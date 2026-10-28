@@ -1,5 +1,5 @@
 # DV360 Simulator by Adsmetor — Project Log (tasks, discussions, build details)
-Last updated: 2026-10-28 · Master plan: `PROJECT.md` · Findings: `docs/explore/`
+Last updated: 2026-10-28 · Master plan: `PROJECT.md` · Findings: `docs/explore/` · Specs: `docs/specs/` · Decisions: `docs/decisions.md` · Build plan: `docs/specs/build-plan.md`
 
 ---
 
@@ -19,6 +19,9 @@ A classroom-only training simulator that replicates Google Display & Video 360 (
 | D8 | Workflow | Local session explores DV360 → writes `docs/explore/NN-*.md` content → a Claude Code cloud session commits it to `main` (`docs: status P1-NN`) → verified on GitHub | Claude |
 | D9 | Stack (proposed, pending approval) | Next.js App Router + TypeScript + MUI + Prisma/PostgreSQL + Vercel; Recharts; Auth.js; Vitest + Playwright | Claude |
 | D10 | Build budget | Build in Claude Code cloud sessions using the $100 cloud credit (expires 5 Nov 2026) | Kailas + Claude |
+| D11 | Spec conflicts | 67 conflict rows in `docs/specs/conflicts.md`: 55 resolved and applied to the specs, 12 owner decisions with defaults | Claude |
+| D12 | Phase 3 plan | 16 cloud sessions in 5 waves, one PR each, disjoint file ownership, fixed merge order, cut order if credit runs short (`docs/specs/build-plan.md`) | Claude |
+| D13 | Decision records | ADR-001 to ADR-038 in `docs/decisions.md`; stack approval (ADR-006 to ADR-010) is still pending | Claude |
 
 ## 3. Environment notes
 - Reference login has limited partner-level access (create advertiser, partner channels/custom bidding, billing, role picker unavailable) — fill those from public docs.
@@ -33,11 +36,11 @@ Status: ✅ done · 🟨 partly done · ⬜ not started
 | ID | Task | Status | Notes |
 |---|---|---|---|
 | P0-01 | Draft PROJECT.md | ✅ | Goals, rules, SOPs, module map, phases, architecture, risks |
-| P0-02 | Review & approve PROJECT.md | ⬜ | Incl. stack approval |
+| P0-02 | Review & approve PROJECT.md | 🟨 | Waiting for the owner: PROJECT.md and stack approval (build-plan P-01) |
 | P0-03 | Repo + PROJECT.md committed | ✅ | |
 | P0-04 | Repo connected to Claude Code on the web | ✅ | Cloud sessions commit successfully |
-| P0-05 | Vercel + Postgres | ⬜ | |
-| P0-06 | Turn off usage-credits toggle | ⬜ | Kailas |
+| P0-05 | Vercel + Postgres | 🟨 | Blocked on the owner: build-plan 1.2 to 1.10 (P-02 to P-07) |
+| P0-06 | Turn off usage-credits toggle | ⬜ | Kailas (build-plan P-12) |
 | P0-07 | Browser + DV360 sign-in | ✅ | Claude in Chrome |
 
 ### Phase 1 — DV360 exploration (`docs/explore/`)
@@ -62,6 +65,17 @@ Status: ✅ done · 🟨 partly done · ⬜ not started
 | P1-17 | Gap sweep | ✅ | `17-gap-sweep.md` | Filled: image creative page, creative History, audience detail, Google tag tab, channel/keyword list editors, report runs, 404. Remaining gaps blocked by demo access — see file |
 | P1-18 | Experiments (A/B + lift) | ✅ | `18-experiments.md` | A/B create/report/settings; lift study create (eligibility, required media cost, survey), report slices, review & fix |
 
+### Phase 2 — Specs and architecture (`docs/specs/`)
+| ID | Task | Status | File | Notes |
+|---|---|---|---|---|
+| P2-01 | Data model | ✅ | `specs/data-model.md` | Entities, enums, RLS, change log, Prisma appendix |
+| P2-02 | Route map | ✅ | `specs/routes.md` | Routes, navigation, layouts, API map |
+| P2-03 | Design system | ✅ | `specs/design-system.md` | Tokens, MUI theme, 20 components, icons, fidelity checklist |
+| P2-04 | Validation catalogue | ✅ | `specs/validation.md` | About 480 rules, matrices, state machines, TypeScript design |
+| P2-05 | Simulation engine | ✅ | `specs/engine.md` | Tick, supply, funnel, bidding, auction, pacing, aggregation, tests |
+| P2-06 | Module specs | ✅ | `specs/modules/` (18 files + README) | 231 build tasks |
+| P2-07 | Build order, conflicts, prompts | ✅ | `specs/conflicts.md`, `specs/build-plan.md`, `decisions.md` | 67 conflict rows; 16 session prompts |
+
 ### Known gaps to revisit
 - LI: DOOH, Demand Gen, app-install step 2, YouTube audio, YT target-frequency/TrueView/ad-sequence forms.
 - Creatives: HTML5/image, video, audio, native, VAST, bulk upload.
@@ -79,6 +93,7 @@ Status: ✅ done · 🟨 partly done · ⬜ not started
 ## 5. Build details
 
 ### 5.1 Architecture
+Authoritative: `docs/decisions.md` (ADR-006 to ADR-010 for the stack) and `docs/specs/build-plan.md` section 2 (repo skeleton, versions, CI).
 | Layer | Choice |
 |---|---|
 | Framework | Next.js App Router + TypeScript; routes mirror DV360 (`/p/[partnerId]/a/[advertiserId]/cs`, `/c/[cid]/io/[ioId]/li/[liId]/details` …) |
@@ -91,9 +106,11 @@ Status: ✅ done · 🟨 partly done · ⬜ not started
 | Tests | Vitest + Playwright |
 
 ### 5.2 Core data model
+Authoritative: `docs/specs/data-model.md` (Appendix A is the Prisma schema) with the conflict rows of `docs/specs/conflicts.md` applied.
 Partner · Advertiser · Campaign · InsertionOrder · BudgetSegment · LineItem · AdGroup · Ad · Creative · CreativeReview · CreativeAssignment · TargetingAssignment · Audience · Channel · KeywordList · LocationList · Exchange · Deal · Package · Order · InventorySource · FloodlightGroup · FloodlightActivity · CustomBiddingAlgorithm · Report · ReportRun · Plan · Experiment · BulkJob · ChangeLog · Alert · User · Role · Classroom · AccessWindow · Scenario · ScenarioAttempt · SimDailyMetric · DeliveryDiagnostic.
 
 ### 5.3 Business rules captured (examples)
+Authoritative: `docs/specs/validation.md` (rule ids, matrices, state machines) and the module files in `docs/specs/modules/`.
 - Campaign goal → recommended KPIs; non-recommended KPI = warning only.
 - IO type + objective gate KPIs, bid strategies and LI types (CTV disables Clicks; DOOH only "no objective" + fixed bid).
 - New IO/LI default Draft; required: name ("Enter a value"), budget > 0, KPI value > 0 ("Enter a number greater than 0"), creative type, EU political ads answer.
@@ -104,6 +121,7 @@ Partner · Advertiser · Campaign · InsertionOrder · BudgetSegment · LineItem
 - Floodlight counting: Standard / Unique / Per session / Transactions / Items sold.
 
 ### 5.4 Simulation engine
+Authoritative: `docs/specs/engine.md`.
 1. Tick = 1 simulated hour; speed set by instructor.
 2. Bid opportunities per exchange × geo × device × environment × audience from synthetic supply.
 3. Each active LI passes the Troubleshooter funnel: Targeting → Creatives → Frequency → Budget → Pacing → Min bid → Internal auction → External (bid too low / creatives / other) → Won.
@@ -112,6 +130,7 @@ Partner · Advertiser · Campaign · InsertionOrder · BudgetSegment · LineItem
 6. Write SimDailyMetric + DeliveryDiagnostic → list columns, chart cards, alerts, Troubleshooter, reports.
 
 ### 5.5 Build order
+Authoritative: `docs/specs/build-plan.md` (waves, ownership, merge order, session prompts, risks). The table below is the summary.
 | Phase | Tasks |
 |---|---|
 | P2 Specs | data model, routes, design system, validation catalogue, engine spec, module specs, cloud-session prompts |
@@ -120,19 +139,38 @@ Partner · Advertiser · Campaign · InsertionOrder · BudgetSegment · LineItem
 | P5 Training | instructor console; scenarios + auto-checks; time acceleration; progress dashboard |
 | P6 QA & launch | fidelity review; E2E tests; load test; pilot; launch |
 
+### 5.6 Spec index
+| File | Covers |
+|---|---|
+| `specs/data-model.md` | Entities, enums, multi-tenancy, seeding, change log, Prisma schema |
+| `specs/routes.md` | URL map, navigation trees, layouts, API and server action map |
+| `specs/design-system.md` | Tokens, theme, components, icons, accessibility, fidelity checklist |
+| `specs/validation.md` | Rules, messages, matrices, state machines, validation library design |
+| `specs/engine.md` | Simulation engine design and tests |
+| `specs/modules/01..18` | One build spec per product area (screens, data, behaviour, acceptance, tasks) |
+| `specs/conflicts.md` | Conflicts between specs and how they were resolved; owner decisions |
+| `specs/build-plan.md` | Owner prerequisites, repo skeleton, waves, ownership, prompts, risks |
+
 ## 6. SOPs in use
 - Explore: open section → record path → capture views, tables, forms, actions → write explore file → tick checklist.
 - Safety: read-only exploration; forms discarded; no real names/emails copied.
 - Status: each task → checklist tick + status row + commit `docs: status <task-id>`.
 
 ## 7. Open questions
-1. Approve stack?
-2. Students per class?
-3. One sandbox per student (assumed) or shared?
-4. Existing exercises to turn into scenarios?
-5. Keep repo public or make private before code lands?
-6. Access to an IO without objective and a Floodlight-optimised advertiser to finish LI gaps?
+Full list with defaults: `PROJECT.md` section 11 and `docs/specs/conflicts.md` section 3 (owner decisions).
+1. Approve PROJECT.md and the stack (blocks P3-01).
+2. Cloud environment, usage-credits toggle, parallel session limit (blocks P3-01).
+3. Vercel project, Postgres, secrets (preview deploys wait).
+4. Engine tick plan: GitHub Actions (default), Vercel Pro cron, or manual.
+5. Students per class and database plan; one sandbox per student (assumed).
+6. Keep the repo public or make it private before code lands.
+7. Logo files; real or fictional vendor names; canned Tutor or model calls.
+8. Billing deferred; student accounts, uploads and retention.
+9. Existing exercises to turn into scenarios (default: the 10 starters in module 18).
+10. Access to an IO without objective and a Floodlight-optimised advertiser to finish the LI gaps (still open from Phase 1).
 
 ## 8. Next steps
-1. Phase 1 done. Start P2-01 data model; fill demo-blocked gaps (see `17-gap-sweep.md`) from public docs during Phase 2.
-2. Phase 2 specs by 1 Nov so Phase 3 can use the cloud credit before 5 Nov 2026.
+1. Phase 1 and Phase 2 are done (Phase 1 gaps are listed in "Known gaps"; they are filled from public docs in the specs).
+2. Owner: complete the prerequisites in `docs/specs/build-plan.md` section 1 by Sat 31 Oct (P-01, P-02, P-12 and the repo visibility decision block the start; Vercel, Postgres and secrets by Sun 1 Nov morning).
+3. Sun 1 Nov: run wave 1 (P3-01), then waves 2 to 5 as in build-plan section 3. Merge freeze Thu 5 Nov 9:00 AM IST; credit expires 1:29 PM IST.
+4. After Phase 3: planning sessions update the specs from the gap list (`docs/gaps/p3.md`) and write Phase 4 prompts from build-plan 3.7.
