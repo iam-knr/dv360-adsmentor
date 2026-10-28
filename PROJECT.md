@@ -199,9 +199,11 @@ Geography (incl. radius, location lists, postal codes) · Language · Demographi
 
 ### 5.9 Reporting
 - **Instant reports**: dimensions & metrics picker, filters, date ranges, pivoting, charts, save/schedule, export CSV/XLSX
-- **Offline / scheduled reports** (Report Builder): templates (Standard, Reach, Audience composition, Floodlight, YouTube, Path-to-conversion), schedule, email delivery, history
+- **Offline reports** (classic Report Builder): types Floodlight, Inventory Availability; template, filters, dimensions, metrics, schedule (repeats, time zone, start/expiry), delivery (format, file name, email owner, share)
 - In-UI performance columns & graphs on every list page
 - Insights: reach & frequency, audience/demographic insights, brand lift (survey simulation)
+- Generate report (BETA, AI natural-language report creation)
+- Report field catalogue (~30 categories, ~700 fields) — see docs/explore/12-reporting.md
 
 ### 5.10 Planning
 - Planner / Plans (forecasting reach, impressions & cost for a plan, converting plans to campaigns)
@@ -249,7 +251,7 @@ One explore file per item; screenshots on demo data only.
 - ✅ P1-09 Inventory & Marketplace (§5.6) → docs/explore/09-inventory.md
 - ✅ P1-10 Audiences (§5.7) → docs/explore/10-audiences.md
 - ✅ P1-11 Resources incl. Floodlight & custom bidding (§5.8) → docs/explore/11-resources.md
-- ⬜ P1-12 Reporting — instant & offline (§5.9)
+- ✅ P1-12 Reporting — instant & offline (§5.9) → docs/explore/12-reporting.md
 - ⬜ P1-13 Planning & reach planner (§5.10)
 - ⬜ P1-14 Advertiser settings (§5.11)
 - ⬜ P1-15 Bulk tools, SDF, rules, experiments, optimisation, alerts (§5.3)
@@ -378,6 +380,7 @@ Partner · Advertiser · Campaign · InsertionOrder · BudgetSegment · LineItem
 | 2026-10-28 | P1-09 | My inventory (orders/deals, packages, deal groups), deal page, instant deal flow, Marketplace Featured + Discover, Plans list, Negotiations list documented | P1-10 Audiences |
 | 2026-10-28 | P1-10 | All audiences tabs (First-party, Custom lists, Combined, Partner), New audience types and forms (tag-based, customer match, combined, lookalike, custom affinity), Analysis pages documented | P1-11 Resources |
 | 2026-10-28 | P1-11 | Brand controls, channels & negative keyword lists, Floodlight group (details, conversions, new conversion form), YouTube assets, creator partnerships, location lists, custom bidding list + wizard documented | P1-12 Reporting |
+| 2026-10-28 | P1-12 | Reports hub, suggested templates, instant report builder (fields catalogue, visualisations, time zone, filters), offline report builder documented | P1-13 Planning |
 
 ---
 
