@@ -1,0 +1,595 @@
+[
+  {
+    "id": "7000037",
+    "kind": "AFFINITY",
+    "path": [
+      "Display & Video 360 Audiences",
+      "Affinity Categories",
+      "Sports & Fitness",
+      "Sports Fans",
+      "Basketball Fans"
+    ],
+    "name": "Basketball Fans"
+  },
+  {
+    "id": "7000074",
+    "kind": "AFFINITY",
+    "path": [
+      "Display & Video 360 Audiences",
+      "Affinity Categories",
+      "Sports & Fitness",
+      "Sports Fans",
+      "Cricket Fans"
+    ],
+    "name": "Cricket Fans"
+  },
+  {
+    "id": "7000111",
+    "kind": "AFFINITY",
+    "path": [
+      "Display & Video 360 Audiences",
+      "Affinity Categories",
+      "Sports & Fitness",
+      "Sports Fans",
+      "Football Fans"
+    ],
+    "name": "Football Fans"
+  },
+  {
+    "id": "7000148",
+    "kind": "AFFINITY",
+    "path": [
+      "Display & Video 360 Audiences",
+      "Affinity Categories",
+      "Sports & Fitness",
+      "Sports Fans",
+      "Tennis Fans"
+    ],
+    "name": "Tennis Fans"
+  },
+  {
+    "id": "7000185",
+    "kind": "AFFINITY",
+    "path": [
+      "Display & Video 360 Audiences",
+      "Affinity Categories",
+      "Sports & Fitness",
+      "Health & Fitness Buffs",
+      "Yoga Enthusiasts"
+    ],
+    "name": "Yoga Enthusiasts"
+  },
+  {
+    "id": "7000222",
+    "kind": "AFFINITY",
+    "path": [
+      "Display & Video 360 Audiences",
+      "Affinity Categories",
+      "Sports & Fitness",
+      "Health & Fitness Buffs",
+      "Running Enthusiasts"
+    ],
+    "name": "Running Enthusiasts"
+  },
+  {
+    "id": "7000259",
+    "kind": "AFFINITY",
+    "path": [
+      "Display & Video 360 Audiences",
+      "Affinity Categories",
+      "Technology",
+      "Technophiles",
+      "Mobile Enthusiasts"
+    ],
+    "name": "Mobile Enthusiasts"
+  },
+  {
+    "id": "7000296",
+    "kind": "AFFINITY",
+    "path": [
+      "Display & Video 360 Audiences",
+      "Affinity Categories",
+      "Technology",
+      "Technophiles",
+      "Gamers"
+    ],
+    "name": "Gamers"
+  },
+  {
+    "id": "7000333",
+    "kind": "AFFINITY",
+    "path": [
+      "Display & Video 360 Audiences",
+      "Affinity Categories",
+      "Technology",
+      "Technophiles",
+      "Smart Home Enthusiasts"
+    ],
+    "name": "Smart Home Enthusiasts"
+  },
+  {
+    "id": "7000370",
+    "kind": "AFFINITY",
+    "path": [
+      "Display & Video 360 Audiences",
+      "Affinity Categories",
+      "Food & Dining",
+      "Foodies",
+      "Cooking Enthusiasts"
+    ],
+    "name": "Cooking Enthusiasts"
+  },
+  {
+    "id": "7000407",
+    "kind": "AFFINITY",
+    "path": [
+      "Display & Video 360 Audiences",
+      "Affinity Categories",
+      "Food & Dining",
+      "Foodies",
+      "Fast Food Cravers"
+    ],
+    "name": "Fast Food Cravers"
+  },
+  {
+    "id": "7000444",
+    "kind": "AFFINITY",
+    "path": [
+      "Display & Video 360 Audiences",
+      "Affinity Categories",
+      "Food & Dining",
+      "Foodies",
+      "Coffee Lovers"
+    ],
+    "name": "Coffee Lovers"
+  },
+  {
+    "id": "7000481",
+    "kind": "AFFINITY",
+    "path": [
+      "Display & Video 360 Audiences",
+      "Affinity Categories",
+      "Travel",
+      "Travel Buffs",
+      "Frequent Flyers"
+    ],
+    "name": "Frequent Flyers"
+  },
+  {
+    "id": "7000518",
+    "kind": "AFFINITY",
+    "path": [
+      "Display & Video 360 Audiences",
+      "Affinity Categories",
+      "Travel",
+      "Travel Buffs",
+      "Beach Lovers"
+    ],
+    "name": "Beach Lovers"
+  },
+  {
+    "id": "7000555",
+    "kind": "AFFINITY",
+    "path": [
+      "Display & Video 360 Audiences",
+      "Affinity Categories",
+      "Travel",
+      "Travel Buffs",
+      "Adventure Travelers"
+    ],
+    "name": "Adventure Travelers"
+  },
+  {
+    "id": "7000592",
+    "kind": "AFFINITY",
+    "path": [
+      "Display & Video 360 Audiences",
+      "Affinity Categories",
+      "Lifestyle",
+      "Shoppers",
+      "Bargain Hunters"
+    ],
+    "name": "Bargain Hunters"
+  },
+  {
+    "id": "7000629",
+    "kind": "AFFINITY",
+    "path": [
+      "Display & Video 360 Audiences",
+      "Affinity Categories",
+      "Lifestyle",
+      "Shoppers",
+      "Luxury Shoppers"
+    ],
+    "name": "Luxury Shoppers"
+  },
+  {
+    "id": "7000666",
+    "kind": "AFFINITY",
+    "path": [
+      "Display & Video 360 Audiences",
+      "Affinity Categories",
+      "Lifestyle",
+      "Shoppers",
+      "Fashionistas"
+    ],
+    "name": "Fashionistas"
+  },
+  {
+    "id": "7000703",
+    "kind": "AFFINITY",
+    "path": [
+      "Display & Video 360 Audiences",
+      "Affinity Categories",
+      "Lifestyle",
+      "Home & Garden",
+      "Home Decor Enthusiasts"
+    ],
+    "name": "Home Decor Enthusiasts"
+  },
+  {
+    "id": "7000740",
+    "kind": "AFFINITY",
+    "path": [
+      "Display & Video 360 Audiences",
+      "Affinity Categories",
+      "Lifestyle",
+      "Home & Garden",
+      "Avid Gardeners"
+    ],
+    "name": "Avid Gardeners"
+  },
+  {
+    "id": "7000777",
+    "kind": "AFFINITY",
+    "path": [
+      "Display & Video 360 Audiences",
+      "Affinity Categories",
+      "Media & Entertainment",
+      "Movie Lovers",
+      "Action Movie Fans"
+    ],
+    "name": "Action Movie Fans"
+  },
+  {
+    "id": "7000814",
+    "kind": "AFFINITY",
+    "path": [
+      "Display & Video 360 Audiences",
+      "Affinity Categories",
+      "Media & Entertainment",
+      "Movie Lovers",
+      "Comedy Fans"
+    ],
+    "name": "Comedy Fans"
+  },
+  {
+    "id": "7000851",
+    "kind": "AFFINITY",
+    "path": [
+      "Display & Video 360 Audiences",
+      "Affinity Categories",
+      "Media & Entertainment",
+      "Music Lovers",
+      "Pop Music Fans"
+    ],
+    "name": "Pop Music Fans"
+  },
+  {
+    "id": "7000888",
+    "kind": "AFFINITY",
+    "path": [
+      "Display & Video 360 Audiences",
+      "Affinity Categories",
+      "Media & Entertainment",
+      "Music Lovers",
+      "Classical Music Fans"
+    ],
+    "name": "Classical Music Fans"
+  },
+  {
+    "id": "7000925",
+    "kind": "IN_MARKET",
+    "path": [
+      "Display & Video 360 Audiences",
+      "In-market Categories",
+      "Apparel & Accessories",
+      "Men's Apparel"
+    ],
+    "name": "Men's Apparel"
+  },
+  {
+    "id": "7000962",
+    "kind": "IN_MARKET",
+    "path": [
+      "Display & Video 360 Audiences",
+      "In-market Categories",
+      "Apparel & Accessories",
+      "Women's Apparel"
+    ],
+    "name": "Women's Apparel"
+  },
+  {
+    "id": "7000999",
+    "kind": "IN_MARKET",
+    "path": [
+      "Display & Video 360 Audiences",
+      "In-market Categories",
+      "Apparel & Accessories",
+      "Footwear"
+    ],
+    "name": "Footwear"
+  },
+  {
+    "id": "7001036",
+    "kind": "IN_MARKET",
+    "path": [
+      "Display & Video 360 Audiences",
+      "In-market Categories",
+      "Autos & Vehicles",
+      "Motorcycles"
+    ],
+    "name": "Motorcycles"
+  },
+  {
+    "id": "7001073",
+    "kind": "IN_MARKET",
+    "path": [
+      "Display & Video 360 Audiences",
+      "In-market Categories",
+      "Autos & Vehicles",
+      "New Vehicles (Cars)"
+    ],
+    "name": "New Vehicles (Cars)"
+  },
+  {
+    "id": "7001110",
+    "kind": "IN_MARKET",
+    "path": [
+      "Display & Video 360 Audiences",
+      "In-market Categories",
+      "Autos & Vehicles",
+      "Used Vehicles"
+    ],
+    "name": "Used Vehicles"
+  },
+  {
+    "id": "7001147",
+    "kind": "IN_MARKET",
+    "path": [
+      "Display & Video 360 Audiences",
+      "In-market Categories",
+      "Consumer Electronics",
+      "Mobile Phones"
+    ],
+    "name": "Mobile Phones"
+  },
+  {
+    "id": "7001184",
+    "kind": "IN_MARKET",
+    "path": [
+      "Display & Video 360 Audiences",
+      "In-market Categories",
+      "Consumer Electronics",
+      "Laptops"
+    ],
+    "name": "Laptops"
+  },
+  {
+    "id": "7001221",
+    "kind": "IN_MARKET",
+    "path": [
+      "Display & Video 360 Audiences",
+      "In-market Categories",
+      "Consumer Electronics",
+      "Televisions"
+    ],
+    "name": "Televisions"
+  },
+  {
+    "id": "7001258",
+    "kind": "IN_MARKET",
+    "path": [
+      "Display & Video 360 Audiences",
+      "In-market Categories",
+      "Financial Services",
+      "Credit Cards"
+    ],
+    "name": "Credit Cards"
+  },
+  {
+    "id": "7001295",
+    "kind": "IN_MARKET",
+    "path": [
+      "Display & Video 360 Audiences",
+      "In-market Categories",
+      "Financial Services",
+      "Mutual Funds"
+    ],
+    "name": "Mutual Funds"
+  },
+  {
+    "id": "7001332",
+    "kind": "IN_MARKET",
+    "path": [
+      "Display & Video 360 Audiences",
+      "In-market Categories",
+      "Financial Services",
+      "Insurance"
+    ],
+    "name": "Insurance"
+  },
+  {
+    "id": "7001369",
+    "kind": "IN_MARKET",
+    "path": [
+      "Display & Video 360 Audiences",
+      "In-market Categories",
+      "Education",
+      "Online Courses"
+    ],
+    "name": "Online Courses"
+  },
+  {
+    "id": "7001406",
+    "kind": "IN_MARKET",
+    "path": [
+      "Display & Video 360 Audiences",
+      "In-market Categories",
+      "Education",
+      "Test Preparation"
+    ],
+    "name": "Test Preparation"
+  },
+  {
+    "id": "7001443",
+    "kind": "IN_MARKET",
+    "path": [
+      "Display & Video 360 Audiences",
+      "In-market Categories",
+      "Real Estate",
+      "Apartments for Sale"
+    ],
+    "name": "Apartments for Sale"
+  },
+  {
+    "id": "7001480",
+    "kind": "IN_MARKET",
+    "path": ["Display & Video 360 Audiences", "In-market Categories", "Real Estate", "Rentals"],
+    "name": "Rentals"
+  },
+  {
+    "id": "7001517",
+    "kind": "IN_MARKET",
+    "path": ["Display & Video 360 Audiences", "In-market Categories", "Travel", "Flights"],
+    "name": "Flights"
+  },
+  {
+    "id": "7001554",
+    "kind": "IN_MARKET",
+    "path": ["Display & Video 360 Audiences", "In-market Categories", "Travel", "Hotels"],
+    "name": "Hotels"
+  },
+  {
+    "id": "7001591",
+    "kind": "IN_MARKET",
+    "path": [
+      "Display & Video 360 Audiences",
+      "In-market Categories",
+      "Travel",
+      "Vacation Packages"
+    ],
+    "name": "Vacation Packages"
+  },
+  {
+    "id": "7001628",
+    "kind": "IN_MARKET",
+    "path": ["Display & Video 360 Audiences", "In-market Categories", "Home & Garden", "Furniture"],
+    "name": "Furniture"
+  },
+  {
+    "id": "7001665",
+    "kind": "IN_MARKET",
+    "path": [
+      "Display & Video 360 Audiences",
+      "In-market Categories",
+      "Home & Garden",
+      "Home Appliances"
+    ],
+    "name": "Home Appliances"
+  },
+  {
+    "id": "7001702",
+    "kind": "LIFE_EVENT",
+    "path": ["Display & Video 360 Audiences", "Life Events", "Recently Moved"],
+    "name": "Recently Moved"
+  },
+  {
+    "id": "7001739",
+    "kind": "LIFE_EVENT",
+    "path": ["Display & Video 360 Audiences", "Life Events", "Getting Married"],
+    "name": "Getting Married"
+  },
+  {
+    "id": "7001776",
+    "kind": "LIFE_EVENT",
+    "path": ["Display & Video 360 Audiences", "Life Events", "Starting a New Job"],
+    "name": "Starting a New Job"
+  },
+  {
+    "id": "7001813",
+    "kind": "LIFE_EVENT",
+    "path": ["Display & Video 360 Audiences", "Life Events", "Graduating from College"],
+    "name": "Graduating from College"
+  },
+  {
+    "id": "7001850",
+    "kind": "LIFE_EVENT",
+    "path": ["Display & Video 360 Audiences", "Life Events", "Having a Baby"],
+    "name": "Having a Baby"
+  },
+  {
+    "id": "7001887",
+    "kind": "LIFE_EVENT",
+    "path": ["Display & Video 360 Audiences", "Life Events", "Buying a Home"],
+    "name": "Buying a Home"
+  },
+  {
+    "id": "7001924",
+    "kind": "DETAILED_DEMOGRAPHIC",
+    "path": ["Display & Video 360 Audiences", "Detailed Demographics", "Parents of Toddlers"],
+    "name": "Parents of Toddlers"
+  },
+  {
+    "id": "7001961",
+    "kind": "DETAILED_DEMOGRAPHIC",
+    "path": ["Display & Video 360 Audiences", "Detailed Demographics", "Homeowners"],
+    "name": "Homeowners"
+  },
+  {
+    "id": "7001998",
+    "kind": "DETAILED_DEMOGRAPHIC",
+    "path": ["Display & Video 360 Audiences", "Detailed Demographics", "Renters"],
+    "name": "Renters"
+  },
+  {
+    "id": "7002035",
+    "kind": "DETAILED_DEMOGRAPHIC",
+    "path": ["Display & Video 360 Audiences", "Detailed Demographics", "College Students"],
+    "name": "College Students"
+  },
+  {
+    "id": "7002072",
+    "kind": "DETAILED_DEMOGRAPHIC",
+    "path": ["Display & Video 360 Audiences", "Detailed Demographics", "Parents of Preschoolers"],
+    "name": "Parents of Preschoolers"
+  },
+  {
+    "id": "7002109",
+    "kind": "DETAILED_DEMOGRAPHIC",
+    "path": [
+      "Display & Video 360 Audiences",
+      "Detailed Demographics",
+      "Parents of School-Aged Children"
+    ],
+    "name": "Parents of School-Aged Children"
+  },
+  {
+    "id": "7002146",
+    "kind": "DETAILED_DEMOGRAPHIC",
+    "path": ["Display & Video 360 Audiences", "Detailed Demographics", "Pet Owners"],
+    "name": "Pet Owners"
+  },
+  {
+    "id": "7002183",
+    "kind": "DETAILED_DEMOGRAPHIC",
+    "path": ["Display & Video 360 Audiences", "Detailed Demographics", "Recent Graduates"],
+    "name": "Recent Graduates"
+  },
+  {
+    "id": "7002220",
+    "kind": "DETAILED_DEMOGRAPHIC",
+    "path": ["Display & Video 360 Audiences", "Detailed Demographics", "Young Professionals"],
+    "name": "Young Professionals"
+  }
+]
