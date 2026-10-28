@@ -1,0 +1,72 @@
+{
+  "note": "26 top-level groups of explore 07 with generated children and some grandchildren (depth 3).",
+  "tree": {
+    "Arts & Entertainment": {
+      "Movies": ["Action Films", "Comedy Films", "Drama Films"],
+      "Music & Audio": ["Pop Music", "Classical Music"],
+      "TV & Video": [],
+      "Celebrities & Entertainment News": []
+    },
+    "Autos & Vehicles": {
+      "Cars": ["Hatchbacks", "SUVs", "Electric Cars"],
+      "Motorcycles": [],
+      "Auto Parts": []
+    },
+    "Beauty & Fitness": { "Fitness": ["Yoga", "Gym Workouts"], "Skin Care": [], "Hair Care": [] },
+    "Books & Literature": {
+      "Fiction": [],
+      "Children's Literature": [],
+      "Comics & Graphic Novels": []
+    },
+    "Business & Industrial": { "Small Business": [], "Manufacturing": [], "Logistics": [] },
+    "Computers & Electronics": {
+      "Mobile Phones": ["Smartphones", "Phone Accessories"],
+      "Computer Hardware": [],
+      "Software": [],
+      "Consumer Electronics": []
+    },
+    "Finance": {
+      "Banking": [],
+      "Insurance": ["Life Insurance", "Health Insurance"],
+      "Investing": ["Mutual Funds", "Stocks"],
+      "Credit Cards": []
+    },
+    "Food & Drink": {
+      "Restaurants": [],
+      "Cooking & Recipes": ["Indian Cuisine", "Baking"],
+      "Beverages": []
+    },
+    "Games": { "Mobile Games": [], "Console Games": [], "Board Games": [] },
+    "Health": { "Nutrition": [], "Mental Health": [], "Medical Facilities": [] },
+    "Hobbies & Leisure": { "Photography": [], "Crafts": [], "Outdoors": [] },
+    "Home & Garden": { "Home Furnishings": [], "Gardening": [], "Home Improvement": [] },
+    "Internet & Telecom": { "Mobile Plans": [], "Broadband": [], "Social Networks": [] },
+    "Jobs & Education": {
+      "Colleges & Universities": [],
+      "Online Courses": ["Programming Courses", "Language Courses"],
+      "Job Listings": []
+    },
+    "Law & Government": { "Government Services": [], "Legal Services": [] },
+    "News": { "National News": [], "Business News": [], "Sports News": [] },
+    "Online Communities": { "Forums": [], "Blogs": [] },
+    "People & Society": { "Family": [], "Religion & Belief": [], "Social Issues": [] },
+    "Pets & Animals": { "Dogs": [], "Cats": [], "Wildlife": [] },
+    "Real Estate": { "Residential": ["Apartments", "Villas"], "Commercial": [], "Rentals": [] },
+    "Reference": { "Dictionaries": [], "Maps": [] },
+    "Science": { "Astronomy": [], "Biology": [], "Technology Research": [] },
+    "Shopping": {
+      "Apparel": ["Men's Apparel", "Women's Apparel"],
+      "Groceries": [],
+      "Consumer Resources": [],
+      "Deals & Coupons": []
+    },
+    "Sports": { "Cricket": [], "Football": [], "Basketball": [], "Badminton": [] },
+    "Travel & Transportation": {
+      "Hotels & Accommodations": [],
+      "Air Travel": [],
+      "Train Travel": [],
+      "Tourist Destinations": []
+    },
+    "World Localities": { "Asia": [], "Europe": [], "North America": [] }
+  }
+}

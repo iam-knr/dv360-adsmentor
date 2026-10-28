@@ -1,0 +1,16 @@
+{
+  "asOf": "2026-10-01",
+  "base": "USD",
+  "note": "Invented rates for the simulator (engine.md 2.7 fx block). Loaded into FxRate once P3-05c adds the table.",
+  "perUSD": {
+    "INR": 88.0,
+    "SGD": 1.34,
+    "AED": 3.67,
+    "GBP": 0.78,
+    "EUR": 0.92,
+    "AUD": 1.52,
+    "IDR": 16300,
+    "BRL": 5.4,
+    "USD": 1.0
+  }
+}

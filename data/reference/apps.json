@@ -1,0 +1,122 @@
+[
+  {
+    "id": "com.example.pixel.harbor.play",
+    "name": "Pixel Harbor Play",
+    "platform": "IOS",
+    "category": "Games"
+  },
+  {
+    "id": "com.example.lumen.pay",
+    "name": "Lumen Pay",
+    "platform": "ANDROID",
+    "category": "Finance"
+  },
+  {
+    "id": "com.example.northwind.shop",
+    "name": "Northwind Shop",
+    "platform": "ANDROID",
+    "category": "Shopping"
+  },
+  {
+    "id": "com.example.cedar.rides",
+    "name": "Cedar Rides",
+    "platform": "IOS",
+    "category": "Travel"
+  },
+  {
+    "id": "com.example.juniper.fit",
+    "name": "Juniper Fit",
+    "platform": "ANDROID",
+    "category": "Health & Fitness"
+  },
+  {
+    "id": "com.example.quill.notes",
+    "name": "Quill Notes",
+    "platform": "ANDROID",
+    "category": "Games"
+  },
+  {
+    "id": "com.example.saffron.eats",
+    "name": "Saffron Eats",
+    "platform": "IOS",
+    "category": "Finance"
+  },
+  {
+    "id": "com.example.tidewater.trips",
+    "name": "Tidewater Trips",
+    "platform": "ANDROID",
+    "category": "Shopping"
+  },
+  {
+    "id": "com.example.ember.chat",
+    "name": "Ember Chat",
+    "platform": "ANDROID",
+    "category": "Travel"
+  },
+  {
+    "id": "com.example.granite.bank",
+    "name": "Granite Bank",
+    "platform": "IOS",
+    "category": "Health & Fitness"
+  },
+  {
+    "id": "com.example.indigo.learn",
+    "name": "Indigo Learn",
+    "platform": "ANDROID",
+    "category": "Games"
+  },
+  {
+    "id": "com.example.kestrel.maps",
+    "name": "Kestrel Maps",
+    "platform": "ANDROID",
+    "category": "Finance"
+  },
+  {
+    "id": "com.example.meadow.garden",
+    "name": "Meadow Garden",
+    "platform": "IOS",
+    "category": "Shopping"
+  },
+  {
+    "id": "com.example.nimbus.weather",
+    "name": "Nimbus Weather",
+    "platform": "ANDROID",
+    "category": "Travel"
+  },
+  {
+    "id": "com.example.orchard.market",
+    "name": "Orchard Market",
+    "platform": "ANDROID",
+    "category": "Health & Fitness"
+  },
+  {
+    "id": "com.example.pebble.games",
+    "name": "Pebble Games",
+    "platform": "IOS",
+    "category": "Games"
+  },
+  {
+    "id": "com.example.rowan.reads",
+    "name": "Rowan Reads",
+    "platform": "ANDROID",
+    "category": "Finance"
+  },
+  {
+    "id": "com.example.sable.stream",
+    "name": "Sable Stream",
+    "platform": "ANDROID",
+    "category": "Shopping"
+  },
+  {
+    "id": "com.example.thistle.home",
+    "name": "Thistle Home",
+    "platform": "IOS",
+    "category": "Travel"
+  },
+  {
+    "id": "com.example.vesper.music",
+    "name": "Vesper Music",
+    "platform": "ANDROID",
+    "category": "Health & Fitness"
+  }
+]
