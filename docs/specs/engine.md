@@ -76,11 +76,11 @@ Rules every engine module must follow (enforced by an ESLint rule `no-restricted
 5. **Reproducibility.** Same `(paramsHash, marketSeed, sandboxSeed, world edits at the same sim times)` gives the same metrics bit for bit. Student edits are part of the input: each edit is stamped with `appliedAtTick` (the first tick that sees it) and logged in `SimEditLog`, so a replay can re-apply them.
 6. **Seed policy per classroom.** `seedMode: 'shared-market'` (default): `marketSeed` identical for all students, `sandboxSeed = hash(marketSeed, sandboxId)`. Students facing the same market make results comparable and make the instructor's "solution run" meaningful. `'isolated'`: different `marketSeed` per student (anti-copying mode).
 
-### 1.4 Tick scheduler (Vercel Cron + server actions)
+### 1.4 Tick scheduler (GitHub Actions timer + server actions)
 
 ```
 Cron trigger (see open question 1 / RC-056)  ->  POST /api/sim/engine/tick   (auth: Authorization Bearer CRON_SECRET or header x-cron-secret; RC-027)
-    1. claimDueSandboxes(limit=40)           SELECT ... FOR UPDATE SKIP LOCKED on SimClock
+    1. claimDueSandboxes(limit=25)           SELECT ... FOR UPDATE SKIP LOCKED on SimClock
                                              where state='RUNNING' and window open and due>0
     2. pool(concurrency=6): runSandboxBatch(sb, maxTicks=24, deadline)
     3. stop at deadline (45 s of a 60 s function); anything left is picked up next minute
@@ -104,7 +104,7 @@ Assumptions: 60 sandboxes, speed 1 day per 5 min (4.8 ticks/min each), 12 active
 | Compute per sandbox-tick (12 LIs, pure CPU) | p50 < 60 ms, p95 < 250 ms |
 | DB writes per sandbox-tick | <= 4 statements, <= 400 rows (hourly 12, diagnostics <= 150 upsert rows, daily slices <= 250 upsert rows) |
 | Cron run | 288 sandbox-ticks/min x ~120 ms = ~35 s CPU per minute; with concurrency 6 it finishes in ~6-8 s wall |
-| Function time | 45 s soft deadline, 60 s hard (raise on Pro if needed) |
+| Function time | 45 s soft deadline, 60 s hard (Hobby maximum; at most 25 sandboxes per call, chunked by sandbox) |
 | Row growth per sandbox-day | ~24 x 12 hourly + ~12 x 250 daily slice + ~12 x 120 diagnostic = ~3.6k rows; 60 sandboxes x 30 sim days = ~6.5M rows worst case |
 | Retention | hourly rows kept for the last 14 sim days then deleted (daily slices stay); diagnostics kept 30 sim days; configurable |
 | Read path | list pages hit `SimDailyMetric` with `sliceKind='total'` only (indexed by `liId, date`); no table scans of slices |
@@ -1592,7 +1592,7 @@ export function dueTicks(c: SimClock, realNow: Date): { due: number; remainderMs
 
 ## 12. Open questions
 
-1. **Cron frequency on Vercel.** Hobby plans only allow daily cron; per-minute needs Pro. If the project stays on Hobby, use an external trigger (GitHub Actions schedule at 5 min, or a free uptime pinger hitting `/api/sim/engine/tick`) plus lazy `ensureCaughtUp` on page loads. Needs a decision before P3-08 (OWNER decision RC-056; default: Vercel Pro cron if available, else GitHub Actions every 5 minutes plus lazy `ensureCaughtUp`).
+1. **Cron frequency on Vercel.** Hobby plans only allow daily cron; per-minute needs Pro. **Decided 2026-10-28 (RC-056, ADR-048):** the project stays on Hobby (the simulator is for free students only). The trigger is a GitHub Actions workflow (`.github/workflows/engine-tick.yml`, `schedule: cron "*/5 * * * *"`) that POSTs to the tick endpoint with `Authorization: Bearer ${CRON_SECRET}`, plus lazy `ensureCaughtUp` on page loads. No sub-daily cron in `vercel.json`; a once-daily Vercel cron backup is allowed. One tick call advances at most 25 sandboxes (chunked by sandbox) to stay inside the Hobby function duration (build-plan 5 R-05).
 2. **Which budget unit does DV360 pace on?** The spec paces on advertiser **revenue** (incl. invoiced fees). If fees are excluded in real DV360 for some fee types, change 7.1 and 8.6 only.
 3. **First-price shading.** Real DV360 shading is not public; 5.4 is a simulator assumption. Should fixed bids be shaded or pay full bid (current choice: pay full), so students learn automated bidding saves cost?
 4. **Conversion date basis.** Default is `conversion_date`. Verify against DV360 reports (or public docs) whether Date for conversion metrics means impression date or conversion date, then set the default.
