@@ -286,7 +286,7 @@ Plan: `docs/specs/build-plan.md` (owner prerequisites, waves, file ownership, me
 - ⬜ P3-02 Adsmetor auth, roles (`USER` / `ADMIN` / `SUPER_ADMIN`), classroom access windows, password policy and lockout foundation → session P3-02 (4.6; module 18 M18-01 to M18-04; module 19 M19-01 to M19-04, M19-14)
 - ⬜ P3-02b Account management dashboard `/manage` (Super admin / Admin / User, email + shared password, cohorts, CSV import, audit) → session P3-02b (4.17; module 19 M19-05 to M19-16; wave 5, merge 15b)
 - ⬜ P3-03 App shell: top bar, switcher, left nav, breadcrumbs, date picker → session P3-03 (4.9; module 01 T1 to T6)
-- ⬜ P3-04 Shared components: data table (columns picker, filters, bulk actions), side panel forms, dialogs, status chips → session P3-04 (4.2; design-system.md)
+- ✅ P3-04 Shared components: data table (columns picker, filters, bulk actions), side panel forms, dialogs, status chips → session P3-04 (4.2; design-system.md) (Tier A and B kit, gallery behind `ENABLE_GALLERY`; column-view menu and Modify columns dialog deferred to the module sessions, see PR)
 - ⬜ P3-05 Full data model + seed generator (partners, advertisers, campaigns, IOs, LIs, creatives, deals, audiences) → sessions P3-05a schema core and `withChangeLog` (4.3), P3-05b seed generator (4.7), P3-05c remaining tables (4.8)
 - ⬜ P3-06 Campaigns → IOs → Line items CRUD with full validation → sessions P3-06a validation library (4.4), P3-06b campaigns and IOs (4.11), P3-06c line items (4.12)
 - ⬜ P3-07 Targeting panel (all dimensions) → sessions P3-07a card, state and basic editors (4.10), P3-07b geography, apps and URLs, brand suitability, audience builder (4.15)
@@ -443,6 +443,7 @@ Full records: `docs/decisions.md` (ADR-001 to ADR-046).
 | 2026-10-28 | SPEC | Account management module 19 specified (3 levels, email+password, admin adds users) | Phase 3 prerequisites |
 | 2026-10-28 | OWNER | Simulator for free students only (paid students use real DV360); Vercel Hobby + GitHub Actions timer | P-03 import repo to Vercel (Hobby), P-04..P-07 |
 | 2026-10-28 | P3-01 | Scaffold done: Next.js 15, MUI 7, Prisma 6 (multi-file schema, `0000_base`), Vitest/Playwright, CI (check, db-tests, e2e green), stubs, engine-tick stub (off by default), no cron in vercel.json | P3-04, P3-05a, P3-06a, P3-08a (wave 2) |
+| 2026-10-28 | P3-04 | UI kit done: tokens, MUI theme, `DvIcon`, Tier A and B components in `components/dv`, gallery at `/components` (404 in production unless `ENABLE_GALLERY=1`), 314 Vitest component and unit tests with axe on every gallery entry, `tests/e2e/gallery.spec.ts` | P3-03 (shell), P3-06b to P3-06c (forms and grids) |
 
 ---
 
