@@ -381,6 +381,7 @@ Partner · Advertiser · Campaign · InsertionOrder · BudgetSegment · LineItem
 | 2026-10-28 | P1-10 | All audiences tabs (First-party, Custom lists, Combined, Partner), New audience types and forms (tag-based, customer match, combined, lookalike, custom affinity), Analysis pages documented | P1-11 Resources |
 | 2026-10-28 | P1-11 | Brand controls, channels & negative keyword lists, Floodlight group (details, conversions, new conversion form), YouTube assets, creator partnerships, location lists, custom bidding list + wizard documented | P1-12 Reporting |
 | 2026-10-28 | P1-12 | Reports hub, suggested templates, instant report builder (fields catalogue, visualisations, time zone, filters), offline report builder documented | P1-13 Planning |
+| 2026-10-28 | DOC | Consolidated task/discussion/build log published at docs/PROJECT-LOG.md | P1-13 Planning |
 
 ---
 
