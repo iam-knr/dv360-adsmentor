@@ -145,6 +145,7 @@ After every task: tick the checklist item, add one line to §10 (date, task ID, 
 
 ### 5.3 Advertiser level — Campaigns
 - **Campaigns**: list, create/edit (name, goal, KPI, planned spend, flight dates, frequency cap, creative types, inventory source types, demographics/geo defaults), statuses
+  - Campaign page: own nav (Campaign, Inventory ▸ My inventory/Marketplace/Negotiations, Campaign settings, Alerts, History), tabs Combined / Insertion orders / Line items, chart cards, saved column views, Alerts page (Critical / Needs attention)
 - **Insertion Orders**: list, create/edit (type, budget unit, budget segments, pacing type & amount, frequency cap, KPI, optimisation, partner costs, targeting), duplicate, bulk edit
 - **Line Items** — all types:
   - Display, Video, Audio, YouTube & partners (incl. Video reach / action / view / Demand Gen variants), Connected TV, Over-the-top, Mobile app install, Mobile app engagement
@@ -226,7 +227,7 @@ Status keys: ⬜ Not started · 🟨 In progress · ✅ Done · ⛔ Blocked
 One explore file per item; screenshots on demo data only.
 - ✅ P1-01 Global shell & navigation (§5.1) → docs/explore/01-global-shell.md
 - ✅ P1-02 Partner level (§5.2) → docs/explore/02-partner-level.md
-- ⬜ P1-03 Campaigns (§5.3)
+- ✅ P1-03 Campaigns (§5.3) → docs/explore/03-campaigns.md
 - ⬜ P1-04 Insertion orders (§5.3)
 - ⬜ P1-05 Line items — every type, every tab (§5.3)
 - ⬜ P1-06 YouTube ad groups & ads (§5.3)
@@ -355,6 +356,7 @@ Partner · Advertiser · Campaign · InsertionOrder · BudgetSegment · LineItem
 | 2026-10-28 | P0-03 | PROJECT.md and docs/ skeleton committed to `iam-knr/dv360-adsmentor` via cloud session | Kailas completes Google sign-in in Chrome; start P1-01 |
 | 2026-10-28 | P1-01 | Global shell, partner + advertiser nav, top bar, right rail, Overview, Bulk status, shortcuts documented | P1-02 Partner level |
 | 2026-10-28 | P1-02 | Partner level documented (advertisers list, basic details, exchanges, targeting defaults, advertiser configurations, resources, users) | P1-03 Campaigns |
+| 2026-10-28 | P1-03 | Campaigns list, bulk/inline actions, New campaign form + validation + goal→KPI rules, campaign page, settings, alerts documented | P1-04 Insertion orders |
 
 ---
 
