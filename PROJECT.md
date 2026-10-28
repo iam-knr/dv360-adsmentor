@@ -164,6 +164,9 @@ Geography (incl. radius, location lists, postal codes) · Language · Demographi
 - Create: standard display (upload image), HTML5 (zip), native (image/video), video (hosted, VAST), audio, third-party tags (display/VAST), bulk upload
 - Creative details: dimensions, landing URL, tracking (impression/click trackers), integrations (Campaign Manager 360 sync), expansion, MRAID, SSL
 - Preview, assignment to line items, creative QA errors
+- Format gallery (Optimized, Native display, Native video, Parallax, Swirl…)
+- Appeal history
+- Creative status: DV360 review + per-exchange review + restrictions + LI eligibility
 
 ### 5.6 Inventory
 - **My inventory**: deals (Private Auction, Preferred, Programmatic Guaranteed), groups, sites/apps lists
@@ -233,7 +236,7 @@ One explore file per item; screenshots on demo data only.
 - 🟨 P1-05 Line items (§5.3) → docs/explore/05-line-items.md (Display/Video/Mobile-app/Ads-in-apps done; DOOH, Demand Gen need an awareness / no-objective IO and Floodlight optimisation — revisit)
 - ✅ P1-06 YouTube ad groups & ads (§5.3) → docs/explore/06-youtube.md
 - ✅ P1-07 Targeting — every dimension (§5.4) → docs/explore/07-targeting.md
-- ⬜ P1-08 Creatives — every type (§5.5)
+- 🟨 P1-08 Creatives (§5.5) → docs/explore/08-creatives.md (library, menus, 3P display form, creative page, review statuses, format gallery, appeals done; upload/native/video/audio forms pending)
 - ⬜ P1-09 Inventory & Marketplace (§5.6)
 - ⬜ P1-10 Audiences (§5.7)
 - ⬜ P1-11 Resources incl. Floodlight & custom bidding (§5.8)
@@ -362,6 +365,7 @@ Partner · Advertiser · Campaign · InsertionOrder · BudgetSegment · LineItem
 | 2026-10-28 | P1-05 | Line items: type picker + compatibility rules, full Display form, type differences, LI page, Troubleshooter funnel, bulk menu documented; some types blocked in demo | P1-06 YouTube |
 | 2026-10-28 | P1-06 | YouTube LI subtypes, LI form, ad groups (targeting, bid), ad create form + preview; CTV & Audio added to 05 | P1-07 Targeting |
 | 2026-10-28 | P1-07 | All Display targeting editors documented (geo, apps/URLs, keywords, categories, environment, position, viewability, language, brand suitability + 3P verification, audience lists builder, demographics, day & time, browser, device, connection speed, carrier/ISP) | P1-08 Creatives |
+| 2026-10-28 | P1-08 | Creatives library, New menu, third-party display form, creative details/status/history, exchange review, format gallery, appeal history documented | P1-09 Inventory |
 
 ---
 
