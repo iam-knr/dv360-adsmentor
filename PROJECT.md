@@ -183,6 +183,8 @@ Geography (incl. radius, location lists, postal codes) · Language · Demographi
 - Google audiences: affinity, in-market, life events, detailed demographics
 - Combined audiences, custom audiences (interest/intent), lookalike lists
 - Audience size estimates in targeting
+- Custom lists: Custom affinity, Custom intent (Display/Video), Custom intent (YouTube)
+- Analysis: Geographic distribution (seed audience) and Audience insights (LIs with optimized targeting)
 
 ### 5.8 Resources
 - Channels (site/app lists), keyword lists, negative keyword lists, location lists
@@ -241,7 +243,7 @@ One explore file per item; screenshots on demo data only.
 - ✅ P1-07 Targeting — every dimension (§5.4) → docs/explore/07-targeting.md
 - 🟨 P1-08 Creatives (§5.5) → docs/explore/08-creatives.md (library, menus, 3P display form, creative page, review statuses, format gallery, appeals done; upload/native/video/audio forms pending)
 - ✅ P1-09 Inventory & Marketplace (§5.6) → docs/explore/09-inventory.md
-- ⬜ P1-10 Audiences (§5.7)
+- ✅ P1-10 Audiences (§5.7) → docs/explore/10-audiences.md
 - ⬜ P1-11 Resources incl. Floodlight & custom bidding (§5.8)
 - ⬜ P1-12 Reporting — instant & offline (§5.9)
 - ⬜ P1-13 Planning & reach planner (§5.10)
@@ -370,6 +372,7 @@ Partner · Advertiser · Campaign · InsertionOrder · BudgetSegment · LineItem
 | 2026-10-28 | P1-07 | All Display targeting editors documented (geo, apps/URLs, keywords, categories, environment, position, viewability, language, brand suitability + 3P verification, audience lists builder, demographics, day & time, browser, device, connection speed, carrier/ISP) | P1-08 Creatives |
 | 2026-10-28 | P1-08 | Creatives library, New menu, third-party display form, creative details/status/history, exchange review, format gallery, appeal history documented | P1-09 Inventory |
 | 2026-10-28 | P1-09 | My inventory (orders/deals, packages, deal groups), deal page, instant deal flow, Marketplace Featured + Discover, Plans list, Negotiations list documented | P1-10 Audiences |
+| 2026-10-28 | P1-10 | All audiences tabs (First-party, Custom lists, Combined, Partner), New audience types and forms (tag-based, customer match, combined, lookalike, custom affinity), Analysis pages documented | P1-11 Resources |
 
 ---
 
