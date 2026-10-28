@@ -1,0 +1,518 @@
+# Module 18: Instructor and training layer (P2-06c)
+
+Status: draft v1, 2026-10-28. Owner session: P2-06c. Build phases: P3-02 (auth, roles, access windows: foundation part, section 7 tasks M18-01..06) and P5-01 to P5-04 (instructor console, scenarios, time controls, progress).
+Inputs: `PROJECT.md` 5.13 and Phase 5, `docs/PROJECT-LOG.md` (D3, R3), `data-model.md` (1.1, 1.5, 2, 3, 5.1, 6), `routes.md` (2, 5.4, 7, 8.19, 8.20), `validation.md` (USR, state machines, DLG), `engine.md` (1.2 clock, 1.4, 10 hooks, 11), `design-system.md` (2.3 right rail, 7 branding).
+Tags: nothing tagged = decided from the sources above. `[SIM]` = invented here. `Δ` = spec delta, repeated in section 8. There was no DV360 reference for this layer (R1: own Adsmetor login), so everything here is a design.
+
+---
+
+## 1. Scope and out-of-scope
+
+### In scope
+| Area | Notes |
+|---|---|
+| Adsmetor auth | Login, logout, session expiry, forced password change, lockout, instructor-driven password reset, profile page |
+| Roles | App roles `student`, `instructor`, `admin` (data-model `User.appRole`); how they map to DV360 roles inside a sandbox |
+| Classroom roster | Create class, join code, add students by form or CSV, remove, deactivate, reset password, co-instructors |
+| Access windows | Create/edit/delete, weekly repeats, open now/close now, banner before end, hard stop, freeze/unfreeze |
+| Sandbox provisioning and reset | One sandbox per student, seed template, backfill, reset (one, many, class), reset to scenario, snapshot/restore (stretch) |
+| Scenarios | Scenario model, authoring, auto-check DSL, evaluator, scoring, attempts, hints, 10 starter exercises |
+| Time-acceleration controls | Instructor and (optional) student controls over the sim clock using engine.md 1.2 and 10.3 |
+| Progress dashboards | Student progress, instructor class progress, step detail, CSV export, solution run comparison |
+| Instructor tools | View-as, announcements (bell), admin pages (users, classes, seed, engine params, audit) |
+| Exercise right-rail panel | Student-side task list with live check marks |
+
+### Out of scope
+- SSO and e-mail based flows (no e-mail is sent in v1; passwords are issued by the instructor).
+- Payments, billing, multi-school tenancy, LMS integrations (LTI) and grading export to LMS (CSV only).
+- The DV360 screens themselves and the engine internals (other specs).
+- Take-home access (R3): there is no self sign-up and no access outside windows for students.
+- Proctoring, plagiarism detection and screen recording.
+
+### Open decisions inherited
+PROJECT.md open questions: students per class (sizing 60), one sandbox per student (assumed), existing exercises (none yet: the 10 starters here), stack approval.
+
+---
+
+## 2. Screens and views
+
+Simulator-only routes live under `/sim/**` (routes R4, section 7). Layout `app/sim/layout.tsx` with a plain Adsmetor header (not the DV360 shell). Instructor and admin screens use `DvPageHeader`, `DvGrid`, `DvFormPage`, `DvModal`, `DvBanner`, `DvToast`, `DvEmptyState` from the design system so they look like one product, with the Adsmetor header (no Google styling).
+
+### 2.1 Public and student
+| # | Screen | Route | Notes |
+|---|---|---|---|
+| S1 | Login | `/sim/login?next=` | email + password, "Forgot password? Ask your instructor." |
+| S2 | Change password (forced) | `/sim/me/password` | shown when `mustChangePassword` |
+| S3 | Class closed | `/sim/closed` | "Class is not open right now", next opening time in the class time zone, instructor name |
+| S4 | Session expired | `/sim/session-expired` | |
+| S5 | Welcome / preparing | `/sim/welcome` | shows sandbox provisioning progress, then links to Overview and exercises |
+| S6 | Profile | `/sim/me` | name, email, password change, "Reset my sandbox" (only if the class allows, typed confirmation) |
+| S7 | Exercises | `/sim/scenarios` | cards: title, difficulty, minutes, status chip, **Start / Resume** |
+| S8 | Exercise brief | `/sim/scenarios/[scenarioId]` | brief (markdown), tasks preview (titles only), Start |
+| S9 | Attempt | `/sim/attempts/[attemptId]` | full task list with check results, hint buttons, Finish, link into the DV360 UI |
+| S10 | My progress | `/sim/progress` | table of exercises with status, score, time; totals |
+| S11 | Exercise rail panel | right-rail icon **Exercise** (`?sim_rail=exercise`) inside the DV360 shell | live steps with ✓/○, **Check now**, **Hint**, **Finish** |
+
+Login page: Adsmetor wordmark, centred card, fields Email, Password, **Sign in**; errors "Incorrect email or password." (same text for unknown email, no enumeration), "Too many attempts. Try again in {n} minutes." (lockout), "Your class isn't open right now." is **not** shown at login for students with a valid password: they are signed in and sent to `/sim/closed` (so they can see the next opening). Instructors/admins land on their consoles.
+
+Closed page: banner with the next `AccessWindow` (if any) formatted in `Classroom.timeZone`, "Ask your instructor if you think this is a mistake."
+
+Attempt page states: not started (brief), in progress (tasks with live status), submitted (score card), closed class (read-only results), error banner when the evaluator failed.
+
+### 2.2 Instructor console
+| # | Screen | Route |
+|---|---|---|
+| I1 | Dashboard | `/sim/instructor` |
+| I2 | My classes | `/sim/instructor/classes` |
+| I3 | Class: roster | `/sim/instructor/classes/[classId]` |
+| I4 | Class: access windows | `/sim/instructor/classes/[classId]/access` |
+| I5 | Class: clock | `/sim/instructor/classes/[classId]/clock` |
+| I6 | Student detail | `/sim/instructor/classes/[classId]/students/[userId]` |
+| I7 | Sandboxes (reset) | `/sim/instructor/sandboxes` |
+| I8 | Scenario library | `/sim/instructor/scenarios` |
+| I9 | Scenario editor | `/sim/instructor/scenarios/[scenarioId]` |
+| I10 | Announcements | `/sim/instructor/announcements` |
+| I11 | Class progress | `/sim/instructor/progress` |
+| A1..A6 | Admin home, users, classes, seed, engine, audit | `/sim/admin/**` |
+
+- **I1 Dashboard**: cards "Class status" (Open/Closed with next window; **Open now** and **Close now** buttons), "Sim clock" (state, speed, sim date, **Pause/Resume**, **Step**), "Students" (n active, n online in the last 5 min), "Alerts" (sandboxes FROZEN/FAILED, ticks failing), "Exercises in progress" (counts), "Recent activity" (last 20 `ChangeGroup` with `source = SCENARIO/INSTRUCTOR` and student edits count). Class selector in the header when the instructor has several classes.
+- **I3 Roster**: `DvGrid` columns Student code · Name · Email · Sandbox (READY / RESETTING / FROZEN / FAILED / NOT CREATED) · Last login · Exercises (passed/total) · Actions ⋮ (Reset password, Reset sandbox, View as, Deactivate, Remove). Buttons **Add students** (form or CSV: columns `name,email`, optional `studentCode`), **Download roster CSV**, **Reset passwords** (bulk). Join code shown with **Copy** (students can also self-enrol with code? **No** in v1: R3 classroom only; join code reserved for instructors adding co-teachers `[SIM]`). Passwords: generated 12 characters shown once in a modal and in a downloadable CSV; stored only as argon2id hash.
+- **I4 Access windows**: calendar-like list sorted by `opensAt`; **New window** form (label, date, start, end in class time zone, repeat None/Weekly with days and Until); row actions Edit, Delete, **Open now** (for SCHEDULED), **Close now** (for OPEN). Status chips SCHEDULED, OPEN, CLOSED, CANCELLED. Warning when windows overlap (allowed) and when a window is shorter than 15 minutes.
+- **I5 Clock**: state chip (RUNNING / PAUSED / STEPPING / LOCKED), sim date/time, speed presets (1 day per 2, 5, 10, 30, 60 min, real time), **Apply to all**, per-student override table, **Step 1 hour**, **Step 1 day**, **Fast-forward** (hours/days input, stop condition dropdown: none, until date, until alert `NO_SPEND_LI`, until budget exhausted), job progress bar, checkbox "Students can pause/step their own clock", checkbox "Run clock outside access windows" (instructor demo sandboxes only).
+- **I6 Student detail**: sandbox status and seed info, attempts with step results, last 50 changes, **View as student**, **Reset sandbox**, **Reassign scenario**, notes (instructor-private `InstructorNote`, Δ18-9).
+- **I7 Sandboxes**: table with checkboxes; actions **Reset selected**, **Reset whole class** (type the class name to confirm), **Reset to scenario…**; options "Keep entities (reset only engine data)", "New market seed" (engine `newSeed`), progress per sandbox.
+- **I8/I9 Scenarios**: library table (Title, Key, Difficulty, Minutes, Seed template, Version, Published, Assigned to) + **New**, **Duplicate to my class**, **Import/Export JSON**. Editor: tabs **Overview** (title, key, brief markdown with preview, difficulty, minutes, seed template, access override), **Setup** (seed patches and timed faults as a structured list + JSON), **Steps** (ordered list with instruction, hint, points, required, latch, check builder), **Preview/Test** (run the setup into a hidden sandbox and evaluate the checks against a "solution script" fixture), **Assign** (class, open/due dates).
+- **I10 Announcements**: list + form (title, body, optional link to an app route, expires). Appear in the DV360 bell as "Announcement".
+- **I11 Class progress**: matrix students × exercises (cells: ✓ passed score, ◐ in progress %, ✗ failed, blank), sort/filter, click a cell → attempt detail with each step's `observed` evidence; **Download CSV**; **Compare with solution run** (section 5); leaderboard tab (KPI per spend from `SimDailyMetric`, engine 10.5).
+
+### 2.3 Admin
+A1 Admin home. A2 Users (all users, search, role change, deactivate, reset password). A3 Classes (all, archive, reassign instructor). A4 Seed (templates list, version, **Regenerate global seed**, dry-run generator with size knobs). A5 Engine (params.json editor with schema validation, version/hash, change log, **Apply to class**; engine.md 2.7). A6 Audit log (every instructor/admin action, filters by actor, class, action, date).
+
+### 2.4 View-as banner
+`?sim_as={userId}` inside any DV360 URL: bar under the app bar "Viewing as {student}. Read only." with **Act as student** toggle (writes allowed, logged with `source = INSTRUCTOR`) and **Exit**. `AppLink` preserves the param (routes 7.3).
+
+---
+
+## 3. Data
+
+### 3.1 Tables used (data-model 5.1)
+`User`, `Classroom`, `ClassroomMember`, `AccessWindow`, `Sandbox`, `SimClock`, `SeedTemplate`, `UserAccessGrant`, `Role`/`Permission`/`RolePermission`, `Scenario`, `ScenarioStep`, `ScenarioSeedPatch`, `ScenarioAttempt`, `ScenarioCheckResult`, `Notification`, `NotificationDismissal`, `ChangeGroup`/`ChangeEntry` (read), `SimDailyMetric` (progress KPI), `SimTickLog`, `Alert` (read for checks).
+
+### 3.2 Spec deltas
+| # | Table.field | Change | Why |
+|---|---|---|---|
+| Δ18-1 | `User.mustChangePassword bool`, `failedLogins int`, `lockedUntil ts Y`, `studentCode str Y` (unique per classroom), `lastSeenAt ts Y` | add | auth policy, "online" indicator, `Sandbox ST-014` naming |
+| Δ18-2 | `Classroom.allowStudentClockControl bool default false`, `allowStudentReset bool default false`, `seedMode enum('SHARED_MARKET','ISOLATED') default SHARED_MARKET`, `catchUp enum('SIMULATE','SKIP')`, `joinCode` kept for co-teachers, `archivedAt` | add | engine 1.3, 1.4, 10.3 |
+| Δ18-3 | `AccessWindow.seriesId str Y`, `repeatRule json Y` (freq WEEKLY, byDay[], until), `note str Y`, `closedBy enum('SCHEDULE','INSTRUCTOR')` | add | routes `AccessWindow.repeat`; occurrences materialised as rows |
+| Δ18-4 | `Sandbox.kind enum('STUDENT','DEMO','TEMPLATE','SOLUTION','SNAPSHOT')`, `provisionState enum('PENDING','SEEDING','BACKFILLING','READY','FAILED')`, `provisionError str Y`, `frozenAt ts Y`, `clockStateBeforeFreeze enum` | add | provisioning job and freeze/unfreeze |
+| Δ18-5 | `ScenarioStep`: `kind enum('TASK','QUESTION','INFO')`, `required bool default true`, `latch enum('STICKY','LIVE') default STICKY`, `unlockAfterStepKey str Y`, `key str` unique per scenario, `hintPenalty int default 0`, `options json Y` (question choices), `checkSpec json` = DSL (section 4.4) | add | DSL |
+| Δ18-6 | `ScenarioAttempt`: `bindings json`, `hintsUsed json`, `startedFromSnapshotId Y`, `lastCheckedAt ts`, `scoreBreakdown json`, `status` includes `SUBMITTED` (or reuse PASSED/FAILED) | add | alias binding, scoring |
+| Δ18-7 | `ScenarioCheckResult` unique `(attemptId, stepId)`, `firstPassedAt ts Y`, `passedNow bool`, `evidence json` (replaces `observed`) | change | sticky vs live |
+| Δ18-8 | `ScenarioAssignment(id, classroomId, scenarioId, opensAt Y, dueAt Y, maxAttempts int default 3, createdAt)` | add | routes `assignScenario` has no table |
+| Δ18-9 | `InstructorNote(id, classroomId, studentUserId, authorId, text, createdAt)` | add | I6 |
+| Δ18-10 | `AuditLog(id, actorUserId, actorRole, classroomId Y, action, targetType, targetId, payload json, createdAt)` | add | A6 |
+| Δ18-11 | `ScenarioEvent(id, scenarioId, atTick/afterTick, faultSpec json, revertAfterHours Y)` | add (engine.md 10.1 uses it) | timed faults |
+| Δ18-12 | `SandboxSnapshot(id, classroomId, sourceSandboxId, name, createdById, createdAt, storageKey)` (stretch) | add | snapshot/restore |
+| Δ18-13 | `Scenario.setup json` (patches reference + events reference) and `Scenario.completion json` | add | section 4.4 |
+| Δ18-14 | `SeedTemplate` rows for `ctv-launch`, `youtube-reach`, `troubleshooting-lab`, `starter-agency`, `blank` | confirm | data-model 3.2 |
+| Δ18-15 | Permission keys `sim.instructor.*` are app-role checks, not DV360 permissions; no change | note | data-model 2.4 |
+
+### 3.3 Seed requirements
+- Global: the five seed templates, the 10 starter scenarios (section 4.7) as migration-versioned fixtures in `lib/scenarios/starters/*.ts` (`Scenario.version`), a demo classroom `DEMO` with one instructor `instructor@sim.adsmetor.invalid` and 3 students, an admin account from env (`ADMIN_EMAIL`, `ADMIN_PASSWORD_HASH`).
+- Test classroom for Playwright: 3 students, one open window.
+- Synthetic emails use the `.invalid` TLD (data-model 3.3); real student emails live only in `User.email`.
+
+---
+
+## 4. Behaviour
+
+### 4.1 Authentication and sessions
+- Auth.js credentials provider (D9). `passwordHash` argon2id, cost per OWASP (m=19 MiB, t=2, p=1). Password policy: 10 to 128 characters, not equal to email; temp passwords are 12 random characters (no ambiguous letters).
+- Lockout: 5 consecutive failures → `lockedUntil = now + 15 min`; counter resets on success. Rate limit by IP (10 per minute) in middleware. Messages never reveal which field was wrong.
+- Session: JWT cookie (httpOnly, sameSite lax, secure), contains `userId`, `appRole`, `sessionVersion`; sandbox and class resolved server-side per request. Idle timeout 8 hours, absolute 12 hours; instructors 24 hours. Changing password or deactivating a user bumps `sessionVersion` (all sessions die).
+- First login with `mustChangePassword` → `/sim/me/password` before anything else.
+- `GET /api/sim/session`: `{ user: { id; name; role; classId? }; classOpen; nextWindow?; closesAt?; viewAs?; sandboxId? }`.
+
+```ts
+signIn(email: string, password: string): Result<{ redirectTo: string }>
+changePassword(req: { current?: string; next: string }): Result<void>              // current omitted when mustChangePassword
+adminResetPassword(userId: Id): Result<{ tempPassword: string }>                  // instructor for own students, admin for anyone; shown once
+```
+Landing: student → `/sim/welcome` first time, afterwards `[P]/home_v3` of their sandbox partner if the class is open else `/sim/closed`; instructor → `/sim/instructor`; admin → `/sim/admin`.
+
+### 4.2 Roles and what they can do
+| Capability | student | instructor | admin |
+|---|---|---|---|
+| Use the DV360 UI in own sandbox | yes (window open) | in demo sandboxes, or view-as | yes |
+| `/sim/instructor/**` | no | own classes | all |
+| `/sim/admin/**` | no | no | yes |
+| Start exercises | yes | preview only | yes |
+| View-as | no | own students | yes |
+| Reset own sandbox | only if `allowStudentReset` | n/a | n/a |
+| Change engine params | no | per class override via scenario `paramsPatch` | yes |
+DV360 role inside a sandbox: students get `STANDARD` on their partner by default (routes Q10, routes section 2), instructors `ADMIN` on every sandbox of their classes. A scenario can set an `accessOverride` (for example `READ_ONLY` on one advertiser) written as `UserAccessGrant` rows and reverted on attempt end. Conflict C2.
+
+### 4.3 Access windows
+```ts
+interface AccessWindowInput { classId: Id; label: string; opensAt: IsoDateTime; closesAt: IsoDateTime; repeat?: { freq: 'WEEKLY'; byDay: ('MO'|'TU'|'WE'|'TH'|'FR'|'SA'|'SU')[]; until: IsoDate }; note?: string }
+createAccessWindow(input: AccessWindowInput): Result<{ ids: Id[] }>        // materialises up to 26 weekly occurrences (Δ18-3)
+updateAccessWindow(id: Id, input: Partial<AccessWindowInput> & { scope?: 'THIS'|'SERIES' }): Result<void>
+deleteAccessWindow(id: Id, scope?: 'THIS'|'SERIES'): Result<void>           // OPEN windows cannot be deleted, use closeClassNow
+openClassNow(classId: Id, req?: { until?: IsoDateTime }): Result<{ windowId: Id }>   // creates a window "Opened manually", default 2 h, max 8 h
+closeClassNow(classId: Id): Result<void>                                    // sets OPEN windows to CLOSED immediately, closedBy INSTRUCTOR
+isClassOpen(classId: Id, at?: Date): boolean
+```
+Rules:
+1. Class is open iff at least one window for the class is `OPEN`. The status changes come from a per-minute cron `GET /api/sim/windows/tick` (same cron secret as the engine tick, can piggyback): `SCHEDULED → OPEN` when `opensAt ≤ now`, `OPEN → CLOSED` when `closesAt ≤ now`. Overlapping windows are allowed.
+2. **Student guard**: middleware checks `isClassOpen` using a 30-second cache and redirects page requests to `/sim/closed`; every server action calls `assertWindowOpen(classId)` and returns `ACCESS_WINDOW_CLOSED` with message "Class has ended. Your work is saved." (routes 7.4). Instructors and admins bypass.
+3. **Five-minute warning**: `/api/sim/session` returns `closesAt`; the DV360 shell shows a `DvBanner` warning when `closesAt - now ≤ 5 min` ("Class ends at {time}. Save your work."), and a toast at 1 minute.
+4. **On close** (the cron, idempotent): for each sandbox of the class: `Sandbox.status = FROZEN`, `frozenAt = now`, remember `SimClock.state` in `clockStateBeforeFreeze`, set the clock `PAUSED` (engine 1.2: auto-pause, unless `runOutsideSession`); running fast-forward jobs finish their current chunk and pause. Student sessions are not killed: writes fail and the next navigation goes to `/sim/closed`.
+5. **On open**: `FROZEN → ACTIVE`; clock returns to the remembered state (RUNNING or PAUSED); paused real time is not owed (engine 1.2).
+6. Windows are displayed in `Classroom.timeZone`; stored UTC.
+7. Hard stop, no grace period (routes Q12 default); instructor can extend by **Open now** with `until`.
+
+### 4.4 Classroom roster and sandbox provisioning
+```ts
+createClass(input: { name: string; timeZone: string; defaultSeedTemplate: string; realSecondsPerSimDay?: number; seedMode?: 'SHARED_MARKET'|'ISOLATED' }): Result<{ id: Id; code: string }>
+updateClass(id: Id, patch: Partial<...>): Result<void>
+archiveClass(id: Id): Result<void>                              // sandboxes ARCHIVED, logins blocked
+addStudents(req: { classId: Id; students: { name: string; email: string; studentCode?: string }[] } | { classId: Id; csvUploadId: Id }): Result<{ created: { userId: Id; email: string; tempPassword: string }[]; skipped: { email: string; reason: 'EXISTS_IN_OTHER_CLASS'|'INVALID_EMAIL'|'DUPLICATE' }[] }>
+removeStudent(req: { classId: Id; userId: Id; deleteSandbox: boolean }): Result<void>
+deactivateStudent(userId: Id): Result<void>
+resetStudentPassword(userId: Id): Result<{ tempPassword: string }>
+```
+- `addStudents` creates `User` (STUDENT, `mustChangePassword = true`), `ClassroomMember`, enqueues `provisionSandbox`. CSV cap 200 rows. Email validation as USR-001. An existing student account may join a second class.
+- **`provisionSandbox(classId, userId)`** is an idempotent job (unique `(classroomId, ownerUserId)`; re-running resumes by `provisionState`):
+  1. create `Sandbox` (`seedValue = hash(classId, userId)`, name `Sandbox {studentCode}`, `seedTemplateKey = Classroom.defaultSeedTemplate`), `SimClock` (`paused`, classroom speed, `marketSeed` per classroom for `SHARED_MARKET`);
+  2. run the seed pipeline for the template in one transaction (P3-05) → partner, advertisers, entities, `UserAccessGrant` STANDARD for the student (C2);
+  3. **backfill** N sim days by the engine in fast mode (`engine.fastForward`, 24-tick chunks; default 14 sim days of hourly data, 90 days of daily data via the seed's daily generator), updating `provisionState`;
+  4. `READY`. Budget: 14 days × 24 ticks × about 120 ms ≈ 40 s per sandbox; 60 sandboxes run with concurrency 6 → about 7 minutes. Roster rows show a spinner "Preparing". If a student logs in earlier, `/sim/welcome` polls and shows a progress bar.
+  Failure sets `FAILED` with the error; **Retry** action.
+- Naming and ids follow data-model 3.3; no real e-mails inside DV360 fields.
+
+### 4.5 Sandbox reset
+```ts
+resetSandbox(req: { scope: 'USER'|'CLASS'; userIds?: Id[]; classId?: Id; toScenarioId?: Id; keepEntities?: boolean; newMarketSeed?: boolean; snapshotId?: Id }): Result<{ jobIds: Id[] }>
+```
+Process (wraps engine.md 10.2 `resetSandbox`): authorise (instructor of the class, admin, or the student themself when `allowStudentReset`); require confirmation payload (`confirm: 'RESET'` or class name for CLASS scope); set `Sandbox.status = RESETTING`, lock clock; engine deletes simulation tables; if `keepEntities = false` re-run the seed (template of the scenario if `toScenarioId`), apply `ScenarioSeedPatch`es, backfill; `resetCount += 1`, `lastResetAt`; `ChangeGroup` with `source = INSTRUCTOR` and `systemActor = SIM_INSTRUCTOR` (hidden unless "Include system changes"); `AuditLog` row; clock returns to PAUSED. Student work is **not** recoverable except via snapshot; the confirm dialog says so. A reset during an open window is allowed for single students and requires a second confirmation for the whole class.
+Snapshot/restore (stretch, Δ18-12): `createSnapshot` clones the sandbox tree into a hidden `SNAPSHOT` sandbox by `INSERT … SELECT` with id remapping (needs `cloneSandbox` in the seed layer); `restoreSnapshot` = reset to that clone. Also the basis for the **solution run** (engine 10.5). If cloning is too heavy for v1, ship reset-only and do solution runs by re-seed + replay of the instructor's scripted fix.
+
+### 4.6 Time-acceleration controls
+Instructor (class level, I5) and optional student (own clock) map 1:1 to engine.md 1.2/10.3:
+```ts
+setClock(req: { classId: Id; userId?: Id; state?: 'RUNNING'|'PAUSED'; minutesPerSimDay?: 2|5|10|30|60|1440; jumpTo?: IsoDateTime }): Result<void>
+stepClock(req: { classId: Id; userId?: Id; ticks: number }): Result<{ jobId?: Id }>
+fastForward(req: { classId: Id; userId?: Id; simHours: number; until?: { kind: 'DATE'|'ALERT'|'BUDGET_EXHAUSTED'; value: string } }): Result<{ jobIds: Id[] }>
+getClock(classId: Id): { sandboxes: { userId: Id; state; simNow: IsoDateTime; minutesPerSimDay: number; behindTicks: number }[] }
+```
+Notes: routes 8.20 expresses speed as `speedX` (sim seconds per real second; 288 = 1 day per 5 min) and routes `SimClock` is per class; engine and data-model are per sandbox with `minutesPerSimDay`/`realSecondsPerSimDay` (conflict C4). This spec follows the engine: per sandbox with class-level apply; `speedX = 86400 / (minutesPerSimDay × 60)` is only a display conversion. Presets and caps from engine: max 12 ticks per sandbox per minute (1 day per 2 minutes); higher = fast-forward job. Student controls (when enabled) can pause/resume/step own clock, never exceed the class cap, and cannot jump backwards. Every clock action writes `AuditLog` (instructor) and `ChangeGroup` `source = INSTRUCTOR` is **not** written (clock is not an entity).
+
+### 4.7 Scenarios and the auto-check DSL
+
+#### Scenario definition (stored across `Scenario`, `ScenarioStep`, `ScenarioSeedPatch`, `ScenarioEvent`; authored as JSON, versioned)
+```ts
+interface ScenarioDef {
+  key: string; title: string; brief: string /* markdown */; difficulty: 1|2|3|4|5; estimatedMinutes: number;
+  seedTemplateKey: 'blank'|'starter-agency'|'troubleshooting-lab'|'ctv-launch'|'youtube-reach';
+  version: number; accessOverride?: { dvRole: DvRole; scope: 'PARTNER'|{ advertiserAlias: string } };
+  paramsPatch?: Record<string, unknown>;                         // merged into engine params for the sandbox (engine 2.7), e.g. creativeRandomDisapprovalRate: 0
+  clock?: { minutesPerSimDay?: number; startPaused?: boolean; fastForwardOnStartHours?: number };
+  bindings: Record<string, Selector>;                            // alias -> entity found after seeding/patching, e.g. { io1: {type:'INSERTION_ORDER', where:{name:'Spring Sale IO'}} }
+  setup: { patches: SeedPatch[]; events: ScenarioEventDef[] };    // patches once, events on the sim clock
+  steps: Step[];
+  completion: { mode: 'ALL_REQUIRED' | 'POINTS'; passPoints?: number; maxAttempts?: number };
+}
+type SeedPatch = { op: 'CREATE'|'UPDATE'|'DELETE'|'SET_STATUS'|'SET_METRIC_BIAS'; entityType: EntityType|'NEGOTIATION'; selector: Selector; payload: unknown };   // data-model ScenarioSeedPatch
+type ScenarioEventDef = { atSimHours: number /* from attempt start */; fault: FaultSpec /* engine.md 10.1 */; revertAfterHours?: number };
+interface Step { key: string; kind: 'TASK'|'QUESTION'|'INFO'; instruction: string; hint?: string; hintPenalty?: number; points: number; required?: boolean; latch?: 'STICKY'|'LIVE';
+  unlockAfter?: string; options?: { value: string; label: string }[]; check?: CheckExpr; answer?: AnswerSpec }
+type AnswerSpec = { correct: { value: string } | { fromEngine: 'TOP_FILTER_REASON'|'TOP_ALERT'|'LI_LIVE_STATUS'; entity: Selector; window?: { lastSimHours: number } } };
+```
+
+#### Selectors
+```ts
+type Selector =
+  | { alias: string }                                          // from ScenarioDef.bindings (resolved per attempt into ScenarioAttempt.bindings)
+  | { type: EntityType; id: Id }                                // internal use
+  | { type: EntityType; where: Where; within?: Selector; created?: 'DURING_ATTEMPT'|'ANY'; limit?: number };
+type Where = Record<string, string | number | boolean | { $eq?; $ne?; $gt?; $gte?; $lt?; $lte?; $in?: unknown[]; $contains?: string }>;
+// field names are the data-model field names of that entity (name, status, type, objective, ...)
+```
+`created: 'DURING_ATTEMPT'` matches rows whose `createdAt ≥ attempt.startedAt` and that are not part of the seed or patches (a student-created campaign), which is how "Launch a CTV campaign" finds what the student built.
+
+#### Check expressions
+```ts
+type CheckExpr = Leaf | { all: CheckExpr[] } | { any: CheckExpr[] } | { not: CheckExpr } | { count: { selector: Selector; op: Op; value: number } };
+type Leaf =
+  | { kind: 'ENTITY_EXISTS'; selector: Selector; count?: { op: Op; value: number } }                       // data-model ENTITY_EXISTS
+  | { kind: 'FIELD'; selector: Selector; field: string; op: Op; value: unknown | [unknown, unknown] }     // FIELD_EQUALS, FIELD_RANGE, STATUS_IS (field 'status')
+  | { kind: 'RELATION'; from: Selector; relation: RelationKey; to: Selector }                             // e.g. LI targets audience, LI has creative, LI has deal
+  | { kind: 'METRIC'; selector: Selector; metric: string; window: { lastSimHours: number } | { dateRange: DateRangeParam }; op: Op; value: number | [number, number] }   // METRIC_THRESHOLD
+  | { kind: 'DIAGNOSTIC'; selector: Selector; reason: string; maxShare: number; window: Window }          // engine.md 10.4
+  | { kind: 'ALERT'; code: string; scope: Selector; state: 'ABSENT'|'PRESENT' }                           // ALERT_CLEARED = ABSENT
+  | { kind: 'LEARNING'; selector: Selector; state: 'STABLE' }
+  | { kind: 'PACING'; selector: Selector; atLeastPct: number }
+  | { kind: 'EVENT'; event: 'REPORT_RUN'|'PAGE_VISITED'|'TROUBLESHOOTER_OPENED'|'HISTORY_OPENED'; match?: Record<string, unknown> }   // telemetry rows
+  | { kind: 'CUSTOM_FN'; fn: string; args?: Record<string, unknown> };                                     // registered TypeScript function, replaces data-model CUSTOM_SQL (C6)
+type Op = '=' | '!=' | '>' | '>=' | '<' | '<=' | 'between' | 'in' | 'contains';
+type RelationKey = 'LI_TARGETS_AUDIENCE'|'LI_TARGETS_CHANNEL'|'LI_USES_KEYWORD_LIST'|'LI_HAS_CREATIVE'|'LI_HAS_DEAL'|'LI_USES_CUSTOM_BIDDING'|'LI_COUNTS_ACTIVITY'|'LI_IN_IO'|'IO_IN_CAMPAIGN'|'AD_IN_AD_GROUP'|'REPORT_HAS_FIELD';
+```
+Mapping to existing definitions: data-model `ScenarioCheckKind` (`ENTITY_EXISTS`, `FIELD_EQUALS`, `FIELD_RANGE`, `METRIC_THRESHOLD`, `ALERT_CLEARED`, `STATUS_IS`, `CUSTOM_SQL`) ⊂ these kinds (column `ScenarioStep.checkKind` becomes `'DSL'` and `checkSpec` holds the expression); engine `Check` (`ENTITY_STATE`, `METRIC`, `DIAGNOSTIC`, `ALERT_ABSENT`, `LEARNING`, `PACING`) ⊂ these kinds; leaves that read only persisted metrics, diagnostics and alerts are delegated to `engine.evaluateChecks`.
+
+New telemetry table for `EVENT` leaves (Δ18-16): `AttemptEvent(id, sandboxId, userId, kind, payload json, simAt, createdAt)` written by the DV360 shell (page visits of Troubleshooter/History/Reports, report runs). Used sparingly.
+
+#### Evaluation
+```ts
+startAttempt(scenarioId: Id): Result<{ attemptId: Id }>
+checkAttempt(attemptId: Id): Result<AttemptView>         // POST /api/sim/attempts/:id/check
+finishAttempt(attemptId: Id): Result<AttemptView>
+abandonAttempt(attemptId: Id): Result<void>
+useHint(attemptId: Id, stepKey: string): Result<{ hint: string; penalty: number }>
+getAttempt(attemptId: Id): AttemptView
+interface AttemptView { id: Id; scenarioKey: string; status: ScenarioStatus; score: number; maxScore: number; startedAt: IsoDateTime; steps: { key: string; kind: string; instruction: string; points: number; passed: boolean; locked: boolean; evidence?: unknown; hintUsed: boolean; options?: ... }[] }
+```
+1. **`startAttempt`**: requires the class window open and an assignment (or free-play permission); enforces `maxAttempts`; (a) if the student has another in-progress attempt, ask to abandon; (b) reset the sandbox with `toScenarioId = scenario` (`keepEntities=false`) unless the scenario `seedTemplateKey` equals the current one and `resetOnStart=false`; (c) apply `setup.patches`; (d) schedule `setup.events` as engine `ScenarioEvent` rows relative to the attempt start tick; (e) resolve `bindings` and store them; (f) apply `accessOverride` and `paramsPatch`; (g) set the clock per `clock`; (h) create `ScenarioAttempt` (`IN_PROGRESS`) and `ScenarioCheckResult` rows.
+2. **Triggers**: after every write by the student (hook inside `withChangeLog` → `enqueueEvaluation(attemptId)` debounced 2 s), after each engine tick that touched the sandbox (metric/diagnostic/alert leaves), on **Check now**, on **Finish**. Evaluations are idempotent and cheap: selectors are resolved with indexed queries (sandbox scoped), no recomputation of metrics (engine 10.4: read persisted data only).
+3. **Latching**: `STICKY` steps remember the first pass (`firstPassedAt`) even if the student later changes the state; `LIVE` steps must hold at **Finish** (metric thresholds, alert absent). Default: `ENTITY_EXISTS`, `FIELD`, `RELATION`, `EVENT`, `QUESTION` are sticky; `METRIC`, `DIAGNOSTIC`, `ALERT`, `PACING`, `LEARNING` are live.
+4. **Unlock**: a step with `unlockAfter` shows as locked until the referenced step passes.
+5. **Questions**: the student picks an option; correct value is static or computed from the engine at check time (`TOP_FILTER_REASON` = the largest `C.*/T.*/B.*/...` loss reason of the entity over the window from `DeliveryDiagnostic`).
+6. **Scoring**: `score = Σ points of passed steps − Σ hint penalties`, floor 0; `PASSED` when `completion.mode` is met (all required steps passed at Finish, or `score ≥ passPoints`). A failed Finish leaves the attempt `IN_PROGRESS` with the failing steps highlighted; `abandon` gives `ABANDONED`. After `maxAttempts` the best attempt counts.
+7. **Safety**: selectors only read the student's own sandbox; `CUSTOM_FN` names come from a code registry (no SQL, no eval); checks have a 500 ms budget; errors mark a step `unknown` (not failed) and show "Checker error, tell your instructor".
+8. **Authoring validation**: `ScenarioDefSchema` (Zod) validates the JSON; the editor's Test tab runs the setup on a hidden sandbox and evaluates the checks against an optional `solution` script (a list of service calls) to prove the scenario is solvable and that the initial state fails.
+
+#### Ten starter exercises
+All use class-open sandboxes, `paramsPatch: { creativeRandomDisapprovalRate: 0 }` (conflict C5 in 12-creatives), shared market seeds. Points total 100 each. `Selector` abbreviations: `LI(name)`, etc.
+
+| # | Key | Title | Seed template | Setup | Steps (check summary) |
+|---|---|---|---|---|---|
+| 1 | `launch-ctv-campaign` | Launch a CTV campaign | `ctv-launch` | none (empty advertiser with an approved video creative and a PG-free setup) | (1) new campaign with goal Raise awareness: `ENTITY_EXISTS CAMPAIGN created DURING_ATTEMPT` and `FIELD goal = BRAND_AWARENESS`. (2) IO of type CTV and OTT, objective Brand awareness, budget ≥ ₹50,000, in that campaign: `FIELD io.type = CTV_OTT`, `objective`, `budget`, `RELATION IO_IN_CAMPAIGN`. (3) Connected TV line item with fixed CPM bid between ₹150 and ₹600, device targeting includes Connected TV: `FIELD li.type = CONNECTED_TV`, bid range, targeting row. (4) Assign the provided video creative: `RELATION LI_HAS_CREATIVE`. (5) Activate IO and LI: `FIELD status = ACTIVE` for both. (6) After fast-forward, `METRIC li.impressions >= 1000 in last 24h` (LIVE) |
+| 2 | `fix-underpacing-io` | Fix an under-pacing IO | `troubleshooting-lab` | events: `DROP_BUDGET` factor 0.4 on `io1` at 0 h; `SET_BID` fixedCpm very low on `li1` at 0 h; fast-forward on start 72 h (clock paused) | (1) Question: which alert is open? options (`UNDERPACING_IO`, `NO_SPEND_LI`...) correct from engine `TOP_ALERT`. (2) Open the LI Troubleshooter: `EVENT TROUBLESHOOTER_OPENED`. (3) Question: top loss reason correct `A.BELOW_MIN_BID` family from engine. (4) Raise bid above clearing: `FIELD li1.bid >= 1.3 × recommended` (value computed in the check as `engine.recommendedBid` via `CUSTOM_FN`). (5) After 48 more sim hours: `PACING io1 >= 90%` (LIVE) and `ALERT UNDERPACING_IO ABSENT` |
+| 3 | `add-pg-deal` | Add a PG deal | `starter-agency` | patch: `CREATE NEGOTIATION` RFP `RFP-100231` (PROPOSED, awaiting BUYER, PG, 2M impressions, ₹145 CPM) | (1) Import the negotiation (RFP shown in the brief): `FIELD negotiation.advertiserId set`. (2) Accept it: `FIELD negotiation.status = ACCEPTED`, `ENTITY_EXISTS DEAL source NEGOTIATED`. (3) Activate the deal: `FIELD deal.status = ACTIVE`. (4) Assign it to a line item with budget ≥ rate × quantity: `RELATION LI_HAS_DEAL`, `CONF.PG_NO_BUDGET` not raised (`ALERT ABSENT`). (5) Creative approved on the deal exchange: `ENTITY_EXISTS` creative servable. (6) After 24 h: `METRIC deal impressions > 0` |
+| 4 | `diagnose-non-spending-li` | Diagnose a non-spending LI via the Troubleshooter | `troubleshooting-lab` | events at 0 h: `DISAPPROVE_CREATIVE` (all exchanges) on `creative1`; `NARROW_TARGETING SINGLE_PINCODE` on `li1`; fast-forward 48 h | (1) Alert `NO_SPEND_LI` is open (INFO). (2) `EVENT TROUBLESHOOTER_OPENED li1`. (3) Question: which stage filters most? correct `TOP_FILTER_REASON` (Targeting). (4) Fix targeting to at least a state: `DIAGNOSTIC T.GEO share <= 0.5` after the edit window; (5) Creative: replace or appeal: `RELATION LI_HAS_CREATIVE` with a servable creative or `ENTITY_EXISTS CreativeAppeal`. (6) After 24 h: `METRIC impressions > 0` and `ALERT NO_SPEND_LI ABSENT` |
+| 5 | `create-audience-and-target` | Create an audience and target it | `starter-agency` | none | (1) Create a tag-based audience from the Page view activity: `ENTITY_EXISTS AUDIENCE type TAG_BASED created DURING_ATTEMPT`. (2) Question: how long before it is available? (answer 4 hours, static). (3) Fast-forward 4 sim hours: `FIELD audience.status = ACTIVE`. (4) Target it on `li1` (include): `RELATION LI_TARGETS_AUDIENCE`. (5) `DIAGNOSTIC T.AUDIENCE <= 90%` after 24 h (the list is not so small that it blocks). (6) `ALERT LIMITED_AUDIENCE_LI ABSENT` |
+| 6 | `build-custom-bidding` | Build and use a custom bidding algorithm | `starter-agency` | none | (1) Create algorithm (objective Clicks, 1 rule `Clicked`, 1 multiplier). (2) Run the Test: `EVENT` or `FIELD lastTestRunId set`. (3) Save and activate. (4) Attach to a LI with bid strategy Maximize custom value/cost. (5) After training (fast-forward): `FIELD status = ACTIVE`, `LEARNING STABLE` |
+| 7 | `resolve-disapproved-creative` | Resolve a disapproved creative | `troubleshooting-lab` | event: `DISAPPROVE_CREATIVE` on one exchange for `creative2` (SSL reason) | (1) Question: why was it disapproved? correct from `reasonCode`. (2) Edit the tag to HTTPS or upload a new creative: `FIELD creative.sslCompliant = true` or a new creative `created DURING_ATTEMPT`. (3) Appeal: `ENTITY_EXISTS CreativeAppeal`. (4) After the review delay: `FIELD review APPROVED` and `ALERT CREATIVE_REJECTED ABSENT` |
+| 8 | `instant-report-and-schedule` | Build an instant report and schedule it | `starter-agency` | none | (1) Report with dimensions Insertion Order and Device Type, metrics Impressions, Clicks, CTR, Revenue (Advertiser Currency), last 7 days: `RELATION REPORT_HAS_FIELD` ×6 + date range. (2) Run it: `EVENT REPORT_RUN`. (3) Save it with a name starting "Weekly": `FIELD name contains 'Weekly'`. (4) Schedule daily: `FIELD schedule.active = true`, `repeat = DAILY`. (5) After 2 sim days: `ENTITY_EXISTS ReportRun scheduled count >= 2` |
+| 9 | `run-ab-test` | Test two bid strategies with an A/B test | `starter-agency` | patch: two IOs `ioA`, `ioB` with identical settings except bid strategy; clock fast-forward after the student saves | (1) Create the test comparing the two IOs, 50/50, goal Clicks, confidence 90%: `FIELD experiment.target = INSERTION_ORDER`, arms, split, goal. (2) Question: which setting must stay identical? static. (3) After 7 sim days: report exists with data: `METRIC experiment spend > 0 both arms`. (4) Question: which arm is best? correct from `engine.experimentReport` (`N/A` is a valid answer). (5) End the test: `FIELD status = COMPLETED` |
+| 10 | `loosen-frequency-cap` | Loosen a frequency cap that blocks delivery | `troubleshooting-lab` | event at 0 h: `TIGHTEN_FREQUENCY` 1 per month on `li1`; fast-forward 72 h | (1) `ALERT NO_SPEND_LI` or low delivery visible (INFO). (2) Troubleshooter: `EVENT TROUBLESHOOTER_OPENED`. (3) Question: which stage? `F.LINE_ITEM` (Frequency). (4) Edit the cap to at least 3 per week or remove: `FIELD li1.frequencyCap` check via `CUSTOM_FN capLooserThan(1/month)`. (5) After 48 h: `DIAGNOSTIC F.* <= 20%` and `METRIC impressions > 0` |
+Exercise 3 is written out in full as Appendix A below; the others follow the same pattern and are authored as fixtures in task M18-14.
+
+**Appendix A (example JSON, exercise 3)**
+```json
+{
+  "key": "add-pg-deal", "title": "Add a PG deal", "difficulty": 3, "estimatedMinutes": 25,
+  "seedTemplateKey": "starter-agency", "version": 1,
+  "bindings": { "li1": { "type": "LINE_ITEM", "where": { "name": "Display Prospecting LI 1" } } },
+  "setup": { "patches": [ { "op": "CREATE", "entityType": "NEGOTIATION",
+      "selector": { "type": "ADVERTISER", "where": {} },
+      "payload": { "rfpId": "RFP-100231", "status": "PROPOSED", "awaiting": "BUYER", "commitment": "GUARANTEED",
+                   "terms": { "rate": 145, "volume": 2000000, "durationDays": 14, "format": "DISPLAY" }, "advertiserId": null } } ],
+    "events": [] },
+  "steps": [
+    { "key": "import", "kind": "TASK", "points": 15, "instruction": "Import the negotiation with RFP ID RFP-100231.",
+      "check": { "kind": "FIELD", "selector": { "type": "NEGOTIATION", "where": { "rfpId": "RFP-100231" } }, "field": "advertiserId", "op": "!=", "value": null } },
+    { "key": "accept", "kind": "TASK", "points": 20, "unlockAfter": "import", "instruction": "Accept the proposal.",
+      "check": { "all": [
+        { "kind": "FIELD", "selector": { "type": "NEGOTIATION", "where": { "rfpId": "RFP-100231" } }, "field": "status", "op": "=", "value": "ACCEPTED" },
+        { "kind": "ENTITY_EXISTS", "selector": { "type": "DEAL", "where": { "commitment": "GUARANTEED", "source": "NEGOTIATED" } } } ] } },
+    { "key": "activate", "kind": "TASK", "points": 15, "unlockAfter": "accept", "instruction": "Activate the new deal.",
+      "check": { "kind": "FIELD", "selector": { "type": "DEAL", "where": { "source": "NEGOTIATED" } }, "field": "status", "op": "=", "value": "ACTIVE" } },
+    { "key": "assign", "kind": "TASK", "points": 25, "unlockAfter": "activate", "instruction": "Assign the deal to a line item that has enough budget.",
+      "hint": "Budget must cover rate x quantity.", "hintPenalty": 5,
+      "check": { "all": [
+        { "kind": "RELATION", "from": { "type": "LINE_ITEM", "where": {} }, "relation": "LI_HAS_DEAL", "to": { "type": "DEAL", "where": { "source": "NEGOTIATED" } } },
+        { "kind": "ALERT", "code": "CONF.PG_NO_BUDGET", "scope": { "type": "LINE_ITEM", "where": {} }, "state": "ABSENT" } ] } },
+    { "key": "deliver", "kind": "TASK", "points": 25, "latch": "LIVE", "unlockAfter": "assign",
+      "instruction": "Fast-forward one sim day and confirm the deal delivers.",
+      "check": { "kind": "METRIC", "selector": { "type": "DEAL", "where": { "source": "NEGOTIATED" } }, "metric": "impressions", "window": { "lastSimHours": 24 }, "op": ">", "value": 0 } }
+  ],
+  "completion": { "mode": "ALL_REQUIRED", "maxAttempts": 3 }
+}
+```
+
+### 4.8 Progress dashboards
+```ts
+getMyProgress(): { exercises: { scenarioKey: string; title: string; status: ScenarioStatus; bestScore: number; maxScore: number; attempts: number; lastAttemptAt: IsoDateTime }[]; totals: { passed: number; assigned: number; points: number } }
+getClassProgress(classId: Id, q?: { scenarioKeys?: string[]; studentIds?: Id[] }): { matrix: Cell[][]; students: Student[]; scenarios: Scenario[]; summary: { avgScore; completionPct } }
+getAttemptDetail(attemptId: Id): AttemptView & { observed: Record<string, unknown>; timeline: { at: IsoDateTime; event: string }[] }
+exportProgressCsv(classId: Id): CSV
+compareToSolution(classId: Id, scenarioKey: string, req: { studentIds?: Id[] }): { rows: { student; kpi: Record<string, number>; delta: Record<string, number> }[] }    // engine 10.5
+```
+Progress KPIs: status, score, steps passed, time to first pass, hints used, edits count (from `ChangeGroup` count since attempt start), and for performance exercises the KPI per spend from `SimDailyMetric`. Student view shows only their own rows; instructors see classes they teach.
+
+### 4.9 Announcements and other instructor tools
+`createAnnouncement({ classId?, title, body, learnMoreRoute?, expiresAt? })` → `Notification` (data-model 5.1; platform-wide only for admin); bell shows "Announcement" entries; `dismissNotification`. View-as per 2.4. Audit log entries for: login of instructors/admin, password resets, roster changes, window changes, clock changes, resets, scenario assign/edit, view-as sessions, engine param changes.
+
+### 4.10 Validation rules and messages (new domain `SCN`/`SIM`, Δ18-17)
+USR-001..004 apply to roster creation. New rules:
+| Rule ID | Field | Condition | Sev | Message `[SIM]` |
+|---|---|---|---|---|
+| SIM-001 | auth.email/password | invalid credentials | E | `Incorrect email or password.` |
+| SIM-002 | auth | account locked | E | `Too many attempts. Try again in {n} minutes.` |
+| SIM-003 | password | shorter than 10 or equal to email | E | `Use at least 10 characters.` |
+| SIM-004 | class.name | empty or over 100 | E | `Enter a value` ‡ / `Use 100 characters or fewer.` |
+| SIM-005 | window | `closesAt <= opensAt` | E | `End time must be after the start time.` |
+| SIM-006 | window | shorter than 15 minutes | W | `This window is very short.` |
+| SIM-007 | window | edit/delete an OPEN window | E | `Close the class first.` |
+| SIM-008 | roster csv | missing columns, over 200 rows, duplicate emails | E | `Fix the highlighted rows.` |
+| SIM-009 | reset | class-scope reset without typing the class name | E | `Type the class name to confirm.` |
+| SIM-010 | write | class closed | E | `Class has ended. Your work is saved.` (`ACCESS_WINDOW_CLOSED`) |
+| SIM-011 | attempt | start while another attempt is in progress | E | `Finish or abandon your current exercise first.` |
+| SIM-012 | attempt | more than `maxAttempts` | E | `You've used all attempts for this exercise.` |
+| SIM-013 | scenario | JSON fails schema | E | `The scenario has errors: {path}` |
+| SIM-014 | clock | student action while student control is off | E | `Your instructor controls the clock.` |
+| SIM-015 | clock | speed beyond cap | E | `That speed isn't available.` |
+
+### 4.11 Permissions per route
+Enforced in middleware + service: `student` → DV360 routes of their own sandbox, `/sim/scenarios`, `/sim/attempts`, `/sim/progress`, `/sim/me`; `instructor` → plus `/sim/instructor/**` for own classes; `admin` → all. A route outside a role returns `/sim/forbidden` or the 404 page (DV360 routes).
+
+---
+
+## 5. Engine hooks (engine.md 10 and 1.2)
+
+| Hook | Use | engine.md |
+|---|---|---|
+| `SimClock`, `setSpeed/pause/resume/stepTicks`, fast-forward job with progress and stop conditions | Section 4.6 UI | 1.2, 10.3 |
+| Auto-pause when the window closes, resume on open; `runOutsideSession` | Section 4.3 freeze/unfreeze | 1.2 |
+| `resetSandbox(sandboxId, { toScenarioId, keepEntities, newSeed })` | Section 4.5 | 10.2 |
+| `FaultSpec` list (`DISAPPROVE_CREATIVE`, `DROP_BUDGET`, `NARROW_TARGETING`, `PAUSE_ENTITY`, `SET_BID`, `TIGHTEN_FREQUENCY`, `BREAK_FLOODLIGHT_TAG`, `WEAK_CREATIVE`, `UNSERVABLE_SIZE`, `EXCHANGE_OUTAGE`, `FLOOR_SPIKE`, `COMPETITOR_SURGE`, `SUPPLY_DROP`, `CLOCK_JUMP`) and `ScenarioEvent` | `setup.events`; entity mutations appear in History with actor "Scenario", engine overrides stay invisible except a banner | 10.1 |
+| `engine.evaluateChecks(sandboxId, checks[])` | metric/diagnostic/alert/learning/pacing leaves | 10.4 |
+| Solution run: clone sandbox, apply the reference fix, fast-forward the same ticks, compare KPIs; leaderboards KPI per spend | I11 compare and leaderboard | 10.5 |
+| `shared-market` seed policy | comparability across students | 1.3 |
+| Params merge (`paramsPatch`) and `paramsVersion` pin | scenario overrides (e.g. `creativeRandomDisapprovalRate: 0`, lift baselines) | 2.7 |
+| `engine.getAlerts`, `DeliveryDiagnostic` | answer keys for `QUESTION` steps | 3.5, 3.7 |
+| Tick hooks | after each tick: evaluate in-progress attempts of the sandbox (metric/diagnostic/alert checks), flip `AccessWindow` statuses by the separate per-minute cron | 1.4 |
+
+Engine deltas requested: Δ18-18 `engine.recommendedBid(world, liId)` (for check #2-4); Δ18-19 `engine.topFilterReason(sandboxId, entity, window)`; Δ18-20 the engine `ScenarioEvent` table and `SimEditLog` are defined by engine.md; data-model must add them; Δ18-21 `SET_METRIC_BIAS` seed patch op has no engine counterpart: map to `SimOverride` rows (`kind = METRIC_BIAS`) in engine; Note: negotiations are created through `SeedPatch` CREATE (not through a fault kind), so `FaultSpec` needs no change for exercise 3.
+
+---
+
+## 6. Acceptance criteria
+
+### 6.1 Numbered
+**Auth and access**
+1. A student with correct credentials during an open window lands on their Overview; with the class closed lands on `/sim/closed` showing the next window and cannot reach DV360 routes (any DV360 URL redirects).
+2. Wrong password shows the same message for unknown emails and wrong passwords; the 5th failure locks for 15 minutes (SIM-002).
+3. `mustChangePassword` forces `/sim/me/password` first; after change, `sessionVersion` increments and old sessions stop working.
+4. Instructor routes return `/sim/forbidden` for students; admin routes for instructors.
+5. A window closing while a student is mid-edit: a banner appears 5 minutes before; after close, a Save returns `ACCESS_WINDOW_CLOSED` and the UI shows SIM-010; the next navigation goes to `/sim/closed`; the sandbox is FROZEN and the clock PAUSED.
+6. Reopening unfreezes the sandbox and restores the previous clock state; no sim time passed while closed.
+7. Weekly repeat creates the right number of occurrences; editing "this" vs "series" behaves; open windows cannot be deleted (SIM-007).
+8. Open now creates a 2 hour window by default; Close now closes immediately.
+
+**Roster and sandbox**
+9. Adding 3 students by form creates 3 users, 3 memberships, 3 temp passwords shown once, and 3 provisioning jobs; CSV with a bad row reports the row and creates the good rows.
+10. Provisioning is idempotent: running it twice yields one sandbox; a failed job can be retried and ends READY.
+11. A new sandbox shows non-empty lists, charts and History (backfill) at first login.
+12. Reset one student: sandbox returns to seed state, `resetCount` +1, history shows `SIM_INSTRUCTOR` rows only with the system toggle; other students are unaffected. Reset class requires typing the class name (SIM-009).
+13. View-as shows the banner and blocks writes unless "Act as student" is on; writes in that mode appear with `source = INSTRUCTOR`.
+
+**Clock**
+14. Setting 1 day per 5 minutes advances about 4.8 sim hours per real minute (tolerance 10%); Pause stops it; Step 1 hour advances exactly one tick; Fast-forward 7 days finishes with a progress bar and the stop condition `NO_SPEND_LI` stops early when the alert fires.
+15. Student clock controls appear only when the class enables them and never exceed the cap (SIM-014, SIM-015).
+
+**Scenarios**
+16. Starting an exercise resets/seeds the sandbox, applies patches and faults, shows the Exercise rail with all steps; locked steps stay locked until their predecessor passes.
+17. The DSL evaluator passes a step within 3 seconds of the student's save; sticky steps stay passed after the student undoes the change; live steps flip back.
+18. Question steps accept only listed options and are graded against the engine-computed answer at check time.
+19. Hints deduct points; the score never goes below 0; Finish with unmet required steps does not pass and highlights them.
+20. For each of the 10 starters, a scripted "solution" run in the test harness makes all required steps pass and the untouched initial state passes none of the required steps.
+21. `maxAttempts` is enforced (SIM-012); abandoning keeps history.
+22. Scenario JSON editing validates against the schema (SIM-013); the Test tab proves solvability.
+
+**Progress**
+23. Student progress lists assigned exercises with status and best score; instructor matrix shows all students; clicking a cell shows per-step evidence; CSV export matches the matrix.
+24. Solution comparison produces KPI deltas for students with the same market seed.
+
+**Security**
+25. A student cannot read another sandbox through scenario selectors or API IDs (RLS tests); instructors only see classes they teach; admin actions create `AuditLog` rows.
+
+### 6.2 Playwright outlines
+| ID | Steps |
+|---|---|
+| E2E-TRN-01 | Instructor creates a class, adds 3 students via CSV, opens a window now; student logs in with temp password, changes password, reaches Overview |
+| E2E-TRN-02 | Window closes while a student edits: banner, failed save, redirect to `/sim/closed`; instructor reopens; student continues |
+| E2E-TRN-03 | Roster provisioning progress and retry of a FAILED sandbox (inject failure) |
+| E2E-TRN-04 | Reset one student and whole class with confirmations; verify other student state |
+| E2E-TRN-05 | Clock page: set speed, pause, step, fast-forward with stop condition; assert sim date in student UI |
+| E2E-TRN-06 | Run exercise 1 end to end through the UI (create campaign, IO, LI, assign creative, activate, fast-forward) and reach PASSED |
+| E2E-TRN-07 | Run exercise 4: open Troubleshooter, answer the question, fix targeting and creative, fast-forward, PASSED |
+| E2E-TRN-08 | Class progress matrix and CSV; view-as a student |
+| E2E-TRN-09 | Role guards: student blocked from instructor and admin routes; direct DV360 URL while closed |
+| E2E-TRN-10 | Announcement shows in the bell for students |
+
+### 6.3 Vitest cases (`tests/training/`)
+- `auth.test.ts`: lockout counter, message uniformity, password policy, session invalidation by `sessionVersion`.
+- `windows.test.ts`: status transitions at boundaries, overlap, weekly materialisation (timezone and DST edge in Asia/Kolkata and America/New_York), `isClassOpen` cache, freeze/unfreeze idempotency.
+- `roster-csv.test.ts`: parsing, duplicates, existing users, caps, temp password format.
+- `provision.test.ts`: idempotent job, resume by state, determinism of `seedValue`.
+- `dsl.schema.test.ts`: Zod schema accepts the 3 sample scenarios, rejects bad selectors/ops.
+- `dsl.eval.test.ts`: every leaf kind with fixtures (entity exists, field ops, relation, metric window, diagnostic share, alert state, learning, pacing, event, custom fn), `all/any/not/count`, `created: DURING_ATTEMPT`, alias binding, sticky vs live latching, unlock chains.
+- `scoring.test.ts`: points, hint penalties, floor, pass modes, best-attempt rule.
+- `starters.test.ts`: for each starter, initial state fails, scripted solution passes (runs against the seed + engine fast mode).
+- `clock-ui-map.test.ts`: preset conversion between `speedX` and `minutesPerSimDay`, caps.
+- `audit.test.ts`: every instructor/admin action writes an audit row.
+- `rls.test.ts`: selectors cannot cross sandboxes.
+
+---
+
+## 7. Build tasks
+
+P3-02 (auth, roles, access windows) is a Phase 3 foundation task; the rest are Phase 5.
+
+| # | Task | Size | Phase | Depends on |
+|---|---|---|---|---|
+| M18-01 | Schema deltas Δ18-1..4, 13, 14; auth tables; seed of demo class and admin | M | P3-02 | P3-01, P3-05 |
+| M18-02 | Auth.js credentials, argon2, session, lockout, forced password change, login/closed/expired/forbidden pages | M | P3-02 | M18-01 |
+| M18-03 | Access windows: model, cron tick, `isClassOpen`, middleware guard, `assertWindowOpen` in server actions, banner | M | P3-02 | M18-02, P3-03 |
+| M18-04 | Role guards and `UserAccessGrant` provisioning, view-as banner and resolver | M | P3-02 | M18-02, P3-03 |
+| M18-05 | Sandbox provisioning job (seed + backfill + states + welcome page progress) | L | P3-02/P3-05 | P3-05, P3-08 |
+| M18-06 | Freeze/unfreeze on window events wired to `SimClock` | S | P3-02/P3-08 | M18-03, P3-08 |
+| M18-07 | Instructor console shell, dashboard, classes, roster (form + CSV), temp passwords | L | P5-01 | M18-02..05, P3-04 |
+| M18-08 | Access windows UI (list, form, repeats, open/close now) | M | P5-01 | M18-03 |
+| M18-09 | Sandbox reset (single, class, to scenario), confirmations, audit log | M | P5-01 | M18-05, P3-08 |
+| M18-10 | Clock page and student clock controls, fast-forward progress, `getClock` | M | P5-03 | P3-08, M18-07 |
+| M18-11 | DSL: Zod schema, selectors, evaluator, latching, scoring, `EVENT` telemetry table, `CUSTOM_FN` registry | L | P5-02 | P3-06, P3-08 |
+| M18-12 | Attempt lifecycle (`startAttempt`, patches/events, bindings, check hooks in `withChangeLog` and tick), Exercise rail panel, attempt pages | L | P5-02 | M18-11, M18-09, P3-03 |
+| M18-13 | Scenario authoring UI (overview, setup, steps builder, JSON editor, Test tab) | L | P5-02 | M18-11 |
+| M18-14 | The 10 starter scenarios as fixtures + scripted solution tests | L | P5-02 | M18-12, modules 12 to 17 landed (P4-01..P4-11) |
+| M18-15 | Progress: student `/sim/progress`, class matrix, detail, CSV, leaderboard, solution comparison | M | P5-04 | M18-12, P3-09 |
+| M18-16 | Announcements, admin pages (users, classes, seed, engine params, audit) | M | P5-01 | M18-07 |
+| M18-17 | Snapshot/restore and solution-run clone (stretch) | L | P5-01 stretch | M18-09, P3-05 |
+| M18-18 | Playwright E2E-TRN-01..10 | M | P5 | all above |
+
+Critical path for the 5 Nov credit window: M18-01..04 are P3-02 and must land in the first foundation wave; M18-05 can follow with the seed generator.
+
+---
+
+## 8. Open questions and conflicts
+
+### Conflicts found between specs
+| # | Conflict | Files and sections | Proposed resolution |
+|---|---|---|---|
+| C1 | Naming of the user role field: data-model `User.appRole` (`STUDENT/INSTRUCTOR/ADMIN`); routes `User.role` lowercase `student/instructor/admin`; DV360 role field `UserAccessGrant.role` vs routes `UserAccess.level` | data-model.md 5.1; routes.md section 2, 8.19 | DB = data-model; session payload lowercase; map in one place (`lib/auth/roles.ts`) |
+| C2 | Student default DV360 role in the sandbox: data-model 2.4 "ADMIN of their own sandbox partner"; routes section 2 and Q10 "STANDARD" | data-model.md 2.4; routes.md 2, Q10 | `STANDARD` default (routes). Exercise on users/roles (not among the 10) would use `accessOverride: ADMIN` |
+| C3 | AccessWindow shape: data-model `opensAt/closesAt/label/status(SCHEDULED, OPEN, CLOSED, CANCELLED)` + classroom tz; routes `startsAt/endsAt/timeZone/state(SCHEDULED, OPEN, CLOSED)/repeat/note` | data-model.md 5.1; routes.md 8.19 | DB = data-model plus Δ18-3 (`repeatRule`, `seriesId`, `note`); DTO maps names; `CANCELLED` stays in the DB for deleted-before-open windows |
+| C4 | Clock ownership and units: engine and data-model per sandbox (`minutesPerSimDay`, `realSecondsPerSimDay`, states RUNNING/PAUSED/STEPPING/LOCKED vs data-model `paused bool`), routes per class with `speedX` and `mode RUNNING/PAUSED` | engine.md 1.2; data-model.md 5.1 `SimClock`; routes.md 8.20 | Per sandbox with class-level apply; follow engine fields; data-model `SimClock` to adopt engine columns (`state`, `minutesPerSimDay`, `remainderMs`, seeds, `runOutsideSession`); routes `speedX` is a display conversion |
+| C5 | Same entities with two creation paths: engine `ScenarioEvent/FaultSpec` (timed) and data-model `ScenarioSeedPatch` (ops at seed) | engine.md 10.1; data-model.md 5.1 | Both kept: patches once at start, events on the sim clock (Δ18-11, Δ18-13). `SET_METRIC_BIAS` needs an engine override (Δ18-21) |
+| C6 | Check vocabularies differ: data-model `ScenarioCheckKind` (`ENTITY_EXISTS, FIELD_EQUALS, FIELD_RANGE, METRIC_THRESHOLD, ALERT_CLEARED, STATUS_IS, CUSTOM_SQL`), engine `Check` (`ENTITY_STATE, METRIC, DIAGNOSTIC, ALERT_ABSENT, LEARNING, PACING`), routes `check: { kind: string; params }` "defined in P5" | data-model.md 4.10; engine.md 10.4; routes.md 8.20 | Section 4.7 defines the DSL as a superset; `CUSTOM_SQL` is replaced by `CUSTOM_FN` (no raw SQL authored by instructors) |
+| C7 | Alert tables: engine writes `AlertEvent`; data-model has `Alert` (OPEN/RESOLVED/DISMISSED) | engine.md 1.7, 3.7; data-model.md 5.19 | One table; checks read `Alert` rows by `type`/`diagnosticCode`; engine to adopt the data-model table (name only) |
+| C8 | Retention: engine hourly 14 sim days; data-model 90 sim days; backfill cost in provisioning depends on it | engine.md 1.4; data-model.md 2.3, 3.1 | Backfill 14 days hourly + 90 days daily; confirm after P3-08 |
+| C9 | Sandbox resolution when a user is in several classes is unspecified (`Sandbox` unique per `(classroomId, ownerUserId)`) | data-model.md 5.1 | Session picks the classroom with an OPEN window, else the most recent membership; `?sim_class=` override for instructors |
+| C10 | Engine endpoint `GET /api/engine/cron` vs routes `POST /api/sim/engine/tick` | engine.md 1.4; routes.md 8.20 | One endpoint, routes name wins; window tick shares the secret |
+| C11 | Routes `startAttempt` "resets or forks the student's sandbox per scenario"; no fork primitive exists | routes.md 8.20 | Reset to scenario seed (engine 10.2); "fork" = snapshot clone, stretch (Δ18-12) |
+| C12 | Notifications table is classroom-level (instructor announcements); routes `createAnnouncement` has `learnMoreRoute`, data-model `learnMoreUrl` | data-model.md 5.1; routes.md 8.20 | Store a route path in `learnMoreUrl` |
+| C13 | Validation has no domain for simulator rules; USR covers only DV360 users | validation.md 1.1 | Add domain `SIM` (SIM-001..015 above) |
+| C14 | Backfill: data-model 3.1 says the engine runs in "fast mode"; engine 10.3 defines fast-forward jobs but no separate "fast mode" tick | data-model.md 3.1; engine.md 10.3 | Use `engine.fastForward` jobs; provisioning waits on them |
+
+### Open questions
+- Q1. Are student accounts created by the instructor only (assumed), or may students self-register with a join code? R3 suggests instructor-created only.
+- Q2. Is a temporary password acceptable, or must we send e-mail (needs a mail provider, not in the stack)?
+- Q3. Do students keep sandbox access between windows read-only (assumed no; hard stop and `/sim/closed`)?
+- Q4. Exercises as graded work: is a score exported to an LMS or only CSV? Assumed CSV.
+- Q5. How many concurrent attempts per sandbox: one at a time (assumed).
+- Q6. Should the Exercise rail be visible during free play (no attempt)? Assumed hidden.
+- Q7. Do starter exercises require the modules of this batch to be fully built (yes for 3, 5, 6, 7, 8, 9)? Tracked in M18-14 dependencies; a reduced set can ship earlier (1, 2, 4, 10).
+- Q8. Sizing: provisioning concurrency 6 vs DB tier; reset of a whole class at once may need queueing.
+- Q9. Where does the Adsmetor logo go on the login page (design-system Q8, text wordmark until assets arrive).
+- Q10. Student data retention and deletion after a course ends (privacy): suggested archive after 90 days, delete on request.
