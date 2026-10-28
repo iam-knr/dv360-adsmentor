@@ -5,7 +5,14 @@ export { MSG, format } from './messages';
 export type { MsgKey, MsgParams } from './messages';
 export * from './types';
 export * as primitives from './primitives';
-export { DIALOGS, renderDialog, archiveCascadeNote, isDirty, normalizeForDirty, commitSlideOver } from './dialogs';
+export {
+  DIALOGS,
+  renderDialog,
+  archiveCascadeNote,
+  isDirty,
+  normalizeForDirty,
+  commitSlideOver,
+} from './dialogs';
 export {
   canTransition,
   offeredTransitions,

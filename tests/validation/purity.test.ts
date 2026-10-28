@@ -5,12 +5,14 @@ import { describe, expect, it } from 'vitest';
 import { ROOT } from './docs';
 
 const LIB = resolve(ROOT, 'lib/validation');
-const FORBIDDEN = /from\s+['"](react|react-dom|next|next\/[^'"]*|@prisma\/client|node:[^'"]*|server-only)['"]/;
+const FORBIDDEN =
+  /from\s+['"](react|react-dom|next|next\/[^'"]*|@prisma\/client|node:[^'"]*|server-only)['"]/;
 
 function files(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const path = resolve(dir, name);
-    if (statSync(path).isDirectory()) return name === 'client' || name === 'server' ? [] : files(path);
+    if (statSync(path).isDirectory())
+      return name === 'client' || name === 'server' ? [] : files(path);
     return path.endsWith('.ts') ? [path] : [];
   });
 }

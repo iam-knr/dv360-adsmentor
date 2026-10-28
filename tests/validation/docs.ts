@@ -32,7 +32,8 @@ export function backtickSpans(cell: string): string[] {
 }
 
 /** The domains `P3-06a` implements: GEN, CMP, IO, LI and the type files except YouTube. */
-export const IMPLEMENTED = /^(GEN|CMP|IO|LI|LI-DSP|LI-VID|LI-CTV|LI-AUD|LI-APP|LI-DG|LI-DOOH)-\d{3}$/;
+export const IMPLEMENTED =
+  /^(GEN|CMP|IO|LI|LI-DSP|LI-VID|LI-CTV|LI-AUD|LI-APP|LI-DG|LI-DOOH)-\d{3}$/;
 
 export interface DocRule {
   id: string;

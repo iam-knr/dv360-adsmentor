@@ -52,13 +52,7 @@ export type EntityKind =
   | 'sdfUpload';
 
 export type RoleKey =
-  | 'ADMIN'
-  | 'STANDARD'
-  | 'READ_ONLY'
-  | 'REPORTING_ONLY'
-  | 'PARTNER_CLIENT'
-  | 'CREATIVE'
-  | 'SYSTEM';
+  'ADMIN' | 'STANDARD' | 'READ_ONLY' | 'REPORTING_ONLY' | 'PARTNER_CLIENT' | 'CREATIVE' | 'SYSTEM';
 
 export type IssueParams = Record<string, string | number>;
 
@@ -224,7 +218,11 @@ export interface LineItemInput {
     dealGroups: string[];
     targetCuratedCtv?: boolean;
   };
-  flight: { mode: 'SAME_AS_IO' | 'CUSTOM' | null; startDate?: string | null; endDate?: string | null };
+  flight: {
+    mode: 'SAME_AS_IO' | 'CUSTOM' | null;
+    startDate?: string | null;
+    endDate?: string | null;
+  };
   budget: { mode: 'UNLIMITED' | 'AMOUNT'; amount?: Num };
   pacing: { period: PacingPeriod | null; type: PacingType | null; dailyAmount?: Num };
   bid: {

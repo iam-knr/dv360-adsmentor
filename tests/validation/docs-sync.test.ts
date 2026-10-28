@@ -1,7 +1,15 @@
 // Parses docs/specs/validation.md and compares IDs, severities, triggers and verbatim messages with the registry.
 import { describe, expect, it } from 'vitest';
 import { allRules, MSG } from '@/lib/validation';
-import { backtickSpans, expectedTriggers, IMPLEMENTED, implementedDocRules, parseRuleTables, readDoc, splitRow } from './docs';
+import {
+  backtickSpans,
+  expectedTriggers,
+  IMPLEMENTED,
+  implementedDocRules,
+  parseRuleTables,
+  readDoc,
+  splitRow,
+} from './docs';
 
 const doc = implementedDocRules();
 const docNonAlias = doc.filter((r) => r.alias === null);
@@ -25,30 +33,34 @@ describe('rule tables of validation.md', () => {
     }
   });
 
-  it.each(docNonAlias.map((r) => [r.id, r] as const))('%s keeps its severity, trigger and message', (id, row) => {
-    const rule = byId.get(id)!;
-    expect(rule.severity).toBe(row.severity);
+  it.each(docNonAlias.map((r) => [r.id, r] as const))(
+    '%s keeps its severity, trigger and message',
+    (id, row) => {
+      const rule = byId.get(id)!;
+      expect(rule.severity).toBe(row.severity);
 
-    const wanted = expectedTriggers(row.trigger);
-    if (wanted.length === 0) expect(rule.triggers).toEqual([]);
-    else for (const t of wanted) expect(rule.triggers).toContain(t);
+      const wanted = expectedTriggers(row.trigger);
+      if (wanted.length === 0) expect(rule.triggers).toEqual([]);
+      else for (const t of wanted) expect(rule.triggers).toContain(t);
 
-    const cell = row.messageCell;
-    const noMessage = cell.startsWith('(') || cell === '' || cell === '-';
-    if (noMessage) {
-      // documentation rows with a parenthesised note have no message of their own
-      expect(rule.message, `${id} has no message in the document`).toBeNull();
-    } else if (row.text !== null) {
-      // the first backticked text is the wording; [SIM] only marks it for sign-off.
-      // A counter message is one template ("Use {max} characters or fewer."); the table shows it with its number.
-      const counter = rule.message === MSG.MAX_CHARS && /^Use \d+ characters or fewer\.$/.test(row.text);
-      if (!counter) expect(rule.message).toBe(row.text);
-    } else if (/^(same as|see) /.test(cell)) {
-      // "see IO-052", "same as the linked rules": the wording lives in the rule they point at
-    } else {
-      expect(rule.message).not.toBeNull();
-    }
-  });
+      const cell = row.messageCell;
+      const noMessage = cell.startsWith('(') || cell === '' || cell === '-';
+      if (noMessage) {
+        // documentation rows with a parenthesised note have no message of their own
+        expect(rule.message, `${id} has no message in the document`).toBeNull();
+      } else if (row.text !== null) {
+        // the first backticked text is the wording; [SIM] only marks it for sign-off.
+        // A counter message is one template ("Use {max} characters or fewer."); the table shows it with its number.
+        const counter =
+          rule.message === MSG.MAX_CHARS && /^Use \d+ characters or fewer\.$/.test(row.text);
+        if (!counter) expect(rule.message).toBe(row.text);
+      } else if (/^(same as|see) /.test(cell)) {
+        // "see IO-052", "same as the linked rules": the wording lives in the rule they point at
+      } else {
+        expect(rule.message).not.toBeNull();
+      }
+    },
+  );
 });
 
 describe('message catalogue (validation.md 1.2)', () => {
@@ -81,12 +93,17 @@ describe('message catalogue (validation.md 1.2)', () => {
 
 describe('module files', () => {
   const docIds = new Set(parseRuleTables(readDoc('docs/specs/validation.md')).map((r) => r.id));
-  it.each(['06-campaigns', '07-insertion-orders', '08-line-items'])('%s only names rule IDs that exist', (file) => {
-    const text = readDoc(`docs/specs/modules/${file}.md`);
-    const ids = [...text.matchAll(/\b((?:GEN|CMP|IO|LI)(?:-[A-Z]+)?-\d{3})\b/g)].map((m) => m[1]!);
-    const unknown = [...new Set(ids)].filter((id) => !docIds.has(id));
-    expect(unknown).toEqual([]);
-  });
+  it.each(['06-campaigns', '07-insertion-orders', '08-line-items'])(
+    '%s only names rule IDs that exist',
+    (file) => {
+      const text = readDoc(`docs/specs/modules/${file}.md`);
+      const ids = [...text.matchAll(/\b((?:GEN|CMP|IO|LI)(?:-[A-Z]+)?-\d{3})\b/g)].map(
+        (m) => m[1]!,
+      );
+      const unknown = [...new Set(ids)].filter((id) => !docIds.has(id));
+      expect(unknown).toEqual([]);
+    },
+  );
 
   it('adopts no new IDs for these domains (RC-053)', () => {
     // RC-053 adopts proposed IDs for ADV, PRT, USR, PLN, CRE, INV, AUD, CB, FL, BLK, RPT, AB, LS, SHL, HIS, SIM only.

@@ -34,7 +34,8 @@ export function isFreqPeriod(value: unknown): value is FreqPeriod {
 /** A "Limit frequency" cap with valid numbers, or null when the cap does not limit (or is not valid yet). */
 export function resolveCap(cap: FrequencyCapInput | null | undefined): ResolvedCap | null {
   if (!cap || cap.mode !== 'LIMITED') return null;
-  if (!isCount(cap.maxImpressions) || !isCount(cap.periodCount) || !isFreqPeriod(cap.period)) return null;
+  if (!isCount(cap.maxImpressions) || !isCount(cap.periodCount) || !isFreqPeriod(cap.period))
+    return null;
   return {
     n: toNum(cap.maxImpressions) as number,
     periodCount: toNum(cap.periodCount) as number,
@@ -43,14 +44,20 @@ export function resolveCap(cap: FrequencyCapInput | null | undefined): ResolvedC
 }
 
 /** `LIMITED` and the max exposures field is empty (CMP-040, IO-060, LI-050). */
-export function capMaxEmpty(cap: FrequencyCapInput | null | undefined, path: string): Violation | null {
+export function capMaxEmpty(
+  cap: FrequencyCapInput | null | undefined,
+  path: string,
+): Violation | null {
   return cap?.mode === 'LIMITED' && isEmptyNum(cap.maxImpressions)
     ? { path: `${path}.maxImpressions` }
     : null;
 }
 
 /** `LIMITED` and a filled max exposures field that is not a whole number >= 1 (CMP-041). */
-export function capMaxInvalid(cap: FrequencyCapInput | null | undefined, path: string): Violation | null {
+export function capMaxInvalid(
+  cap: FrequencyCapInput | null | undefined,
+  path: string,
+): Violation | null {
   return cap?.mode === 'LIMITED' && !isEmptyNum(cap.maxImpressions) && !isCount(cap.maxImpressions)
     ? { path: `${path}.maxImpressions` }
     : null;
@@ -103,7 +110,10 @@ export function cpmFeeNegative(costs: PartnerCostsInput | undefined, prefix: str
 }
 
 /** IO-071: media fee percent present and outside 0-100. */
-export function mediaFeePercentInvalid(costs: PartnerCostsInput | undefined, prefix: string): Violation[] {
+export function mediaFeePercentInvalid(
+  costs: PartnerCostsInput | undefined,
+  prefix: string,
+): Violation[] {
   return allFees(costs)
     .filter((r) => r.kind === 'mediaFees' && !isEmptyNum(r.fee.amount))
     .filter((r) => {

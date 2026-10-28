@@ -51,7 +51,12 @@ function gen(
   };
 }
 
-export const GEN_001 = gen('GEN-001', 'required', MSG.ENTER_VALUE, (e) => e.check === 'required' && isBlank(e.value));
+export const GEN_001 = gen(
+  'GEN-001',
+  'required',
+  MSG.ENTER_VALUE,
+  (e) => e.check === 'required' && isBlank(e.value),
+);
 export const GEN_002 = gen(
   'GEN-002',
   'positive',

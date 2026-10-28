@@ -7,11 +7,16 @@ import { originalOf } from './shared';
 
 type AppType = 'MOBILE_APP_INSTALL' | 'ADS_IN_MOBILE_APPS';
 
-function def(types: readonly AppType[], rule: Omit<Rule<LineItemInput>, 'kind'>): Rule<LineItemInput> {
+function def(
+  types: readonly AppType[],
+  rule: Omit<Rule<LineItemInput>, 'kind'>,
+): Rule<LineItemInput> {
   return baseDef({
     ...rule,
     appliesTo: (l, ctx) =>
-      !!l.type && (types as readonly string[]).includes(l.type) && (rule.appliesTo?.(l, ctx) ?? true),
+      !!l.type &&
+      (types as readonly string[]).includes(l.type) &&
+      (rule.appliesTo?.(l, ctx) ?? true),
   });
 }
 

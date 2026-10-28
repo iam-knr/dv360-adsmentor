@@ -12,7 +12,10 @@ export type FloodlightCountingMethod = (typeof FLOODLIGHT_COUNTING_METHODS)[numb
 export type FloodlightActivityType = 'COUNTER' | 'SALE';
 
 /** Which methods each activity type accepts (from public docs). */
-export const COUNTING_METHODS_BY_ACTIVITY: Record<FloodlightActivityType, readonly FloodlightCountingMethod[]> = {
+export const COUNTING_METHODS_BY_ACTIVITY: Record<
+  FloodlightActivityType,
+  readonly FloodlightCountingMethod[]
+> = {
   COUNTER: ['STANDARD', 'UNIQUE', 'PER_SESSION'],
   SALE: ['TRANSACTIONS', 'ITEMS_SOLD'],
 };

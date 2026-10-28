@@ -31,7 +31,11 @@ function isInternalLink(anchor: HTMLAnchorElement): boolean {
   const url = new URL(anchor.href, window.location.href);
   if (url.origin !== window.location.origin) return false;
   // Same page hash links do not leave the form.
-  return !(url.pathname === window.location.pathname && url.search === window.location.search && url.hash !== '');
+  return !(
+    url.pathname === window.location.pathname &&
+    url.search === window.location.search &&
+    url.hash !== ''
+  );
 }
 
 export function useUnsavedChanges(options: UseUnsavedChangesOptions): UseUnsavedChanges {
@@ -65,7 +69,8 @@ export function useUnsavedChanges(options: UseUnsavedChangesOptions): UseUnsaved
   useEffect(() => {
     const onClick = (event: MouseEvent): void => {
       if (!dirtyRef.current || event.defaultPrevented) return;
-      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+        return;
       const anchor = (event.target as Element | null)?.closest?.('a[href]');
       if (!(anchor instanceof HTMLAnchorElement) || !isInternalLink(anchor)) return;
       event.preventDefault();
@@ -115,5 +120,12 @@ export function useUnsavedChanges(options: UseUnsavedChangesOptions): UseUnsaved
     setDialogOpen(false);
   }, []);
 
-  return { isDirty: dirty, dialogOpen, dialog: DIALOGS['DLG-01'], requestLeave, discard, continueEditing };
+  return {
+    isDirty: dirty,
+    dialogOpen,
+    dialog: DIALOGS['DLG-01'],
+    requestLeave,
+    discard,
+    continueEditing,
+  };
 }

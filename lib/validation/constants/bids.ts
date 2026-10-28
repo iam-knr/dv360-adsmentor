@@ -42,7 +42,8 @@ export function allowedBidStrategies(
 ): readonly BidStrategy[] {
   if (liType === 'DOOH_DISPLAY' || liType === 'DOOH_VIDEO') return [];
   // IO CLICKS, DISPLAY line item (MX-04 row 1)
-  if (objective === 'CLICKS' && liType === 'DISPLAY') return ['MAX_CLICKS', 'MAX_CUSTOM_VALUE_COST'];
+  if (objective === 'CLICKS' && liType === 'DISPLAY')
+    return ['MAX_CLICKS', 'MAX_CUSTOM_VALUE_COST'];
   // IO BRAND_AWARENESS, CTV line item (MX-04 row 3)
   if (objective === 'BRAND_AWARENESS' && liType === 'CTV') return ['MAX_REACH'];
   if (objective === 'NONE') return AUTOMATED_STRATEGIES;
@@ -57,5 +58,7 @@ export function strategyNeedsTarget(strategy: BidStrategy, priority?: BidPriorit
 
 /** New line items default to an automated bid, except Audio and DOOH which default to a fixed bid (RC-040). */
 export function defaultBidMode(type: LiType): 'AUTOMATED' | 'FIXED' {
-  return type === 'AUDIO' || type === 'DOOH_DISPLAY' || type === 'DOOH_VIDEO' ? 'FIXED' : 'AUTOMATED';
+  return type === 'AUDIO' || type === 'DOOH_DISPLAY' || type === 'DOOH_VIDEO'
+    ? 'FIXED'
+    : 'AUTOMATED';
 }

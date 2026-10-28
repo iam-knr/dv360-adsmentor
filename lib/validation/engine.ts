@@ -39,7 +39,10 @@ function selectRules(kind: EntityKind, opts: ValidateOptions): readonly AnyRule[
   const changed = opts.changedPath ? normalizePath(opts.changedPath) : null;
   return all.filter((r) => {
     if (isActivateOnly(r)) return false;
-    const wanted = trigger === 'blur' ? r.triggers.includes('blur') || r.triggers.includes('cross') : r.triggers.includes('cross');
+    const wanted =
+      trigger === 'blur'
+        ? r.triggers.includes('blur') || r.triggers.includes('cross')
+        : r.triggers.includes('cross');
     if (!wanted) return false;
     if (changed === null) return true;
     return r.reads.some((read) => pathMatches(read, changed));
@@ -54,7 +57,9 @@ function toViolations(result: Violation | Violation[] | null): Violation[] {
 function orderIndex(kind: EntityKind, path: string): number {
   const order = PATH_ORDER[kind] ?? [];
   const normalized = normalizePath(path);
-  const at = order.findIndex((p) => normalized === p || normalized.startsWith(`${p}.`) || normalized.startsWith(`${p}[`));
+  const at = order.findIndex(
+    (p) => normalized === p || normalized.startsWith(`${p}.`) || normalized.startsWith(`${p}[`),
+  );
   return at === -1 ? order.length : at;
 }
 

@@ -6,8 +6,7 @@ import { validate } from '../engine';
 import type { EntityKind, Issue, ValidateOptions, ValidationContext } from '../types';
 
 export type ValidatedResult<R> =
-  | { ok: true; result: R; issues: Issue[] }
-  | { ok: false; issues: Issue[] };
+  { ok: true; result: R; issues: Issue[] } | { ok: false; issues: Issue[] };
 
 export interface WithValidationConfig<I> {
   kind: EntityKind;

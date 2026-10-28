@@ -53,14 +53,22 @@ export interface UseValidatedForm<T extends FieldValues> {
   checkAll: () => boolean;
 }
 
-export function useValidatedForm<T extends FieldValues>(options: UseValidatedFormOptions<T>): UseValidatedForm<T> {
+export function useValidatedForm<T extends FieldValues>(
+  options: UseValidatedFormOptions<T>,
+): UseValidatedForm<T> {
   const { kind, ctx, defaultValues, targetStatus } = options;
-  const resolver = useMemo(() => createResolver<T>(kind, ctx, targetStatus), [kind, ctx, targetStatus]);
+  const resolver = useMemo(
+    () => createResolver<T>(kind, ctx, targetStatus),
+    [kind, ctx, targetStatus],
+  );
   const form = useForm<T>({ defaultValues, resolver, mode: 'onSubmit', reValidateMode: 'onBlur' });
 
   const values = form.watch();
   const softIssues = useMemo(
-    () => softIssuesOf(validate(kind, values, ctx, { trigger: 'save', ...(targetStatus ? { targetStatus } : {}) })),
+    () =>
+      softIssuesOf(
+        validate(kind, values, ctx, { trigger: 'save', ...(targetStatus ? { targetStatus } : {}) }),
+      ),
     [kind, values, ctx, targetStatus],
   );
 

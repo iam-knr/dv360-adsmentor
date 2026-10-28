@@ -113,7 +113,9 @@ export const DIALOGS = {
 export type DialogId = keyof typeof DIALOGS;
 
 /** DLG-03 adds the cascade sentence for campaigns and IOs only while the cascade flag is on (RC-040). */
-export function archiveCascadeNote(entity: 'campaign' | 'insertionOrder' | 'lineItem'): string | null {
+export function archiveCascadeNote(
+  entity: 'campaign' | 'insertionOrder' | 'lineItem',
+): string | null {
   if (!CASCADE_ARCHIVE) return null;
   if (entity === 'campaign') return 'Their insertion orders and line items will also be archived.';
   if (entity === 'insertionOrder') return 'Their line items will also be archived.';
@@ -121,7 +123,10 @@ export function archiveCascadeNote(entity: 'campaign' | 'insertionOrder' | 'line
 }
 
 /** Title and body with their {placeholders} filled. */
-export function renderDialog(id: DialogId, params?: MsgParams): { title: string | null; body: string } {
+export function renderDialog(
+  id: DialogId,
+  params?: MsgParams,
+): { title: string | null; body: string } {
   const spec: DialogSpec = DIALOGS[id];
   return {
     title: spec.title === null ? null : format(spec.title, params),
@@ -171,7 +176,8 @@ function normalize(value: unknown, path: string, opts: Required<DirtyOptions>): 
     if (opts.trailingEmptyRows.includes(path)) {
       while (items.length > 0 && isEmptyValue(items[items.length - 1])) items = items.slice(0, -1);
     }
-    if (opts.unordered.includes(path)) items = [...items].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+    if (opts.unordered.includes(path))
+      items = [...items].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
     return items;
   }
   if (value !== null && typeof value === 'object') {
@@ -195,7 +201,10 @@ export function normalizeForDirty(value: unknown, options: DirtyOptions = {}): u
 
 /** Typing then reverting is clean. `initial` is the snapshot taken after defaults were applied. */
 export function isDirty(current: unknown, initial: unknown, options: DirtyOptions = {}): boolean {
-  return JSON.stringify(normalizeForDirty(current, options)) !== JSON.stringify(normalizeForDirty(initial, options));
+  return (
+    JSON.stringify(normalizeForDirty(current, options)) !==
+    JSON.stringify(normalizeForDirty(initial, options))
+  );
 }
 
 /** UC-3: Apply copies a slide-over's edits into the parent form; Cancel, the X and the scrim discard them. */

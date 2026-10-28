@@ -29,7 +29,10 @@ function filledRows(c: CampaignInput): { row: CampaignBudgetRow; i: number }[] {
     .map((row, i) => ({ row, i }))
     .filter(
       ({ row }) =>
-        !isBlank(row.name) || !isEmptyNum(row.amount) || !isBlank(row.startDate) || !isBlank(row.endDate),
+        !isBlank(row.name) ||
+        !isEmptyNum(row.amount) ||
+        !isBlank(row.startDate) ||
+        !isBlank(row.endDate),
     );
 }
 
@@ -107,7 +110,10 @@ export const CMP_013 = def({
   reads: ['goal', 'kpi.type'],
   message: MSG.KPI_NOT_RECOMMENDED,
   appliesTo: (c) => !!c.goal && !!c.kpi?.type && c.kpi.type !== 'OTHER',
-  check: (c) => (c.goal && c.kpi?.type && notRecommendedKpis(c.goal).includes(c.kpi.type) ? { path: 'kpi.type' } : null),
+  check: (c) =>
+    c.goal && c.kpi?.type && notRecommendedKpis(c.goal).includes(c.kpi.type)
+      ? { path: 'kpi.type' }
+      : null,
 });
 
 export const CMP_014 = def({
@@ -303,7 +309,10 @@ export const CMP_061 = def({
   triggers: ['blur'],
   reads: ['keywords'],
   message: 'Enter up to 5 keywords to help improve recommendations.',
-  check: (c) => (c.keywords.filter((k) => !isBlank(k)).length > LIMITS.CAMPAIGN_KEYWORDS_MAX ? { path: 'keywords' } : null),
+  check: (c) =>
+    c.keywords.filter((k) => !isBlank(k)).length > LIMITS.CAMPAIGN_KEYWORDS_MAX
+      ? { path: 'keywords' }
+      : null,
 });
 
 /** UI only: "Copy Settings" stays disabled until a source and one setting are ticked. Documentation row. */

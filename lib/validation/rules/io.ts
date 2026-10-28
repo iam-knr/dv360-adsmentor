@@ -55,7 +55,10 @@ function segments(io: IoInput): { seg: BudgetSegmentInput; i: number }[] {
 
 function datedSegments(io: IoInput): { start: string; end: string; i: number }[] {
   return segments(io)
-    .filter(({ seg }) => isIsoDate(seg.startDate) && isIsoDate(seg.endDate) && seg.endDate >= seg.startDate)
+    .filter(
+      ({ seg }) =>
+        isIsoDate(seg.startDate) && isIsoDate(seg.endDate) && seg.endDate >= seg.startDate,
+    )
     .map(({ seg, i }) => ({ start: seg.startDate as string, end: seg.endDate as string, i }));
 }
 
@@ -74,11 +77,17 @@ function segmentTotal(io: IoInput): number {
 }
 
 /** Children with custom dates that fall outside `flight`. */
-function outsideFlight(children: readonly LineItemSnapshot[], flight: { start: string; end: string }): LineItemSnapshot[] {
+function outsideFlight(
+  children: readonly LineItemSnapshot[],
+  flight: { start: string; end: string },
+): LineItemSnapshot[] {
   return children.filter((li) => {
     if (li.flight?.mode !== 'CUSTOM') return false;
     const { startDate, endDate } = li.flight;
-    return (isIsoDate(startDate) && startDate < flight.start) || (isIsoDate(endDate) && endDate > flight.end);
+    return (
+      (isIsoDate(startDate) && startDate < flight.start) ||
+      (isIsoDate(endDate) && endDate > flight.end)
+    );
   });
 }
 
@@ -110,7 +119,8 @@ export const IO_003 = def({
   triggers: ['cross'],
   reads: ['type', 'objective'],
   message: "Clicks isn't available for Connected TV and OTT insertion orders.",
-  check: (io) => (io.type === 'CTV_OTT' && io.objective === 'CLICKS' ? { path: 'objective' } : null),
+  check: (io) =>
+    io.type === 'CTV_OTT' && io.objective === 'CLICKS' ? { path: 'objective' } : null,
 });
 
 export const IO_004 = def({
@@ -120,7 +130,9 @@ export const IO_004 = def({
   reads: ['type', 'objective'],
   message: 'Digital out of home insertion orders can only be created without an objective.',
   check: (io) =>
-    io.type === 'DOOH' && io.objective !== null && io.objective !== 'NONE' ? { path: 'objective' } : null,
+    io.type === 'DOOH' && io.objective !== null && io.objective !== 'NONE'
+      ? { path: 'objective' }
+      : null,
 });
 
 export const IO_005 = def({
@@ -231,7 +243,9 @@ export const IO_023 = def({
   appliesTo: (io) => io.budget.type === 'IMPRESSIONS',
   check: (io) =>
     segments(io)
-      .filter(({ seg }) => !isEmptyNum(seg.amount) && toNum(seg.amount) !== null && !isWhole(seg.amount))
+      .filter(
+        ({ seg }) => !isEmptyNum(seg.amount) && toNum(seg.amount) !== null && !isWhole(seg.amount),
+      )
       .map(({ i }): Violation => ({ path: at(SEG, i, 'amount') })),
 });
 
@@ -261,7 +275,12 @@ export const IO_025 = def({
     return segments(io)
       .filter(({ seg }) => {
         const before = stored.budget.segments.find((s) => s.id !== undefined && s.id === seg.id);
-        return !!before && isIsoDate(before.startDate) && before.startDate <= now && seg.startDate !== before.startDate;
+        return (
+          !!before &&
+          isIsoDate(before.startDate) &&
+          before.startDate <= now &&
+          seg.startDate !== before.startDate
+        );
       })
       .map(({ i }): Violation => ({ path: at(SEG, i, 'startDate') }));
   },
@@ -279,10 +298,15 @@ export const IO_026 = def({
     if (!stored) return null;
     const out: Violation[] = [];
     for (const { seg, i } of segments(io)) {
-      const spent = stored.budget.segments.find((s) => s.id !== undefined && s.id === seg.id)?.spent;
+      const spent = stored.budget.segments.find(
+        (s) => s.id !== undefined && s.id === seg.id,
+      )?.spent;
       const amount = toNum(seg.amount);
       if (spent !== undefined && amount !== null && amount < spent) {
-        out.push({ path: at(SEG, i, 'amount'), params: { spent: formatSpent(spent, io, ctx.advertiser.currency) } });
+        out.push({
+          path: at(SEG, i, 'amount'),
+          params: { spent: formatSpent(spent, io, ctx.advertiser.currency) },
+        });
       }
     }
     return out;
@@ -327,7 +351,10 @@ export const IO_030 = def({
   triggers: ['save'],
   reads: ['pacing.period'],
   message: 'Choose a pacing period.',
-  check: (io) => (io.pacing.period && PACING_PERIODS.includes(io.pacing.period) ? null : { path: 'pacing.period' }),
+  check: (io) =>
+    io.pacing.period && PACING_PERIODS.includes(io.pacing.period)
+      ? null
+      : { path: 'pacing.period' },
 });
 
 export const IO_031 = def({
@@ -369,7 +396,8 @@ export const IO_034 = def({
   severity: 'warning',
   triggers: ['cross'],
   reads: ['pacing.dailyAmount', 'budget.segments[].amount'],
-  message: 'The daily amount is higher than the segment budget, so the segment budget will limit spend.',
+  message:
+    'The daily amount is higher than the segment budget, so the segment budget will limit spend.',
   appliesTo: (io) => io.pacing.period === 'DAILY',
   check: (io) => {
     const daily = toNum(io.pacing.dailyAmount);
@@ -457,7 +485,8 @@ export const IO_052 = def({
   triggers: ['cross'],
   reads: ['optimization.mode', 'lineItems[].type'],
   message: MSG.AUTOMATION_LI_TYPE,
-  appliesTo: (io, ctx) => io.optimization.mode === 'IO_AUTOMATED' && (ctx.children?.lineItems?.length ?? 0) > 0,
+  appliesTo: (io, ctx) =>
+    io.optimization.mode === 'IO_AUTOMATED' && (ctx.children?.lineItems?.length ?? 0) > 0,
   check: (_io, ctx) =>
     (ctx.children?.lineItems ?? []).some((li) => !AUTOMATION_LI_TYPES.includes(li.type))
       ? { path: 'lineItems' }
@@ -484,7 +513,8 @@ export const IO_054 = def({
   reads: ['objective', 'optimization.mode', 'optimization.optimizedTowards'],
   message: 'Choose a bid strategy that is available for this objective.',
   suppressedBy: ['IO-003', 'IO-004'],
-  appliesTo: (io) => hasTypeAndObjective(io) && io.type !== 'DOOH' && io.optimization.mode === 'IO_AUTOMATED',
+  appliesTo: (io) =>
+    hasTypeAndObjective(io) && io.type !== 'DOOH' && io.optimization.mode === 'IO_AUTOMATED',
   check: (io) => {
     const chosen = io.optimization.optimizedTowards;
     const allowed = ioBidStrategiesFor(io.type!, io.objective!);
@@ -497,9 +527,11 @@ export const IO_055 = def({
   severity: 'error',
   triggers: ['cross'],
   reads: ['optimization.mode', 'optimization.autoBudgetAllocation'],
-  message: 'Automatic budget allocation is only available when bid and budget are controlled at the line item level.',
+  message:
+    'Automatic budget allocation is only available when bid and budget are controlled at the line item level.',
   appliesTo: (io) => io.optimization.mode === 'IO_AUTOMATED',
-  check: (io) => (io.optimization.autoBudgetAllocation ? { path: 'optimization.autoBudgetAllocation' } : null),
+  check: (io) =>
+    io.optimization.autoBudgetAllocation ? { path: 'optimization.autoBudgetAllocation' } : null,
 });
 
 export const IO_056 = def({
@@ -530,7 +562,8 @@ export const IO_061 = def({
   triggers: ['cross'],
   reads: ['frequencyCap.mode'],
   message: MSG.FREQ_CAMPAIGN_IO,
-  appliesTo: (io, ctx) => io.frequencyCap.mode !== 'LIMITED' && resolveCap(ctx.campaign?.frequencyCap) !== null,
+  appliesTo: (io, ctx) =>
+    io.frequencyCap.mode !== 'LIMITED' && resolveCap(ctx.campaign?.frequencyCap) !== null,
   check: (_io, ctx) => {
     const cap = resolveCap(ctx.campaign?.frequencyCap);
     return cap ? { path: 'frequencyCap', params: { n: cap.n, period: periodLabel(cap) } } : null;
@@ -555,7 +588,8 @@ export const IO_063 = def({
   triggers: ['cross'],
   reads: ['frequencyCap'],
   message: "This limit is less restrictive than the campaign's, so the campaign limit applies.",
-  appliesTo: (io, ctx) => resolveCap(io.frequencyCap) !== null && resolveCap(ctx.campaign?.frequencyCap) !== null,
+  appliesTo: (io, ctx) =>
+    resolveCap(io.frequencyCap) !== null && resolveCap(ctx.campaign?.frequencyCap) !== null,
   check: (io, ctx) => {
     const own = resolveCap(io.frequencyCap);
     const campaign = resolveCap(ctx.campaign?.frequencyCap);
@@ -597,7 +631,8 @@ export const IO_073 = def({
   reads: ['partnerCosts.mediaFees[0]'],
   message: MSG.FEE_LOCKED,
   appliesTo: (_io, ctx) => ctx.mode === 'edit',
-  check: (io, ctx) => systemFeeChanged(io.partnerCosts, originalOf<IoInput>(ctx)?.partnerCosts, 'partnerCosts'),
+  check: (io, ctx) =>
+    systemFeeChanged(io.partnerCosts, originalOf<IoInput>(ctx)?.partnerCosts, 'partnerCosts'),
 });
 
 export const IO_074 = def({
@@ -662,7 +697,10 @@ export const IO_093 = def({
   message: MSG.LI_BUDGET_GT_IO,
   appliesTo: (_io, ctx) => (ctx.children?.lineItems?.length ?? 0) > 0,
   check: (io, ctx) => {
-    const sum = (ctx.children?.lineItems ?? []).reduce((total, li) => total + (li.budgetAmount ?? 0), 0);
+    const sum = (ctx.children?.lineItems ?? []).reduce(
+      (total, li) => total + (li.budgetAmount ?? 0),
+      0,
+    );
     return sum > segmentTotal(io) ? { path: '*' } : null;
   },
 });
@@ -672,7 +710,8 @@ export const IO_094 = def({
   severity: 'warning',
   triggers: ['cross'],
   reads: [SEG, 'optimization', 'lineItems[]'],
-  message: 'Insertion order or line item has conflicting settings which may prevent your budget from being spent',
+  message:
+    'Insertion order or line item has conflicting settings which may prevent your budget from being spent',
   appliesTo: (_io, ctx) => (ctx.children?.lineItems?.length ?? 0) > 0,
   check: (io, ctx) => {
     const children = ctx.children?.lineItems ?? [];
@@ -704,7 +743,8 @@ export const IO_095 = def({
     const flight = ioFlight(io);
     const stored = originalOf<IoInput>(ctx);
     const before = stored ? ioFlight(stored) : null;
-    if (!flight || (before && before.start === flight.start && before.end === flight.end)) return null;
+    if (!flight || (before && before.start === flight.start && before.end === flight.end))
+      return null;
     const n = outsideFlight(ctx.children?.lineItems ?? [], flight).length;
     return n > 0 ? { path: SEG, params: { n } } : null;
   },

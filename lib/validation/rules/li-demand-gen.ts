@@ -7,7 +7,10 @@ import type { AnyRule, LineItemInput, Rule, Violation } from '../types';
 import { def as baseDef } from './line-item';
 
 function def(rule: Omit<Rule<LineItemInput>, 'kind'>): Rule<LineItemInput> {
-  return baseDef({ ...rule, appliesTo: (l, ctx) => l.type === 'DEMAND_GEN' && (rule.appliesTo?.(l, ctx) ?? true) });
+  return baseDef({
+    ...rule,
+    appliesTo: (l, ctx) => l.type === 'DEMAND_GEN' && (rule.appliesTo?.(l, ctx) ?? true),
+  });
 }
 
 export const LI_DG_001 = def({
@@ -49,7 +52,8 @@ export const LI_DG_006 = def({
   check: (l) => {
     const out: Violation[] = [];
     if (isEmptyNum(l.budget.amount)) out.push({ path: 'budget.amount' });
-    if (l.pacing.period === 'DAILY' && isEmptyNum(l.pacing.dailyAmount)) out.push({ path: 'pacing.dailyAmount' });
+    if (l.pacing.period === 'DAILY' && isEmptyNum(l.pacing.dailyAmount))
+      out.push({ path: 'pacing.dailyAmount' });
     return out;
   },
 });
@@ -64,7 +68,10 @@ export const LI_DG_007 = def({
     (l.ads ?? [])
       .map((ad, i) => ({ ad, i }))
       .filter(({ ad }) => codePointLength(ad.headline ?? '') > LIMITS.DG_HEADLINE_MAX)
-      .map(({ i }): Violation => ({ path: `ads[${i}].headline`, params: { max: LIMITS.DG_HEADLINE_MAX } })),
+      .map(({ i }): Violation => ({
+        path: `ads[${i}].headline`,
+        params: { max: LIMITS.DG_HEADLINE_MAX },
+      })),
 });
 
 export const LI_DG_008 = def({
@@ -77,7 +84,10 @@ export const LI_DG_008 = def({
     (l.ads ?? [])
       .map((ad, i) => ({ ad, i }))
       .filter(({ ad }) => codePointLength(ad.description ?? '') > LIMITS.AD_DESCRIPTION_MAX)
-      .map(({ i }): Violation => ({ path: `ads[${i}].description`, params: { max: LIMITS.AD_DESCRIPTION_MAX } })),
+      .map(({ i }): Violation => ({
+        path: `ads[${i}].description`,
+        params: { max: LIMITS.AD_DESCRIPTION_MAX },
+      })),
 });
 
 export const LI_DG_009 = def({

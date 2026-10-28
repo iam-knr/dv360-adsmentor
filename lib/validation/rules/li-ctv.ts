@@ -3,7 +3,10 @@ import type { AnyRule, LineItemInput, Rule } from '../types';
 import { def as baseDef } from './line-item';
 
 function def(rule: Omit<Rule<LineItemInput>, 'kind'>): Rule<LineItemInput> {
-  return baseDef({ ...rule, appliesTo: (l, ctx) => l.type === 'CTV' && (rule.appliesTo?.(l, ctx) ?? true) });
+  return baseDef({
+    ...rule,
+    appliesTo: (l, ctx) => l.type === 'CTV' && (rule.appliesTo?.(l, ctx) ?? true),
+  });
 }
 
 /** Pre-added "Position in content: In-stream, all positions selected". Documentation row. */
@@ -32,7 +35,8 @@ export const LI_CTV_004 = def({
   triggers: ['save'],
   reads: ['targeting.device'],
   message: 'Connected TV line items must target Connected TV devices.',
-  check: (l) => (l.targeting.device?.include.includes('CONNECTED_TV') ? null : { path: 'targeting.device' }),
+  check: (l) =>
+    l.targeting.device?.include.includes('CONNECTED_TV') ? null : { path: 'targeting.device' },
 });
 
 /** The "Target DV360 curated CTV auction inventory" checkbox is available. Documentation row. */

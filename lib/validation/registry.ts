@@ -140,7 +140,8 @@ export function assertRegistry(): void {
   const seen = new Set<string>();
   for (const [kind, rules] of Object.entries(RULES)) {
     for (const rule of rules) {
-      if (!ID_FORMAT.test(rule.id)) throw new Error(`Rule id ${rule.id} does not match ${String(ID_FORMAT)}`);
+      if (!ID_FORMAT.test(rule.id))
+        throw new Error(`Rule id ${rule.id} does not match ${String(ID_FORMAT)}`);
       if (seen.has(rule.id)) throw new Error(`Duplicate rule id ${rule.id}`);
       seen.add(rule.id);
       if (rule.kind !== kind) {

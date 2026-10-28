@@ -5,7 +5,13 @@ import type { LiType } from './li-compat';
 export const IO_TYPES = ['STANDARD', 'CTV_OTT', 'DOOH'] as const;
 export type IoType = (typeof IO_TYPES)[number];
 
-export const IO_OBJECTIVES = ['BRAND_AWARENESS', 'CLICKS', 'CONVERSIONS', 'CUSTOM', 'NONE'] as const;
+export const IO_OBJECTIVES = [
+  'BRAND_AWARENESS',
+  'CLICKS',
+  'CONVERSIONS',
+  'CUSTOM',
+  'NONE',
+] as const;
 export type IoObjective = (typeof IO_OBJECTIVES)[number];
 
 export const IO_OBJECTIVE_LABEL: Record<IoObjective, string> = {
@@ -111,7 +117,12 @@ export const STANDARD_IO_MATRIX: Record<IoObjective, ObjectiveRow> = {
   },
   CLICKS: {
     kpis: ['CPC', 'CTR', 'VALUE_COST'],
-    bidStrategies: ['MAX_CLICKS', 'MAX_CUSTOM_VALUE_COST', 'TARGET_CPC', 'TARGET_CUSTOM_VALUE_COST'],
+    bidStrategies: [
+      'MAX_CLICKS',
+      'MAX_CUSTOM_VALUE_COST',
+      'TARGET_CPC',
+      'TARGET_CUSTOM_VALUE_COST',
+    ],
     liTypes: ['DISPLAY', 'VIDEO', 'MOBILE_APP_INSTALL', 'ADS_IN_MOBILE_APPS', 'DEMAND_GEN'],
   },
   CONVERSIONS: {

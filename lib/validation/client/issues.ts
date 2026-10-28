@@ -37,12 +37,17 @@ export function firstInvalidPath(issues: readonly Issue[]): string | null {
 }
 
 /** Moves focus to the first invalid field and scrolls it into view. Fields carry `name` or `data-field-path`. */
-export function focusFirstInvalid(issues: readonly Issue[], root: ParentNode | undefined = undefined): boolean {
+export function focusFirstInvalid(
+  issues: readonly Issue[],
+  root: ParentNode | undefined = undefined,
+): boolean {
   const path = firstInvalidPath(issues);
   if (path === null || typeof document === 'undefined') return false;
   const scope: ParentNode = root ?? document;
   const escaped = path.replace(/["\\]/g, '\\$&');
-  const el = scope.querySelector<HTMLElement>(`[name="${escaped}"], [data-field-path="${escaped}"]`);
+  const el = scope.querySelector<HTMLElement>(
+    `[name="${escaped}"], [data-field-path="${escaped}"]`,
+  );
   if (!el) return false;
   el.scrollIntoView?.({ block: 'center' });
   el.focus();

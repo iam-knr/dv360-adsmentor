@@ -6,10 +6,7 @@ import {
   strategyNeedsTarget,
 } from '../constants/bids';
 import { LI_COUNTING_MODES } from '../constants/conversions';
-import {
-  creativeFormatAllowed,
-  LI_TYPES_WITHOUT_LIBRARY_CREATIVES,
-} from '../constants/creatives';
+import { creativeFormatAllowed, LI_TYPES_WITHOUT_LIBRARY_CREATIVES } from '../constants/creatives';
 import { looserThan, periodLabel, strictestCap } from '../constants/frequency';
 import {
   AUTOMATION_LI_TYPES,
@@ -189,7 +186,9 @@ export const LI_010 = def({
   reads: ['inventory.quality'],
   message: 'Choose an inventory quality option.',
   check: (l) =>
-    l.inventory.quality && QUALITIES.includes(l.inventory.quality) ? null : { path: 'inventory.quality' },
+    l.inventory.quality && QUALITIES.includes(l.inventory.quality)
+      ? null
+      : { path: 'inventory.quality' },
 });
 
 export const LI_011 = def({
@@ -269,7 +268,8 @@ export const LI_021 = def({
   reads: ['flight.startDate', 'flight.endDate'],
   message: MSG.END_BEFORE_START,
   appliesTo: (l) => l.flight.mode === 'CUSTOM',
-  check: (l) => (dateRange(l.flight.startDate, l.flight.endDate) ? null : { path: 'flight.endDate' }),
+  check: (l) =>
+    dateRange(l.flight.startDate, l.flight.endDate) ? null : { path: 'flight.endDate' },
 });
 
 export const LI_022 = def({
@@ -301,7 +301,9 @@ export const LI_023 = def({
     const storedStart =
       stored?.flight.mode === 'CUSTOM' ? stored.flight.startDate : ctx.io?.flight?.start;
     if (!isIsoDate(storedStart)) return null;
-    return storedStart <= today(ctx) && l.flight.startDate !== storedStart ? { path: 'flight.startDate' } : null;
+    return storedStart <= today(ctx) && l.flight.startDate !== storedStart
+      ? { path: 'flight.startDate' }
+      : null;
   },
 });
 
@@ -311,8 +313,10 @@ export const LI_024 = def({
   triggers: ['blur'],
   reads: ['flight.startDate'],
   message: MSG.START_IN_PAST,
-  appliesTo: (l, ctx) => ctx.mode === 'create' && l.flight.mode === 'CUSTOM' && isIsoDate(l.flight.startDate),
-  check: (l, ctx) => (l.flight.startDate && l.flight.startDate < today(ctx) ? { path: 'flight.startDate' } : null),
+  appliesTo: (l, ctx) =>
+    ctx.mode === 'create' && l.flight.mode === 'CUSTOM' && isIsoDate(l.flight.startDate),
+  check: (l, ctx) =>
+    l.flight.startDate && l.flight.startDate < today(ctx) ? { path: 'flight.startDate' } : null,
 });
 
 export const LI_030 = def({
@@ -342,7 +346,9 @@ export const LI_032 = def({
   reads: ['budget.amount', 'ioId'],
   message: MSG.WHOLE_NUMBER,
   appliesTo: (l, ctx) =>
-    l.budget.mode === 'AMOUNT' && ctx.io?.budgetType === 'IMPRESSIONS' && toNum(l.budget.amount) !== null,
+    l.budget.mode === 'AMOUNT' &&
+    ctx.io?.budgetType === 'IMPRESSIONS' &&
+    toNum(l.budget.amount) !== null,
   check: (l) => (isWhole(l.budget.amount) ? null : { path: 'budget.amount' }),
 });
 
@@ -355,7 +361,9 @@ export const LI_033 = def({
   appliesTo: (l, ctx) => l.budget.mode === 'AMOUNT' && !!ctx.io && ctx.io.budgetTotal > 0,
   check: (l, ctx) => {
     const amount = toNum(l.budget.amount);
-    return amount !== null && ctx.io && amount > ctx.io.budgetTotal ? { path: 'budget.amount' } : null;
+    return amount !== null && ctx.io && amount > ctx.io.budgetTotal
+      ? { path: 'budget.amount' }
+      : null;
   },
 });
 
@@ -366,7 +374,8 @@ export const LI_034 = def({
   reads: ['pacing.period', 'pacing.type'],
   message: MSG.PACING_COMBO,
   appliesTo: (l, ctx) => ctx.io?.mode !== 'IO_AUTOMATED' && !!l.pacing.period && !!l.pacing.type,
-  check: (l) => (isLiPacingAllowed(l.pacing.period!, l.pacing.type!) ? null : { path: 'pacing.type' }),
+  check: (l) =>
+    isLiPacingAllowed(l.pacing.period!, l.pacing.type!) ? null : { path: 'pacing.type' },
 });
 
 export const LI_035 = def({
@@ -376,7 +385,8 @@ export const LI_035 = def({
   reads: ['pacing.type', 'pacing.period', 'ioId'],
   message: "Pacing is managed by the insertion order's automation.",
   appliesTo: (_l, ctx) => ctx.io?.mode === 'IO_AUTOMATED',
-  check: (l) => (l.pacing.type === 'ASAP' && l.pacing.period === 'FLIGHT' ? null : { path: 'pacing.type' }),
+  check: (l) =>
+    l.pacing.type === 'ASAP' && l.pacing.period === 'FLIGHT' ? null : { path: 'pacing.type' },
 });
 
 export const LI_036 = def({
@@ -394,12 +404,15 @@ export const LI_037 = def({
   severity: 'warning',
   triggers: ['cross'],
   reads: ['pacing.dailyAmount', 'budget.amount'],
-  message: 'The daily amount is higher than the line item budget, so the line item budget will limit spend.',
+  message:
+    'The daily amount is higher than the line item budget, so the line item budget will limit spend.',
   appliesTo: (l) => l.pacing.period === 'DAILY' && l.budget.mode === 'AMOUNT',
   check: (l) => {
     const daily = toNum(l.pacing.dailyAmount);
     const budget = toNum(l.budget.amount);
-    return daily !== null && budget !== null && budget > 0 && daily > budget ? { path: 'pacing.dailyAmount' } : null;
+    return daily !== null && budget !== null && budget > 0 && daily > budget
+      ? { path: 'pacing.dailyAmount' }
+      : null;
   },
 });
 
@@ -409,7 +422,8 @@ export const LI_040 = def({
   triggers: ['save'],
   reads: ['bid.mode'],
   message: 'Choose a bid strategy.',
-  check: (l) => (l.bid.mode === 'AUTOMATED' || l.bid.mode === 'FIXED' ? null : { path: 'bid.mode' }),
+  check: (l) =>
+    l.bid.mode === 'AUTOMATED' || l.bid.mode === 'FIXED' ? null : { path: 'bid.mode' },
 });
 
 export const LI_041 = def({
@@ -552,11 +566,14 @@ export const LI_053 = def({
   severity: 'info',
   triggers: ['cross'],
   reads: ['frequencyCap', 'ioId'],
-  message: "This limit is less restrictive than the higher-level limit, so the higher-level limit applies.",
+  message:
+    'This limit is less restrictive than the higher-level limit, so the higher-level limit applies.',
   appliesTo: (l, ctx) => resolveCap(l.frequencyCap) !== null && higherCaps(ctx).length > 0,
   check: (l, ctx) => {
     const own = resolveCap(l.frequencyCap);
-    return own && higherCaps(ctx).some((high) => looserThan(own, high)) ? { path: 'frequencyCap' } : null;
+    return own && higherCaps(ctx).some((high) => looserThan(own, high))
+      ? { path: 'frequencyCap' }
+      : null;
   },
 });
 
@@ -585,7 +602,9 @@ export const LI_061 = def({
   check: (l, ctx) =>
     l.creatives
       .map((id, i) => ({ info: ctx.lookups.creatives?.get(id), i }))
-      .filter(({ info }) => !!info && (info.status === 'ARCHIVED' || info.review === 'NOT_SERVABLE'))
+      .filter(
+        ({ info }) => !!info && (info.status === 'ARCHIVED' || info.review === 'NOT_SERVABLE'),
+      )
       .map(({ i }): Violation => ({ path: `creatives[${i}]` })),
 });
 
@@ -605,7 +624,8 @@ export const LI_063 = def({
   triggers: ['activate'],
   reads: ['creatives'],
   message: "This line item has no creatives and won't deliver.",
-  appliesTo: (l) => !!l.type && !LI_TYPES_WITHOUT_LIBRARY_CREATIVES.includes(l.type) && l.creatives.length === 0,
+  appliesTo: (l) =>
+    !!l.type && !LI_TYPES_WITHOUT_LIBRARY_CREATIVES.includes(l.type) && l.creatives.length === 0,
   check: () => ({ path: 'creatives' }),
 });
 
@@ -713,7 +733,8 @@ export const LI_090 = def({
   check: (l) => {
     const model = l.revenueModel;
     if (!model?.type) return null;
-    const valid = model.type === 'TOTAL_MEDIA_COST_MARKUP' ? pct(model.value) : nonNegative(model.value);
+    const valid =
+      model.type === 'TOTAL_MEDIA_COST_MARKUP' ? pct(model.value) : nonNegative(model.value);
     return valid ? null : { path: 'revenueModel.value' };
   },
 });
@@ -734,9 +755,13 @@ export const LI_091 = def({
       ...withMessage(feeTypeMissing(l.partnerCosts, 'partnerCosts'), MSG.PICK_FEE_TYPE),
       ...withMessage(
         ctx.mode === 'edit'
-          ? [systemFeeChanged(l.partnerCosts, originalOf<LineItemInput>(ctx)?.partnerCosts, 'partnerCosts')].flatMap(
-              (v) => (v ? [v] : []),
-            )
+          ? [
+              systemFeeChanged(
+                l.partnerCosts,
+                originalOf<LineItemInput>(ctx)?.partnerCosts,
+                'partnerCosts',
+              ),
+            ].flatMap((v) => (v ? [v] : []))
           : [],
         MSG.FEE_LOCKED,
       ),

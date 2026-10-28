@@ -77,16 +77,20 @@ describe('MX-01 goal to KPI (V-06-11)', () => {
     }
   });
 
-  it.each(CAMPAIGN_GOALS.flatMap((goal) => [...CAMPAIGN_KPI_UNIVERSE, 'OTHER' as Kpi].map((kpi) => [goal, kpi] as const)))(
-    '%s x %s warns iff not recommended',
-    (goal, kpi) => {
-      const campaign = applyPatch(validCampaign(), { goal, kpi: { type: kpi, value: kpi === 'OTHER' ? null : 5 } });
-      const issues = validate('campaign', campaign, makeCtx());
-      const warned = issues.some((i) => i.ruleId === 'CMP-013');
-      expect(warned).toBe(kpi !== 'OTHER' && notRecommendedKpis(goal).includes(kpi));
-      expect(issues.filter((i) => i.blocking)).toEqual([]);
-    },
-  );
+  it.each(
+    CAMPAIGN_GOALS.flatMap((goal) =>
+      [...CAMPAIGN_KPI_UNIVERSE, 'OTHER' as Kpi].map((kpi) => [goal, kpi] as const),
+    ),
+  )('%s x %s warns iff not recommended', (goal, kpi) => {
+    const campaign = applyPatch(validCampaign(), {
+      goal,
+      kpi: { type: kpi, value: kpi === 'OTHER' ? null : 5 },
+    });
+    const issues = validate('campaign', campaign, makeCtx());
+    const warned = issues.some((i) => i.ruleId === 'CMP-013');
+    expect(warned).toBe(kpi !== 'OTHER' && notRecommendedKpis(goal).includes(kpi));
+    expect(issues.filter((i) => i.blocking)).toEqual([]);
+  });
 
   it('keeps every KPI key from the registry', () => {
     for (const kpi of CAMPAIGN_KPI_UNIVERSE) expect(KPIS).toContain(kpi);
@@ -95,7 +99,12 @@ describe('MX-01 goal to KPI (V-06-11)', () => {
 
 describe('MX-02 IO type x objective (V-07-19)', () => {
   const rows = tableAfter('### MX-02')
-    .filter((r) => r.length === 4 && r[0]!.startsWith('`') && /BRAND_AWARENESS|CLICKS|CONVERSIONS|CUSTOM|NONE/.test(r[0]!))
+    .filter(
+      (r) =>
+        r.length === 4 &&
+        r[0]!.startsWith('`') &&
+        /BRAND_AWARENESS|CLICKS|CONVERSIONS|CUSTOM|NONE/.test(r[0]!),
+    )
     .filter((r) => backtickSpans(r[0]!).length === 1);
 
   it('matches the STANDARD table B', () => {
@@ -106,8 +115,14 @@ describe('MX-02 IO type x objective (V-07-19)', () => {
       const matrix = STANDARD_IO_MATRIX[objective];
       if (objective !== 'NONE') {
         expect([...matrix.kpis].sort(), `${objective} kpis`).toEqual(backtickSpans(row[1]!).sort());
-        expect([...matrix.bidStrategies].sort(), `${objective} bids`).toEqual(backtickSpans(row[2]!).filter((s) => s !== 'FIXED_BID').sort());
-        expect([...matrix.liTypes].sort(), `${objective} types`).toEqual(backtickSpans(row[3]!).sort());
+        expect([...matrix.bidStrategies].sort(), `${objective} bids`).toEqual(
+          backtickSpans(row[2]!)
+            .filter((s) => s !== 'FIXED_BID')
+            .sort(),
+        );
+        expect([...matrix.liTypes].sort(), `${objective} types`).toEqual(
+          backtickSpans(row[3]!).sort(),
+        );
       } else {
         expect([...matrix.liTypes].sort()).toEqual(backtickSpans(row[3]!).sort());
       }
@@ -120,9 +135,12 @@ describe('MX-02 IO type x objective (V-07-19)', () => {
     DOOH: ['NONE'],
   };
 
-  it.each(IO_TYPES.flatMap((t) => IO_OBJECTIVES.map((o) => [t, o] as const)))('%s x %s', (type, objective) => {
-    expect(isObjectiveEnabled(type, objective)).toBe(enabled[type].includes(objective));
-  });
+  it.each(IO_TYPES.flatMap((t) => IO_OBJECTIVES.map((o) => [t, o] as const)))(
+    '%s x %s',
+    (type, objective) => {
+      expect(isObjectiveEnabled(type, objective)).toBe(enabled[type].includes(objective));
+    },
+  );
 
   it('gives CTV and OTT insertion orders their own KPI and strategy lists', () => {
     expect(ioKpisFor('CTV_OTT', 'BRAND_AWARENESS')).toEqual(['CPM', 'VALUE_COST']);
@@ -137,60 +155,95 @@ describe('MX-02 IO type x objective (V-07-19)', () => {
 });
 
 describe('MX-03 line item type x IO objective (V-08-19)', () => {
-  const rows = tableAfter('### MX-03').filter((r) => r.length === 6 && /^`[A-Z_]+`$/.test(r[0]!) && (r[1] === 'Y' || r[1] === 'N'));
+  const rows = tableAfter('### MX-03').filter(
+    (r) => r.length === 6 && /^`[A-Z_]+`$/.test(r[0]!) && (r[1] === 'Y' || r[1] === 'N'),
+  );
 
   it('matches the document table', () => {
     expect(rows).toHaveLength(9);
     for (const row of rows) {
       const type = backtickSpans(row[0]!)[0] as LiType;
       IO_OBJECTIVES.forEach((objective, i) => {
-        expect(liTypeAllowedByObjective(objective, type), `${type} x ${objective}`).toBe(row[i + 1] === 'Y');
-        expect(LI_TYPE_BY_OBJECTIVE[objective][type as keyof (typeof LI_TYPE_BY_OBJECTIVE)['NONE']]).toBe(row[i + 1] === 'Y');
+        expect(liTypeAllowedByObjective(objective, type), `${type} x ${objective}`).toBe(
+          row[i + 1] === 'Y',
+        );
+        expect(
+          LI_TYPE_BY_OBJECTIVE[objective][type as keyof (typeof LI_TYPE_BY_OBJECTIVE)['NONE']],
+        ).toBe(row[i + 1] === 'Y');
       });
     }
   });
 
   it('agrees with MX-02 table B (derived from the same data)', () => {
     for (const objective of IO_OBJECTIVES) {
-      const allowed = LI_TYPES.filter((t) => liTypeAllowedByObjective(objective, t) && !CTV_OTT_ONLY_LI_TYPES.includes(t) && !t.startsWith('DOOH'));
+      const allowed = LI_TYPES.filter(
+        (t) =>
+          liTypeAllowedByObjective(objective, t) &&
+          !CTV_OTT_ONLY_LI_TYPES.includes(t) &&
+          !t.startsWith('DOOH'),
+      );
       expect(allowed.sort(), objective).toEqual([...STANDARD_IO_MATRIX[objective].liTypes].sort());
     }
   });
 
-  it.each(IO_TYPES.flatMap((t) => LI_TYPES.map((l) => [t, l] as const)))('IO %s accepts %s', (ioType, liType) => {
-    const expected =
-      ioType === 'DOOH'
-        ? liType.startsWith('DOOH')
-        : ioType === 'CTV_OTT'
-          ? liType === 'CTV' || liType === 'YT_ON_CTV'
-          : !liType.startsWith('DOOH') && liType !== 'YT_ON_CTV';
-    expect(liTypeAllowedByIoType(ioType, liType)).toBe(expected);
-  });
+  it.each(IO_TYPES.flatMap((t) => LI_TYPES.map((l) => [t, l] as const)))(
+    'IO %s accepts %s',
+    (ioType, liType) => {
+      const expected =
+        ioType === 'DOOH'
+          ? liType.startsWith('DOOH')
+          : ioType === 'CTV_OTT'
+            ? liType === 'CTV' || liType === 'YT_ON_CTV'
+            : !liType.startsWith('DOOH') && liType !== 'YT_ON_CTV';
+      expect(liTypeAllowedByIoType(ioType, liType)).toBe(expected);
+    },
+  );
 });
 
 describe('MX-04 bid strategies (V-08-20)', () => {
   it('follows the line item refinements', () => {
-    expect(allowedBidStrategies('STANDARD', 'CLICKS', 'DISPLAY')).toEqual(['MAX_CLICKS', 'MAX_CUSTOM_VALUE_COST']);
+    expect(allowedBidStrategies('STANDARD', 'CLICKS', 'DISPLAY')).toEqual([
+      'MAX_CLICKS',
+      'MAX_CUSTOM_VALUE_COST',
+    ]);
     expect(allowedBidStrategies('STANDARD', 'BRAND_AWARENESS', 'CTV')).toEqual(['MAX_REACH']);
-    expect(allowedBidStrategies('STANDARD', 'BRAND_AWARENESS', 'DISPLAY')).toEqual(STANDARD_IO_MATRIX.BRAND_AWARENESS.bidStrategies);
-    expect(allowedBidStrategies('STANDARD', 'BRAND_AWARENESS', 'VIDEO')).toContain('MAX_VIEWABLE_IMPRESSIONS');
+    expect(allowedBidStrategies('STANDARD', 'BRAND_AWARENESS', 'DISPLAY')).toEqual(
+      STANDARD_IO_MATRIX.BRAND_AWARENESS.bidStrategies,
+    );
+    expect(allowedBidStrategies('STANDARD', 'BRAND_AWARENESS', 'VIDEO')).toContain(
+      'MAX_VIEWABLE_IMPRESSIONS',
+    );
     expect(allowedBidStrategies('DOOH', 'NONE', 'DOOH_DISPLAY')).toEqual([]);
     expect(allowedBidStrategies('STANDARD', 'NONE', 'DISPLAY')).toEqual(AUTOMATED_STRATEGIES);
   });
 
-  it.each(IO_OBJECTIVES.flatMap((o) => (['DISPLAY', 'VIDEO', 'AUDIO', 'MOBILE_APP_INSTALL'] as LiType[]).map((l) => [o, l] as const)))(
-    '%s x %s uses the objective list unless refined',
-    (objective, type) => {
-      const refined = objective === 'CLICKS' && type === 'DISPLAY';
-      if (!refined) expect(allowedBidStrategies('STANDARD', objective, type)).toEqual(ioBidStrategiesFor('STANDARD', objective));
-    },
-  );
+  it.each(
+    IO_OBJECTIVES.flatMap((o) =>
+      (['DISPLAY', 'VIDEO', 'AUDIO', 'MOBILE_APP_INSTALL'] as LiType[]).map((l) => [o, l] as const),
+    ),
+  )('%s x %s uses the objective list unless refined', (objective, type) => {
+    const refined = objective === 'CLICKS' && type === 'DISPLAY';
+    if (!refined)
+      expect(allowedBidStrategies('STANDARD', objective, type)).toEqual(
+        ioBidStrategiesFor('STANDARD', objective),
+      );
+  });
 
   it('knows which strategies need a target value', () => {
-    for (const s of ['TARGET_CPM', 'TARGET_CPV', 'TARGET_CPC', 'TARGET_CPA', 'TARGET_VIEWABLE_IMPRESSIONS', 'TARGET_CUSTOM_VALUE_COST', 'MAX_CPV', 'TARGET_ROAS'] as const) {
+    for (const s of [
+      'TARGET_CPM',
+      'TARGET_CPV',
+      'TARGET_CPC',
+      'TARGET_CPA',
+      'TARGET_VIEWABLE_IMPRESSIONS',
+      'TARGET_CUSTOM_VALUE_COST',
+      'MAX_CPV',
+      'TARGET_ROAS',
+    ] as const) {
       expect(strategyNeedsTarget(s), s).toBe(true);
     }
-    for (const s of ['MAX_REACH', 'MAX_CONVERSIONS', 'MAX_VIEWABLE_IMPRESSIONS'] as const) expect(strategyNeedsTarget(s), s).toBe(false);
+    for (const s of ['MAX_REACH', 'MAX_CONVERSIONS', 'MAX_VIEWABLE_IMPRESSIONS'] as const)
+      expect(strategyNeedsTarget(s), s).toBe(false);
     expect(strategyNeedsTarget('MAX_CLICKS')).toBe(false);
     expect(strategyNeedsTarget('MAX_CLICKS', 'TARGET')).toBe(true);
   });
@@ -213,7 +266,8 @@ describe('MX-05 pacing', () => {
     expect(isIoPacingAllowed('DAILY', 'ASAP')).toBe(true);
     expect(isIoPacingAllowed('DAILY', 'AHEAD')).toBe(false);
     // RC-039: Flight x Ahead is allowed for line items
-    for (const type of ['EVEN', 'AHEAD', 'ASAP'] as const) expect(isLiPacingAllowed('FLIGHT', type)).toBe(true);
+    for (const type of ['EVEN', 'AHEAD', 'ASAP'] as const)
+      expect(isLiPacingAllowed('FLIGHT', type)).toBe(true);
     expect(isLiPacingAllowed('DAILY', 'AHEAD')).toBe(false);
   });
 });
@@ -239,7 +293,7 @@ describe('MX-10 targeting availability (V-08-21)', () => {
           if (labels.length === 2 && col === 'CTV' && label === 'REWARDED') text = 'N';
           expect(cellOf(text), `${label} x ${col}`).toBe(
             // the raw matrix keeps 'V' for "Y if adType VIDEO"
-            (availabilityRaw(label, col)),
+            availabilityRaw(label, col),
           );
         });
       }
@@ -277,9 +331,16 @@ describe('MX-10 targeting availability (V-08-21)', () => {
     const known = new Set(backtickSpans(line));
     for (const label of MATRIX_DIMENSIONS) {
       expect(MATRIX_TO_DM[label].length, label).toBeGreaterThan(0);
-      for (const key of MATRIX_TO_DM[label]) expect(known.has(key.split(':')[0]!), `${label} -> ${key}`).toBe(true);
+      for (const key of MATRIX_TO_DM[label])
+        expect(known.has(key.split(':')[0]!), `${label} -> ${key}`).toBe(true);
     }
-    for (const named of ['INVENTORY_SOURCE', 'APPS_AND_URLS', 'AUDIENCE_LIST', 'CONTENT_STREAM_TYPE', 'DOOH_VENUE']) {
+    for (const named of [
+      'INVENTORY_SOURCE',
+      'APPS_AND_URLS',
+      'AUDIENCE_LIST',
+      'CONTENT_STREAM_TYPE',
+      'DOOH_VENUE',
+    ]) {
       expect(matrixDimensionOf(named), named).not.toBeNull();
     }
     expect(matrixDimensionOf('KEYWORD')).toBe('KEYWORDS');

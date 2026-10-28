@@ -2,7 +2,10 @@
 // The "source of truth" column says which snapshot field a rule reads.
 
 export const PREREQUISITES = {
-  DEMAND_GEN_FLOODLIGHT: { source: 'advertiser.demandGenFloodlightOptimization', rule: 'LI-DG-001' },
+  DEMAND_GEN_FLOODLIGHT: {
+    source: 'advertiser.demandGenFloodlightOptimization',
+    rule: 'LI-DG-001',
+  },
   GOOGLE_INVENTORY: { source: 'advertiser.googleInventoryEnabled', rule: 'LI-DG-004' },
   CONVERSION_BIDDING: { source: 'li.conversions.activities', rule: 'LI-046' },
   DEMAND_GEN_CONVERSIONS: { source: 'li.conversions.activities', rule: 'LI-DG-005' },

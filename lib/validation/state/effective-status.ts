@@ -11,7 +11,8 @@ export function effectiveStatus(
   entity: { status: EntityStatus; flightEnd: string | null },
   today: string,
 ): EffectiveStatus {
-  if (entity.status === 'ACTIVE' && entity.flightEnd !== null && entity.flightEnd < today) return 'COMPLETED';
+  if (entity.status === 'ACTIVE' && entity.flightEnd !== null && entity.flightEnd < today)
+    return 'COMPLETED';
   return entity.status;
 }
 

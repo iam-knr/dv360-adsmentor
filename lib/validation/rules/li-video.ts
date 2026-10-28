@@ -4,7 +4,10 @@ import type { AnyRule, LineItemInput, Rule } from '../types';
 import { def as baseDef } from './line-item';
 
 function def(rule: Omit<Rule<LineItemInput>, 'kind'>): Rule<LineItemInput> {
-  return baseDef({ ...rule, appliesTo: (l, ctx) => l.type === 'VIDEO' && (rule.appliesTo?.(l, ctx) ?? true) });
+  return baseDef({
+    ...rule,
+    appliesTo: (l, ctx) => l.type === 'VIDEO' && (rule.appliesTo?.(l, ctx) ?? true),
+  });
 }
 
 export const LI_VID_001 = def({

@@ -74,7 +74,8 @@ export type TransitionDenial =
   /** A parent (IO, campaign) is archived. IO-091, LI-111. */
   | 'PARENT_ARCHIVED';
 
-export type TransitionResult = { ok: true } | { ok: false; reason: TransitionDenial; ruleId?: string };
+export type TransitionResult =
+  { ok: true } | { ok: false; reason: TransitionDenial; ruleId?: string };
 
 export interface TransitionActor {
   role: RoleKey;
@@ -105,10 +106,13 @@ export function canTransition(
   const row = TRANSITIONS[kind].find((t) => t.from === from && t.to === to);
   if (!row) return { ok: false, reason: 'NOT_OFFERED' };
   if (!row.roles.includes(actor.role)) return { ok: false, reason: 'ROLE' };
-  if (actor.limitedAccess && actor.role !== 'SYSTEM') return { ok: false, reason: 'LIMITED_ACCESS' };
+  if (actor.limitedAccess && actor.role !== 'SYSTEM')
+    return { ok: false, reason: 'LIMITED_ACCESS' };
   if (row.needsLiveParent && (parents.campaignArchived || parents.ioArchived)) {
     const ruleId = PARENT_RULE[kind];
-    return ruleId ? { ok: false, reason: 'PARENT_ARCHIVED', ruleId } : { ok: false, reason: 'PARENT_ARCHIVED' };
+    return ruleId
+      ? { ok: false, reason: 'PARENT_ARCHIVED', ruleId }
+      : { ok: false, reason: 'PARENT_ARCHIVED' };
   }
   return { ok: true };
 }

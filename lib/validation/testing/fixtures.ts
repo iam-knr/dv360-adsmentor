@@ -51,9 +51,7 @@ export function validCampaign(): CampaignInput {
   };
 }
 
-export function validIo(
-  opts: { type?: IoType; objective?: IoObjective } = {},
-): IoInput {
+export function validIo(opts: { type?: IoType; objective?: IoObjective } = {}): IoInput {
   const type = opts.type ?? 'STANDARD';
   const objective = opts.objective ?? 'BRAND_AWARENESS';
   const kpiType = type === 'DOOH' ? null : IO_DEFAULT_KPI[objective];
@@ -64,7 +62,9 @@ export function validIo(
     objective,
     budget: {
       type: 'CURRENCY',
-      segments: [{ id: 'seg-1', amount: inr(10_000), startDate: '2026-10-01', endDate: '2026-10-31' }],
+      segments: [
+        { id: 'seg-1', amount: inr(10_000), startDate: '2026-10-01', endDate: '2026-10-31' },
+      ],
     },
     pacing: { period: 'FLIGHT', type: 'AHEAD' },
     kpi: kpiType ? { type: kpiType, value: inr(100) } : null,
@@ -148,10 +148,19 @@ export function validLineItem(type: LiType = 'DISPLAY'): LineItemInput {
         ? { mode: 'AUTOMATED', optimizedTowards: 'MAX_REACH' }
         : type === 'DEMAND_GEN'
           ? { mode: 'AUTOMATED', optimizedTowards: 'MAX_CLICKS', priority: 'FULL_BUDGET' }
-          : { mode: 'AUTOMATED', optimizedTowards: 'MAX_VIEWABLE_IMPRESSIONS', priority: 'FULL_BUDGET' },
+          : {
+              mode: 'AUTOMATED',
+              optimizedTowards: 'MAX_VIEWABLE_IMPRESSIONS',
+              priority: 'FULL_BUDGET',
+            },
     frequencyCap: { mode: 'INHERIT' },
     creatives: creative ? [creative.id] : [],
-    conversions: { activities: [], countingMode: 'ALL', postViewPct: 100, attributionModelId: null },
+    conversions: {
+      activities: [],
+      countingMode: 'ALL',
+      postViewPct: 100,
+      attributionModelId: null,
+    },
     euPoliticalAds: 'NO',
     revenueModel: null,
     partnerCosts: { cpmFees: [], mediaFees: [] },
@@ -161,7 +170,10 @@ export function validLineItem(type: LiType = 'DISPLAY'): LineItemInput {
 
   switch (type) {
     case 'DISPLAY':
-      base.targeting = { dimensions: ['BRAND_SUITABILITY', 'VIEWABILITY', 'GEOGRAPHY'], predictedViewability: 'ALL' };
+      base.targeting = {
+        dimensions: ['BRAND_SUITABILITY', 'VIEWABILITY', 'GEOGRAPHY'],
+        predictedViewability: 'ALL',
+      };
       break;
     case 'CTV':
       base.targeting = {
@@ -245,7 +257,10 @@ export interface CtxOverrides {
 }
 
 const EXCHANGE_LOOKUP = new Map<string, ExchangeInfo>(
-  ENABLED_EXCHANGES.map((id): [string, ExchangeInfo] => [id, { id, name: id, isDooh: id.startsWith('ex-dooh') }]),
+  ENABLED_EXCHANGES.map((id): [string, ExchangeInfo] => [
+    id,
+    { id, name: id, isDooh: id.startsWith('ex-dooh') },
+  ]),
 );
 
 /** A complete lookup set: nothing is skipped for a missing lookup. */
@@ -253,9 +268,16 @@ export function fullLookups(type: LiType = 'DISPLAY'): NonNullable<ValidationCon
   const creative = validCreativeInfo(type);
   return {
     exchanges: new Map(EXCHANGE_LOOKUP),
-    deals: new Map([['deal-1', { id: 'deal-1', accessible: true, exchangeEnabled: true, status: 'ACTIVE' as const }]]),
+    deals: new Map([
+      [
+        'deal-1',
+        { id: 'deal-1', accessible: true, exchangeEnabled: true, status: 'ACTIVE' as const },
+      ],
+    ]),
     creatives: new Map(creative ? [[creative.id, creative]] : []),
-    floodlightActivities: new Map([['fl-1', { id: 'fl-1', status: 'ACTIVE' as const, linkedToAdvertiser: true }]]),
+    floodlightActivities: new Map([
+      ['fl-1', { id: 'fl-1', status: 'ACTIVE' as const, linkedToAdvertiser: true }],
+    ]),
     customBidding: new Map([['cb-1', { id: 'cb-1', status: 'ACTIVE' as const }]]),
     templates: new Map([
       ['tpl-display', { id: 'tpl-display', liType: 'DISPLAY' as const }],
@@ -268,16 +290,27 @@ export function fullLookups(type: LiType = 'DISPLAY'): NonNullable<ValidationCon
  * A valid context: create mode, a Standard role, the fixture advertiser, an active campaign and an
  * active Brand awareness IO. `overrides` replace parts of it; `null` removes `campaign`, `io` or `lookups`.
  */
-export function makeCtx(overrides: CtxOverrides = {}, lineItemType: LiType = 'DISPLAY'): ValidationContext {
+export function makeCtx(
+  overrides: CtxOverrides = {},
+  lineItemType: LiType = 'DISPLAY',
+): ValidationContext {
   const { ioType, objective } = ioFor(lineItemType);
-  const io = overrides.io === null ? undefined : { ...validIoSnapshot({ type: ioType, objective }), ...overrides.io };
+  const io =
+    overrides.io === null
+      ? undefined
+      : { ...validIoSnapshot({ type: ioType, objective }), ...overrides.io };
   const campaign =
     overrides.campaign === null ? undefined : { ...validCampaignSnapshot(), ...overrides.campaign };
-  const lookups = overrides.lookups === null ? {} : (overrides.lookups ?? fullLookups(lineItemType));
+  const lookups =
+    overrides.lookups === null ? {} : (overrides.lookups ?? fullLookups(lineItemType));
   return {
     mode: overrides.mode ?? 'create',
     now: overrides.now ?? NOW,
-    actor: { userId: 'user-1', role: overrides.role ?? 'STANDARD', limitedAccess: overrides.limitedAccess ?? false },
+    actor: {
+      userId: 'user-1',
+      role: overrides.role ?? 'STANDARD',
+      limitedAccess: overrides.limitedAccess ?? false,
+    },
     ...(overrides.source ? { source: overrides.source } : {}),
     ...(overrides.original !== undefined ? { original: overrides.original } : {}),
     partner: { enabledExchangeIds: ENABLED_EXCHANGES, sdfVersion: '11', ...overrides.partner },
@@ -300,11 +333,13 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 
 /** Deep merge for case tables: objects merge, arrays and scalars replace, `undefined` removes the key. */
 export function applyPatch<T>(base: T, patch: unknown): T {
-  if (!isPlainObject(base) || !isPlainObject(patch)) return (patch === undefined ? base : patch) as T;
+  if (!isPlainObject(base) || !isPlainObject(patch))
+    return (patch === undefined ? base : patch) as T;
   const out: Record<string, unknown> = { ...base };
   for (const [key, value] of Object.entries(patch)) {
     if (value === undefined) delete out[key];
-    else if (isPlainObject(value) && isPlainObject(out[key])) out[key] = applyPatch(out[key], value);
+    else if (isPlainObject(value) && isPlainObject(out[key]))
+      out[key] = applyPatch(out[key], value);
     else out[key] = value;
   }
   return out as T;

@@ -46,7 +46,8 @@ describe('messages', () => {
       for (const value of catalogueOnly) {
         // a quoted literal that equals a catalogue value; template placeholders make the value specific enough
         const patterns = [`'${value}'`, `"${value}"`, `'${value.replace(/'/g, "\\'")}'`];
-        if (patterns.some((p) => text.includes(p))) offenders.push(`${file.replace(ROOT, '')}: ${value}`);
+        if (patterns.some((p) => text.includes(p)))
+          offenders.push(`${file.replace(ROOT, '')}: ${value}`);
       }
     }
     expect(offenders).toEqual([]);

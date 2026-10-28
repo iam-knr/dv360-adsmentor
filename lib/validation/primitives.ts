@@ -56,7 +56,7 @@ export function byteLength(value: string): number {
 
 /** GEN-006: `http(s)://host...` within the length limit. */
 export function isUrl(value: string, maxLength = 1024): boolean {
-  if (value.length > maxLength) return false;
+  if (value.length > maxLength || /\s/.test(value)) return false;
   if (!/^https?:\/\/[^\s/?#]+/i.test(value)) return false;
   try {
     const url = new URL(value);
@@ -98,7 +98,10 @@ export function isIsoDate(value: string | null | undefined): value is string {
 }
 
 /** GEN-008: `end >= start`. Missing or invalid dates pass (another rule reports them). */
-export function dateRange(start: string | null | undefined, end: string | null | undefined): boolean {
+export function dateRange(
+  start: string | null | undefined,
+  end: string | null | undefined,
+): boolean {
   if (!isIsoDate(start) || !isIsoDate(end)) return true;
   return end >= start;
 }

@@ -1,6 +1,11 @@
 // MX-01 Campaign goal to KPI (validation.md 3). Enum keys follow RC-001.
 
-export const CAMPAIGN_GOALS = ['AWARENESS', 'ONLINE_ACTION', 'OFFLINE_SALES', 'APP_INSTALLS'] as const;
+export const CAMPAIGN_GOALS = [
+  'AWARENESS',
+  'ONLINE_ACTION',
+  'OFFLINE_SALES',
+  'APP_INSTALLS',
+] as const;
 export type CampaignGoal = (typeof CAMPAIGN_GOALS)[number];
 
 export const KPIS = [
@@ -56,8 +61,18 @@ export function notRecommendedKpis(goal: CampaignGoal): readonly Kpi[] {
   return CAMPAIGN_KPI_UNIVERSE.filter((k) => !recommended.includes(k));
 }
 
-/** KPIs whose value is a percentage; the rest are money in minor units. */
-export const MONEY_KPIS = ['CPM', 'CPC', 'CPA', 'CPV', 'CPIAVC', 'VCPM', 'CPCL', 'CPCV', 'VALUE_COST'] as const;
+/** KPIs whose value is money in minor units; the rest are percentages. */
+export const MONEY_KPIS = [
+  'CPM',
+  'CPC',
+  'CPA',
+  'CPV',
+  'CPIAVC',
+  'VCPM',
+  'CPCL',
+  'CPCV',
+  'VALUE_COST',
+] as const;
 
 /** Percent KPIs checked on the campaign form (CMP-015). */
 export const CAMPAIGN_PERCENT_KPIS: readonly Kpi[] = ['CTR', 'VIEWABLE_PCT'];

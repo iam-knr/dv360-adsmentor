@@ -17,7 +17,10 @@ const IN_CONTENT = [
 const VIEWABILITY_STEPS = [90, 80, 70, 60, 50, 40, 30, 20, 10] as const;
 
 function def(rule: Omit<Rule<LineItemInput>, 'kind'>): Rule<LineItemInput> {
-  return baseDef({ ...rule, appliesTo: (l, ctx) => l.type === 'DISPLAY' && (rule.appliesTo?.(l, ctx) ?? true) });
+  return baseDef({
+    ...rule,
+    appliesTo: (l, ctx) => l.type === 'DISPLAY' && (rule.appliesTo?.(l, ctx) ?? true),
+  });
 }
 
 export const LI_DSP_010 = def({
@@ -51,10 +54,13 @@ export const LI_DSP_021 = def({
   triggers: ['save'],
   reads: ['targeting.predictedViewability'],
   message: 'Choose a viewability option.',
-  appliesTo: (l) => l.targeting.predictedViewability !== undefined && l.targeting.predictedViewability !== null,
+  appliesTo: (l) =>
+    l.targeting.predictedViewability !== undefined && l.targeting.predictedViewability !== null,
   check: (l) => {
     const value = l.targeting.predictedViewability;
-    const ok = value === 'ALL' || (typeof value === 'number' && (VIEWABILITY_STEPS as readonly number[]).includes(value));
+    const ok =
+      value === 'ALL' ||
+      (typeof value === 'number' && (VIEWABILITY_STEPS as readonly number[]).includes(value));
     return ok ? null : { path: 'targeting.predictedViewability' };
   },
 });

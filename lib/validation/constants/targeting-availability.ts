@@ -48,7 +48,18 @@ export const MATRIX_DIMENSIONS = [
 ] as const;
 export type MatrixDimension = (typeof MATRIX_DIMENSIONS)[number];
 
-type Row = readonly [Availability, Availability, Availability, Availability, Availability, Availability, Availability, Availability, Availability, Availability];
+type Row = readonly [
+  Availability,
+  Availability,
+  Availability,
+  Availability,
+  Availability,
+  Availability,
+  Availability,
+  Availability,
+  Availability,
+  Availability,
+];
 
 // Column order: DSP VID CTV AUD MAI AIA YTLI YTAG DG DOOH
 const ROWS: Record<MatrixDimension, Row> = {
@@ -78,13 +89,15 @@ const ROWS: Record<MatrixDimension, Row> = {
   DOOH_VENUE_SCREEN: ['N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'Y'],
 };
 
-export const TARGETING_AVAILABILITY: Record<MatrixDimension, Record<TargetingColumn, Availability>> =
-  Object.fromEntries(
-    MATRIX_DIMENSIONS.map((dim) => [
-      dim,
-      Object.fromEntries(TARGETING_COLUMNS.map((col, i) => [col, ROWS[dim][i]])),
-    ]),
-  ) as Record<MatrixDimension, Record<TargetingColumn, Availability>>;
+export const TARGETING_AVAILABILITY: Record<
+  MatrixDimension,
+  Record<TargetingColumn, Availability>
+> = Object.fromEntries(
+  MATRIX_DIMENSIONS.map((dim) => [
+    dim,
+    Object.fromEntries(TARGETING_COLUMNS.map((col, i) => [col, ROWS[dim][i]])),
+  ]),
+) as Record<MatrixDimension, Record<TargetingColumn, Availability>>;
 
 /**
  * DM `TargetingDimension` keys (data-model 4.6) that each matrix label stands for (RC-011).
