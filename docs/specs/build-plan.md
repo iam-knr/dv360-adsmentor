@@ -802,7 +802,7 @@ READ FIRST, in this order
 - docs/specs/build-plan.md sections 2 (conventions, stubs, global stop conditions in 2.10) and 3.2 (file ownership)
 - docs/specs/data-model.md: header conventions, sections 1 (ER), 2 (multi-tenancy, RLS), 4 (all enumerations), 5.1 to 5.8, 5.18, 5.19, 6 (change-log design), 7.1 to 7.4, Appendix A (the Prisma text), Appendix B (SQL)
 - docs/specs/modules/05-history-notifications.md sections 3.2 (deltas), 4.1 (write pipeline), 4.2, 6 (acceptance criteria AC-05-1 to AC-05-9, AC-05-29)
-- docs/specs/modules/06-campaigns.md 3.3, 07-insertion-orders.md 3.3, 08-line-items.md 3.3 (spec deltas), 18 section 3.2 (deltas D18-1 to D18-4, D18-13, D18-14)
+- docs/specs/modules/06-campaigns.md 3.3, 07-insertion-orders.md 3.3, 08-line-items.md 3.3 (spec deltas), 18 section 3.2 (deltas Δ18-1 to Δ18-4, Δ18-13, Δ18-14)
 - docs/specs/conflicts.md rows RC-001 to RC-006, RC-013, RC-019 to RC-025, RC-028, RC-031, RC-032 (already applied to data-model.md; read them to know what changed)
 - docs/specs/engine.md 1.7 and 3.5 (stored shape of DeliveryDiagnostic), 9.1 and 9.2 (metric columns)
 
@@ -1351,7 +1351,7 @@ SESSION: P3-07a (targeting card, state and basic editors). Wave 4. Merged before
 READ FIRST, in this order
 - docs/specs/conflicts.md (rows RC-nnn override every spec; read section 1.1)
 - docs/specs/build-plan.md sections 2 (conventions, stubs, global stop conditions in 2.10) and 3.2 (file ownership)
-- docs/specs/modules/10-targeting.md sections 1, 2.1 to 2.3, 3 (state to rows, deltas D-10-1 to D-10-3, D-10-6 to D-10-8), 4 (actions, validation map, rules), 6 (acceptance and tests), 7 (tasks T10-01, T10-03 to T10-06, part of T10-08)
+- docs/specs/modules/10-targeting.md sections 1, 2.1 to 2.3, 3 (state to rows, deltas Δ-10-1 to Δ-10-3, Δ-10-6 to Δ-10-8), 4 (actions, validation map, rules), 6 (acceptance and tests), 7 (tasks T10-01, T10-03 to T10-06, part of T10-08)
 - docs/specs/validation.md domain TGT and TPL, matrix MX-10, MX-16
 - docs/specs/data-model.md sections 4.6 and 5.8 (TargetingOption, TargetingAssignment, TargetingTemplate) and the explore file docs/explore/07-targeting.md for option lists (verbatim)
 - docs/specs/design-system.md 2.10 (DvSlideOver), 2.8 (forms)
