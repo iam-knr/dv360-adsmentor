@@ -150,6 +150,7 @@ After every task: tick the checklist item, add one line to §10 (date, task ID, 
 - **Line Items** — all types:
   - Display, Video, Audio, YouTube & partners (incl. Video reach / action / view / Demand Gen variants), Connected TV, Over-the-top, Mobile app install, Mobile app engagement
   - Tabs/sections: basic details, flight & budget, pacing, bid strategy (fixed CPM, maximise conversions/clicks, target CPA, target ROAS/custom bidding, viewable CPM), creatives assignment, frequency cap, conversion tracking (Floodlight), partner costs, revenue model, optimised targeting
+  - Line item page tabs: Line item details / Troubleshooter (delivery funnel: available requests → filtered → eligible → bids → auction → won) / History
 - **Ad groups / ads** (YouTube line items)
 - Bulk tools: bulk edit, duplicate, upload/download **Structured Data Files (SDF)**, rules/automation
 - **Experiments** (A/B tests)
@@ -229,7 +230,7 @@ One explore file per item; screenshots on demo data only.
 - ✅ P1-02 Partner level (§5.2) → docs/explore/02-partner-level.md
 - ✅ P1-03 Campaigns (§5.3) → docs/explore/03-campaigns.md
 - ✅ P1-04 Insertion orders (§5.3) → docs/explore/04-insertion-orders.md
-- ⬜ P1-05 Line items — every type, every tab (§5.3)
+- 🟨 P1-05 Line items (§5.3) → docs/explore/05-line-items.md (Display/Video/Mobile-app/Ads-in-apps done; CTV, Audio, DOOH, Demand Gen need an awareness / no-objective IO and Floodlight optimisation — revisit)
 - ⬜ P1-06 YouTube ad groups & ads (§5.3)
 - ⬜ P1-07 Targeting — every dimension (§5.4)
 - ⬜ P1-08 Creatives — every type (§5.5)
@@ -358,6 +359,7 @@ Partner · Advertiser · Campaign · InsertionOrder · BudgetSegment · LineItem
 | 2026-10-28 | P1-02 | Partner level documented (advertisers list, basic details, exchanges, targeting defaults, advertiser configurations, resources, users) | P1-03 Campaigns |
 | 2026-10-28 | P1-03 | Campaigns list, bulk/inline actions, New campaign form + validation + goal→KPI rules, campaign page, settings, alerts documented | P1-04 Insertion orders |
 | 2026-10-28 | P1-04 | Insertion orders: list, bulk menu, 2-step create with objective matrix, full form + validation, IO page tabs documented | P1-05 Line items |
+| 2026-10-28 | P1-05 | Line items: type picker + compatibility rules, full Display form, type differences, LI page, Troubleshooter funnel, bulk menu documented; some types blocked in demo | P1-06 YouTube |
 
 ---
 
