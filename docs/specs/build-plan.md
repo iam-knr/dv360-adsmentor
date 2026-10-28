@@ -1,6 +1,6 @@
 # Build plan (P2-07)
 
-Executable plan for Phase 3 (foundation build), with an outline for Phases 4 and 5. Written 2026-10-29 by session P2-07. Inputs: `PROJECT.md`, `docs/PROJECT-LOG.md`, `docs/decisions.md`, `docs/specs/*.md`, `docs/specs/modules/*.md`, `docs/specs/conflicts.md`.
+Executable plan for Phase 3 (foundation build), with an outline for Phases 4 and 5. Written 2026-10-28 by session P2-07. Inputs: `PROJECT.md`, `docs/PROJECT-LOG.md`, `docs/decisions.md`, `docs/specs/*.md`, `docs/specs/modules/*.md`, `docs/specs/conflicts.md`.
 
 Contents
 1. Owner prerequisites checklist

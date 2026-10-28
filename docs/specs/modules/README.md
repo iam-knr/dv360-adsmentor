@@ -2,7 +2,7 @@
 
 One file per module area, each derived from `docs/explore/*` and cross-referenced to `docs/specs/{data-model,routes,design-system,validation,engine}.md`. Every file has the same eight sections: scope, screens, data, behaviour, engine hooks, acceptance criteria (with Playwright and Vitest outlines), build tasks, open questions and conflicts.
 
-Index completed by session P2-07 (2026-10-29). Conflicts between these files and the core specs are resolved in `../conflicts.md`; read it before using a module file. The build order and cloud-session prompts are in `../build-plan.md`.
+Index completed by session P2-07 (2026-10-28). Conflicts between these files and the core specs are resolved in `../conflicts.md`; read it before using a module file. The build order and cloud-session prompts are in `../build-plan.md`.
 
 Columns: **PROJECT.md section** is the scope heading in PROJECT.md section 5. **Phase** names the PROJECT.md section 6 tasks the module's build tasks belong to. **Depends on** lists modules whose code or data this module calls (from the "Depends on" column of its section 7). **Build tasks** is the row count of its section 7 (231 tasks in total).
 

@@ -1,6 +1,6 @@
 # Conflict log (P2-07)
 
-Consolidated conflicts and inconsistencies across `data-model.md` (DM), `routes.md` (RT), `validation.md` (VAL), `engine.md` (ENG), `design-system.md` (DS), `modules/01..18` and `PROJECT.md`. Written 2026-10-29 by session P2-07.
+Consolidated conflicts and inconsistencies across `data-model.md` (DM), `routes.md` (RT), `validation.md` (VAL), `engine.md` (ENG), `design-system.md` (DS), `modules/01..18` and `PROJECT.md`. Written 2026-10-28 by session P2-07.
 
 Sources: section 8 of the 18 module files (211 numbered conflicts), the open-question lists of DM, RT, VAL, ENG and DS, and cross-checks done in this session (enum spellings, field names, route paths, role names, rule IDs, state machines, metric names, SDF and report definitions, engine inputs). Rule IDs proposed by modules were checked against the VAL registry and against each other: no collisions.
 
