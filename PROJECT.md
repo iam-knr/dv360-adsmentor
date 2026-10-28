@@ -153,7 +153,7 @@ After every task: tick the checklist item, add one line to §10 (date, task ID, 
   - Line item page tabs: Line item details / Troubleshooter (delivery funnel: available requests → filtered → eligible → bids → auction → won) / History
 - **Ad groups / ads** (YouTube line items)
 - Bulk tools: bulk edit, duplicate, upload/download **Structured Data Files (SDF)**, rules/automation
-- **Experiments** (A/B tests)
+- **Experiments**: A/B tests (2–n arms of IOs or LIs, audience split, control arm, measurement goal, 90/95% confidence, exclude unidentified users, optional brand lift) and Lift studies (Brand lift / Search lift, eligibility + required media cost, survey metrics ≤3, competitors, object type, intended action, study strength, report with absolute/relative/headroom lift and slices)
 - **Optimisation**: recommendations, optimisation score, alerts & troubleshooting (e.g. "line item not spending" diagnostics)
 
 ### 5.4 Targeting (shared panel used at IO / LI / ad group)
@@ -254,9 +254,10 @@ One explore file per item; screenshots on demo data only.
 - ✅ P1-12 Reporting — instant & offline (§5.9) → docs/explore/12-reporting.md
 - 🟨 P1-13 Planning & reach planner (§5.10) → docs/explore/13-planning.md (Plans list, plan forecast page, columns, Cross-media reach create flow done; New plan, editable plan settings, forecast charts, plan → campaign conversion blocked by Limited Access + past-dated demo plans — revisit)
 - ✅ P1-14 Advertiser settings (§5.11) → docs/explore/14-advertiser-settings.md
-- 🟨 P1-15 Bulk tools, SDF, rules, experiments, optimisation, alerts (§5.3) → docs/explore/15-bulk-sdf-experiments.md (SDF download/upload dialogs, bulk Action bar, custom charts, Intelligence panel, lift study form, targeting templates done; A/B test create and bulk edit panels blocked by Limited Access; no separate rules page exists — revisit)
+- 🟨 P1-15 Bulk tools, SDF, rules, experiments, optimisation, alerts (§5.3) → docs/explore/15-bulk-sdf-experiments.md + docs/explore/18-experiments.md (A/B tests and lift studies now fully documented; only bulk edit side panels remain blocked by Limited Access)
 - ✅ P1-16 Change history, notifications, misc (§5.12) → docs/explore/16-history-notifications.md
 - ✅ P1-17 Gap sweep: click every remaining menu item; add anything missing to §5 → docs/explore/17-gap-sweep.md (filled creative page/history, audience detail, Google tag, channel & keyword list editors, report runs, 404; remaining blocked gaps listed there for Phase 2 from public docs)
+- ✅ P1-18 Experiments: A/B tests + Brand/Search lift studies → docs/explore/18-experiments.md
 
 ### Phase 2 — Specs & architecture — target: 31 Oct–1 Nov
 - ⬜ P2-01 Data model (all entities & relationships) → `docs/specs/data-model.md`
@@ -387,6 +388,7 @@ Partner · Advertiser · Campaign · InsertionOrder · BudgetSegment · LineItem
 | 2026-10-28 | P1-15 | SDF download/upload dialogs, bulk Action bar, custom charts builder, Intelligence panel, lift study form, targeting templates documented; A/B tests and bulk edit panels blocked in demo | P1-16 Change history, notifications |
 | 2026-10-28 | P1-16 | History page (spend chart, date range, local timezone / system changes toggles, download, day cards with field-level old → new), notes panel, notifications, right rail documented | P1-17 Gap sweep |
 | 2026-10-28 | P1-17 | Gap sweep: image creative page, creative History table, audience detail, Floodlight Google tag, channel and negative keyword list editors, report run files, 404 page documented; still-blocked gaps tabled for Phase 2 | P2-01 Data model |
+| 2026-10-28 | P1-18 | Experiments: A/B test list, create form, report + settings/difference; Lift studies list, create form (eligibility, budget, survey), report, review & fix documented | Phase 1 audit → P2-01 |
 
 ---
 

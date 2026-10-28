@@ -57,9 +57,10 @@ Status: ✅ done · 🟨 partly done · ⬜ not started
 | P1-12 | Reporting | ✅ | `12-reporting.md` | Hub, templates, instant builder, ~700-field catalogue, offline builder |
 | P1-13 | Planning & reach planner | 🟨 | `13-planning.md` | Plans list; plan forecast page (KPIs, tabs, line-items table, columns); Cross-media reach create flow. Gaps: New plan, editable settings, forecast charts, plan → campaign |
 | P1-14 | Advertiser settings | ✅ | `14-advertiser-settings.md` | Basic details (SDF, ad server, authorizations, EU political, Demand Gen Floodlight switch, 3P services); targeting rules; data manager; alert preferences (10 alerts); policy center certificates |
-| P1-15 | Bulk, SDF, rules, experiments, optimisation | 🟨 | `15-bulk-sdf-experiments.md` | SDF download/upload; bulk Action bar; custom charts; Intelligence panel; lift study form; targeting templates. Gaps: A/B test create, bulk edit panels |
+| P1-15 | Bulk, SDF, rules, experiments, optimisation | 🟨 | `15-bulk-sdf-experiments.md` | SDF download/upload; bulk Action bar; custom charts; Intelligence panel; lift study form; targeting templates. Gaps: bulk edit panels only (A/B now in 18) |
 | P1-16 | Change history, notifications | ✅ | `16-history-notifications.md` | History page at advertiser/IO level (toggles, date range, day cards, old → new), notes panel, notifications, right rail |
 | P1-17 | Gap sweep | ✅ | `17-gap-sweep.md` | Filled: image creative page, creative History, audience detail, Google tag tab, channel/keyword list editors, report runs, 404. Remaining gaps blocked by demo access — see file |
+| P1-18 | Experiments (A/B + lift) | ✅ | `18-experiments.md` | A/B create/report/settings; lift study create (eligibility, required media cost, survey), report slices, review & fix |
 
 ### Known gaps to revisit
 - LI: DOOH, Demand Gen, app-install step 2, YouTube audio, YT target-frequency/TrueView/ad-sequence forms.
