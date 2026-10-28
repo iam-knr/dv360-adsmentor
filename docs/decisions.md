@@ -174,10 +174,10 @@ Sources: `PROJECT.md` section 9, `docs/PROJECT-LOG.md` section 2, `docs/specs/ro
 - Status: Proposed-awaiting-owner (RC-061). Still open. Default: one sandbox per student; session picks the class with an open window; instructors can override with `?sim_class=`. Changing to shared sandboxes for pairs needs `Sandbox.ownerUserId` to be nullable and extra grants (already supported by the model).
 
 ### ADR-029 Cron plan for the engine tick
-- Status: Superseded by ADR-041 (2026-10-28): the default is now Vercel Cron on Pro; GitHub Actions is the fallback. Original proposal (RC-056, owner item P-05): Default: GitHub Actions every 5 minutes plus lazy catch-up; Vercel Pro cron every minute if the owner upgrades; manual stepping as the weakest option. Needed before P3-08b merges.
+- Status: Superseded by ADR-041, then restored as the default by ADR-048 (2026-10-28): the GitHub Actions timer is the default engine trigger on Vercel Hobby. Original proposal (RC-056, owner item P-05): Default: GitHub Actions every 5 minutes plus lazy catch-up; Vercel Pro cron every minute if the owner upgrades; manual stepping as the weakest option. Needed before P3-08b merges.
 
 ### ADR-030 Vercel plan
-- Status: Accepted and made binding by ADR-041 (2026-10-28): Pro is required. Original proposal (owner item P-03): Default: Pro for class use. Hobby is for non-commercial use, allows daily cron only (a deploy with a faster cron fails) and limits deployments per day (build-plan R-05).
+- Status: Superseded by ADR-048 (2026-10-28): stay on Hobby for now (the simulator is for free students only). Earlier: made binding by ADR-041. Original proposal (owner item P-03): Default: Pro for class use. Hobby is for non-commercial use, allows daily cron only (a deploy with a faster cron fails) and limits deployments per day (build-plan R-05).
 
 ### ADR-031 AI-looking features are canned
 - Status: Proposed-awaiting-owner (RC-054). Default: Ask Advisor, search, report generation and chart prompts use canned logic with a visible "Tutor" label and no model calls. Revisit after the credit window.
@@ -214,8 +214,8 @@ Answered by Kailas in chat on 2026-10-28 and recorded here. They close owner ite
 - Consequences: Free-tier limits are 500 MB, projects pause after 7 days of inactivity, about 60 pooled connections (build-plan 1.4, R-06). Vercel function region is `dub1` (ADR-041). Build-plan 1.4 and 1.10 are rewritten for Supabase. Open item P-04 remains.
 
 ### ADR-041 Vercel Pro required; Vercel Cron is the engine trigger
-- Status: Accepted. Date: 2026-10-28. By: Kailas. Closes: P-05, RC-056. Supersedes ADR-029; makes ADR-030 binding.
-- Decision: The Vercel team is "BIGSEO's projects" (Hobby today). The simulator is used with paying Ads Mentor students and Hobby is non-commercial, so **Vercel Pro is required**. The owner upgrades in Vercel, Settings, Billing, before production use. With Pro, cron may run every minute, so Vercel Cron is the default engine tick trigger (`CRON_MODE=vercel`); the GitHub Actions timer stays as an optional fallback. Function region is `dub1` (Dublin, nearest to eu-west-1), not `bom1` or `sin1`.
+- Status: Superseded by ADR-048 (2026-10-28, same day: the owner corrected the audience to free students only). Date: 2026-10-28. By: Kailas. Closes: P-05, RC-056. Supersedes ADR-029; makes ADR-030 binding.
+- Decision: The Vercel team is "BIGSEO's projects" (Hobby today). The simulator was then thought to be used with paying Ads Mentor students (corrected by ADR-048) and Hobby is non-commercial, so **Vercel Pro is required**. The owner upgrades in Vercel, Settings, Billing, before production use. With Pro, cron may run every minute, so Vercel Cron is the default engine tick trigger (`CRON_MODE=vercel`); the GitHub Actions timer stays as an optional fallback. Function region is `dub1` (Dublin, nearest to eu-west-1), not `bom1` or `sin1`.
 - Consequences: Build-plan 1.3, 1.5, R-05 updated. P3-08b adds the per-minute cron entry only when `CRON_MODE=vercel` is set and the project is on Pro. Open item P-03 (project import and Pro upgrade) remains.
 
 ### ADR-042 Real vendor names as reference data
@@ -235,7 +235,7 @@ Answered by Kailas in chat on 2026-10-28 and recorded here. They close owner ite
 
 ### ADR-045 Class size up to 25 students
 - Status: Accepted. Date: 2026-10-28. By: Kailas. Closes: RC-057.
-- Decision: Up to 25 concurrent students. Size sandboxes, seed data and the load test (P6-03) for 25; 60 stays as a stretch target. The free Supabase tier is acceptable for the pilot with reduced hourly retention and slice caps from engine.md 1.4.
+- Decision: Up to 25 concurrent students by default (free cohorts may be larger; RC-057 is an open owner question, ADR-048). Size sandboxes, seed data and the load test (P6-03) for 25; 60 stays as a stretch target. The free Supabase tier is acceptable for the pilot with reduced hourly retention and slice caps from engine.md 1.4.
 - Consequences: Revisit the database plan if a class exceeds 25 or storage nears 500 MB.
 
 ### ADR-046 Merge authority for the Cowork assistant
@@ -261,7 +261,7 @@ Answered by Kailas in chat on 2026-10-28 and recorded here. They close owner ite
 | ADR-005 | Build in cloud sessions on the $100 credit | Accepted |
 | ADR-006 | Framework and UI | Accepted (ADR-039) |
 | ADR-007 | Data | Accepted (ADR-039, ADR-040) |
-| ADR-008 | Hosting and jobs | Accepted (ADR-039, ADR-041) |
+| ADR-008 | Hosting and jobs | Accepted (ADR-039, ADR-048) |
 | ADR-009 | Authentication | Accepted (ADR-039) |
 | ADR-010 | Tests | Accepted (ADR-039) |
 | ADR-011 | Files only in GitHub | Accepted |
@@ -282,8 +282,8 @@ Answered by Kailas in chat on 2026-10-28 and recorded here. They close owner ite
 | ADR-026 | Engine v1 scope, history stub | Accepted |
 | ADR-027 | Partitioning deferred, RLS flag | Accepted |
 | ADR-028 | One sandbox per student | Proposed-awaiting-owner |
-| ADR-029 | Cron plan | Superseded by ADR-041 |
-| ADR-030 | Vercel plan | Accepted (ADR-041) |
+| ADR-029 | Cron plan | Superseded by ADR-041; restored by ADR-048 |
+| ADR-030 | Vercel plan | Superseded by ADR-048 |
 | ADR-031 | Canned AI features | Proposed-awaiting-owner |
 | ADR-032 | Vendor names | Superseded by ADR-042 |
 | ADR-033 | Billing deferred | Proposed-awaiting-owner |
@@ -294,10 +294,16 @@ Answered by Kailas in chat on 2026-10-28 and recorded here. They close owner ite
 | ADR-038 | Script custom bidding disabled | Accepted |
 | ADR-039 | Stack and plan approved | Accepted |
 | ADR-040 | Database is Supabase | Accepted |
-| ADR-041 | Vercel Pro required; Vercel Cron is the engine trigger | Accepted |
+| ADR-041 | Vercel Pro required; Vercel Cron is the engine trigger | Superseded by ADR-048 |
 | ADR-042 | Real vendor names as reference data | Accepted |
 | ADR-043 | Logo committed; screenshots still missing | Accepted |
 | ADR-044 | Repo stays public; secrets rule | Accepted |
 | ADR-045 | Class size up to 25 students | Accepted |
 | ADR-046 | Merge authority for the Cowork assistant | Accepted |
 | ADR-047 | Three-level account hierarchy and owner-managed credentials | Accepted |
+| ADR-048 | Free students only; Vercel Hobby + GitHub Actions timer as engine trigger | Accepted |
+
+### ADR-048 Free students only; Vercel Hobby with a GitHub Actions timer as engine trigger
+- Status: Accepted. Date: 2026-10-28. By: Kailas. Supersedes ADR-041 and ADR-030; restores ADR-029 as the default. Reopens RC-057 (class size) as an owner question.
+- Decision: (1) The simulator is for FREE students (a lead-gen and training funnel). Paying Ads Mentor students use the real DV360 instead. The account hierarchy (Super admin, Admin, User) from ADR-047 is unchanged. (2) The project stays on Vercel Hobby (team "BIGSEO's projects") for now. No upgrade is needed today. (3) The engine tick is a GitHub Actions workflow (`.github/workflows/engine-tick.yml`, `schedule: cron "*/5 * * * *"`) that POSTs to `/api/engine/cron` with `Authorization: Bearer ${CRON_SECRET}`, plus lazy `ensureCaughtUp` on page loads. No sub-daily cron goes into `vercel.json` (a Hobby deployment fails with it); one daily Vercel cron as a backup is allowed. (4) Revisit Pro before a large public free cohort, or if Vercel asks for an upgrade. Hobby is non-commercial and a free student tool tied to a business is a grey area; the owner accepts this risk.
+- Consequences: Build-plan 1.3, 1.5, 1.6, R-05 and the P3-01 and P3-08b prompts are updated. P-03 becomes "import the repo into Vercel Hobby; no upgrade needed now". Hobby limits (100 deployments per day, function duration, no commercial use) are recorded in build-plan R-05. Function region `dub1` from ADR-041 stays.

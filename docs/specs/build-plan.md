@@ -36,9 +36,9 @@ Owner decisions of 2026-10-28 are recorded below (ADR-039 to ADR-046): P-01, P-0
 |---|---|---|---|---|
 | P-01 | [x] | Approve PROJECT.md and the stack (P0-02, RC-060). **Done 2026-10-28, Kailas:** stack as in PROJECT.md section 7.1 and ADR-006 to ADR-010 approved; plan approved as the project plan and action plan (Phases 0 to 2 done). ADR-039 | Sat 31 Oct | was **BLOCKS** P3-01; no longer blocks |
 | P-02 | [ ] | Prepare the Claude Code cloud environment `dv360-build` (steps in 1.2). **Open** | Sat 31 Oct | **BLOCKS** P3-01 |
-| P-03 | [ ] | Import the repo into Vercel (team "BIGSEO's projects", Hobby today) and **upgrade to Pro** (steps in 1.3). **Open** | Sun 1 Nov, 10:00 IST | Preview deploys and the "preview green" part of the definition of done wait. Sessions still run. Pro is required before any paying student uses the app |
+| P-03 | [ ] | Import the repo into Vercel Hobby (team "BIGSEO's projects"); no upgrade needed now (steps in 1.3, ADR-048). **Open** | Sun 1 Nov, 10:00 IST | Preview deploys and the "preview green" part of the definition of done wait. Sessions still run. Revisit Pro before a large public free cohort or if Vercel asks for an upgrade |
 | P-04 | [ ] | Copy the two Supabase connection strings into Vercel Environment Variables (steps in 1.4). The Supabase project already exists (ref `bwqzdhyatvhpssxtwjza`, eu-west-1). **Open** | Sun 1 Nov, 10:00 IST | Same as P-03. Sessions use a local Postgres, so they do not wait |
-| P-05 | [x] | Cron plan (RC-056). **Done 2026-10-28, Kailas:** Vercel Cron is the default engine trigger, which needs Vercel Pro (see P-03). The GitHub Actions timer stays as an optional fallback. ADR-041 | Mon 2 Nov | Closed. Vercel Pro (P-03) must be active before the cron entry deploys |
+| P-05 | [x] | Cron plan (RC-056). **Done 2026-10-28, Kailas (ADR-048, replaces ADR-041):** a GitHub Actions workflow calls the tick endpoint every 5 minutes, plus lazy catch-up. No sub-daily cron in `vercel.json`. Needs the two Actions secrets of 1.6 (P-06) | Mon 2 Nov | Closed. The timer starts working once P3-08b is merged and P-06 and P-07 are done |
 | P-06 | [ ] | GitHub settings and Actions secrets (steps in 1.6). **Open** | Sun 1 Nov | Branch protection can wait until P3-01 is merged |
 | P-07 | [ ] | Generate `AUTH_SECRET` and `CRON_SECRET` and put them in Vercel (steps in 1.7). **Open** | Sun 1 Nov | Preview login fails without `AUTH_SECRET` |
 | P-08 | [ ] | Create the Vercel Blob store (steps in 1.8) | before Phase 4 | Not needed for Phase 3 |
@@ -76,13 +76,13 @@ Open the cloud environment menu in the session title bar, then Edit. Create one 
 
 ### 1.3 Vercel project (P-03)
 
-1. vercel.com, team "BIGSEO's projects" (Hobby today), Add New, Project, import `iam-knr/dv360-adsmentor`. Install the Vercel GitHub app on that repo if asked.
+1. vercel.com, team "BIGSEO's projects" (Hobby, stays Hobby for now), Add New, Project, import `iam-knr/dv360-adsmentor`. Install the Vercel GitHub app on that repo if asked.
 2. Framework Next.js (auto), Root Directory `./`, Node.js version 22.x (Project Settings, General), Install Command `npm ci`, Build Command `npm run vercel-build`.
 3. Production Branch `main`. Leave "Preview deployments for all branches" on: each session branch gets its own preview URL.
 4. Region: set the Function Region to Dublin, Ireland (`dub1`), the nearest to the database in eu-west-1 (Project Settings, Functions). Do not use `bom1` or `sin1`.
-5. Plan: **Vercel Pro is required** (owner decision 2026-10-28, ADR-041). The simulator is used with paying Ads Mentor students and Hobby is for non-commercial use only. Upgrade in Vercel, Settings, Billing, before any production use with students. With Pro, cron can run every minute. Hobby allows cron jobs only once a day (a deploy with a faster cron fails on Hobby) and limits deployments per day, which many session pushes can hit (see section 5). Until the upgrade is done, keep the cron entry out of `vercel.json` (R-05).
+5. Plan: **stay on Hobby for now** (owner decision 2026-10-28, ADR-048; it replaces the Pro decision of ADR-041). The simulator is for free students only (paying students use the real DV360). No upgrade is needed today. Hobby is for non-commercial use and a free student tool tied to a business is a grey area; the owner accepts this risk. Revisit Pro before a large public free cohort or if Vercel asks for an upgrade. Hobby allows cron jobs only once a day and a deploy with a faster cron fails, so keep sub-daily cron out of `vercel.json`; the engine tick comes from GitHub Actions (1.5). Hobby limits are in section 5, R-05.
 6. Environment variables: add the table in 1.10, each one scoped to Production and Preview separately where the table says so.
-7. Settings, Git: tick "Ignored Build Step" later if the deployment limit becomes a problem (command `git diff --quiet HEAD^ HEAD -- . ':!docs' ':!*.md'` skips docs-only commits).
+7. Settings, Git: set an "Ignored Build Step" now (Hobby allows 100 deployments per day; command `git diff --quiet HEAD^ HEAD -- . ':!docs' ':!*.md'` skips docs-only commits).
 8. Settings, Deployment Protection: keep Vercel Authentication on for previews. Copy the "Protection Bypass for Automation" secret and save it for 1.6 (`VERCEL_AUTOMATION_BYPASS_SECRET`).
 9. Done when: the Vercel project shows a first deployment of the repo (it may fail until P3-01 merges, which is expected).
 
@@ -112,12 +112,12 @@ Owner decision 2026-10-28 (ADR-040): the database is **Supabase**, not Neon. The
 
 ### 1.5 Cron plan (P-05, RC-056)
 
-Decided 2026-10-28 (ADR-041): **Vercel Cron is the default trigger** for the engine tick. It needs Vercel Pro (1.3). With Pro, the cron entry may run every minute, which the engine needs while a class runs. The GitHub Actions timer stays as an optional fallback.
+Decided 2026-10-28 (ADR-048, replaces ADR-041): the **default trigger is a GitHub Actions workflow** that calls the engine tick endpoint every 5 minutes, plus lazy `ensureCaughtUp` on page loads and at login. The project stays on Vercel Hobby, which allows cron only once a day. Do NOT put a sub-daily cron in `vercel.json` (a Hobby deploy fails). A once-daily Vercel cron as a backup is allowed.
 
 | Option | What you do | Trade-off |
 |---|---|---|
-| A. Vercel Cron on Pro (default) | Upgrade to Pro (1.3). Set the Vercel env var `CRON_MODE=vercel`. Session P3-08b adds the cron entry (every minute) to `vercel.json` only when that variable is set | Most reliable. Costs $20 per month, which is already required for paying students |
-| B. GitHub Actions (optional fallback) | Add the two values in 1.6. The workflow `engine-tick.yml` calls the tick URL every 5 minutes. Lazy catch-up runs on page loads and at login. Use it while the project is still on Hobby, or if Vercel Cron misses ticks | Free. GitHub may delay or skip a run |
+| A. GitHub Actions (default) | Add the two Actions secrets in 1.6 (`ENGINE_CRON_URL`, `CRON_SECRET`). The workflow `.github/workflows/engine-tick.yml` (`schedule: cron "*/5 * * * *"`) POSTs to the tick endpoint with `Authorization: Bearer ${CRON_SECRET}`. Lazy catch-up runs on page loads and at login | Free. GitHub may delay or skip a run, so lazy catch-up stays on |
+| B. Vercel Cron, once a day (optional backup) | Session P3-08b may add one daily entry to `vercel.json` (for example the nightly retention job or a daily tick). Never a sub-daily entry on Hobby | Free. Too coarse to drive a class alone |
 | C. Manual | Nothing. The instructor presses Step or Catch up during class | Zero cost, weakest realism |
 
 Lazy `ensureCaughtUp` on page loads stays on in every option.
@@ -126,8 +126,8 @@ Lazy `ensureCaughtUp` on page loads stays on in every option.
 
 Repo, Settings:
 1. Actions, General: allow all actions. Workflow permissions: Read and write.
-2. Secrets and variables, Actions, Secrets: add `CRON_SECRET` (same value as in Vercel). Add `VERCEL_AUTOMATION_BYPASS_SECRET` (from 1.3 step 8). Add `DIRECT_URL_PREVIEW` only if you want CI to run migrations on the preview database (optional).
-3. Secrets and variables, Actions, Variables: add `ENGINE_TICK_URL` = `https://<your-production-domain>/api/sim/engine/tick` and `E2E_BASE_URL` = your production or preview domain (used by the optional post-deploy smoke test).
+2. Secrets and variables, Actions, Secrets: add `ENGINE_CRON_URL` = `https://<your-production-domain>/api/engine/cron` (the tick endpoint URL) and `CRON_SECRET` (same value as in Vercel). Add `VERCEL_AUTOMATION_BYPASS_SECRET` (from 1.3 step 8). Add `DIRECT_URL_PREVIEW` only if you want CI to run migrations on the preview database (optional).
+3. Secrets and variables, Actions, Variables: add `E2E_BASE_URL` = your production or preview domain (used by the optional post-deploy smoke test).
 4. Branches: after P3-01 is merged, add a rule for `main`: require a pull request, require status checks `check`, `db-tests` and `e2e`, block force pushes, require branches to be up to date. Do not add this rule before P3-01, because P3-01 creates the checks. Allow squash merging only.
 5. General: tick "Automatically delete head branches".
 6. Code security: turn on secret scanning and push protection. The repo is public (ADR-044), so this is mandatory, not optional.
@@ -180,12 +180,13 @@ Names are final. `.env.example` (created by P3-01) lists all of them with safe l
 | `CRON_SECRET` | Production and Preview | `openssl rand -hex 24` | `POST /api/sim/engine/tick` |
 | `SEED_SUPER_ADMIN_EMAIL` | Production and Preview | your email | `npm run db:bootstrap` creates the first Super admin (RC-071). Optional `SEED_SUPER_ADMIN_NAME` |
 | `SEED_SUPER_ADMIN_PASSWORD` | Production and Preview | strong temporary password | same. Delete it from Vercel after the first sign in |
-| `CRON_MODE` | Production | `vercel` (default, needs Pro) or `github` or `manual` | P3-08b (cron entry on or off) |
+| `CRON_MODE` | Production | `github` (default) or `manual`. Never `vercel` on Hobby | P3-08b (daily backup cron entry on or off) |
 | `ENABLE_GALLERY` | Preview only | `1` | component gallery page (never in Production) |
 | `BLOB_READ_WRITE_TOKEN` | Production and Preview | added by Vercel (1.8) | uploads (Phase 4) |
 | `DATABASE_URL_TEST` | none (CI and cloud env only) | local Postgres | Vitest `db` project |
 | `AUTH_DEV_BYPASS` | local only, never in Vercel | `1` | dev login bypass, ignored when `NODE_ENV=production` |
-| `ENGINE_TICK_URL`, `E2E_BASE_URL` | GitHub Actions variables | your domain | tick workflow, optional smoke test |
+| `ENGINE_CRON_URL`, `CRON_SECRET` | GitHub Actions secrets | your domain; same `CRON_SECRET` as Vercel | tick workflow |
+| `E2E_BASE_URL` | GitHub Actions variable | your domain | optional smoke test |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | GitHub Actions secret | Vercel (1.3) | Playwright against protected previews |
 
 ---
@@ -515,7 +516,7 @@ No two sessions that run at the same time own the same path. "Owner" is the only
 
 | Path | Owner | After merge |
 |---|---|---|
-| Root configs, `package*.json`, `.github/workflows/ci.yml`, `.github/pull_request_template.md`, `scripts/**`, `.env.example`, `lib/env.ts`, `lib/money.ts`, `app/api/health` | P3-01 | Any session may add a dependency or env var it needs (rebase rule in 2.2). `vercel.json`: P3-08b may add the cron entry |
+| Root configs, `package*.json`, `.github/workflows/ci.yml`, `.github/pull_request_template.md`, `scripts/**`, `.env.example`, `lib/env.ts`, `lib/money.ts`, `app/api/health` | P3-01 | Any session may add a dependency or env var it needs (rebase rule in 2.2). `vercel.json`: P3-08b may add a once-daily backup cron entry only |
 | `lib/theme/**`, `components/dv/**`, `components/icons/**`, `app/(dev)/components/**`, `tests/components/**` | P3-04 | Other sessions import only. Bugs found later: fix in a one-line PR by the session that found it, noted in its PR |
 | `prisma/schema/00-base.prisma` | P3-01 | frozen |
 | `prisma/schema/10..69-*.prisma`, `prisma/migrations/0001_*`, `prisma/sql/**`, `lib/db/**` except `client.ts`, `lib/changelog/{index,diff,registry-types,actors,scan}.ts`, `tests/db/{rls,tenant}*`, `tests/changelog/**` | P3-05a | A later session needing a column adds `prisma/schema/9x-<session>-extra.prisma` and its own migration |
@@ -658,7 +659,7 @@ BUILD EXACTLY THIS
 6. Create `.github/workflows/ci.yml` (the YAML in 2.6, including the secret-scanning step with gitleaks or GitHub secret scanning, ADR-044) and `.github/pull_request_template.md` (sections listed in 2.9). Make sure `.gitignore` excludes every `.env*` file except `.env.example`. The repo is public: never commit secrets, keys, database URLs or student data.
 7. Create the stub contracts of 2.7 with the listed exports and behaviour. Add a 3-line `README.md` to each owned folder naming the owner session and the spec.
 8. Create `app/layout.tsx` (ThemeRegistry from `lib/theme/provider.tsx`, self-hosted Figtree and Roboto via @fontsource, no network fonts), `app/page.tsx` placeholder, `app/api/health/route.ts`, `lib/env.ts` (zod), `lib/money.ts` with unit tests (RC-019).
-9. Create `scripts/bootstrap.ts` (runs `prisma/bootstrap/*.bootstrap.ts` in name order, each idempotent) and `scripts/vercel-build.sh`.
+9. Create `vercel.json` with no cron entry at all (a sub-daily cron fails a Hobby deploy; ADR-048) and the Ignored Build Step command of 1.3 step 7 if the repo can hold it. Create `scripts/bootstrap.ts` (runs `prisma/bootstrap/*.bootstrap.ts` in name order, each idempotent) and `scripts/vercel-build.sh`.
 10. Write `README.md` quickstart.
 11. Run the full gate locally (`npm ci`, `npm run check`, `npm run db:local` in the background, `npm run db:migrate:dev`, `npm run test:db`, `npm run build`, `npm run e2e`). Push, open the PR, wait for CI.
 
@@ -682,6 +683,7 @@ ACCEPTANCE CRITERIA (copied from the specs; list each one in the PR as Done, Par
 - F6: ESLint rejects `Math.random()` in a file under `lib/engine/` (fixture) and accepts it elsewhere.
 - F7: `.env.example` lists every variable of build-plan 1.10. No secret value is committed.
 - F8: Every stub of 2.7 exists with the exported names and types listed.
+- F12: `vercel.json` contains no sub-daily cron (ADR-048).
 - F9: The Vercel preview for the PR builds with `npm run vercel-build` and `/api/health` returns 200 (only if owner items P-03 and P-04 are done).
 - F10: Playwright smoke passes against `npm run start` and uses the preinstalled Chromium if `PLAYWRIGHT_CHROMIUM_PATH` is set.
 - F11: CI runs a secret scan (gitleaks or GitHub secret scanning) inside the `check` job and it passes; `.gitignore` excludes `.env*` except `.env.example` (ADR-044).
@@ -1666,11 +1668,11 @@ READ FIRST, in this order
 BUILD EXACTLY THIS
 1. `lib/engine/io/loadWorld.ts` (database to `World`), `persistTick.ts` (additive upserts of `DeliveryDiagnostic`, `SimHourlyMetric`, `SimDailyMetric`, pacing snapshots, `Alert` open and resolve after 2 clear ticks), `locks.ts` (`SELECT ... FOR UPDATE SKIP LOCKED` on `SimClock`, idempotency through `SimTickLog`), `jobs.ts` (`SimJob`: fast-forward, reset). Use `withBypass` (role `app_engine`).
 2. `lib/engine/server.ts`: `ensureCaughtUp(sandboxId)`, `runDueTicks(deadline)`, `fastForward(sandboxId, simHours)` with progress, `resetSandbox(sandboxId)` minimal (delete sim rows, reset clock), clock controls `setSpeed`, `pause`, `resume`, `stepTicks`.
-3. `POST /api/sim/engine/tick`: auth by `Authorization: Bearer $CRON_SECRET` or `x-cron-secret`; calls `tickAccessWindows(now)` from P3-02 then advances every due RUNNING sandbox within a time budget (default 50 seconds); returns counts. `maxDuration` set.
+3. `POST /api/sim/engine/tick`: auth by `Authorization: Bearer $CRON_SECRET` or `x-cron-secret`; calls `tickAccessWindows(now)` from P3-02 then advances every due RUNNING sandbox within a time budget (default 45 seconds, at most 25 sandboxes per call, chunked by sandbox); returns counts and the number still due. `maxDuration = 60` (Hobby allows up to 60 s).
 4. Alert persistence for the rules available in the engine core, using the `Alert` table with `type` and `diagnosticCode` (RC-013) and the campaign alert groups feed; disabled alert preferences suppress creation.
 5. Structural engine edits (flight end status flip, creative review sync) go through `withChangeLog` with `source = ENGINE` and the system actor constants.
 6. Retention job: trim hourly rows older than 14 sim days nightly (RC-024).
-7. `.github/workflows/engine-tick.yml` (optional fallback, ADR-041): schedule every 5 minutes, runs only when the repository variable `ENGINE_TICK_URL` is set, sends the bearer secret `CRON_SECRET`, fails the job on non-2xx. Vercel Cron is the default trigger on Pro: add the every-minute cron entry to `vercel.json` only when `CRON_MODE=vercel` is set and the owner confirms the project is on Pro (a Hobby deploy fails with a per-minute cron); otherwise put the JSON snippet in the PR body for the owner.
+7. `.github/workflows/engine-tick.yml` (default engine trigger, ADR-048): `schedule: cron "*/5 * * * *"` plus `workflow_dispatch`; POSTs to the secret `ENGINE_CRON_URL` with `Authorization: Bearer ${CRON_SECRET}` (Actions secret); skips quietly when `ENGINE_CRON_URL` is not set; fails the job on non-2xx. Do NOT add any sub-daily cron to `vercel.json` (a Hobby deploy fails); a once-daily Vercel cron backup is allowed. Each tick call advances at most 25 sandboxes (chunk by sandbox, build-plan 5 R-05) and returns the remaining count so the next run continues.
 
 OUT OF SCOPE (do not build, even if easy)
 - A/B tests, lift, YouTube, deals, faults and scenarios, reprocessing, report runs, audience and negotiation steps
@@ -1683,7 +1685,7 @@ FILES YOU OWN (create or edit)
 - `.github/workflows/engine-tick.yml`
 - `tests/engine-io/**`
 EXCEPTIONS (you may also touch)
-- `vercel.json` only if the owner chose Vercel cron (build-plan 1.5)
+- `vercel.json` only for a once-daily backup cron entry (build-plan 1.5); never a sub-daily entry
 - `lib/engine/index.ts` to export runtime types only
 - `PROJECT.md` (last commit only)
 Everything else belongs to another session. Do not edit it. If you must, follow stop condition 1 of build-plan 2.10.
@@ -1697,6 +1699,8 @@ ACCEPTANCE CRITERIA (copied from the specs; list each one in the PR as Done, Par
 - A frozen sandbox (closed window) receives no ticks and its sim time does not move; unfreezing resumes without a jump.
 - Alert opens and resolves after 2 clear ticks; a disabled alert type is never created.
 - The tick endpoint returns 401 for a wrong or missing secret.
+- One tick call processes at most 25 sandboxes and stays inside the function duration; the rest wait for the next call.
+- `vercel.json` holds no sub-daily cron; `engine-tick.yml` uses `*/5 * * * *` and the bearer secret.
 - Money columns are stored once in the advertiser currency (RC-025).
 
 TESTS TO WRITE
@@ -1988,7 +1992,7 @@ The $100 credit expires on 5 Nov 2026 at 1:29 PM IST. The plan spends about 90 o
 
 Minimum viable demo (MVP): an instructor and a student can sign in during an open class window; the student lands in the DV360-style shell; creates a campaign, then an insertion order, then a line item with validation messages as in DV360; the seeded account has realistic data; the engine has produced metrics that show in the list columns.
 
-P3-02b (module 19) is not in the demo MVP below but is required before paying students get accounts; without it, accounts are created only through the bootstrap and the `provisionStudent` helper.
+P3-02b (module 19) is not in the demo MVP below but is required before free students get accounts; without it, accounts are created only through the bootstrap and the `provisionStudent` helper.
 
 The sessions needed for the MVP are, in order: P3-01, P3-05a, P3-04 (Tier A only), P3-06a, P3-02, P3-05b, P3-03, P3-06b, P3-06c, P3-08a, P3-08b, P3-09, P3-INT.
 
@@ -2019,7 +2023,7 @@ Not cuttable: P3-01, P3-05a, P3-06a, P3-05b, P3-03, P3-06b, P3-06c, a minimal P3
 | R-02 | Credit expires while a session is mid-work | Medium, medium | Sessions still open on the morning of 5 Nov | Freeze 9:00 AM IST. Last start 8:00 PM on 4 Nov. Sessions push every 20 minutes |
 | R-03 | Fewer parallel cloud sessions allowed than the plan uses (5 at peak) | Medium, medium | P-12 shows a limit | Run waves with fewer sessions in merge order (3.5). Drop the cuts of 5.2 earlier |
 | R-04 | Owner prerequisites late (Vercel, Postgres, secrets) | Medium, medium | Items open on 1 Nov | Sessions use a local Postgres and need no cloud database. Only "preview green" waits. See F-3 |
-| R-05 | Vercel Hobby limits: cron once per day; a deploy with a faster cron fails; limited deployments per day; function time limits; non-commercial use only | High if Hobby, medium | Deploy error mentioning cron; deployment limit message | Pro is required for the classes (1.3, ADR-041). Until the upgrade is done keep cron out of `vercel.json` (P3-08b rule) and use the GitHub Actions fallback every 5 minutes plus lazy catch-up. Sessions push at checkpoints only (2.9). Add the Ignored Build Step for docs-only commits. Long jobs (fast-forward) run in chunks that fit the function time limit |
+| R-05 | Vercel Hobby limits (ADR-048): 100 deployments per day; function duration 10 s by default (configurable up to 60 s on Hobby); cron once per day and a deploy with a faster cron fails; non-commercial use only | Medium, high | Deploy error mentioning cron or the deployment limit; tick calls cut off with a timeout | Deployments: set the Ignored Build Step so docs-only commits do not deploy (1.3 step 7); sessions push at most every 20 minutes and at checkpoints (2.9, R-02), so a day stays well under 100; preview deployments only for PR branches (turn off previews for branches without a PR). Duration: set `maxDuration = 60` on the tick endpoint and keep the soft deadline at 45 s; a tick call advances at most 25 sandboxes, chunked by sandbox, and returns the remaining count so the next 5-minute run continues; fast-forward and reset run in chunks that fit one call. Cron: keep sub-daily cron out of `vercel.json`; the GitHub Actions timer plus lazy catch-up drives the engine. Commercial use: Hobby is non-commercial. A free student tool tied to a business is a grey area and the owner accepts this risk; revisit Pro before a large public free cohort or if Vercel asks for an upgrade |
 | R-06 | Supabase free-tier limits (Nano): 500 MB storage, project paused after 7 days of inactivity, about 60 pooled connections, cold starts | Medium, medium | Slow first request; storage near the limit; compute hours used up early in the month | Lower sim speed and hourly retention (RC-057, ADR-045); open the app before each class so a paused project is restored. The tick workflow runs only inside class hours (edit the cron expression of `engine-tick.yml` to class hours). Move to Supabase Pro if a class exceeds 25 students |
 | R-07 | Prisma with a transaction pooler: prepared statements, `SET LOCAL` and interactive transactions | Medium, high | Errors like "prepared statement already exists" or lost `app.sandbox_id` | Use `pgbouncer=true` on `DATABASE_URL`, `DIRECT_URL` for migrations, and run every request inside `withSandbox` (one interactive transaction). Fallback F-4 |
 | R-08 | RLS and composite foreign keys slow the schema work or break Prisma features | Medium, medium | P3-05a tests need long fixes | `RLS_ENABLED=false` switch keeps the service-layer sandbox filter (every query already carries `sandboxId`). Record the gap and move on |

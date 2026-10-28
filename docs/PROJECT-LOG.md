@@ -4,7 +4,7 @@ Last updated: 2026-10-28 (owner approvals recorded) · Master plan: `PROJECT.md`
 ---
 
 ## 1. What we are building
-A classroom-only training simulator that replicates Google Display & Video 360 (DV360) screen-for-screen and is fully functional (forms validate, campaigns "run" via a simulated ad-serving engine, reports reflect simulated delivery), so students learn real programmatic workflows without real money or real client data.
+A classroom-only training simulator for FREE students (paying Ads Mentor students use the real DV360, ADR-048) that replicates Google Display & Video 360 (DV360) screen-for-screen and is fully functional (forms validate, campaigns "run" via a simulated ad-serving engine, reports reflect simulated delivery), so students learn real programmatic workflows without real money or real client data.
 
 ## 2. Discussion & decisions
 | # | Topic | Decision / outcome | By |
@@ -24,11 +24,11 @@ A classroom-only training simulator that replicates Google Display & Video 360 (
 | D13 | Decision records | ADR-001 to ADR-046 in `docs/decisions.md`; ADR-039 to ADR-046 record the owner decisions of 2026-10-28 | Claude |
 | D14 | Approvals (2026-10-28) | Stack and plan approved; PROJECT.md is the project plan and action plan. Closes P-01, P0-02, RC-060 (ADR-039) | Kailas |
 | D15 | Database | Supabase (existing project, ref `bwqzdhyatvhpssxtwjza`, eu-west-1, free Nano), Postgres only. Pooler port 6543 for `DATABASE_URL`, direct port 5432 for `DIRECT_URL`; values pasted only into Vercel env vars. Not Neon (ADR-040) | Kailas |
-| D16 | Hosting and cron | Vercel team "BIGSEO's projects"; Pro required for paying students; Vercel Cron is the default tick trigger, GitHub Actions timer is the fallback; function region `dub1`. Closes P-05, RC-056 (ADR-041) | Kailas |
+| D16 | Hosting and cron | Vercel team "BIGSEO's projects"; stays on Hobby for now; the simulator is for free students only (paying students use the real DV360); GitHub Actions timer every 5 minutes is the default tick trigger plus lazy catch-up; function region `dub1`. Closes P-05, RC-056 (ADR-048, supersedes ADR-041) | Kailas |
 | D17 | Vendor names | Real exchange, verifier and vendor names with invented prices, also in Advertiser settings. Closes P-10, RC-055 (ADR-042) | Kailas |
 | D18 | Logo | `docs/brand/adsmentor-logo-horizontal.png` committed; used in app bar and login; P3-03 derives a square icon. Screenshots still missing. Closes RC-058, P-09 partly (ADR-043) | Kailas |
 | D19 | Repo visibility | Stays public. Never commit secrets, `.env*`, keys, DB URLs or student data; secret scan in P3-01 CI. Closes RC-059 (ADR-044) | Kailas |
-| D20 | Class size | Up to 25 concurrent students; free Supabase tier for the pilot with reduced retention; P6-03 target 25, 60 stretch. Closes RC-057 (ADR-045) | Kailas |
+| D20 | Class size | Default up to 25 concurrent students; free cohorts may be larger; RC-057 is an open owner question (cohort size, public self-signup; default 25, no self-signup). Free Supabase tier for the pilot with reduced retention; P6-03 target 25, 60 stretch (ADR-045, ADR-048) | Kailas |
 | D21 | Merge authority | Cowork assistant may merge Phase 3+ build PRs after green checks and preview, in merge order, with no open comments; squash only; reports every merge. Closes P-13 (ADR-046) | Kailas |
 
 ## 3. Environment notes
@@ -47,7 +47,7 @@ Status: ✅ done · 🟨 partly done · ⬜ not started
 | P0-02 | Review & approve PROJECT.md | ✅ | Approved 2026-10-28 with the stack (build-plan P-01, ADR-039) |
 | P0-03 | Repo + PROJECT.md committed | ✅ | |
 | P0-04 | Repo connected to Claude Code on the web | ✅ | Cloud sessions commit successfully |
-| P0-05 | Vercel + Postgres | 🟨 | Supabase project exists (ref `bwqzdhyatvhpssxtwjza`); pending: Vercel import and Pro upgrade, env vars, secrets, cloud environment (build-plan 1.2 to 1.10, P-02, P-03, P-04, P-06, P-07) |
+| P0-05 | Vercel + Postgres | 🟨 | Supabase project exists (ref `bwqzdhyatvhpssxtwjza`); pending: Vercel import (Hobby, no upgrade needed now), env vars, secrets, cloud environment (build-plan 1.2 to 1.10, P-02, P-03, P-04, P-06, P-07) |
 | P0-06 | Turn off usage-credits toggle | ⬜ | Kailas (build-plan P-12) |
 | P0-07 | Browser + DV360 sign-in | ✅ | Claude in Chrome |
 
@@ -109,7 +109,7 @@ Authoritative: `docs/decisions.md` (ADR-006 to ADR-010 for the stack) and `docs/
 | Tables | MUI X Data Grid / TanStack Table (column views, filter chips, bulk Action bar) |
 | Charts | Recharts |
 | Data | PostgreSQL + Prisma; synthetic seed generator |
-| Jobs | Vercel Cron + server actions for simulation ticks |
+| Jobs | GitHub Actions timer + lazy catch-up + server actions for simulation ticks (Vercel Hobby, ADR-048) |
 | Auth | Auth.js; roles student / instructor / admin + DV360-style Standard / Read only / Reporting only |
 | Tests | Vitest + Playwright |
 
@@ -167,7 +167,7 @@ Authoritative: `docs/specs/build-plan.md` (waves, ownership, merge order, sessio
 ## 7. Open questions
 Full list with defaults: `PROJECT.md` section 11 and `docs/specs/conflicts.md` section 3 (owner decisions). Answered on 2026-10-28: stack and plan, database (Supabase), cron and Vercel plan, vendor names, logo, repo visibility, class size, merge authority (D14 to D21).
 1. Cloud environment `dv360-build`, usage-credits toggle, $100 balance, parallel session limit (P-02, P-12). Blocks P3-01.
-2. Vercel project import and Pro upgrade (P-03); Supabase URLs into Vercel env vars (P-04); GitHub Actions secrets (P-06); `AUTH_SECRET` and `CRON_SECRET` into Vercel (P-07). Preview deploys wait for these.
+2. Vercel project import into Hobby, no upgrade needed now (P-03); Supabase URLs into Vercel env vars (P-04); GitHub Actions secrets (P-06); `AUTH_SECRET` and `CRON_SECRET` into Vercel (P-07). Preview deploys wait for these.
 3. Reference screenshots are not in the repo (`docs/screenshots/` is empty); design-system Q1 stays open (P-09 partly done).
 4. One sandbox per student (assumed, RC-061); canned Tutor (RC-054); billing deferred (RC-062); student accounts, uploads and retention (RC-063 to RC-065).
 5. Existing exercises to turn into scenarios (default: the 10 starters in module 18).
@@ -175,6 +175,6 @@ Full list with defaults: `PROJECT.md` section 11 and `docs/specs/conflicts.md` s
 
 ## 8. Next steps
 1. Phase 1 and Phase 2 are done (Phase 1 gaps are listed in "Known gaps"; they are filled from public docs in the specs). Owner approvals of 2026-10-28 are recorded (ADR-039 to ADR-046).
-2. Owner: complete P-02 (cloud environment `dv360-build`) and P-12 (usage credits off, $100 balance) by Sat 31 Oct; P-03 (Vercel import and Pro upgrade), P-04 (Supabase URLs into Vercel), P-06 (GitHub Actions secrets) and P-07 (`AUTH_SECRET`, `CRON_SECRET` into Vercel) by Sun 1 Nov morning. Values go only into Vercel, never chat or the repo.
+2. Owner: complete P-02 (cloud environment `dv360-build`) and P-12 (usage credits off, $100 balance) by Sat 31 Oct; P-03 (Vercel import into Hobby), P-04 (Supabase URLs into Vercel), P-06 (GitHub Actions secrets) and P-07 (`AUTH_SECRET`, `CRON_SECRET` into Vercel) by Sun 1 Nov morning. Values go only into Vercel, never chat or the repo.
 3. Sun 1 Nov: run wave 1 (P3-01, including the secret-scan CI step), then waves 2 to 5 as in build-plan section 3. The Cowork assistant merges build PRs under the conditions in build-plan 3.6. Merge freeze Thu 5 Nov 9:00 AM IST; credit expires 1:29 PM IST.
 4. After Phase 3: planning sessions update the specs from the gap list (`docs/gaps/p3.md`) and write Phase 4 prompts from build-plan 3.7.
