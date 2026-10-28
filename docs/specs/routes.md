@@ -27,7 +27,7 @@ Path aliases used in tables
 | R1 | Drop the `/ng_nav` prefix. `/ng_nav/**` is accepted and 308-redirected to `/**`. | Teachers can paste a real DV360 URL and land on the same screen. Real DV360 is a SPA under `/ng_nav/`; we do not need the prefix. |
 | R2 | Keep DV360 spelling for every segment, even odd ones (`home_v3`, `explorerios`, `explorerlis`, `fl/events`, `tid`, `location-extension`, `brand-lift-measurements`, `featured-v3`). | Fidelity rule (R2 in PROJECT.md). Students may compare URLs with the real product. |
 | R3 | Tabs are **path segments** (`/explorerios`, `/details`, `/history`, `/troubleshooter`, `/adgroups`). The only exception is the deal page, which uses `?activeTab=` because DV360 does. | Matches DV360 and gives each tab its own `page.tsx` and its own loading state. |
-| R4 | Everything simulator-only lives under `/sim/**` (pages) and `/api/sim/**` (API). Simulator-only query params start with `sim_`. DV360 paths never start with `sim`. | No collision with any current or future DV360 path. |
+| R4 | Everything simulator-only lives under `/sim/**` (pages) and `/api/sim/**` (API). Simulator-only query params start with `sim_`. DV360 paths never start with `sim`. Module 19 adds the reserved prefixes `/manage/**` (account management pages) and `/api/manage/**`; no DV360 path starts with `manage` either (RC-068). | No collision with any current or future DV360 path. |
 | R5 | Two physical route trees under one route group: `(app)` has the top bar, left nav, right rail. `(full)` has no top bar and no nav (full-screen forms, plan page, reports app). Both trees use the same URL prefix `p/[partnerId]/...`. | A parent layout cannot remove its own chrome, so full-screen pages must sit in a sibling tree. Cost: thin duplicate context layouts, solved with shared loaders. |
 | R6 | Right-rail panels and dialogs are client state. Draft-bound slide-overs are client state inside the form draft. Entity slide-overs use `?sim_panel=`. The two A/B test panels use a parallel + intercepting route because DV360 gives them real URLs. See section 5.4. | Each surface gets the mechanism that matches its lifetime. |
 | R7 | Reads for tables go through `GET /api/dv/**` route handlers. Form writes go through server actions that call the same service function. File up/download and polling use route handlers. | Tables need cacheable, refetchable URLs. Forms benefit from typed actions. One service layer keeps validation in one place. |
@@ -41,14 +41,14 @@ Path aliases used in tables
 
 Two layers.
 
-**Simulator role** (`User.role`, from Auth.js session): `student`, `instructor`, `admin`.
+**Simulator role** (`User.appRole`, from Auth.js session): `user`, `admin`, `super_admin` (RC-068; formerly `student`, `instructor`, `admin`; hierarchy and rules in module 19).
 **DV360 access level** (per partner or advertiser, `UserAccess.level`): `ADMIN`, `STANDARD`, `READ_ONLY`, `REPORTING_ONLY`, plus `PARTNER_CLIENT` and `CREATIVE` (seen / documented, see Q11).
 
 | Simulator role | Gets by default |
 |---|---|
-| student | `STANDARD` on their own sandbox partner (all advertisers in it). No `/sim/instructor/**`. Can open `/sim/scenarios`. |
-| instructor | `ADMIN` on every sandbox partner of their classes. All `/sim/instructor/**`. Can use "view as student". |
-| admin | Everything, plus `/sim/admin/**`. |
+| user (a student) | `STANDARD` on their own sandbox partner (all advertisers in it). No `/sim/instructor/**`, no `/manage/**`. Can open `/sim/scenarios`. |
+| admin (an instructor) | DV360 `ADMIN` on every sandbox partner of their own cohorts. `/sim/instructor/**` for own classes. `/manage/**` limited to own users. Can use "view as user". |
+| super_admin (the owner) | Everything, plus `/sim/admin/**`, `/manage/settings` and all of `/manage/**`. |
 
 A scenario may override a student's access level on the sandbox (for example `READ_ONLY` to practise "why can I not edit?").
 
@@ -81,7 +81,7 @@ Each file entry below is a folder holding `page.tsx`. Tree root is `app/(dv)/(ap
 
 | DV360 path | Simulator folder | Frame | Purpose | Level | Explore | Access |
 |---|---|---|---|---|---|---|
-| (DV360 product home) | `app/page.tsx` | - | Redirect: student to their sandbox `[P]/home_v3`, instructor to `/sim/instructor`, admin to `/sim/admin`. `≠` simulator-only entry | Global | 01 | ANY |
+| (DV360 product home) | `app/page.tsx` | - | Redirect: user to their sandbox `[P]/home_v3`, admin to `/sim/instructor`, super admin to `/manage/accounts`. `≠` simulator-only entry | Global | 01 | ANY |
 | `/bulk-status` | `(global)/bulk-status` | G | Bulk job history grouped by year and day, filter, auto refresh, "Show changes by all users" | Global | 01 | RO / - (all-users toggle: ADM) |
 | `/users` | `(global)/users` | G (no left nav, back arrow) | Your profile table + Users table, filter, New user | Global | 02 | RO / ADM |
 | `/users/new` | `(global)/users/new` | G (no left nav) | New user: name, email, type, access (select partners and advertisers slide-over), role per row | Global | 02 | ADM / ADM |
@@ -470,10 +470,12 @@ app/
   404/page.tsx                the DV360-style 404
   [...unmatched]/page.tsx     redirect('/404?url=' + encodeURIComponent(path)); lowest priority catch-all
   sim/                        simulator-only pages (section 7), own layouts
+  manage/                     account management pages (section 7.5, module 19), own layout
   api/
     auth/[...nextauth]/route.ts
     dv/...                    DV360 module endpoints (section 8)
     sim/...                   simulator endpoints (section 8.19+)
+    manage/...                account management endpoints (section 8.21)
   (dv)/
     layout.tsx                guard: session present, access window open, view-as banner; NO visual chrome
     (app)/                    tree WITH chrome
@@ -546,8 +548,9 @@ Each table page has `loading.tsx` (grid skeleton) and each shell has `error.tsx`
 Edge `middleware.ts` (named `proxy.ts` on Next 16+):
 1. `/ng_nav/**` to `/**` (308).
 2. Not signed in and path is not `/sim/login` or `/api/auth/**`: redirect to `/sim/login?next={path}`.
-3. Student outside an open access window: redirect to `/sim/closed`. Instructor and admin skip this.
-4. `/sim/instructor/**` needs instructor or admin. `/sim/admin/**` needs admin. Else `/404`.
+3. User (student) outside an open access window: redirect to `/sim/closed`. Admin and super admin skip this. `/manage/**` is never subject to class windows.
+4. `/sim/instructor/**` needs admin or super admin. `/sim/admin/**` needs super admin. `/manage/**` needs admin or super admin; `/manage/settings` needs super admin. Anything else redirects to `/sim/forbidden` for `/sim/**` and `/manage/**` (RC-075); DV360 routes keep `/404`.
+5. Module 19: the middleware only verifies the session cookie and the role claim. Status, `sessionVersion`, single session and idle limits are checked by `requireUser()` in every page, action and handler (module 19 4.5).
 
 Node layout guards (section 5.1): chain check (R10), then access level. Failure of either renders the 404 page; a missing write right is returned by the action as an `Issue` with code `FORBIDDEN` and shown as a toast.
 
@@ -703,12 +706,12 @@ Everything lives under `/sim`. They use own layouts (`app/sim/layout.tsx` with a
 | `/sim/instructor/announcements` | Author notifications shown in the bell |
 | `/sim/instructor/progress` | Class progress |
 
-### 7.3 Admin and view-as
+### 7.3 Super admin tools and view-as
 
 | Route | Purpose |
 |---|---|
-| `/sim/admin` | Admin home |
-| `/sim/admin/users` | All users and roles |
+| `/sim/admin` | Super admin home (platform tools: seed, engine, audit) |
+| `/sim/admin/users` | Redirects to `/manage/accounts` (module 19, RC-068) |
 | `/sim/admin/classes` | All classes |
 | `/sim/admin/seed` | Seed templates and generator runs |
 | `/sim/admin/engine` | Engine tuning (CPM, CTR, win-rate ranges) |
@@ -720,6 +723,26 @@ View-as: an instructor opens any DV360 URL with `?sim_as={userId}`. The server r
 - Access windows, clock and sandbox reset are **class** properties. A student never sees `/sim/instructor/**`.
 - The access window guard is in the middleware and also in every action (a long-open tab must stop writing when the window closes).
 - Window ending: banner 5 minutes before the end; at the end all writes fail with `ACCESS_WINDOW_CLOSED` and the next navigation goes to `/sim/closed` (Q12).
+
+### 7.5 Account management (`/manage`, module 19)
+
+Own layout `app/manage/layout.tsx` (plain Adsmetor header and left menu). Access codes: `SA` super admin, `AD` admin (own users only), `AD+SA` both. A User gets `/sim/forbidden`.
+
+| Route | Folder | Purpose | Access |
+|---|---|---|---|
+| `/manage` | `app/manage` | Redirect to `/manage/accounts` | AD+SA |
+| `/manage/accounts` | `app/manage/accounts` | Accounts list: search, filters (role, status, cohort, owner admin), bulk actions | AD+SA |
+| `/manage/accounts/new` | `app/manage/accounts/new` | Add account (email, name, role limited by creator, cohort, access period, password generate or set) | AD+SA |
+| `/manage/accounts/import` | `app/manage/accounts/import` | CSV import with dry run | AD+SA |
+| `/manage/accounts/[userId]` | `app/manage/accounts/[userId]` | Account detail: security, sandbox, progress, activity | AD+SA (own users) |
+| `/manage/cohorts` | `app/manage/cohorts` | Cohorts (classrooms) list | AD+SA |
+| `/manage/cohorts/new` | `app/manage/cohorts/new` | Create cohort | AD+SA |
+| `/manage/cohorts/[cohortId]` | `app/manage/cohorts/[cohortId]` | Cohort users, settings, windows | AD+SA (own cohorts) |
+| `/manage/access` | `app/manage/access` | Account access periods and class windows overview | AD+SA |
+| `/manage/audit` | `app/manage/audit` | Audit log of account actions | AD+SA (scoped) |
+| `/manage/settings` | `app/manage/settings` | Session, lockout, password and cohort policy | SA |
+
+Sign in and change password are shared pages (`/sim/login`, `/sim/me/password`). Query params: `?q=`, `f.role=`, `f.status=`, `f.cohort=`, `f.owner=`, `sort=`, `page=`, `rows=` (same list convention as 6.1). A foreign or unknown `[userId]` renders "Account not found." inside the layout (module 19 ACC-022), not the DV360 404 page.
 
 ---
 
@@ -1268,7 +1291,7 @@ interface LiftStudyInput extends WriteMeta { name: string; ioIds: Id[]; brandLif
 
 ```ts
 // Auth.js: /api/auth/[...nextauth]  (credentials)
-// GET /api/sim/session -> { user: { id; name; role: 'student'|'instructor'|'admin'; classId?: Id }; classOpen: boolean; nextWindow?: IsoDateTime; viewAs?: Id }
+// GET /api/sim/session -> { user: { id; name; role: 'user'|'admin'|'super_admin'; classId?: Id }; classOpen: boolean; nextWindow?: IsoDateTime; viewAs?: Id }
 interface ClassInfo { id: Id; name: string; instructorIds: Id[]; studentCount: number; sandboxTemplateId: Id }
 interface AccessWindow { id: Id; classId: Id; startsAt: IsoDateTime; endsAt: IsoDateTime; timeZone: string; repeat?: { freq: 'WEEKLY'; byDay: string[]; until: IsoDate }; note?: string; state: 'SCHEDULED'|'OPEN'|'CLOSED' }
 // GET /api/sim/classes | GET /api/sim/classes/:id | action createClass / updateClass / archiveClass
@@ -1306,6 +1329,22 @@ interface Scenario { id: Id; title: string; brief: string /* markdown */; seedTe
 > Resolved RC-028: the clock is stored per sandbox (DM `SimClock`, ENG 1.2); a class-level action applies to every sandbox of the class. `speedX` is a display conversion of `minutesPerSimDay`.
 
 ---
+
+### 8.21 Account management (module 19)
+
+Base `/api/manage/**`. Server actions in `lib/actions/accounts.ts`; every action starts with `requireUser()`, role check and `can()`; results are `Result<T>`; actions that return a password send `Cache-Control: no-store`. Full signatures and rules: module 19 4.7.
+
+```ts
+// GET /api/manage/accounts?q=&f.role=&f.status=&f.cohort=&f.owner=   -> ListResult<AccountDto>
+// GET /api/manage/accounts/:id | GET /api/manage/accounts.csv (no secrets)
+// action createAccount | updateAccount | changeRole | transferOwnership | setAccountStatus | unlockAccount
+// action resetPassword | revokeSessions | deleteAccount | restoreAccount | purgeAccount | bulkAccounts | importAccounts | generateAccountPassword
+// GET /api/manage/cohorts | action createCohort | updateCohort | archiveCohort
+// GET /api/manage/audit | GET /api/manage/policy | action updatePolicy (super admin)
+// action changeOwnPassword (alias of module 18 changePassword)
+// module 18 actions addStudents, resetStudentPassword (8.19) are aliases of createAccount and resetPassword (RC-073)
+// GET /api/sim/session -> { user: { id; name; role: 'user'|'admin'|'super_admin'; classId? }; ... }   (8.19, role values renamed by RC-068)
+```
 
 ## 9. Build notes for P3-03 (app shell) and P3-06
 

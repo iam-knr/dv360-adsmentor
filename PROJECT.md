@@ -231,6 +231,7 @@ Basic details (name, URL, industry, currency, time zone) · Ad serving (CM360 li
 ### 5.13 Simulator-only features (Adsmetor layer)
 - **Simulation engine** (§7.3): time acceleration (1 day = N minutes), auction, pacing, metrics
 - **Instructor console**: open/close classroom access, create class & student accounts, reset sandboxes, load scenarios, view student progress
+- **Account management dashboard (super admin / admin / user)**: separate `/manage` area (spec: `docs/specs/modules/19-account-management.md`). Super admin (owner) and Admin (instructor) add accounts by email with a password they set or generate and share by hand; Admins manage only their own Users. Cohorts, CSV import, access periods, audit log, lockout and session policy
 - **Scenarios / exercises**: guided tasks ("Launch a CTV campaign", "Fix under-pacing IO", "Add PG deal"), auto-checked
 - Per-student sandboxed partner/advertiser with seeded data
 
@@ -282,7 +283,8 @@ One explore file per item; screenshots on demo data only.
 ### Phase 3 — Foundation build (cloud sessions, $100 credit) — target: 1–5 Nov
 Plan: `docs/specs/build-plan.md` (owner prerequisites, waves, file ownership, merge order, prompts). Session ids below are the prompt ids in build-plan section 4. Starts when owner items P-01 and P-02 are done. A split task is ticked 🟨 until all its sessions are merged.
 - ⬜ P3-01 Next.js + TypeScript + Prisma + Postgres scaffold; Vercel deploy → session P3-01 (build-plan 4.1)
-- ⬜ P3-02 Adsmetor auth, roles (student / instructor / admin), classroom access windows → session P3-02 (4.6; module 18 M18-01 to M18-04)
+- ⬜ P3-02 Adsmetor auth, roles (`USER` / `ADMIN` / `SUPER_ADMIN`), classroom access windows, password policy and lockout foundation → session P3-02 (4.6; module 18 M18-01 to M18-04; module 19 M19-01 to M19-04, M19-14)
+- ⬜ P3-02b Account management dashboard `/manage` (Super admin / Admin / User, email + shared password, cohorts, CSV import, audit) → session P3-02b (4.17; module 19 M19-05 to M19-16; wave 5, merge 15b)
 - ⬜ P3-03 App shell: top bar, switcher, left nav, breadcrumbs, date picker → session P3-03 (4.9; module 01 T1 to T6)
 - ⬜ P3-04 Shared components: data table (columns picker, filters, bulk actions), side panel forms, dialogs, status chips → session P3-04 (4.2; design-system.md)
 - ⬜ P3-05 Full data model + seed generator (partners, advertisers, campaigns, IOs, LIs, creatives, deals, audiences) → sessions P3-05a schema core and `withChangeLog` (4.3), P3-05b seed generator (4.7), P3-05c remaining tables (4.8)
@@ -400,6 +402,7 @@ Full records: `docs/decisions.md` (ADR-001 to ADR-046).
 | 2026-10-28 | ADR-044: repo stays public; never commit secrets, `.env*`, keys, DB URLs or student data; secret scan in P3-01 CI; closes RC-059 | Kailas |
 | 2026-10-28 | ADR-045: up to 25 concurrent students; free Supabase tier for the pilot with reduced retention; P6-03 target 25 (60 stretch); closes RC-057 | Kailas |
 | 2026-10-28 | ADR-046: Cowork assistant may merge Phase 3+ build PRs under strict conditions (checks, preview, order, no open comments; squash only); closes P-13 | Kailas |
+| 2026-10-28 | ADR-047: three-level account hierarchy (`SUPER_ADMIN`, `ADMIN`, `USER`), email login with a creator-set or generated shared password, `/manage` dashboard; supersedes ADR-034 (RC-063, RC-068 to RC-076) | Kailas (requirement), Claude (module 19) |
 
 ---
 
@@ -435,6 +438,7 @@ Full records: `docs/decisions.md` (ADR-001 to ADR-046).
 | 2026-10-28 | P2-06 | Module specs: 18 files (sections 1 to 8) and index; 231 build tasks; conflicts and open questions per module | P2-07 Build order |
 | 2026-10-28 | P2-07 | Conflict log (67 rows: 55 resolved and applied to the specs, 12 owner decisions with defaults), ADR-001 to ADR-038, module index, build plan (owner prerequisites, repo skeleton, 16 sessions in 5 waves with ownership and merge order, ready-to-paste prompts, risks and cut order) | Owner completes build-plan section 1 by Sat 31 Oct (P-01, P-02, P-12, repo visibility block the start); run wave 1 (P3-01) on Sun 1 Nov |
 | 2026-10-28 | OWNER | Stack/plan approved; Supabase + Vercel Pro; real vendor names; repo public; ≤25 students; assistant may merge PRs | Owner completes P-02/03/04/06/07/12; then P3-01 |
+| 2026-10-28 | SPEC | Account management module 19 specified (3 levels, email+password, admin adds users) | Phase 3 prerequisites |
 
 ---
 
@@ -452,7 +456,7 @@ Owner decisions are listed with their conflict-log id (`docs/specs/conflicts.md`
 10. ~~Real or fictional vendor names?~~ Real names with invented prices (RC-055, ADR-042).
 11. AI-looking features: canned Tutor (default) or real model calls (RC-054)?
 12. Billing, invoices and partner-level lists deferred past Phase 4 (RC-062)? Please confirm.
-13. Student accounts created by the instructor with temporary passwords, no email (RC-063)? Student uploads allowed (RC-064)? Retention after a course (RC-065)?
+13. Student accounts: **answered 2026-10-28** (RC-063, ADR-047): created by a Super admin or Admin with email login and a shared password, no email provider. Still open: forced password change default, one session per account, cohort size 25 (module 19 section 8)? Student uploads allowed (RC-064)? Retention after a course (RC-065)?
 14. Any specific exercises you already teach that should become Phase 5 scenarios? Default: the 10 starters in module 18.
 15. How many cloud sessions can run in parallel on this account? The wave plan assumes up to 5 (build-plan P-12, R-03).
 16. ~~Who merges the pull requests?~~ The Cowork assistant may merge Phase 3+ build PRs under the conditions in build-plan 3.6 (P-13, ADR-046).

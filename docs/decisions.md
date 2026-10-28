@@ -82,7 +82,7 @@ Sources: `PROJECT.md` section 9, `docs/PROJECT-LOG.md` section 2, `docs/specs/ro
 
 ### ADR-009 Authentication
 - Status: Accepted by ADR-039 (2026-10-28, Kailas). Date: 2026-10-28.
-- Decision: Auth.js v5 with the credentials provider and argon2id password hashing. Roles: student, instructor, admin, plus DV360-style access levels (Standard, Read only, Reporting only, Partner client, Creative, Admin) inside a sandbox.
+- Decision: Auth.js v5 with the credentials provider and argon2id password hashing. Roles: `USER`, `ADMIN`, `SUPER_ADMIN` (ADR-047; formerly student, instructor, admin), plus DV360-style access levels (Standard, Read only, Reporting only, Partner client, Creative, Admin) inside a sandbox.
 - Consequences: Auth.js v5 is a beta package; all use goes through `lib/auth/session.ts` so it can be swapped (build-plan R-19).
 
 ### ADR-010 Tests
@@ -189,7 +189,7 @@ Sources: `PROJECT.md` section 9, `docs/PROJECT-LOG.md` section 2, `docs/specs/ro
 - Status: Proposed-awaiting-owner (RC-062). Default: billing profiles, invoices, partner costs and revenue models pages, and partner-level audiences and lists are built after Phase 4 (task 02-T14). Tables stay in the schema.
 
 ### ADR-034 Student accounts
-- Status: Proposed-awaiting-owner (RC-063). Default: instructor creates accounts (form or CSV); temporary password shown once and changed at first login; no email provider, no self-registration.
+- Status: Superseded by ADR-047 (owner requirement of 2026-10-28, RC-063 changed). Original default: instructor creates accounts (form or CSV); temporary password shown once and changed at first login; no email provider, no self-registration.
 
 ### ADR-035 Student uploads
 - Status: Proposed-awaiting-owner (RC-064). Default: students may upload creative files with MIME checks and size caps (10 MB for HTML5, video and audio, 5 MB for others), direct to Blob by signed URL, no scanning, deleted on sandbox reset.
@@ -243,6 +243,11 @@ Answered by Kailas in chat on 2026-10-28 and recorded here. They close owner ite
 - Decision: The Cowork assistant session may merge Phase 3+ build PRs into `main` on the owner's behalf only when (a) required checks (lint, typecheck, unit tests, Playwright, secret scan) are green, (b) the Vercel preview deployment is green, (c) merge order follows build-plan 3.5, and (d) there are no unresolved review comments. Squash-merge only. Never force-push, never delete other branches, never merge a docs-only PR that touches specs without reading the diff. The assistant reports every merge to the owner.
 - Consequences: Build-plan 3.6 carries the rule. Other owner items stay open: P-02, P-03, P-04, P-06, P-07, P-12.
 
+### ADR-047 Three-level account hierarchy and owner-managed credentials
+- Status: Accepted (owner requirement of 2026-10-28; RC-063, RC-068 to RC-076; module 19). Date: 2026-10-28.
+- Decision: Accounts have three levels: `SUPER_ADMIN` (the owner: manages everything, at least one must stay active, cannot be deleted), `ADMIN` (an instructor: creates and manages only `USER` accounts in their own cohorts, cannot create Admins or Super admins, sees only their own users) and `USER` (a student: works only in their own sandbox). A separate dashboard under `/manage/**` manages them. The person's email is the login. The creator sets a password or lets the app generate one (16 characters), shares it by hand, and the app shows it once; passwords are stored only as argon2id hashes. "Ask for a new password at first sign in" is on by default and can be switched off per account. No email provider in v1, no self sign-up. A cohort is the existing `Classroom`. Account actions go through one service layer with role checks in middleware and in every server action, row scoping by owner admin and cohort, and one extended `AuditLog`. First Super admin comes from `SEED_SUPER_ADMIN_EMAIL` and `SEED_SUPER_ADMIN_PASSWORD` in Vercel env only.
+- Consequences: `AppRole` values are renamed (`STUDENT` to `USER`, `INSTRUCTOR` to `ADMIN`, old `ADMIN` to `SUPER_ADMIN`) in data-model, routes and module 18 before any schema exists, so there is no data migration. New session P3-02b builds the dashboard (build-plan 3.1, merge 15b); P3-02 gets the security foundation (password policy, lockout, session policy, bootstrap). Shared passwords are a real risk on a public repository, so secrets live only in Vercel env, plaintext is never stored or logged, and the threat list in module 19 4.6.2 has a test for each item. Email invites and two-factor sign in are deferred (M19-17). Alternatives rejected: separate `Cohort` table (duplicates `Classroom`), one `AccessWindow` row per account (clutters the class windows table), a `Session` table (JWT with `sessionVersion` and `sid` is enough).
+
 ---
 
 ## Index
@@ -282,7 +287,7 @@ Answered by Kailas in chat on 2026-10-28 and recorded here. They close owner ite
 | ADR-031 | Canned AI features | Proposed-awaiting-owner |
 | ADR-032 | Vendor names | Superseded by ADR-042 |
 | ADR-033 | Billing deferred | Proposed-awaiting-owner |
-| ADR-034 | Student accounts | Proposed-awaiting-owner |
+| ADR-034 | Student accounts | Superseded by ADR-047 |
 | ADR-035 | Student uploads | Proposed-awaiting-owner |
 | ADR-036 | Data retention | Proposed-awaiting-owner |
 | ADR-037 | Students are Standard users | Accepted |
@@ -295,3 +300,4 @@ Answered by Kailas in chat on 2026-10-28 and recorded here. They close owner ite
 | ADR-044 | Repo stays public; secrets rule | Accepted |
 | ADR-045 | Class size up to 25 students | Accepted |
 | ADR-046 | Merge authority for the Cowork assistant | Accepted |
+| ADR-047 | Three-level account hierarchy and owner-managed credentials | Accepted |

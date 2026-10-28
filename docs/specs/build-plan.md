@@ -17,7 +17,7 @@ Contents
 | Build window | Sunday 1 Nov to Thursday 5 Nov 2026 |
 | Merge freeze | Thursday 5 Nov, 9:00 AM IST. Anything not merged by then waits for normal plan limits |
 | Last session start | Wednesday 4 Nov, 8:00 PM IST |
-| Sessions | 16 sessions in 6 waves (section 3). Peak parallelism: 5 sessions |
+| Sessions | 17 sessions in 6 waves (section 3; P3-02b added by module 19). Peak parallelism: 5 sessions |
 | Minimum viable classroom demo | Instructor and student login, app shell, campaign then IO then line item create with validation, seed data, engine v1 delivering metrics in list columns. Defined in section 5.2 |
 | Hard rule | No session pushes to `main`. Every session opens one PR from its own branch |
 | Hard rule (repo is public, ADR-044) | Never commit secrets, `.env*` files (only `.env.example` with safe local values), keys, database URLs or student data. Production values live only in Vercel Environment Variables |
@@ -68,8 +68,8 @@ Open the cloud environment menu in the session title bar, then Edit. Create one 
 | `AUTH_SECRET` | any 32+ character random string (test only) |
 | `AUTH_TRUST_HOST` | `true` |
 | `CRON_SECRET` | `dev-cron-secret` |
-| `SEED_ADMIN_EMAIL` | `admin@example.test` |
-| `SEED_ADMIN_PASSWORD` | `dev-admin-password-change-me` |
+| `SEED_SUPER_ADMIN_EMAIL` | `admin@example.test` |
+| `SEED_SUPER_ADMIN_PASSWORD` | `dev-admin-password-change-me` |
 
 4. Do not put production secrets in this environment. Playwright and Chromium are already installed in the cloud image (path `/opt/pw-browsers/chromium`); no browser download is needed.
 5. Done when: a new session in this environment can run `node -v` (22 or later) and `npm view next version` without a network error.
@@ -145,7 +145,7 @@ openssl rand -base64 32
 openssl rand -hex 24
 ```
 
-Use the first for `AUTH_SECRET` and the second for `CRON_SECRET`. Choose `SEED_ADMIN_EMAIL` (your real email) and a long `SEED_ADMIN_PASSWORD` (changed at first login). Never put them in a prompt, an issue, a PR or a file.
+Use the first for `AUTH_SECRET` and the second for `CRON_SECRET`. Choose `SEED_SUPER_ADMIN_EMAIL` (your real email) and a long `SEED_SUPER_ADMIN_PASSWORD` (changed at first login). They create the first Super admin account (module 19, RC-071); the bootstrap only creates it when no Super admin exists. After you have signed in and changed the password, delete `SEED_SUPER_ADMIN_PASSWORD` from Vercel. Never put them in a prompt, an issue, a PR or a file.
 
 ### 1.8 Blob store (P-08)
 
@@ -162,7 +162,7 @@ Vercel project, Storage, Create, Blob. Connect it to the project. Vercel adds `B
 | RC-059 | **Decided 2026-10-28:** the repo **stays public**. Hard rule: never commit secrets, `.env*` files, keys, database URLs or student data. A secret-scanning step is part of the P3-01 CI list (ADR-044) | Closed | n/a |
 | RC-061 | One sandbox per student, or shared sandboxes for pairs | One per student | before P3-02 |
 | RC-062 | Billing, invoices, partner-level lists deferred past Phase 4 | Deferred | before Phase 4 |
-| RC-063 | Student accounts: instructor-created with a temporary password and no email | As stated | before Phase 5 |
+| RC-063 | Student accounts: answered by the owner on 2026-10-28 (module 19, ADR-047): created by Super admin or Admin with email login and a shared password, no email provider. Open details are in module 19 section 8 | As stated in module 19 (forced change on, one session per User, cohort 25) | before P3-02b |
 | RC-064 | Allow students to upload their own files | Allowed with size caps, no scanning | before Phase 4 |
 | RC-065 | Student data retention after a course | Archive after 90 days, delete on request | before the pilot |
 | PROJECT.md 11 | Exercises you already teach (students per class is decided: up to 25, RC-057) | the 10 starters in module 18 | before Phase 5 |
@@ -178,8 +178,8 @@ Names are final. `.env.example` (created by P3-01) lists all of them with safe l
 | `AUTH_SECRET` | Production and Preview | `openssl rand -base64 32` | Auth.js |
 | `AUTH_TRUST_HOST` | Production and Preview | `true` | Auth.js behind the Vercel proxy |
 | `CRON_SECRET` | Production and Preview | `openssl rand -hex 24` | `POST /api/sim/engine/tick` |
-| `SEED_ADMIN_EMAIL` | Production and Preview | your email | `npm run db:bootstrap` creates the first admin |
-| `SEED_ADMIN_PASSWORD` | Production and Preview | strong temporary password | same |
+| `SEED_SUPER_ADMIN_EMAIL` | Production and Preview | your email | `npm run db:bootstrap` creates the first Super admin (RC-071). Optional `SEED_SUPER_ADMIN_NAME` |
+| `SEED_SUPER_ADMIN_PASSWORD` | Production and Preview | strong temporary password | same. Delete it from Vercel after the first sign in |
 | `CRON_MODE` | Production | `vercel` (default, needs Pro) or `github` or `manual` | P3-08b (cron entry on or off) |
 | `ENABLE_GALLERY` | Preview only | `1` | component gallery page (never in Production) |
 | `BLOB_READ_WRITE_TOKEN` | Production and Preview | added by Vercel (1.8) | uploads (Phase 4) |
@@ -394,8 +394,8 @@ jobs:
       AUTH_SECRET: ci-only-secret-ci-only-secret-ci-only
       AUTH_TRUST_HOST: 'true'
       CRON_SECRET: ci-cron-secret
-      SEED_ADMIN_EMAIL: admin@example.test
-      SEED_ADMIN_PASSWORD: ci-admin-password
+      SEED_SUPER_ADMIN_EMAIL: admin@example.test
+      SEED_SUPER_ADMIN_PASSWORD: ci-admin-password
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -504,9 +504,10 @@ Sizes use the module specs' scale: S under half a day, M about a day, L two days
 | 4 | **P3-08b** | P3-08 engine runtime. engine.md 1.2 to 1.4, 1.7, 3.5, 3.7, 10.2, 10.3 | `lib/engine/io/**`, `lib/engine/server.ts`, `app/api/sim/engine`, `.github/workflows/engine-tick.yml`, `tests/engine-io` | 2, 5, 6, 7 | 13 | M, 5 | A tick writes funnel, hourly and daily rows for seeded LIs. Idempotent and lock-safe in DB tests. Fast-forward 7 days finishes. Tick endpoint rejects a wrong secret. Tick P3-08 |
 | 4 | **P3-09** | P3-09 performance columns. engine.md 9.2 to 9.4; modules 06, 07, 08 section 2.1 | `lib/metrics/**`, `app/api/dv/metrics`, `tests/metrics`, `tests/e2e/performance-columns.spec.ts` | 2, 7 to start; 11 and 12 merged before its e2e spec runs | 14 | S, 3 | Campaign, IO and LI lists show real numbers and totals on seeded data; totals reconcile with raw rows in tests. Tick P3-09 |
 | 5 | **P3-07b** | P3-07 targeting, part b: geography with map, apps and URLs, brand suitability, audience builder. module 10 T07, T08 (apps), T09, T10 | `components/targeting/editors/{geography,apps-urls,brand,audience}/**`, `lib/targeting/{geo,audience}.ts` | 10 | 15 | M, 5 | Acceptance criteria listed in the prompt pass. Tick P3-07 |
+| 5 | **P3-02b** | Account management dashboard (new, module 19). module 19 M19-05 to M19-16; routes.md 7.5, 8.21; validation.md 2.26 | `lib/accounts/**`, `lib/actions/accounts.ts`, `lib/validation/rules/acc.ts`, `lib/sandbox/provision.ts`, `app/manage/**`, `app/api/manage/**`, `components/manage/**`, `tests/accounts/**`, `tests/e2e/accounts.spec.ts` | 2, 3, 4, 6 (P3-02 foundation M19-01 to 04 and 14). M18-05 optional (stub) | 15b | L, 6 | Super admin, Admin and User flows of module 19 section 6 pass in unit, db and e2e tests; no plaintext password in storage or logs; CSV import with exact messages. Tick P3-02b (PROJECT.md 6 and 5.13 row) |
 | 5 | **P3-INT** | Integration and hardening. Not a PROJECT.md task | any file, small fixes only, one commit per fix with the owning session id | all merged | 16 | M, 4 | Full CI green on `main`, demo script passes on the production preview, gaps listed in `docs/gaps/p3.md`. Tick remaining P3 lines |
 
-Merge numbers are the order in 3.5. Wave 4 sessions can run in parallel because their file sets do not overlap. P3-06c and P3-07a talk to each other only through the stub in 2.7. P3-09 and P3-06b/c talk through `getGridMetrics`.
+Merge numbers are the order in 3.5. P3-02b is merge 15b (inserted by module 19, so no later number moves); it runs in wave 5 beside P3-07b and P3-INT and must merge before P3-INT. Wave 4 sessions can run in parallel because their file sets do not overlap. P3-06c and P3-07a talk to each other only through the stub in 2.7. P3-09 and P3-06b/c talk through `getGridMetrics`.
 
 ### 3.2 File and directory ownership
 
@@ -521,7 +522,8 @@ No two sessions that run at the same time own the same path. "Owner" is the only
 | `lib/changelog/registries/<entity>.ts` | the session that owns the entity: campaign, budget, IO, segment, partner cost by P3-06b; line item and children by P3-06c; the rest in Phase 4 | |
 | `prisma/schema/70..89-*.prisma`, `prisma/migrations/0002_*` and later, `tests/db/extended*` | P3-05c | frozen |
 | `prisma/seed/**` except `auth.seed.ts`, `prisma/bootstrap/20-*`, `lib/seed/**`, `data/reference/**`, `tests/seed/**` | P3-05b | Module sessions in Phase 4 add their own `*.seed.ts` files |
-| `prisma/seed/auth.seed.ts`, `prisma/bootstrap/10-*` | P3-02 | |
+| `prisma/seed/auth.seed.ts`, `prisma/bootstrap/10-*`, `lib/auth/password.ts`, `lib/auth/roles.ts` | P3-02 | P3-02b imports only |
+| `lib/accounts/**`, `lib/actions/accounts.ts`, `lib/validation/rules/acc.ts`, `lib/sandbox/provision.ts` (stub until M18-05), `app/manage/**`, `app/api/manage/**`, `components/manage/**`, `tests/accounts/**`, `tests/e2e/accounts.spec.ts` | P3-02b | Phase 5 may extend `lib/sandbox/provision.ts` (M18-05) |
 | `lib/validation/**` (except targeting and template rules), `tests/validation/**` (except `cases.targeting.ts`) | P3-06a | Phase 4 sessions add their domain files (`rules/<domain>.ts`) |
 | `lib/validation/rules/{targeting,template}.ts`, `tests/validation/cases.targeting.ts` | P3-07a | |
 | `lib/validation/constants/targeting-availability.ts` | P3-06a (MX-10 data) | P3-07a may extend the mapping |
@@ -555,7 +557,7 @@ No two sessions that run at the same time own the same path. "Owner" is the only
 | Sun 1 Nov, afternoon to night | Wave 2 (4 sessions in parallel). Merge 2 to 5 as each finishes |
 | Mon 2 Nov | Wave 3 (4 sessions). Merge 6 to 9 |
 | Tue 3 Nov | Wave 4 (5 sessions). Merge 10 to 14 |
-| Wed 4 Nov | Wave 5: P3-07b and P3-INT. Fix round. Last session starts by 8:00 PM |
+| Wed 4 Nov | Wave 5: P3-07b, P3-02b and P3-INT. Fix round. Last session starts by 8:00 PM |
 | Thu 5 Nov | Fixes only. Merge freeze 9:00 AM. Credit expires 1:29 PM |
 
 If fewer than 5 sessions can run at once (P-12), run each wave in the merge order of 3.5 and let the schedule slip by one wave, then apply the cuts in 5.2.
@@ -579,6 +581,7 @@ If fewer than 5 sessions can run at once (P-12), run each wave in the merge orde
 | 13 | P3-08b | engine runtime and tick endpoint |
 | 14 | P3-09 | metrics replace the zero stub |
 | 15 | P3-07b | advanced editors |
+| 15b | P3-02b | account management dashboard; needs auth (6), validation core (4), components (3) |
 | 16 | P3-INT | last |
 
 ### 3.6 Merge cheat sheet (for whoever merges)
@@ -825,7 +828,7 @@ READ FIRST, in this order
 - docs/specs/build-plan.md sections 2 (conventions, stubs, global stop conditions in 2.10) and 3.2 (file ownership)
 - docs/specs/data-model.md: header conventions, sections 1 (ER), 2 (multi-tenancy, RLS), 4 (all enumerations), 5.1 to 5.8, 5.18, 5.19, 6 (change-log design), 7.1 to 7.4, Appendix A (the Prisma text), Appendix B (SQL)
 - docs/specs/modules/05-history-notifications.md sections 3.2 (deltas), 4.1 (write pipeline), 4.2, 6 (acceptance criteria AC-05-1 to AC-05-9, AC-05-29)
-- docs/specs/modules/06-campaigns.md 3.3, 07-insertion-orders.md 3.3, 08-line-items.md 3.3 (spec deltas), 18 section 3.2 (deltas Δ18-1 to Δ18-4, Δ18-13, Δ18-14)
+- docs/specs/modules/06-campaigns.md 3.3, 07-insertion-orders.md 3.3, 08-line-items.md 3.3 (spec deltas), 18 section 3.2 (deltas Δ18-1 to Δ18-4, Δ18-13, Δ18-14), 19 section 3.2 and 3.3 (deltas Δ19-1 to Δ19-8: `AppRole` values, `User` account columns, `Classroom` owner and capacity, `Sandbox.frozenReason`, `AuditLog` columns, `AccountPolicy`, `AuthThrottle`, `citext`; already merged into data-model.md 5.1 and Appendix A)
 - docs/specs/conflicts.md rows RC-001 to RC-006, RC-013, RC-019 to RC-025, RC-028, RC-031, RC-032 (already applied to data-model.md; read them to know what changed)
 - docs/specs/engine.md 1.7 and 3.5 (stored shape of DeliveryDiagnostic), 9.1 and 9.2 (metric columns)
 
@@ -1088,7 +1091,7 @@ STOP CONDITIONS (in addition to build-plan 2.10)
 ### 4.6 P3-02 (Auth, roles, access windows)
 
 ```text
-Read PROJECT.md, docs/specs/build-plan.md and the listed specs. Implement Adsmetor authentication, roles, DV360 access levels and classroom access windows (PROJECT.md P3-02). Write tests. Open a PR to `main` from branch `p3-02-auth`; do not push to main. Update nothing in PROJECT.md except via the PR's last commit `docs: status P3-02`.
+Read PROJECT.md, docs/specs/build-plan.md and the listed specs. Implement Adsmetor authentication, roles (`USER`, `ADMIN`, `SUPER_ADMIN`, RC-068), DV360 access levels and classroom access windows (PROJECT.md P3-02), plus the account security foundation of module 19 (tasks M19-01 to M19-04 and M19-14). Write tests. Open a PR to `main` from branch `p3-02-auth`; do not push to main. Update nothing in PROJECT.md except via the PR's last commit `docs: status P3-02`.
 
 SESSION: P3-02 (authentication, roles and classroom access windows). Wave 3. Merged before you start: P3-01, P3-05a.
 
@@ -1097,21 +1100,23 @@ READ FIRST, in this order
 - docs/specs/build-plan.md sections 2 (conventions, stubs, global stop conditions in 2.10) and 3.2 (file ownership)
 - docs/specs/modules/18-instructor-training-layer.md sections 1, 2.1, 2.4, 3.1 to 3.3, 4.1 to 4.3, 4.10 (SIM rules), 4.11, 6.1 (acceptance), 6.3 (Vitest cases), 7 (tasks M18-01 to M18-04)
 - docs/specs/modules/02-partner-level.md sections 4 (roles and `assertAccess`) and 7 task 02-T1
+- docs/specs/modules/19-account-management.md sections 3.2, 4.1, 4.4 to 4.6, 6.3 (`password`, `lockout`, `enumeration`, `session`, `bootstrap`, `no-secrets` suites) and 7 (tasks M19-02 to M19-04, M19-14); the dashboard itself (`/manage`) is session P3-02b, not yours
 - docs/specs/routes.md sections 2 (roles and access model), 5.1 (guards), 7.1 and 7.4 (simulator routes), 8.19 (types)
 - docs/specs/data-model.md sections 2.2 to 2.4 and 5.1 (User, Classroom, ClassroomMember, AccessWindow, Sandbox, SimClock, UserAccessGrant, Role, Permission, RolePermission)
 - docs/specs/validation.md SIM rules as defined in module 18 4.10; DLG texts for the closed-window banner
-- docs/specs/conflicts.md rows RC-016, RC-028, RC-047, RC-048, RC-061, RC-063
+- docs/specs/conflicts.md rows RC-016, RC-028, RC-047, RC-048, RC-061, RC-063, RC-068 to RC-076
 
 BUILD EXACTLY THIS
 1. Auth.js v5 credentials provider with argon2id hashing (`@node-rs/argon2`), JWT session with `sessionVersion`, email and password sign-in at `/sim/login` (plain Adsmetor header with the logo from `public/brand/adsmentor-logo-horizontal.png`, RC-058), sign-out at `/sim/logout`.
 2. Failed-login counter and lockout (5th failure locks for 15 minutes, same message for unknown email and wrong password; SIM-002), `mustChangePassword` flow at `/sim/me/password` that bumps `sessionVersion`.
 3. Pages: `/sim/closed` (next window and instructor contact), `/sim/session-expired`, `/sim/forbidden`, `/sim/me`.
 4. Replace the stubs in 2.7: `lib/auth/session.ts` (`getSessionUser`, `requireUser`, view-as resolver for `?sim_as=`, read-only unless "Act as student"), `lib/rbac/can.ts` (DV360 levels ADMIN, STANDARD, READ_ONLY, REPORTING_ONLY, PARTNER_CLIENT, CREATIVE per routes.md 2 and RC-047/048; `assertAccess`), `lib/access/windows.ts` (`isClassOpen`, `getWindowBanner` with the 5-minute warning, `assertWindowOpen` returning `ACCESS_WINDOW_CLOSED`, `tickAccessWindows(now)` which flips SCHEDULED/OPEN/CLOSED, freezes and unfreezes the sandbox and its clock state without advancing sim time).
-5. `middleware.ts`: session required, role guard for `/sim/instructor/**` and `/sim/admin/**` (to `/sim/forbidden`), class window guard (student to `/sim/closed`; instructors and admins bypass), `/ng_nav/**` 308 redirect (routes.md R1).
+5. `middleware.ts`: session required, role guard for `/sim/instructor/**` (`ADMIN`, `SUPER_ADMIN`), `/sim/admin/**` (`SUPER_ADMIN`), `/manage/**` (`ADMIN`, `SUPER_ADMIN`; `/manage/settings` `SUPER_ADMIN` only) (all to `/sim/forbidden`, RC-075), class window guard (student to `/sim/closed`; instructors and admins bypass), `/ng_nav/**` 308 redirect (routes.md R1).
 6. Sandbox resolution rule (RC-061): the class with an OPEN window, else the most recent membership; `?sim_class=` override for instructors.
-7. Role and permission seeds: RolePermission rows from data-model 5.1 in `prisma/seed/auth.seed.ts`; bootstrap `prisma/bootstrap/10-admin.bootstrap.ts` that creates the first admin from `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` (idempotent, `mustChangePassword = true`).
+7. Role and permission seeds: RolePermission rows from data-model 5.1 in `prisma/seed/auth.seed.ts`; bootstrap `prisma/bootstrap/10-admin.bootstrap.ts` that creates the first Super admin from `SEED_SUPER_ADMIN_EMAIL` and `SEED_SUPER_ADMIN_PASSWORD` only when no Super admin exists (idempotent, never changes an existing account, `mustChangePassword = true`, never prints a secret; module 19 4.6.4).
 8. Keep `AUTH_DEV_BYPASS` working only outside production.
-9. A tiny helper `provisionStudent(db, classroomId, input)` that creates a user, membership and a temporary password (returned once). Its callers (roster UI) are Phase 5.
+9. A tiny helper `provisionStudent(db, classroomId, input)` that creates a `USER` account, membership and a generated password (returned once). Its callers are the `/manage` dashboard (P3-02b) and the roster UI (Phase 5).
+10. Module 19 foundation: `lib/auth/password.ts` (`checkPassword`, `generatePassword`, `hashPassword`, `verifyPassword`, `needsRehash`, common list), `AuthThrottle` rate limits (IP and email keys, unknown emails lock like real ones), lockout fields, uniform sign in messages with a dummy hash for unknown emails, session policy from `AccountPolicy` (`sessionVersion`, `sid`, single session, idle and absolute limits, `/sim/session-expired?reason=`), ACC-070 to ACC-075 messages.
 
 OUT OF SCOPE (do not build, even if easy)
 - instructor console, roster UI, access window UI (P5-01), clock page, scenarios, sandbox provisioning job, password reset by email, self-registration
@@ -1188,7 +1193,7 @@ BUILD EXACTLY THIS
 2. Generator in `lib/seed/` with a seeded PRNG (`mulberry32`) and the three templates `starter-agency`, `healthy`, `troubleshooting-lab` (data-model 3.2) producing: one partner, advertisers (one INR, one SGD), campaigns, IOs of every type (Standard, CTV, DOOH) with budget segments and partner costs, line items of every non-YouTube type in valid parents, minimal creatives with per-exchange reviews, targeting assignments and templates, alert preferences, planted delivery stories (module 08 3.4 list), `Alert` rows, `ChangeGroup` rows from `SIM_SEED` (hidden), `SimClock` at "today".
 3. History stub `lib/seed/history-stub.ts`: closed-form, deterministic 90 days of `SimDailyMetric` (`sliceKind = total` plus device and exchange slices) and 14 days of hourly totals for every active LI, with plausible CPM, CTR, conversion rates by format from `engine/params.json` constants copied into the stub (do not import the engine). It lets the UI and P3-09 work before the engine is wired. P3-INT replaces it with `engine.fastForward` if time allows.
 4. `npm run db:seed` runs global seeds then a demo sandbox; `prisma/seed/index.ts` globs `prisma/seed/**/*.seed.ts` in name order (it must tolerate the absence of `auth.seed.ts`).
-5. `prisma/bootstrap/20-demo-class.bootstrap.ts`: creates classroom "Demo class", one instructor, three students (`student1@example.test` to `student3@example.test`) with temporary passwords from `SEED_STUDENT_PASSWORD` or a random value printed once in the logs, sandboxes from `starter-agency`, and an always-open window for 30 days. Idempotent. Skipped when `NODE_ENV=production` unless `SEED_DEMO=1`.
+5. `prisma/bootstrap/20-demo-class.bootstrap.ts`: creates classroom "Demo class", one `ADMIN` account (instructor level, `instructor@example.test`), three `USER` accounts (`student1@example.test` to `student3@example.test`) with passwords from `SEED_STUDENT_PASSWORD` or a random value printed once to the terminal of a non-production run (never to production logs, module 19 4.4), sandboxes from `starter-agency`, and an always-open window for 30 days. Idempotent. Skipped when `NODE_ENV=production` unless `SEED_DEMO=1`.
 6. Size knobs `advertisers`, `campaignsPerAdvertiser`, `iosPerCampaign`, `lineItemsPerIo`, `creativesPerAdvertiser`, `historyDays`, `plantedProblems[]` (data-model 3.4). One sandbox builds in under 60 seconds locally, ten in under 3 minutes.
 7. All names synthetic (PROJECT.md R5). Real exchange and verifier names are allowed only from the allow-list in `data/reference/vendors.json` (RC-055).
 
@@ -1888,6 +1893,82 @@ STOP CONDITIONS (in addition to build-plan 2.10)
 - Stop at 6:00 PM IST on Wednesday 4 Nov even if the demo is not complete, push, and list what remains.
 ```
 
+### 4.17 P3-02b (Account management dashboard)
+
+```text
+Read PROJECT.md, docs/specs/build-plan.md and the listed specs. Implement the account management dashboard under `/manage` (module 19): accounts list, add account with generated or typed password, CSV import, cohorts, access periods, audit log, policy settings, and the sandbox link. Write tests. Open a PR to `main` from branch `p3-02b-accounts`; do not push to main. Update nothing in PROJECT.md except via the PR's last commit `docs: status P3-02b`.
+
+SESSION: P3-02b (account management: Super admin, Admin, User). Wave 5. Merged before you start: P3-01, P3-05a, P3-04, P3-06a, P3-02. M18-05 (sandbox provisioning job) is not required: use the stub described below.
+
+READ FIRST, in this order
+- docs/specs/conflicts.md (rows RC-nnn override every spec; read section 1.1; rows RC-063 and RC-068 to RC-076 matter most)
+- docs/specs/build-plan.md sections 2 (conventions, stubs, global stop conditions in 2.10) and 3.2 (file ownership)
+- docs/specs/modules/19-account-management.md, the whole file (it is short enough to read in full)
+- docs/specs/modules/18-instructor-training-layer.md sections 2.1, 4.1, 4.3, 4.4 and 4.10 (what you call and reuse)
+- docs/specs/validation.md section 2.26 (ACC rules) and 4.11 (account states), plus section 6 (how rules are registered and docs-synced)
+- docs/specs/routes.md sections 5.3, 7.5, 8.0 and 8.21
+- docs/specs/data-model.md section 5.1 (User, Classroom, ClassroomMember, Sandbox) and Appendix A (User, Classroom, AccountPolicy, AuthThrottle)
+- docs/specs/design-system.md sections 2.4 (DvGrid), 2.8 (forms), 2.11 (DvModal), 2.12 to 2.14 (banner, toast, empty state)
+
+BUILD EXACTLY THIS
+1. `lib/accounts/`: `permissions.ts` (`can(actor, action, target)` table-driven from module 19 4.2), `scope.ts` (`scopedUsers`, `scopedCohorts`, module 19 3.4), `status.ts` (the state machine of 4.3), `ownership.ts` (transfer), `service.ts` (every operation of 4.7), `audit.ts` (writer with the allowed-keys list of 4.11), `rules.ts` (ACC rules registered in the validation catalogue through `lib/validation/rules/acc.ts`, a new file; add the domain to the catalogue index only).
+2. `lib/actions/accounts.ts` thin server actions; `app/api/manage/accounts/route.ts`, `app/api/manage/accounts.csv/route.ts`, `app/api/manage/audit/route.ts`, `app/api/manage/cohorts/route.ts`, `app/api/manage/policy/route.ts`.
+3. Pages under `app/manage/**` per module 19 section 2 (M1 to M9): layout with the plain Adsmetor header and left menu, accounts list with bulk bar and result modals, add account form with the `OneTimeSecret` reveal modal, import page with dry run, account detail, cohorts list and detail, access page, audit page, settings page. Use design-system components only; the only new component is `components/manage/OneTimeSecret.tsx`.
+4. Password reveal rules of module 19 4.4 (never store, log, cache or put the plaintext in a URL or browser storage; `Cache-Control: no-store`; modal cannot be reopened; clear state on close, route change and pagehide).
+5. CSV import and credential CSV per 4.8 and 4.4 rule 6 (formula-safe cells, 200 KB, 200 rows).
+6. Sandbox link (4.10): call `enqueueProvisionSandbox(cohortId, userId)` from `lib/sandbox/provision.ts`. If M18-05 is not merged, create that function as a stub that records "NOT CREATED" and returns, and say so in the PR. Freeze on disable with `frozenReason = ACCOUNT` through the freeze helper of P3-02 (`lib/access/windows.ts`); if the helper lacks the reason argument, add it there (single-line exception below). Archive on delete. Move cohort transaction.
+7. ESLint rule that forbids `db.user.*` and `db.classroom.*` outside `lib/auth/**` and `lib/accounts/**`, with a test.
+8. Retention job: daily delete of `AuditLog` rows older than 365 days, as a function `purgeOldAudit(now)` called from the existing engine tick route only if it already exists (otherwise export it and note it in the PR).
+9. Alias the module 18 actions `addStudents`, `resetStudentPassword`, `deactivateStudent` to the new service (RC-073) if they already exist from P3-02; otherwise leave them for Phase 5 and note it.
+
+OUT OF SCOPE (do not build, even if easy)
+- email sending of any kind, invite links, two-factor sign in, self sign-up (M19-17 is later)
+- the instructor console, class windows UI, clock page, scenarios (module 18, Phase 5)
+- the DV360 role screens inside a sandbox (module 02)
+- any change to the schema (it is done by P3-05a; stop if a column is missing)
+
+FILES YOU OWN (create or edit)
+- `lib/accounts/**`
+- `lib/actions/accounts.ts`
+- `lib/validation/rules/acc.ts`
+- `lib/sandbox/provision.ts` (stub or thin wrapper)
+- `app/manage/**`
+- `app/api/manage/**`
+- `components/manage/**`
+- `tests/accounts/**`
+- `tests/e2e/accounts.spec.ts`
+EXCEPTIONS (you may also touch)
+- `lib/access/windows.ts`: only to add the `frozenReason` argument to the freeze and unfreeze helpers (P3-02 owns it)
+- `.eslintrc*` or `eslint.config.*`: only to add the ban rule of step 7
+- `lib/validation/catalogue index`: only to register the `ACC` domain
+- `package.json` for missing dependencies
+- `PROJECT.md` (last commit only)
+Everything else belongs to another session. Do not edit it. If you must, follow stop condition 1 of build-plan 2.10.
+
+ACCEPTANCE CRITERIA (module 19 section 6.1; list each as Done, Partly or Not done with the test that proves it)
+- M19-AC1 to AC9 (roles and permissions): Super admin creates Admin; Admin creates User; Admin cannot create Admin or Super admin (forged request refused and audited as Denied); an Admin sees only own users; Users cannot open `/manage`; permission matrix holds; no self harm; last Super admin protected under concurrency; Super admin accounts cannot be deleted; Admin demotion or archive needs `transferTo`.
+- M19-AC10 to AC13 (credentials): generated password passes policy and is shown once; weak typed password blocked; forced change at first sign in works and can be turned off; reset returns new secrets once and ends sessions.
+- M19-AC14 to AC18 (sign in and sessions; the core of these belongs to P3-02, verify with its helpers): same message for unknown, wrong and archived; lockout after 5 for 15 minutes; disabled user refused with ACC-070; access period messages; single session; sign out everywhere.
+- M19-AC19 to AC25 (dashboard): list, search, filters, bulk actions up to 100, delete with typed `DELETE`, cohort capacity 25, CSV import with exact row messages, account detail, audit scoped by level, settings.
+- M19-AC26 to AC28 (security): no-secrets and plaintext tests; bootstrap behaviour; foreign Origin refused.
+
+TESTS TO WRITE
+- Vitest suites listed in module 19 6.3 (`permissions`, `scope`, `password` if not already written by P3-02, `plaintext`, `lockout`, `enumeration`, `session`, `status`, `last-super`, `ownership`, `cohort`, `import`, `csv`, `audit`, `bootstrap`, `no-secrets`, `csrf`, `validation-docs-sync`). Put P3-02's own tests where it created them; do not duplicate.
+- DB tests for the last-Super-admin race, the move-cohort transaction, the audit allowed-keys list and `scopedUsers` against a seeded database.
+- Playwright `tests/e2e/accounts.spec.ts`: E2E-ACC-01 to E2E-ACC-12. Use `@example.test` emails and passwords from `generatePassword()` at run time.
+
+DONE WHEN
+- `npm run check`, `npm run test:db` and `npm run e2e` pass on your branch rebased on the latest `main`
+- CI is green on the PR and the Vercel preview is green (if the preview is not available because owner items P-03 or P-04 are open, say so in the PR)
+- the PR body follows .github/pull_request_template.md, with the acceptance table, deviations and a Not done list
+- the last commit is `docs: status P3-02b`
+
+STOP CONDITIONS (in addition to build-plan 2.10)
+- If a column or table of module 19 section 3 is missing from the schema, stop and name it. Do not add it under `prisma/schema/10..69`.
+- Never log, return in a list, store or commit a plaintext password, hash or secret. If a test needs a password, generate it at run time.
+- Do not put a real email address or a real password in any file, fixture or test name.
+```
+
 ---
 
 ## 5. Risks, fallbacks and scope cuts
@@ -1907,6 +1988,8 @@ The $100 credit expires on 5 Nov 2026 at 1:29 PM IST. The plan spends about 90 o
 
 Minimum viable demo (MVP): an instructor and a student can sign in during an open class window; the student lands in the DV360-style shell; creates a campaign, then an insertion order, then a line item with validation messages as in DV360; the seeded account has realistic data; the engine has produced metrics that show in the list columns.
 
+P3-02b (module 19) is not in the demo MVP below but is required before paying students get accounts; without it, accounts are created only through the bootstrap and the `provisionStudent` helper.
+
 The sessions needed for the MVP are, in order: P3-01, P3-05a, P3-04 (Tier A only), P3-06a, P3-02, P3-05b, P3-03, P3-06b, P3-06c, P3-08a, P3-08b, P3-09, P3-INT.
 
 If credit or time is short, cut from the top of this list first. Each cut names what is lost and what stays.
@@ -1923,6 +2006,8 @@ If credit or time is short, cut from the top of this list first. Each cut names 
 | 8 | P3-08a: keep Fixed bid, Max clicks and Max conversions only; drop IO-level allocation and frequency modelling | Less realism | non-zero, plausible metrics |
 | 9 | P3-09 reduced to campaign and IO lists | LI list shows zeros | the demo story |
 | 10 | P3-02 reduced to credentials login plus window guard; drop lockout, forced password change, view-as | Less security polish | login and class windows |
+
+| 11 | P3-02b reduced to Accounts list, Add account, Reset password, Disable and Enable (drop CSV import, cohorts UI, access page, audit viewer, settings page) | Owner manages accounts without bulk tools; admins add users one by one. P3-02b is not part of the demo MVP but is needed before real students sign in | login, class windows, bootstrap Super admin, `provisionStudent` helper |
 
 Not cuttable: P3-01, P3-05a, P3-06a, P3-05b, P3-03, P3-06b, P3-06c, a minimal P3-08a and P3-08b. If even these do not fit, see fallback F-2.
 

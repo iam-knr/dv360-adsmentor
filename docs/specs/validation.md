@@ -75,7 +75,8 @@ Anything marked `(from public docs)` is a best-effort reproduction of real DV360
 | `PLN` `RPT` `USR` | Plans and cross-media reach, reports, users | 13, 12, 02 |
 | `SHL` | Global shell: search, workspaces, pins, notes entry points (domain registered by RC-053; IDs `SHL-010..015` live in module 01) | 01 |
 | `HIS` | History pages, notes, notifications (IDs `HIS-001..020` live in module 05) | 16 |
-| `SIM` | Simulator rules: auth, access windows, clock, scenarios (IDs `SIM-001..015` live in module 18) | none |
+| `SIM` | Simulator rules: auth, access windows, clock, scenarios (IDs `SIM-001..015` live in module 18; `SIM-003` is superseded by `ACC-010`) | none |
+| `ACC` | Account management: accounts, passwords, roles, cohorts, CSV import, bulk actions, sign in states (section 2.26; defined in module 19) | none |
 
 > Resolved RC-053: rule IDs proposed in module files (`ADV-021..028`, `PRT-011..015`, `USR-010..011`, `PLN-020..031`, `CRE-100..104`, `INV-030..042`, `AUD-023..025` and `AUD-110..114`, `CB-012`, `FL-030..033`, `BLK-020..035`, `RPT-010..020`, `AB-026..029`, `LS-018..019`, `SHL`, `HIS`, `SIM`) are adopted; the module file is their definition until the P3 validation scaffold copies them here. `LS-017` duplicates `LS-002` and is dropped.
 
@@ -789,6 +790,58 @@ Public docs fill what the create form could not show under Limited Access (18 wa
 | USR-003 | user.access[].role | row without a role | E | `A selection is required` ‡ | S | 02 |
 | USR-004 | user.email | email already belongs to a user | E | `[SIM] A user with this email already exists.` | S | (from public docs) [RC-016: uniqueness applies to login users; simulated colleagues created on /users/new are stored as sandbox-local `SandboxContact` rows] |
 
+### 2.26 ACC: account management (`/manage/**`, module 19)
+
+Owner requirement of 2026-10-28 (RC-068 to RC-076). The table below is copied from `modules/19-account-management.md` 4.9, which is its definition. `SIM-001` (`Incorrect email or password.`) and `SIM-002` (lockout) from module 18 still apply to sign in; `ACC-073` is reserved. Rules `ACC-020` to `ACC-027` are authorisation rules: the server enforces them for every action, and the UI hides what the actor may not do.
+
+| Rule ID | Entity.field | Condition | Sev | Message | Trigger | Src |
+|---|---|---|---|---|---|---|
+| ACC-001 | account.email | empty, not an address, or longer than 254 | E | `[SIM] Enter a valid email address.` | B, S | 19 |
+| ACC-002 | account.email | exists (any status, case-insensitive) | E | `[SIM] An account with this email already exists.` / archived: `[SIM] This email belongs to an archived account. Restore it instead.` | S | 19 |
+| ACC-003 | account.name | empty / over 100 | E | `Enter a value` ‡ / `[SIM] Use 100 characters or fewer.` | B, S | 19 |
+| ACC-004 | account.notes | over 500 | E | `[SIM] Use 500 characters or fewer.` | B, S | 19 |
+| ACC-010 | password | shorter than the minimum (10) / longer than 128 | E | `[SIM] Use at least 10 characters.` / `[SIM] Use 128 characters or fewer.` | B, S | 19 |
+| ACC-011 | password | fewer than 3 of 4 classes (lower, upper, digit, symbol) | E | `[SIM] Use at least 3 of: lowercase, uppercase, number, symbol.` | B, S | 19 |
+| ACC-012 | password | equals email, contains the email local part (4+ characters), or is on the common list | E | `[SIM] Choose a password that is harder to guess.` | B, S | 19 |
+| ACC-013 | password.confirm | differs from the new password | E | `[SIM] The passwords do not match.` | X | 19 |
+| ACC-014 | password.next | equals the current password | E | `[SIM] Your new password must be different from the current one.` | S | 19 |
+| ACC-015 | password.current | wrong (counts toward lockout) | E | `[SIM] Your current password is incorrect.` | S | 19 |
+| ACC-020 | account.role | actor level may not create this role (Admin to ADMIN or SUPER_ADMIN; anyone to a role above their own) | E | `[SIM] You can't create accounts with this role.` | S | 19 |
+| ACC-021 | account.role | role change by a non Super admin, or on self | E | `[SIM] You can't change this role.` | S | 19 |
+| ACC-022 | account.id | target is outside the actor's scope or does not exist | E | `[SIM] Account not found.` | S | 19 |
+| ACC-023 | account.* | actor disables, archives or changes the role of their own account | E | `[SIM] You can't do this to your own account.` | S | 19 |
+| ACC-024 | account.status, account.role | the change would leave no active Super admin | E | `[SIM] At least one active super admin is required.` | S | 19 |
+| ACC-025 | account.role, account.status | demote or archive an Admin who still owns Users or cohorts without `transferTo` | E | `[SIM] Move this admin's users and cohorts to another admin first.` | S | 19 |
+| ACC-027 | account.status | disable an Admin who still owns Users or cohorts | W | `[SIM] This admin still owns {n} users and {m} cohorts.` | S | 19 |
+| ACC-026 | account.* | delete (archive) or purge a Super admin | E | `[SIM] Super admin accounts can be disabled but not deleted.` | S | 19 |
+| ACC-030 | account.cohortId | role USER without a cohort | E | `[SIM] Choose a cohort.` | S | 19 |
+| ACC-031 | account.cohortId | cohort not in the actor's scope or archived | E | `[SIM] Cohort not found.` | S | 19 |
+| ACC-032 | cohort.capacity | active, disabled and locked Users plus new ones exceed capacity | E | `[SIM] This cohort is full ({n} of {cap}).` | S | 19 |
+| ACC-033 | cohort.name | empty / over 100 / already used by the same owner admin | E | `Enter a value` ‡ / `[SIM] Use 100 characters or fewer.` / `[SIM] You already have a cohort with this name.` | B, S | 19 |
+| ACC-034 | cohort.capacity | not 1 to 60, or above 25 set by a non Super admin | E | `[SIM] Use a number from 1 to 60.` / `[SIM] Only a super admin can raise the limit above {n}.` | B, S | 19 |
+| ACC-035 | cohort.status | archive with non-archived Users | E | `[SIM] Move or archive the accounts in this cohort first.` | S | 19 |
+| ACC-040 | account.accessEndsAt | end not after start | E | `[SIM] End time must be after the start time.` (same text as SIM-005) | X | 19 |
+| ACC-041 | account.accessEndsAt | end already in the past for an ACTIVE account | W | `[SIM] This access period has already ended. The user won't be able to sign in.` | X | 19 |
+| ACC-042 | account.accessEndsAt | period longer than 365 days | W | `[SIM] This access period is longer than a year.` | X | 19 |
+| ACC-050 | import.header | a required column is missing (`email`, `name`; `cohort` unless a default cohort is chosen) | E | `[SIM] Missing column: {name}.` | S | 19 |
+| ACC-051 | import.file | over 200 rows / over 200 KB / not CSV | E | `[SIM] Use 200 rows or fewer.` / `[SIM] The file is too large (200 KB maximum).` / `[SIM] Upload a CSV file.` | S | 19 |
+| ACC-052 | import.row.email | invalid | E | `[SIM] Row {n}: enter a valid email address.` | S | 19 |
+| ACC-053 | import.row.email | repeated inside the file | E | `[SIM] Row {n}: duplicate of row {m}.` | S | 19 |
+| ACC-054 | import.row.email | already has an account | E | `[SIM] Row {n}: an account with this email already exists.` | S | 19 |
+| ACC-055 | import.row.cohort | name not found in scope (or ambiguous) | E | `[SIM] Row {n}: cohort "{name}" was not found.` | S | 19 |
+| ACC-056 | import.row.password | present and fails ACC-010 to ACC-012 | E | `[SIM] Row {n}: password is too weak. Leave it empty to generate one.` | S | 19 |
+| ACC-057 | import.row.cohort | cohort capacity reached before this row | E | `[SIM] Row {n}: cohort "{name}" is full.` | S | 19 |
+| ACC-058 | import.row.name | empty or over 100 | E | `[SIM] Row {n}: enter a name.` | S | 19 |
+| ACC-060 | bulk.ids | more than 100 selected | E | `[SIM] Select 100 accounts or fewer.` | S | 19 |
+| ACC-061 | bulk.confirm | delete without the typed text `DELETE`; purge without the exact email | E | `[SIM] Type DELETE to confirm.` / `[SIM] Type the account's email to confirm.` | S | 19 |
+| ACC-062 | bulk.result | some ids were skipped (out of scope, own account, last Super admin, not allowed) | W | `[SIM] {n} accounts were skipped.` (per row: the ACC code and its message) | S | 19 |
+| ACC-063 | bulk.reset | shared password mode with over 25 ids | E | `[SIM] Generate passwords when you reset more than 25 accounts.` | S | 19 |
+| ACC-070 | auth | correct password, status `DISABLED` | E | `[SIM] Your account is disabled. Contact your admin.` | S | 19 |
+| ACC-071 | auth | correct password, access period not started | E | `[SIM] Your access starts on {date}.` | S | 19 |
+| ACC-072 | auth | correct password, access period ended | E | `[SIM] Your access ended on {date}. Contact your admin.` | S | 19 |
+| ACC-074 | session | `sid` replaced by a newer sign in (single session) | I | `[SIM] You were signed out because this account signed in on another device.` | n/a | 19 |
+| ACC-075 | session | idle, absolute or revoked session | I | `[SIM] Your session expired. Sign in again.` | n/a | 19 |
+
 ---
 
 ## 3. Cross-entity matrices (ready to become code constants)
@@ -1348,6 +1401,13 @@ Bulk bar text: `{n} row(s) selected` · **Action ▾** · **Segment by** · ✕.
 | SDF: Upload, Download metadata | campaigns list ⋮ | IO and LI ⋮ (Upload only) | | | read-only role |
 
 After any bulk action the selection clears, the grid refreshes, and a snackbar links to **Bulk status** (`/bulk-status`). Only the 100 most recent jobs are kept in the list (BLK-015).
+
+### 4.11 Account (19)
+- Status: `ACTIVE`, `DISABLED`, `LOCKED`, `ARCHIVED` (stored in `User.status`). `LOCKED` is set by the system after the failure threshold and clears by time, **Unlock** or **Reset password**.
+- Transitions: `ACTIVE` to `DISABLED` (Disable), `DISABLED` to `ACTIVE` (Enable), `ACTIVE` to `LOCKED` (system), `LOCKED` to `ACTIVE` (time, Unlock, Reset), `LOCKED` to `DISABLED`, any of `ACTIVE`, `DISABLED`, `LOCKED` to `ARCHIVED` (Delete; never for `SUPER_ADMIN`, ACC-026), `ARCHIVED` to `DISABLED` (Restore), `ARCHIVED` to removed (Purge, Super admin).
+- Not allowed: `ARCHIVED` to `ACTIVE` directly; any change that leaves no active Super admin (ACC-024); disable or archive of the actor's own account (ACC-023).
+- Side effects: disable, archive, role change and password change bump `sessionVersion`; disable and archive freeze or archive the User's sandbox (module 19 4.10).
+- Matrix of who may do each transition: module 19 4.2.
 
 ---
 

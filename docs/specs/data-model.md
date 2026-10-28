@@ -214,7 +214,7 @@ Classroom (instructor owns)
 | Row-level security | Postgres RLS on every tenant table: `USING (sandboxId = current_setting('app.sandbox_id'))`. The app sets `SET LOCAL app.sandbox_id = ...` at the start of each request transaction (from the session's resolved sandbox), and `app.bypass_rls = on` only for the engine and instructor jobs. RLS is the safety net, not the primary check. |
 | App layer | A Prisma client extension injects `where: { sandboxId }` on every read and `data.sandboxId` on every create, and throws if a query reaches a tenant model without a sandbox in context. URL IDs (`/p/{publicId}/a/{publicId}`) are global-unique but always re-checked against the session's sandbox; a foreign ID returns the same 404 page as a missing one (see `17-gap-sweep.md`). |
 | `classroomId` | Lives on `Sandbox` (one hop away). It is also **denormalised** (plain column, no FK) onto the tables the instructor console queries across sandboxes: `SimDailyMetric`, `ChangeGroup`, `ScenarioAttempt`, `Notification`. That keeps "all students in class X, last 7 days" a single indexed scan. |
-| Access windows | `AccessWindow` rows decide whether any member of a classroom can log in (R3). The login check is: user is a member of a classroom with an `OPEN` window now, or user is an `INSTRUCTOR`/`ADMIN`. An expired window freezes the sandbox (`SandboxStatus.FROZEN`) and pauses its `SimClock`. |
+| Access windows | `AccessWindow` rows decide whether any member of a classroom can log in (R3). The login check is: user is a member of a classroom with an `OPEN` window now, or user is an `ADMIN` or `SUPER_ADMIN` (RC-068). An expired window freezes the sandbox (`SandboxStatus.FROZEN`) and pauses its `SimClock`. |
 | Reset | `DELETE ... WHERE sandboxId = $1` over the tenant tables in reverse dependency order, then re-seed. Because the composite FKs cascade from `Partner`, deleting the sandbox's partners already removes the tree; the order only matters for the soft-reference tables. For the large simulation tables the delete is done per partition (2.3). |
 
 ### 2.3 Physical layout notes
@@ -227,7 +227,7 @@ Classroom (instructor owns)
 
 Two separate role systems, deliberately not mixed:
 
-1. **App role** (`User.appRole`): `STUDENT`, `INSTRUCTOR`, `ADMIN`. Decides which app you get (DV360 UI, instructor console, admin).
+1. **App role** (`User.appRole`): `USER`, `ADMIN`, `SUPER_ADMIN` (RC-068; formerly `STUDENT`, `INSTRUCTOR`, `ADMIN`). Decides which Adsmetor area you get (DV360 UI in your own sandbox, instructor console and `/manage` for your own users, everything). Module 19 defines the hierarchy and who may manage whom. `DvRole.ADMIN` below is a different enum.
 2. **DV360 role** (`UserAccessGrant.role`): `ADMIN`, `STANDARD`, `READ_ONLY`, `REPORTING_ONLY`, `PARTNER_CLIENT`, `CREATIVE`. Per partner or per advertiser inside a sandbox, exactly as on the DV360 Users page ("You can give users different roles for each advertiser or partner they have access to"). A student is `STANDARD` on their own sandbox partner by default (RC-047; a scenario may raise it to `ADMIN` through `accessOverride`); instructors can hand out lower roles to practise permission scenarios (for example a scenario that gives the student `READ_ONLY` on one advertiser). Roles seen in the demo: Standard, Read only, Partner client, Reporting only; `ADMIN` and `CREATIVE` are `(from public docs)`.
 
 ---
@@ -469,7 +469,7 @@ Type rules: `CTV_OTT` disables `CLICKS`; with `BRAND_AWARENESS` its KPIs are CPM
 | `DeviceType` / `Environment` | Computer, Smartphone, Tablet, Connected TV / Web, App (sim slice dimensions) |
 | `DiagFunnelStage` (UI constant, not a DB enum; RC-021) | `TOTAL_AVAILABLE_REQUESTS`, `FILTERED_IMPRESSIONS`, `ELIGIBLE_IMPRESSIONS`, `FILTERED_ELIGIBLE_IMPRESSIONS`, `BIDS_SUBMITTED`, `FILTERED_BY_AUCTION`, `BID_RESPONSES`, `EXTERNALLY_FILTERED_RESPONSES`, `IMPRESSIONS_WON` |
 | `DiagFunnelReason` (UI constant, not a DB enum; RC-021) | `NONE`; filtered impressions: `TARGETING`, `CREATIVES`; filtered eligible: `FREQUENCY`, `BUDGET`, `PACING`; filtered by auction: `BELOW_MINIMUM_BID`, `AUCTION_LOST_INTERNAL`; externally filtered: `BID_TOO_LOW`, `CREATIVES_EXTERNAL`, `OTHERS`, `EXTERNALLY_LOST_NOT_REPORTED` |
-| `AccessRole` etc. | `AppRole` = STUDENT, INSTRUCTOR, ADMIN. `DvRole` = ADMIN `(from public docs)`, STANDARD, READ_ONLY, REPORTING_ONLY, PARTNER_CLIENT, CREATIVE `(from public docs)`. |
+| `AccessRole` etc. | `AppRole` = USER, ADMIN, SUPER_ADMIN (RC-068). `DvRole` = ADMIN `(from public docs)`, STANDARD, READ_ONLY, REPORTING_ONLY, PARTNER_CLIENT, CREATIVE `(from public docs)`. |
 | `ScenarioStatus` | `NOT_STARTED`, `IN_PROGRESS`, `PASSED`, `FAILED`, `ABANDONED` |
 | `ScenarioCheckKind` | `ENTITY_EXISTS`, `FIELD_EQUALS`, `FIELD_RANGE`, `METRIC_THRESHOLD`, `ALERT_CLEARED`, `STATUS_IS`, plus the engine kinds `ENTITY_STATE`, `METRIC`, `DIAGNOSTIC`, `ALERT_ABSENT`, `LEARNING`, `PACING`, and `CUSTOM_FN` (a registered function; instructors never author raw SQL). The DSL is module 18 section 4.7 (RC-017) |
 | `RecommendationType` | `ENABLE_AUTOMATED_BID_BUDGET_IO`, `ENABLE_AUTOMATED_BIDDING_LI`, `ENABLE_AUTO_BUDGET_ALLOCATION`, `USE_OPTIMIZED_TARGETING`, `ADD_CREATIVES` (first three seen in Intelligence panel), plus the engine rules `RAISE_BID`, `BROADEN_TARGETING`, `BID_LEARNING` (RC-014; engine "add creative sizes" maps to `ADD_CREATIVES`) |
@@ -488,12 +488,25 @@ Keys: `email` unique. Index: none extra.
 
 | Field | Type | Null | Default | Notes |
 |---|---|---|---|---|
-| email | str | N | | unique, lowercase; real address only here |
+| email | str (citext) | N | | unique case-insensitive, stored lowercase; real address only here; never in the repo |
 | name | str | N | | |
-| passwordHash | str | Y | | argon2id; null when SSO is used later |
-| appRole | enum AppRole | N | STUDENT | |
-| isActive | bool | N | true | |
+| passwordHash | str | Y | | argon2id (bcrypt cost 12 or more as documented fallback); null = cannot sign in; never logged or returned |
+| appRole | enum AppRole | N | USER | `USER`, `ADMIN`, `SUPER_ADMIN` (RC-068) |
+| status | enum AccountStatus | N | ACTIVE | `ACTIVE`, `DISABLED`, `LOCKED`, `ARCHIVED`; replaces `isActive` (module 19 4.3) |
+| mustChangePassword | bool | N | true | forced change at next sign in |
+| failedLoginCount | int | N | 0 | reset on success; lock at the policy threshold (default 5) |
+| lockedUntil | ts | Y | | default 15 minutes after the lock |
+| sessionVersion | int | N | 0 | bumped on password change, disable, archive, role change, sign out everywhere |
+| activeSessionId | str | Y | | current `sid` when the policy allows one session per account |
+| passwordChangedAt | ts | Y | | |
+| createdById, ownerAdminId | cuid FK | Y | | creator; the Admin responsible for a User (scoping key) |
+| cohortId | cuid FK | Y | | `Classroom` the User was added to (RC-069); sandbox resolution still uses `ClassroomMember` (RC-061) |
+| accessStartsAt, accessEndsAt | ts | Y | | account level access period, Users only (module 19 4.5) |
+| notes | text | Y | | visible to creator, owner admin and Super admins |
+| disabledAt, disabledById, archivedAt | ts / cuid / ts | Y | | |
 | lastLoginAt | ts | Y | | |
+
+> Delta: module 19. Role enum renamed (RC-068), `isActive` replaced by `status`, account columns added (Δ19-1, Δ19-2), `email` is case-insensitive unique (`citext`, Δ19-8). Also applies the module 18 columns of Δ18-1 under the names `failedLoginCount` and `mustChangePassword` (RC-074). Row scoping of accounts is done in the app layer by `scopedUsers()` (module 19 3.4), not by sandbox RLS.
 
 #### Classroom (global) , Prisma
 A class run by an instructor. Parent of members, access windows, sandboxes.
@@ -505,9 +518,14 @@ A class run by an instructor. Parent of members, access windows, sandboxes.
 | timeZone | str | N | Asia/Kolkata | time zone used to display access windows |
 | realSecondsPerSimDay | int | N | 300 | default clock speed for new sandboxes ("1 sim-day per 5 real minutes") |
 | defaultSeedTemplate | str | N | blank | `SeedTemplate.key` |
+| ownerAdminId | cuid FK | N | | the Admin who runs the class; unique `(ownerAdminId, name)` (module 19, RC-069) |
+| capacity | int | N | 25 | maximum non-archived Users, 1 to 60, above 25 only by a Super admin |
+| defaultAccessStartsAt / defaultAccessEndsAt | ts | Y | | default account access period for new Users |
+
+> Delta: module 19. A `Classroom` is called a **cohort** in the account management UI (RC-069). `Classroom` also gets the module 18 columns of Δ18-2.
 
 #### ClassroomMember , Prisma
-Unique `(classroomId, userId)`. Fields: `classroomId`, `userId`, `appRole` (enum, N, STUDENT; INSTRUCTOR for co-teachers), `joinedAt`. An instructor user can be a member of many classrooms; a student normally of one.
+Unique `(classroomId, userId)`. Fields: `classroomId`, `userId`, `appRole` (enum, N, USER; ADMIN for co-admins, RC-068), `joinedAt`. An instructor user can be a member of many classrooms; a student normally of one.
 
 #### AccessWindow , Prisma
 Instructor opens and closes access per session (R3).
@@ -535,6 +553,7 @@ The tenant. Unique `(classroomId, ownerUserId)`. Index `(classroomId, status)`.
 | seedValue | int | N | | PRNG seed, reproducible data |
 | seedVersion | int | N | 1 | version of the seed code that produced it |
 | resetCount / lastResetAt | int / ts | N / Y | 0 / | |
+| frozenReason | enum('WINDOW','ACCOUNT') | Y | | why the sandbox is `FROZEN`: class window closed or account disabled; the window tick unfreezes only `WINDOW` (module 19 Δ19-4, RC-076) |
 
 #### SimClock (1:1 with Sandbox) , Prisma
 PK = `sandboxId`. The clock of one sandbox, advanced by the tick job (engine spec P2-05).
@@ -1494,9 +1513,16 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 enum AppRole {
-  STUDENT
-  INSTRUCTOR
+  USER
   ADMIN
+  SUPER_ADMIN
+}
+
+enum AccountStatus {
+  ACTIVE
+  DISABLED
+  LOCKED
+  ARCHIVED
 }
 
 enum DvRole {
@@ -2083,19 +2109,47 @@ enum AlertState {
 // ---------------------------------------------------------------------------
 
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  name         String
-  passwordHash String?
-  appRole      AppRole   @default(STUDENT)
-  isActive     Boolean   @default(true)
-  lastLoginAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id                 String        @id @default(cuid())
+  email              String        @unique @db.Citext
+  name               String
+  passwordHash       String?
+  appRole            AppRole       @default(USER)
+  status             AccountStatus @default(ACTIVE)
+  mustChangePassword Boolean       @default(true)
+  failedLoginCount   Int           @default(0)
+  lockedUntil        DateTime?
+  sessionVersion     Int           @default(0)
+  activeSessionId    String?
+  passwordChangedAt  DateTime?
+  createdById        String?
+  ownerAdminId       String?
+  cohortId           String?
+  accessStartsAt     DateTime?
+  accessEndsAt       DateTime?
+  notes              String?
+  studentCode        String?
+  lastSeenAt         DateTime?
+  disabledAt         DateTime?
+  disabledById       String?
+  archivedAt         DateTime?
+  lastLoginAt        DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  createdBy  User?      @relation("UserCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  created    User[]     @relation("UserCreatedBy")
+  ownerAdmin User?      @relation("UserOwnerAdmin", fields: [ownerAdminId], references: [id], onDelete: SetNull)
+  ownedUsers User[]     @relation("UserOwnerAdmin")
+  cohort     Classroom? @relation("UserCohort", fields: [cohortId], references: [id], onDelete: SetNull)
 
   memberships ClassroomMember[]
   sandboxes   Sandbox[]
   grants      UserAccessGrant[]
+  ownedCohorts Classroom[] @relation("CohortOwner")
+
+  @@index([appRole, status])
+  @@index([ownerAdminId, status])
+  @@index([cohortId, status])
 }
 
 model Classroom {
@@ -2105,19 +2159,56 @@ model Classroom {
   timeZone             String   @default("Asia/Kolkata")
   realSecondsPerSimDay Int      @default(300)
   defaultSeedTemplate  String   @default("blank")
+  ownerAdminId         String                       // module 19, RC-069 (a "cohort" in the UI)
+  capacity             Int      @default(25)
+  defaultAccessStartsAt DateTime?
+  defaultAccessEndsAt   DateTime?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
+  ownerAdmin    User              @relation("CohortOwner", fields: [ownerAdminId], references: [id])
+  users         User[]            @relation("UserCohort")
   members       ClassroomMember[]
   accessWindows AccessWindow[]
   sandboxes     Sandbox[]
+
+  @@unique([ownerAdminId, name])
+}
+
+// Module 19 (account management). AccountPolicy is a one row table (id = 1).
+model AccountPolicy {
+  id                    Int      @id @default(1)
+  idleMinutesUser       Int      @default(480)
+  idleMinutesAdmin      Int      @default(480)
+  idleMinutesSuper      Int      @default(120)
+  absoluteHoursUser     Int      @default(12)
+  absoluteHoursAdmin    Int      @default(24)
+  absoluteHoursSuper    Int      @default(8)
+  singleSessionUser     Boolean  @default(true)
+  singleSessionAdmin    Boolean  @default(false)
+  singleSessionSuper    Boolean  @default(false)
+  lockoutThreshold      Int      @default(5)
+  lockoutMinutes        Int      @default(15)
+  minPasswordLength     Int      @default(10)
+  defaultMustChange     Boolean  @default(true)
+  defaultCohortCapacity Int      @default(25)
+  updatedAt             DateTime @updatedAt
+  updatedById           String?
+}
+
+// Rate limit counters for sign in (keys ip:{sha256} and email:{sha256}); also covers unknown emails
+model AuthThrottle {
+  key         String    @id
+  count       Int       @default(0)
+  windowStart DateTime  @default(now())
+  lockedUntil DateTime?
 }
 
 model ClassroomMember {
   id          String   @id @default(cuid())
   classroomId String
   userId      String
-  appRole     AppRole  @default(STUDENT)
+  appRole     AppRole  @default(USER)
   joinedAt    DateTime @default(now())
 
   classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
@@ -2152,6 +2243,7 @@ model Sandbox {
   seedTemplateKey String        @default("blank")
   seedValue       Int
   seedVersion     Int           @default(1)
+  frozenReason    String?       // 'WINDOW' | 'ACCOUNT' (module 19, RC-076)
   resetCount      Int           @default(0)
   lastResetAt     DateTime?
   createdAt       DateTime      @default(now())
