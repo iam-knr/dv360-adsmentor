@@ -132,12 +132,16 @@ After every task: tick the checklist item, add one line to §10 (date, task ID, 
 ### 5.2 Partner level
 - Advertisers list (create, edit, archive, columns, filters)
 - Partner settings: basic details, currency, time zone, ad-serving defaults, exchange settings (enable/disable exchanges, seat IDs), default targeting, brand safety defaults
-- Users & access / roles (Admin, Standard, Read-only, Reporting-only, Creative)
+- Users & access (global page /users): roles seen Standard, Read only, Partner client, Reporting only (Admin, Creative per Google docs); per-partner/advertiser role assignment
 - Partner-level channels, inventory lists, location lists, negative keyword lists
 - Partner-level audiences, combined audiences, custom lists
 - Billing: billing profiles, invoices
 - Partner costs & revenue models
 - Partner reporting
+- Partner brand controls (Display & video / YouTube tabs, per-advertiser coverage bars)
+- Advertiser configurations (Enhanced automation, Product improvement, Google & partner inventory, YouTube guaranteed instant deals, Auto-tagging, Advanced ad serving)
+- Cross-media reach reports (partner + advertiser)
+- Email preferences: Alerts; News, announcements and offers
 
 ### 5.3 Advertiser level — Campaigns
 - **Campaigns**: list, create/edit (name, goal, KPI, planned spend, flight dates, frequency cap, creative types, inventory source types, demographics/geo defaults), statuses
@@ -221,7 +225,7 @@ Status keys: ⬜ Not started · 🟨 In progress · ✅ Done · ⛔ Blocked
 ### Phase 1 — Full DV360 exploration (Cowork + browser) — target: 29–31 Oct
 One explore file per item; screenshots on demo data only.
 - ✅ P1-01 Global shell & navigation (§5.1) → docs/explore/01-global-shell.md
-- ⬜ P1-02 Partner level (§5.2)
+- ✅ P1-02 Partner level (§5.2) → docs/explore/02-partner-level.md
 - ⬜ P1-03 Campaigns (§5.3)
 - ⬜ P1-04 Insertion orders (§5.3)
 - ⬜ P1-05 Line items — every type, every tab (§5.3)
@@ -350,6 +354,7 @@ Partner · Advertiser · Campaign · InsertionOrder · BudgetSegment · LineItem
 | 2026-10-28 | P0-01 | Master plan drafted | Kailas reviews; create GitHub repo; choose browser |
 | 2026-10-28 | P0-03 | PROJECT.md and docs/ skeleton committed to `iam-knr/dv360-adsmentor` via cloud session | Kailas completes Google sign-in in Chrome; start P1-01 |
 | 2026-10-28 | P1-01 | Global shell, partner + advertiser nav, top bar, right rail, Overview, Bulk status, shortcuts documented | P1-02 Partner level |
+| 2026-10-28 | P1-02 | Partner level documented (advertisers list, basic details, exchanges, targeting defaults, advertiser configurations, resources, users) | P1-03 Campaigns |
 
 ---
 
