@@ -55,7 +55,7 @@ Status: ✅ done · 🟨 partly done · ⬜ not started
 | P1-10 | Audiences | ✅ | `10-audiences.md` | Tabs; create types; tag-based, combined, lookalike, custom affinity forms; analysis |
 | P1-11 | Resources | ✅ | `11-resources.md` | Brand controls; channels; negative keywords; Floodlight; YouTube assets; location lists; custom bidding wizard |
 | P1-12 | Reporting | ✅ | `12-reporting.md` | Hub, templates, instant builder, ~700-field catalogue, offline builder |
-| P1-13 | Planning & reach planner | ⬜ | | Next |
+| P1-13 | Planning & reach planner | 🟨 | `13-planning.md` | Plans list; plan forecast page (KPIs, tabs, line-items table, columns); Cross-media reach create flow. Gaps: New plan, editable settings, forecast charts, plan → campaign |
 | P1-14 | Advertiser settings | ⬜ | | |
 | P1-15 | Bulk, SDF, rules, experiments, optimisation | ⬜ | | |
 | P1-16 | Change history, notifications | ⬜ | | |
@@ -70,6 +70,7 @@ Status: ✅ done · 🟨 partly done · ⬜ not started
 - Audiences: detail page; custom intent; YouTube users.
 - Resources: channel/keyword list/app & CTV Floodlight forms; Google tag tab; custom bidding Test step.
 - Reporting: full Date/Fees/Conversions/YouTube lists; results grid; Inventory Availability builder.
+- Planning: New plan flow; editable Location/Dates/Demographics/Additional Settings; forecast charts per tab; plan line-item editor; Copy dialog; plan → campaign conversion (demo has Limited Access and only past-dated plans).
 
 ## 5. Build details
 
@@ -129,5 +130,5 @@ Partner · Advertiser · Campaign · InsertionOrder · BudgetSegment · LineItem
 6. Access to an IO without objective and a Floodlight-optimised advertiser to finish LI gaps?
 
 ## 8. Next steps
-1. P1-13 → P1-17.
+1. P1-14 → P1-17.
 2. Phase 2 specs by 1 Nov so Phase 3 can use the cloud credit before 5 Nov 2026.

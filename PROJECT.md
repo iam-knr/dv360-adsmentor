@@ -252,7 +252,7 @@ One explore file per item; screenshots on demo data only.
 - ✅ P1-10 Audiences (§5.7) → docs/explore/10-audiences.md
 - ✅ P1-11 Resources incl. Floodlight & custom bidding (§5.8) → docs/explore/11-resources.md
 - ✅ P1-12 Reporting — instant & offline (§5.9) → docs/explore/12-reporting.md
-- ⬜ P1-13 Planning & reach planner (§5.10)
+- 🟨 P1-13 Planning & reach planner (§5.10) → docs/explore/13-planning.md (Plans list, plan forecast page, columns, Cross-media reach create flow done; New plan, editable plan settings, forecast charts, plan → campaign conversion blocked by Limited Access + past-dated demo plans — revisit)
 - ⬜ P1-14 Advertiser settings (§5.11)
 - ⬜ P1-15 Bulk tools, SDF, rules, experiments, optimisation, alerts (§5.3)
 - ⬜ P1-16 Change history, notifications, misc (§5.12)
@@ -382,6 +382,7 @@ Partner · Advertiser · Campaign · InsertionOrder · BudgetSegment · LineItem
 | 2026-10-28 | P1-11 | Brand controls, channels & negative keyword lists, Floodlight group (details, conversions, new conversion form), YouTube assets, creator partnerships, location lists, custom bidding list + wizard documented | P1-12 Reporting |
 | 2026-10-28 | P1-12 | Reports hub, suggested templates, instant report builder (fields catalogue, visualisations, time zone, filters), offline report builder documented | P1-13 Planning |
 | 2026-10-28 | DOC | Consolidated task/discussion/build log published at docs/PROJECT-LOG.md | P1-13 Planning |
+| 2026-10-28 | P1-13 | Plans list (status filter, columns), plan forecast page (KPI strip + metric switches, forecast tabs, line-items table, Modify columns), Cross-media reach create flow documented; editors blocked in demo | P1-14 Advertiser settings |
 
 ---
 
