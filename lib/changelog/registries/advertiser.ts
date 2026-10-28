@@ -1,0 +1,58 @@
+// Worked example registry (build-plan 4.3 item 5). Every Prisma column of Advertiser is registered or ignored;
+// tests/changelog/registry-advertiser.test.ts proves it from the schema.
+import type { EntityRegistry } from '../registry-types';
+
+export const advertiserRegistry: EntityRegistry = {
+  entityType: 'ADVERTISER',
+  model: 'Advertiser',
+  noun: 'advertiser',
+  version: 1,
+  fields: [
+    { path: 'id', label: 'ID', kind: 'scalar', ignore: true },
+    { path: 'sandboxId', label: 'Sandbox', kind: 'scalar', ignore: true },
+    { path: 'publicId', label: 'Advertiser ID', kind: 'scalar', ignore: true },
+    { path: 'partnerId', label: 'Partner', kind: 'scalar', ignore: true },
+    { path: 'name', label: 'Name', kind: 'text' },
+    { path: 'status', label: 'Status', kind: 'enum' },
+    { path: 'websiteUrl', label: 'Website URL', kind: 'text' },
+    { path: 'industry', label: 'Industry', kind: 'text' },
+    { path: 'currencyCode', label: 'Currency', kind: 'scalar' },
+    { path: 'timeZone', label: 'Time zone', kind: 'scalar' },
+    { path: 'adServer', label: 'Ad server', kind: 'enum' },
+    { path: 'floodlightGroupId', label: 'Floodlight group', kind: 'scalar' },
+    { path: 'sdfVersion', label: 'SDF version', kind: 'enum' },
+    { path: 'sdfAdminEmail', label: 'SDF admin email', kind: 'text' },
+    { path: 'productImprovement', label: 'Product improvement', kind: 'bool' },
+    { path: 'orderIdReporting', label: 'Order ID reporting', kind: 'bool' },
+    { path: 'adBadging', label: 'Ad badging', kind: 'bool' },
+    {
+      path: 'shareDataWithCommercePartners',
+      label: 'Share data with commerce partners',
+      kind: 'bool',
+    },
+    { path: 'creativesContainTracking', label: 'Creatives contain tracking', kind: 'bool' },
+    {
+      path: 'authorizeVideoForTvReporting',
+      label: 'Authorize video for TV reporting',
+      kind: 'bool',
+    },
+    { path: 'prismaEnabled', label: 'Prisma', kind: 'bool' },
+    { path: 'euPoliticalAds', label: 'EU political ads', kind: 'enum' },
+    {
+      path: 'demandGenFloodlightOptimization',
+      label: 'Demand Gen Floodlight optimization',
+      kind: 'bool',
+    },
+    { path: 'googleInventoryEnabled', label: 'Google inventory', kind: 'bool' },
+    { path: 'ytBusinessName', label: 'YouTube business name', kind: 'text' },
+    { path: 'ytLogoAssetId', label: 'YouTube logo', kind: 'scalar' },
+    { path: 'integrationCode', label: 'Integration code', kind: 'text' },
+    { path: 'integrationDetail', label: 'Integration detail', kind: 'text' },
+    { path: 'iasClientId', label: 'IAS client ID', kind: 'scalar' },
+    { path: 'thirdPartyConfig', label: 'Third-party configuration', kind: 'json' },
+    { path: 'scheduledDeletionAt', label: 'Scheduled deletion', kind: 'date' },
+    { path: 'version', label: 'Version', kind: 'scalar', ignore: true },
+    { path: 'createdAt', label: 'Created', kind: 'date', ignore: true },
+    { path: 'updatedAt', label: 'Updated', kind: 'date', ignore: true },
+  ],
+};
