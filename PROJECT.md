@@ -192,6 +192,10 @@ Geography (incl. radius, location lists, postal codes) · Language · Demographi
 - Linked accounts (CM360, Google Analytics, Google Ads, YouTube)
 - Third-party verification setup
 - Custom bidding algorithms (script / goal-based), with training status
+- Brand controls overview (coverage of exclusions, authorized sellers, verification across LIs)
+- YouTube assets (Location, Affiliate location, Sitelink)
+- YouTube creator partnerships (BETA: Overview, Creator search, Content discovery, Management, Analytics)
+- Custom bidding v2 wizard: objective → rules (score) + up to 4 multipliers → Test → Save
 
 ### 5.9 Reporting
 - **Instant reports**: dimensions & metrics picker, filters, date ranges, pivoting, charts, save/schedule, export CSV/XLSX
@@ -244,7 +248,7 @@ One explore file per item; screenshots on demo data only.
 - 🟨 P1-08 Creatives (§5.5) → docs/explore/08-creatives.md (library, menus, 3P display form, creative page, review statuses, format gallery, appeals done; upload/native/video/audio forms pending)
 - ✅ P1-09 Inventory & Marketplace (§5.6) → docs/explore/09-inventory.md
 - ✅ P1-10 Audiences (§5.7) → docs/explore/10-audiences.md
-- ⬜ P1-11 Resources incl. Floodlight & custom bidding (§5.8)
+- ✅ P1-11 Resources incl. Floodlight & custom bidding (§5.8) → docs/explore/11-resources.md
 - ⬜ P1-12 Reporting — instant & offline (§5.9)
 - ⬜ P1-13 Planning & reach planner (§5.10)
 - ⬜ P1-14 Advertiser settings (§5.11)
@@ -373,6 +377,7 @@ Partner · Advertiser · Campaign · InsertionOrder · BudgetSegment · LineItem
 | 2026-10-28 | P1-08 | Creatives library, New menu, third-party display form, creative details/status/history, exchange review, format gallery, appeal history documented | P1-09 Inventory |
 | 2026-10-28 | P1-09 | My inventory (orders/deals, packages, deal groups), deal page, instant deal flow, Marketplace Featured + Discover, Plans list, Negotiations list documented | P1-10 Audiences |
 | 2026-10-28 | P1-10 | All audiences tabs (First-party, Custom lists, Combined, Partner), New audience types and forms (tag-based, customer match, combined, lookalike, custom affinity), Analysis pages documented | P1-11 Resources |
+| 2026-10-28 | P1-11 | Brand controls, channels & negative keyword lists, Floodlight group (details, conversions, new conversion form), YouTube assets, creator partnerships, location lists, custom bidding list + wizard documented | P1-12 Reporting |
 
 ---
 
