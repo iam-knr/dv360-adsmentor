@@ -1,0 +1,103 @@
+// Tenant root: partner and advertiser
+// Source: docs/specs/data-model.md Appendix A (P3-05a). Owner session: P3-05a.
+
+// ---------------------------------------------------------------------------
+// Partner and advertiser
+// ---------------------------------------------------------------------------
+
+model Partner {
+  id                      String       @id @default(cuid())
+  sandboxId               String
+  publicId                BigInt       @unique @default(dbgenerated("next_public_id()"))
+  name                    String
+  status                  EntityStatus @default(ACTIVE)
+  timeZone                String       @default("Asia/Calcutta")
+  currencyCode            String       @default("INR")
+  nielsenContractCountry  String?
+  includeDataInCmTransfer Boolean      @default(false)
+  reportCostToCm          Boolean      @default(false)
+  autoEnableNewExchanges  Boolean      @default(false)
+  sdfVersion              SdfVersion   @default(V11)
+  sdfAdminEmail           String?
+  dataTermsAcceptedAt     DateTime?
+  version                 Int          @default(1)
+  createdAt               DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
+
+  sandbox     Sandbox           @relation(fields: [sandboxId], references: [id], onDelete: Cascade)
+  advertisers Advertiser[]
+  exchanges   PartnerExchange[]
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId])
+}
+
+model PartnerExchange {
+  id         String  @id @default(cuid())
+  sandboxId  String
+  partnerId  String
+  exchangeId String
+  enabled    Boolean @default(true)
+  seatId     String?
+  networkId  String?
+  agencyId   String?
+
+  partner  Partner  @relation(fields: [partnerId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  exchange Exchange @relation(fields: [exchangeId], references: [id])
+
+  @@unique([partnerId, exchangeId])
+  @@index([sandboxId])
+}
+
+model Advertiser {
+  id                              String          @id @default(cuid())
+  sandboxId                       String
+  publicId                        BigInt          @unique @default(dbgenerated("next_public_id()"))
+  partnerId                       String
+  name                            String
+  status                          EntityStatus    @default(ACTIVE)
+  websiteUrl                      String
+  industry                        String?
+  currencyCode                    String
+  timeZone                        String
+  adServer                        AdServerType    @default(THIRD_PARTY_ONLY)
+  floodlightGroupId               String?
+  sdfVersion                      SdfVersion      @default(V9)
+  sdfAdminEmail                   String?
+  productImprovement              Boolean         @default(true)
+  orderIdReporting                Boolean         @default(false)
+  adBadging                       Boolean         @default(true)
+  shareDataWithCommercePartners   Boolean         @default(false)
+  creativesContainTracking        Boolean         @default(false)
+  authorizeVideoForTvReporting    Boolean         @default(false)
+  prismaEnabled                   Boolean         @default(false)
+  euPoliticalAds                  EuPoliticalAds?
+  demandGenFloodlightOptimization Boolean         @default(false)
+  googleInventoryEnabled          Boolean         @default(true) // Δ-08-10
+  ytBusinessName                  String?
+  ytLogoAssetId                   String?
+  integrationCode                 String?
+  integrationDetail               String?
+  iasClientId                     BigInt          @default(0)
+  thirdPartyConfig                Json?
+  scheduledDeletionAt             DateTime?
+  version                         Int             @default(1)
+  createdAt                       DateTime        @default(now())
+  updatedAt                       DateTime        @updatedAt
+
+  partner         Partner               @relation(fields: [partnerId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  campaigns       Campaign[]
+  insertionOrders InsertionOrder[]
+  lineItems       LineItem[]
+  adGroups        AdGroup[]
+  ads             Ad[]
+  creatives       Creative[]
+  assets          CreativeAsset[]
+  audiences       Audience[]
+  templates       TargetingTemplate[]
+  targeting       TargetingAssignment[]
+  alerts          Alert[]
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, partnerId, status])
+}

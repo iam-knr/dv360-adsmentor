@@ -1,0 +1,198 @@
+// Creatives, targeting, audiences
+// Source: docs/specs/data-model.md Appendix A (P3-05a). Owner session: P3-05a.
+
+// ---------------------------------------------------------------------------
+// Creatives
+// ---------------------------------------------------------------------------
+
+model Creative {
+  id                    String            @id @default(cuid())
+  sandboxId             String
+  publicId              BigInt            @unique @default(dbgenerated("next_public_id()"))
+  advertiserId          String
+  name                  String
+  status                EntityStatus      @default(ACTIVE)
+  kind                  CreativeKind
+  formatKey             String?
+  source                CreativeSource    @default(DV360)
+  cm360Id               String?
+  width                 Int               @default(0)
+  height                Int               @default(0)
+  durationSeconds       Int?
+  landingPageUrl        String?
+  dontScaleToFit        Boolean           @default(false)
+  requiresMraid         Boolean           @default(false)
+  requiresHtml5         Boolean           @default(false)
+  expandDirection       ExpandDirection   @default(NONE)
+  expandsOnHover        Boolean           @default(false)
+  thirdPartyTag         String?
+  vastTagUrl            String?
+  appendTrackingTag     Boolean           @default(false)
+  requiresPing          Boolean           @default(false)
+  aiLabel               AiLabel           @default(UNSET)
+  integrationCode       String?
+  notes                 String?
+  companionOfCreativeId String?
+  cmAuditFeedback       String?
+  dv360Review           Dv360ReviewStatus @default(PENDING)
+  dv360Feedback         String?
+  reviewCompletedAt     DateTime?
+  version               Int               @default(1)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  advertiser  Advertiser           @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  assets      CreativeAsset[]
+  reviews     CreativeReview[]
+  assignments CreativeAssignment[]
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, advertiserId, status])
+}
+
+model CreativeAsset {
+  id              String            @id @default(cuid())
+  sandboxId       String
+  advertiserId    String
+  creativeId      String?
+  role            CreativeAssetRole @default(MAIN)
+  fileName        String
+  mimeType        String
+  sizeBytes       Int
+  storageKey      String
+  width           Int?
+  height          Int?
+  durationSeconds Int?
+
+  advertiser Advertiser @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  creative   Creative?  @relation(fields: [creativeId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, creativeId])
+}
+
+// One row per creative x exchange: approval plus SSL approval
+model CreativeReview {
+  id         String               @id @default(cuid())
+  sandboxId  String
+  creativeId String
+  exchangeId String
+  status     ExchangeReviewStatus @default(PENDING)
+  sslStatus  ExchangeReviewStatus @default(PENDING)
+  feedback   String?
+  lastSyncAt DateTime?
+  decideAt   DateTime?
+
+  creative Creative @relation(fields: [creativeId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([creativeId, exchangeId])
+  @@index([sandboxId, status])
+}
+
+model CreativeAssignment {
+  id           String   @id @default(cuid())
+  sandboxId    String
+  lineItemId   String
+  creativeId   String
+  assignedById String?
+  assignedAt   DateTime @default(now())
+
+  lineItem LineItem @relation(fields: [lineItemId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  creative Creative @relation(fields: [creativeId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([lineItemId, creativeId])
+  @@index([sandboxId, creativeId])
+}
+
+// ---------------------------------------------------------------------------
+// Targeting
+// ---------------------------------------------------------------------------
+
+model TargetingTemplate {
+  id                 String           @id @default(cuid())
+  sandboxId          String
+  publicId           BigInt           @unique @default(dbgenerated("next_public_id()"))
+  advertiserId       String
+  name               String
+  description        String?
+  lineItemType       LineItemType
+  inventoryQuality   InventoryQuality @default(AUTHORIZED_DIRECT_SELLERS_AND_RESELLERS) // Δ-08-16
+  exchangeIds        String[]
+  optimizedTargeting Boolean          @default(false)
+  status             EntityStatus     @default(ACTIVE)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  advertiser Advertiser            @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  targeting  TargetingAssignment[]
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, advertiserId])
+}
+
+// One row per selected option (or per config block for range-type dimensions)
+model TargetingAssignment {
+  id              String             @id @default(cuid())
+  sandboxId       String
+  ownerType       TargetOwnerType
+  partnerId       String?
+  advertiserId    String?
+  templateId      String?
+  lineItemId      String?
+  adGroupId       String?
+  dimension       TargetingDimension
+  mode            TargetMode         @default(INCLUDE)
+  optionId        String?
+  refType         TargetRefType?
+  refId           String?
+  valueText       String?
+  groupIndex      Int                @default(0)
+  audienceSection AudienceSection?
+  config          Json?
+  isLocked        Boolean            @default(false)
+  createdAt       DateTime           @default(now())
+
+  advertiser Advertiser?        @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  template   TargetingTemplate? @relation(fields: [templateId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  lineItem   LineItem?          @relation(fields: [lineItemId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  adGroup    AdGroup?           @relation(fields: [adGroupId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, lineItemId, dimension])
+  @@index([sandboxId, adGroupId, dimension])
+  @@index([sandboxId, advertiserId, dimension])
+  @@index([sandboxId, templateId])
+  @@index([sandboxId, refType, refId])
+}
+
+// ---------------------------------------------------------------------------
+// Audiences (core row; type-specific detail tables are listed in the field tables)
+// ---------------------------------------------------------------------------
+
+model Audience {
+  id                   String         @id @default(cuid())
+  sandboxId            String
+  publicId             BigInt         @unique @default(dbgenerated("next_public_id()"))
+  advertiserId         String
+  name                 String
+  description          String?
+  type                 AudienceType
+  status               AudienceStatus @default(PROCESSING)
+  source               AudienceSource @default(DISPLAY_VIDEO_360)
+  sizeDisplay          BigInt?
+  sizeYoutube          BigInt?
+  sizeMobileApp        BigInt?
+  sizeCtv              BigInt?
+  membershipDays       Int?
+  floodlightActivityId String?
+  lookalikeReachPct    Decimal?       @db.Decimal(4, 1)
+  lookalikeCountries   String[]
+  config               Json?
+  availableAt          DateTime?
+  version              Int            @default(1)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  advertiser Advertiser @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, advertiserId, type])
+}

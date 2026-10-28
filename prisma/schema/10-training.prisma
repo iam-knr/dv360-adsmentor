@@ -1,0 +1,272 @@
+// Training layer, accounts, sandbox, clock and global reference data
+// Source: docs/specs/data-model.md Appendix A (P3-05a). Owner session: P3-05a.
+
+// ---------------------------------------------------------------------------
+// Training layer: classroom, users, sandbox, clock (global rows, no sandboxId)
+// ---------------------------------------------------------------------------
+
+model User {
+  id                 String        @id @default(cuid())
+  email              String        @unique @db.Citext
+  name               String
+  passwordHash       String?
+  appRole            AppRole       @default(USER)
+  status             AccountStatus @default(ACTIVE)
+  mustChangePassword Boolean       @default(true)
+  failedLoginCount   Int           @default(0)
+  lockedUntil        DateTime?
+  sessionVersion     Int           @default(0)
+  activeSessionId    String?
+  passwordChangedAt  DateTime?
+  createdById        String?
+  ownerAdminId       String?
+  cohortId           String?
+  accessStartsAt     DateTime?
+  accessEndsAt       DateTime?
+  notes              String?
+  studentCode        String?
+  lastSeenAt         DateTime?
+  disabledAt         DateTime?
+  disabledById       String?
+  archivedAt         DateTime?
+  lastLoginAt        DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  createdBy  User?      @relation("UserCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  created    User[]     @relation("UserCreatedBy")
+  ownerAdmin User?      @relation("UserOwnerAdmin", fields: [ownerAdminId], references: [id], onDelete: SetNull)
+  ownedUsers User[]     @relation("UserOwnerAdmin")
+  cohort     Classroom? @relation("UserCohort", fields: [cohortId], references: [id], onDelete: SetNull)
+
+  memberships  ClassroomMember[]
+  sandboxes    Sandbox[]
+  grants       UserAccessGrant[]
+  ownedCohorts Classroom[]       @relation("CohortOwner")
+
+  @@unique([cohortId, studentCode])
+  @@index([appRole, status])
+  @@index([ownerAdminId, status])
+  @@index([cohortId, status])
+}
+
+model Classroom {
+  id                       String    @id @default(cuid())
+  name                     String
+  code                     String    @unique
+  timeZone                 String    @default("Asia/Kolkata")
+  realSecondsPerSimDay     Int       @default(300)
+  defaultSeedTemplate      String    @default("blank")
+  ownerAdminId             String // module 19, RC-069 (a "cohort" in the UI)
+  capacity                 Int       @default(25)
+  defaultAccessStartsAt    DateTime?
+  defaultAccessEndsAt      DateTime?
+  allowStudentClockControl Boolean   @default(false) // Δ18-2
+  allowStudentReset        Boolean   @default(false)
+  seedMode                 SeedMode  @default(SHARED_MARKET)
+  catchUp                  CatchUp   @default(SIMULATE)
+  archivedAt               DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  ownerAdmin    User              @relation("CohortOwner", fields: [ownerAdminId], references: [id])
+  users         User[]            @relation("UserCohort")
+  members       ClassroomMember[]
+  accessWindows AccessWindow[]
+  sandboxes     Sandbox[]
+
+  @@unique([ownerAdminId, name])
+}
+
+// Module 19 (account management). AccountPolicy is a one row table (id = 1).
+model AccountPolicy {
+  id                    Int      @id @default(1)
+  idleMinutesUser       Int      @default(480)
+  idleMinutesAdmin      Int      @default(480)
+  idleMinutesSuper      Int      @default(120)
+  absoluteHoursUser     Int      @default(12)
+  absoluteHoursAdmin    Int      @default(24)
+  absoluteHoursSuper    Int      @default(8)
+  singleSessionUser     Boolean  @default(true)
+  singleSessionAdmin    Boolean  @default(false)
+  singleSessionSuper    Boolean  @default(false)
+  lockoutThreshold      Int      @default(5)
+  lockoutMinutes        Int      @default(15)
+  minPasswordLength     Int      @default(10)
+  defaultMustChange     Boolean  @default(true)
+  defaultCohortCapacity Int      @default(25)
+  updatedAt             DateTime @updatedAt
+  updatedById           String?
+}
+
+// Rate limit counters for sign in (keys ip:{sha256} and email:{sha256}); also covers unknown emails
+model AuthThrottle {
+  key         String    @id
+  count       Int       @default(0)
+  windowStart DateTime  @default(now())
+  lockedUntil DateTime?
+}
+
+model ClassroomMember {
+  id          String   @id @default(cuid())
+  classroomId String
+  userId      String
+  appRole     AppRole  @default(USER)
+  joinedAt    DateTime @default(now())
+
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([classroomId, userId])
+  @@index([userId])
+}
+
+model AccessWindow {
+  id          String                @id @default(cuid())
+  classroomId String
+  label       String
+  opensAt     DateTime
+  closesAt    DateTime
+  status      AccessWindowStatus    @default(SCHEDULED)
+  seriesId    String?
+  repeatRule  Json? // { freq: 'WEEKLY', byDay: string[], until: string } (RC-016)
+  note        String?
+  closedBy    AccessWindowClosedBy?
+  createdById String?
+  createdAt   DateTime              @default(now())
+
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+
+  @@index([classroomId, opensAt])
+  @@index([status, closesAt])
+  @@index([seriesId])
+}
+
+model Sandbox {
+  id                     String         @id @default(cuid())
+  classroomId            String
+  ownerUserId            String?
+  name                   String
+  status                 SandboxStatus  @default(ACTIVE)
+  seedTemplateKey        String         @default("blank")
+  seedValue              Int
+  seedVersion            Int            @default(1)
+  kind                   SandboxKind    @default(STUDENT)
+  provisionState         ProvisionState @default(PENDING)
+  provisionError         String?
+  frozenReason           FrozenReason? // module 19, RC-076
+  frozenAt               DateTime?
+  clockStateBeforeFreeze SimClockState?
+  resetCount             Int            @default(0)
+  lastResetAt            DateTime?
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+
+  classroom Classroom         @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  owner     User?             @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  clock     SimClock?
+  partners  Partner[]
+  grants    UserAccessGrant[]
+  changes   ChangeGroup[]
+
+  @@unique([classroomId, ownerUserId])
+  @@index([classroomId, status])
+}
+
+model SimClock {
+  sandboxId         String        @id
+  simStart          DateTime // sim time of tick 0 (ENG 1.2)
+  tickIndex         BigInt        @default(0) // ticks already processed; simNow = simStart + tickIndex hours
+  state             SimClockState @default(PAUSED)
+  minutesPerSimDay  Int           @default(5)
+  lastAdvanceRealAt DateTime? // real time up to which ticks are accounted for
+  remainderMs       Int           @default(0)
+  marketSeed        String
+  sandboxSeed       String
+  paramsVersion     String        @default("")
+  runOutsideSession Boolean       @default(false)
+
+  sandbox Sandbox @relation(fields: [sandboxId], references: [id], onDelete: Cascade)
+}
+
+// Module 18 (Δ18-10) and module 19 (Δ19-5, RC-072): one audit table for admin and account actions.
+// Global (no sandboxId). No FK to the actor so history survives account deletion.
+model AuditLog {
+  id           String      @id @default(cuid())
+  actorUserId  String?
+  actorRole    AppRole?
+  classroomId  String?
+  action       String
+  targetType   String
+  targetId     String?
+  targetUserId String?
+  result       AuditResult @default(OK)
+  requestId    String?
+  payload      Json?
+  createdAt    DateTime    @default(now())
+
+  @@index([targetUserId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([classroomId, createdAt])
+  @@index([createdAt])
+}
+
+// Users get DV360-style roles per partner or advertiser (the "Role" and "Permission" tables
+// in the spec text are seed constants; the grant row is the tenant-scoped part)
+model UserAccessGrant {
+  id           String   @id @default(cuid())
+  userId       String
+  sandboxId    String
+  partnerId    String?
+  advertiserId String?
+  role         DvRole
+  createdAt    DateTime @default(now())
+
+  sandbox Sandbox @relation(fields: [sandboxId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sandboxId, partnerId, advertiserId])
+  @@index([sandboxId])
+}
+
+// ---------------------------------------------------------------------------
+// Global reference data (no sandboxId, read-only for students)
+// ---------------------------------------------------------------------------
+
+model Exchange {
+  id               String       @id @default(cuid())
+  code             String       @unique
+  name             String
+  kind             ExchangeKind @default(EXCHANGE)
+  supportsDisplay  Boolean      @default(true)
+  supportsVideo    Boolean      @default(true)
+  supportsAudio    Boolean      @default(false)
+  supportsCtv      Boolean      @default(false)
+  supportsDooh     Boolean      @default(false)
+  needsSeatId      Boolean      @default(false)
+  needsNetworkId   Boolean      @default(false)
+  enabledByDefault Boolean      @default(true)
+  sortOrder        Int          @default(0)
+  auctionType      AuctionType  @default(SECOND_PRICE)
+  simSupplyShare   Decimal      @default(0.01) @db.Decimal(8, 6)
+  simFloorCpm      Decimal      @default(0.5) @db.Decimal(20, 6)
+
+  partnerExchanges PartnerExchange[]
+}
+
+model TargetingOption {
+  id        String             @id @default(cuid())
+  dimension TargetingDimension
+  code      String
+  name      String
+  path      String?
+  parentId  String?
+  sortOrder Int                @default(0)
+  meta      Json?
+
+  parent   TargetingOption?  @relation("TargetingTree", fields: [parentId], references: [id])
+  children TargetingOption[] @relation("TargetingTree")
+
+  @@unique([dimension, code])
+  @@index([dimension, parentId])
+}
