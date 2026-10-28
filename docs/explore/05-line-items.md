@@ -79,7 +79,8 @@ Top: **Apply a targeting template** (collapsible): carousel of template cards (n
 | Mobile app install | Step 1 card "Mobile app": platform dropdown (All platforms / iOS / Android) + "Search for Android or iOS apps"; Ad type ● Display (image, H5, rich media) / ○ Video; Next → full form (app search returned nothing in demo, step 2 not reached) |
 | Ads in mobile apps | Pre-step: name + Ad type Display / Video, Next (name required). Full form then adds locked targeting: Environment "Include: App"; Device "Include: Smartphone, Tablet" |
 | Demand Gen | Blocked until Floodlight optimization enabled on advertiser |
-| Connected TV, Audio, YouTube & partners video/audio | Not available in a Clicks IO; YouTube covered in P1-06; CTV/Audio pending (need Brand awareness or no-objective IO) |
+| Connected TV | Same structure as Display. Public inventory 46 exchanges + ☑ "Target DV360 curated CTV auction inventory" (help). Pre-added targeting: Position "Position in content — In-stream: All positions selected"; Video "Video player size — Large, HD"; Device "Include: Connected TV; Exclude: Computer, Smartphone, Tablet". Bid strategy in Brand awareness IO: Automated → Maximize reach (+ Fixed bid). |
+| Audio | Public inventory "11 Exchanges and 0 Subexchanges" + note "Google Ad Manager and Spotify Ad Exchange support public inventory for audio line items." Targeting note "Most audio ads serve in mobile app environments, which limits the available targeting options." No pre-added viewability. Bid strategy defaults to Fixed bid (Automated not selected). YouTube & partners types → see 06-youtube.md |
 | DOOH (Display/Video digital out of home) | Only in DOOH IOs (04); not explored |
 
 ### Existing LI page
@@ -101,6 +102,6 @@ Top: **Apply a targeting template** (collapsible): carousel of template cards (n
 - Troubleshooter + Intelligence forecasts come from engine.
 
 ## Open questions
-- CTV, Audio, DOOH, Demand Gen, Mobile app install step 2 forms — need suitable IO/advertiser settings.
+- DOOH, Demand Gen, Mobile app install step 2 forms — need suitable IO/advertiser settings.
 - Bid strategy lists for other objectives at LI level (expect same as 04 matrix).
 - "Additional options" under bid strategy showed nothing for Clicks IO.

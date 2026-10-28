@@ -230,8 +230,8 @@ One explore file per item; screenshots on demo data only.
 - ✅ P1-02 Partner level (§5.2) → docs/explore/02-partner-level.md
 - ✅ P1-03 Campaigns (§5.3) → docs/explore/03-campaigns.md
 - ✅ P1-04 Insertion orders (§5.3) → docs/explore/04-insertion-orders.md
-- 🟨 P1-05 Line items (§5.3) → docs/explore/05-line-items.md (Display/Video/Mobile-app/Ads-in-apps done; CTV, Audio, DOOH, Demand Gen need an awareness / no-objective IO and Floodlight optimisation — revisit)
-- ⬜ P1-06 YouTube ad groups & ads (§5.3)
+- 🟨 P1-05 Line items (§5.3) → docs/explore/05-line-items.md (Display/Video/Mobile-app/Ads-in-apps done; DOOH, Demand Gen need an awareness / no-objective IO and Floodlight optimisation — revisit)
+- ✅ P1-06 YouTube ad groups & ads (§5.3) → docs/explore/06-youtube.md
 - ⬜ P1-07 Targeting — every dimension (§5.4)
 - ⬜ P1-08 Creatives — every type (§5.5)
 - ⬜ P1-09 Inventory & Marketplace (§5.6)
@@ -360,6 +360,7 @@ Partner · Advertiser · Campaign · InsertionOrder · BudgetSegment · LineItem
 | 2026-10-28 | P1-03 | Campaigns list, bulk/inline actions, New campaign form + validation + goal→KPI rules, campaign page, settings, alerts documented | P1-04 Insertion orders |
 | 2026-10-28 | P1-04 | Insertion orders: list, bulk menu, 2-step create with objective matrix, full form + validation, IO page tabs documented | P1-05 Line items |
 | 2026-10-28 | P1-05 | Line items: type picker + compatibility rules, full Display form, type differences, LI page, Troubleshooter funnel, bulk menu documented; some types blocked in demo | P1-06 YouTube |
+| 2026-10-28 | P1-06 | YouTube LI subtypes, LI form, ad groups (targeting, bid), ad create form + preview; CTV & Audio added to 05 | P1-07 Targeting |
 
 ---
 
