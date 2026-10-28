@@ -769,7 +769,8 @@ export function buildSandboxPlan(input: PlanInput): SandboxPlan {
     if (li) {
       li.flightMode = 'CUSTOM';
       li.flightStart = addDays(T, 10);
-      li.flightEnd = addDays(T, 40);
+      // inside the IO flight: only the conflicting-settings story leaves it on purpose
+      li.flightEnd = minIso(addDays(T, 40), ioAt(1, 1, 0)?.end ?? addDays(T, 40));
       li.neverLive = true;
     }
     tagLi(

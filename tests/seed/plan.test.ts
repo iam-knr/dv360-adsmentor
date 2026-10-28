@@ -230,8 +230,20 @@ describe.each(TEMPLATE_KEYS)('integrity of %s', (template: TemplateKey) => {
           );
       });
     }
+    // custom line item flights stay inside the IO flight; the conflicting-settings story leaves it on purpose
+    const conflicting = new Set(
+      plan.stories.filter((x) => x.tag === 'io-conflicting-settings').map((x) => x.entityId),
+    );
     for (const l of plan.lineItems.filter((x) => x.flightMode === 'CUSTOM')) {
       expect(iso(l.flightStart) <= iso(l.flightEnd)).toBe(true);
+      const ioSegs = plan.budgetSegments.filter((x) => x.ioId === l.ioId);
+      const ioStart = ioSegs.map((x) => iso(x.startDate)).sort()[0]!;
+      const ioEnd = ioSegs
+        .map((x) => iso(x.endDate))
+        .sort()
+        .pop()!;
+      if (conflicting.has(l.ioId)) continue;
+      expect(iso(l.flightStart) >= ioStart && iso(l.flightEnd) <= ioEnd, l.name).toBe(true);
     }
     // campaign planned spend equals the sum of its currency budgets when it has a plan
     for (const c of plan.campaigns.filter((x) => x.plannedSpend)) {
