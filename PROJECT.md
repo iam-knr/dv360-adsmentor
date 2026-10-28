@@ -270,13 +270,13 @@ One explore file per item; screenshots on demo data only.
 - ✅ P1-18 Experiments: A/B tests + Brand/Search lift studies → docs/explore/18-experiments.md
 
 ### Phase 2 — Specs & architecture — target: 31 Oct–1 Nov
-- ⬜ P2-01 Data model (all entities & relationships) → `docs/specs/data-model.md`
-- ⬜ P2-02 Route map mirroring DV360 navigation → `docs/specs/routes.md`
-- ⬜ P2-03 Design system: colours, typography, spacing, components matching DV360 look → `docs/specs/design-system.md`
-- ⬜ P2-04 Validation rules catalogue → `docs/specs/validation.md`
-- ⬜ P2-05 Simulation engine spec → `docs/specs/engine.md`
-- ⬜ P2-06 Module specs (one per §5 area)
-- ⬜ P2-07 Build order & cloud-session prompts written
+- ✅ P2-01 Data model (all entities & relationships) → [docs/specs/data-model.md](docs/specs/data-model.md)
+- ✅ P2-02 Route map mirroring DV360 navigation → [docs/specs/routes.md](docs/specs/routes.md)
+- ✅ P2-03 Design system: colours, typography, spacing, components matching DV360 look → [docs/specs/design-system.md](docs/specs/design-system.md)
+- ✅ P2-04 Validation rules catalogue → [docs/specs/validation.md](docs/specs/validation.md)
+- ✅ P2-05 Simulation engine spec → [docs/specs/engine.md](docs/specs/engine.md)
+- ✅ P2-06 Module specs (one per §5 area) → [docs/specs/modules/](docs/specs/modules/README.md) (18 modules, 231 build tasks)
+- ✅ P2-07 Build order & cloud-session prompts written → [docs/specs/build-plan.md](docs/specs/build-plan.md), conflict log [docs/specs/conflicts.md](docs/specs/conflicts.md), ADR log [docs/decisions.md](docs/decisions.md)
 
 ### Phase 3 — Foundation build (cloud sessions, $100 credit) — target: 1–5 Nov
 Plan: `docs/specs/build-plan.md` (owner prerequisites, waves, file ownership, merge order, prompts). Session ids below are the prompt ids in build-plan section 4. Starts when owner items P-01 and P-02 are done. A split task is ticked 🟨 until all its sessions are merged.
@@ -418,6 +418,13 @@ Full records: `docs/decisions.md` (ADR-001 to ADR-038).
 | 2026-10-28 | P1-16 | History page (spend chart, date range, local timezone / system changes toggles, download, day cards with field-level old → new), notes panel, notifications, right rail documented | P1-17 Gap sweep |
 | 2026-10-28 | P1-17 | Gap sweep: image creative page, creative History table, audience detail, Floodlight Google tag, channel and negative keyword list editors, report run files, 404 page documented; still-blocked gaps tabled for Phase 2 | P2-01 Data model |
 | 2026-10-28 | P1-18 | Experiments: A/B test list, create form, report + settings/difference; Lift studies list, create form (eligibility, budget, survey), report, review & fix documented | Phase 1 audit → P2-01 |
+| 2026-10-28 | P2-01 | Data model: ER overview, multi-tenancy with row level security, seeding strategy, all enumerations, entity field tables, change-log design, Prisma schema (Appendix A) | P2-02 Route map |
+| 2026-10-28 | P2-02 | Route map: route table, three navigation trees, frame hierarchy, URL conventions, simulator routes, API and server-action map | P2-03 Design system |
+| 2026-10-28 | P2-03 | Design system: tokens, MUI theme, 20 component specs, icon map, layout, accessibility, fidelity checklist (SOP-3) | P2-04 Validation |
+| 2026-10-28 | P2-04 | Validation catalogue: about 480 rules with ids and messages, matrices MX-01 to MX-18, state machines, validation library design | P2-05 Engine |
+| 2026-10-28 | P2-05 | Simulation engine: tick scheduler, supply, eligibility funnel, bidding, auction, outcomes, pacing, costs, aggregation, scenario hooks, tests | P2-06 Module specs |
+| 2026-10-28 | P2-06 | Module specs: 18 files (sections 1 to 8) and index; 231 build tasks; conflicts and open questions per module | P2-07 Build order |
+| 2026-10-28 | P2-07 | Conflict log (67 rows: 55 resolved and applied to the specs, 12 owner decisions with defaults), ADR-001 to ADR-038, module index, build plan (owner prerequisites, repo skeleton, 16 sessions in 5 waves with ownership and merge order, ready-to-paste prompts, risks and cut order) | Owner completes build-plan section 1 by Sat 31 Oct (P-01, P-02, P-12, repo visibility block the start); run wave 1 (P3-01) on Sun 1 Nov |
 
 ---
 
