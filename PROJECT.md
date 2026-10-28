@@ -173,6 +173,9 @@ Geography (incl. radius, location lists, postal codes) · Language · Demographi
 - **Marketplace**: publisher catalog, proposals & negotiation flow (send RFP, accept/decline), packages, Programmatic Guaranteed setup
 - Inventory sources: open exchanges list & settings
 - ads.txt / sellers.json indicators
+- Instant deals (pick exchange/publisher → name, targeting, advertiser access → forecast → accept)
+- Marketplace Featured (curated package collections, bulk assign) and Discover (AI/keyword search + faceted filters, package detail with scale charts)
+- Orders → deals hierarchy in My inventory; deal page tabs Overview / Access / Settings / History
 
 ### 5.7 Audiences
 - Audience list: types, sizes, match rates, status
@@ -237,7 +240,7 @@ One explore file per item; screenshots on demo data only.
 - ✅ P1-06 YouTube ad groups & ads (§5.3) → docs/explore/06-youtube.md
 - ✅ P1-07 Targeting — every dimension (§5.4) → docs/explore/07-targeting.md
 - 🟨 P1-08 Creatives (§5.5) → docs/explore/08-creatives.md (library, menus, 3P display form, creative page, review statuses, format gallery, appeals done; upload/native/video/audio forms pending)
-- ⬜ P1-09 Inventory & Marketplace (§5.6)
+- ✅ P1-09 Inventory & Marketplace (§5.6) → docs/explore/09-inventory.md
 - ⬜ P1-10 Audiences (§5.7)
 - ⬜ P1-11 Resources incl. Floodlight & custom bidding (§5.8)
 - ⬜ P1-12 Reporting — instant & offline (§5.9)
@@ -366,6 +369,7 @@ Partner · Advertiser · Campaign · InsertionOrder · BudgetSegment · LineItem
 | 2026-10-28 | P1-06 | YouTube LI subtypes, LI form, ad groups (targeting, bid), ad create form + preview; CTV & Audio added to 05 | P1-07 Targeting |
 | 2026-10-28 | P1-07 | All Display targeting editors documented (geo, apps/URLs, keywords, categories, environment, position, viewability, language, brand suitability + 3P verification, audience lists builder, demographics, day & time, browser, device, connection speed, carrier/ISP) | P1-08 Creatives |
 | 2026-10-28 | P1-08 | Creatives library, New menu, third-party display form, creative details/status/history, exchange review, format gallery, appeal history documented | P1-09 Inventory |
+| 2026-10-28 | P1-09 | My inventory (orders/deals, packages, deal groups), deal page, instant deal flow, Marketplace Featured + Discover, Plans list, Negotiations list documented | P1-10 Audiences |
 
 ---
 
