@@ -1,24 +1,71 @@
 import 'server-only';
-import type { SessionUser } from './types';
+import { cache } from 'react';
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { auth } from './index';
+import { devBypassUser, isDevBypassEnabled } from './dev-bypass';
+import { resolveSessionUser, type ResolvedSession } from './session-core';
+import type { SessionFailureReason, SessionUser } from './types';
+import { SIM_CLASS_HEADER, VIEW_AS_ACT_HEADER, VIEW_AS_HEADER } from './view-as-headers';
+import { parseViewAs } from './view-as';
 
-const DEV_USER: SessionUser = {
-  id: 'dev-user',
-  email: 'dev@example.test',
-  name: 'Dev User',
-  appRole: 'admin',
-  dvRole: 'ADMIN',
-};
-
-/** Stub (P3-02 replaces it). Returns a fixed user only when AUTH_DEV_BYPASS=1 outside production. */
-export async function getSessionUser(): Promise<SessionUser | null> {
-  if (process.env.AUTH_DEV_BYPASS === '1' && process.env.NODE_ENV !== 'production') {
-    return await Promise.resolve(DEV_USER);
+export class UnauthenticatedError extends Error {
+  constructor(readonly reason: SessionFailureReason = 'none') {
+    super('UNAUTHENTICATED');
+    this.name = 'UnauthenticatedError';
   }
-  return null;
 }
 
-export async function requireUser(): Promise<SessionUser> {
-  const user = await getSessionUser();
-  if (!user) throw new Error('UNAUTHENTICATED');
-  return user;
+async function requestHeaders(): Promise<Headers | null> {
+  try {
+    return await headers();
+  } catch {
+    return null; // outside a request (tests, scripts)
+  }
 }
+
+async function resolve(): Promise<ResolvedSession> {
+  if (isDevBypassEnabled()) return { ok: true, user: devBypassUser() };
+
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) return { ok: false, reason: 'none' };
+
+  const { sv, sid, loginAt } = session.user;
+  if (sv < 0 || !sid || !loginAt) return { ok: false, reason: 'revoked' };
+
+  const h = await requestHeaders();
+  return resolveSessionUser({
+    userId,
+    claims: { sv, sid, loginAt },
+    now: new Date(),
+    viewAs: h ? parseViewAs((n) => h.get(n)) : null,
+    simClass: h?.get(SIM_CLASS_HEADER) ?? null,
+  });
+}
+
+/** One resolution per request (React cache), so layouts and pages share the database reads. */
+export const resolveSession = cache(resolve);
+
+/** The signed in user, or null. Never throws. */
+export async function getSessionUser(): Promise<SessionUser | null> {
+  const r = await resolveSession();
+  return r.ok ? r.user : null;
+}
+
+/** For server actions and route handlers: throws `UnauthenticatedError` (message UNAUTHENTICATED). */
+export async function requireUser(): Promise<SessionUser> {
+  const r = await resolveSession();
+  if (!r.ok) throw new UnauthenticatedError(r.reason);
+  return r.user;
+}
+
+/** For pages and layouts: sends a signed out or expired person to the right page. */
+export async function requireUserOrRedirect(): Promise<SessionUser> {
+  const r = await resolveSession();
+  if (r.ok) return r.user;
+  if (r.reason === 'none') redirect('/sim/login');
+  redirect(`/sim/session-expired?reason=${r.reason}`);
+}
+
+export { VIEW_AS_HEADER, VIEW_AS_ACT_HEADER };
