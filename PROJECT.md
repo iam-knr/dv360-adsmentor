@@ -288,7 +288,7 @@ Plan: `docs/specs/build-plan.md` (owner prerequisites, waves, file ownership, me
 - ⬜ P3-03 App shell: top bar, switcher, left nav, breadcrumbs, date picker → session P3-03 (4.9; module 01 T1 to T6)
 - ⬜ P3-04 Shared components: data table (columns picker, filters, bulk actions), side panel forms, dialogs, status chips → session P3-04 (4.2; design-system.md)
 - ⬜ P3-05 Full data model + seed generator (partners, advertisers, campaigns, IOs, LIs, creatives, deals, audiences) → sessions P3-05a schema core and `withChangeLog` (4.3), P3-05b seed generator (4.7), P3-05c remaining tables (4.8)
-- ⬜ P3-06 Campaigns → IOs → Line items CRUD with full validation → sessions P3-06a validation library (4.4), P3-06b campaigns and IOs (4.11), P3-06c line items (4.12)
+- 🟨 P3-06 Campaigns → IOs → Line items CRUD with full validation → sessions P3-06a validation library (4.4) done, in PR; P3-06b campaigns and IOs (4.11), P3-06c line items (4.12) pending
 - ⬜ P3-07 Targeting panel (all dimensions) → sessions P3-07a card, state and basic editors (4.10), P3-07b geography, apps and URLs, brand suitability, audience builder (4.15)
 - ⬜ P3-08 Simulation engine v1 (auction, pacing, metrics) → sessions P3-08a engine core (4.5), P3-08b engine runtime and tick endpoint (4.13)
 - ⬜ P3-09 Performance columns on list pages → session P3-09 (4.14)
@@ -443,6 +443,7 @@ Full records: `docs/decisions.md` (ADR-001 to ADR-046).
 | 2026-10-28 | SPEC | Account management module 19 specified (3 levels, email+password, admin adds users) | Phase 3 prerequisites |
 | 2026-10-28 | OWNER | Simulator for free students only (paid students use real DV360); Vercel Hobby + GitHub Actions timer | P-03 import repo to Vercel (Hobby), P-04..P-07 |
 | 2026-10-28 | P3-01 | Scaffold done: Next.js 15, MUI 7, Prisma 6 (multi-file schema, `0000_base`), Vitest/Playwright, CI (check, db-tests, e2e green), stubs, engine-tick stub (off by default), no cron in vercel.json | P3-04, P3-05a, P3-06a, P3-08a (wave 2) |
+| 2026-10-28 | P3-06a | Validation core in `lib/validation`: engine, MSG catalogue, matrices MX-01 to MX-06, MX-08, MX-10, MX-17, rules for GEN, CMP, IO, LI and the display, video, CTV, audio, app, DOOH and Demand Gen type files, state machines, bulk applicability, client hooks, server wrapper; 1,151 tests (docs-sync, coverage, matrices, state, dirty) | P3-06b, P3-06c (wave 4); P3-02b and P3-07a also read it |
 
 ---
 
