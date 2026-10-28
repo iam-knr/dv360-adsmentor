@@ -1,0 +1,21 @@
+# Engine timer stub (P3-08b finishes it). Vercel Hobby has no sub-daily cron, so GitHub Actions
+# calls the tick URL. It does nothing until the owner sets the repo variable ENGINE_TICK_ENABLED=true.
+# Needs: repo variable ENGINE_CRON_URL (https://<domain>/api/sim/engine/tick) and secret CRON_SECRET.
+name: engine-tick
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+jobs:
+  tick:
+    if: ${{ vars.ENGINE_TICK_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the engine tick endpoint
+        env:
+          ENGINE_CRON_URL: ${{ vars.ENGINE_CRON_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl --fail --silent --show-error --max-time 55 -X POST \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${ENGINE_CRON_URL}"
