@@ -1,6 +1,7 @@
-# Engine timer stub (P3-08b finishes it). Vercel Hobby has no sub-daily cron, so GitHub Actions
-# calls the tick URL. It does nothing until the owner sets the repo variable ENGINE_TICK_ENABLED=true.
-# Needs: repo variable ENGINE_CRON_URL (https://<domain>/api/sim/engine/tick) and secret CRON_SECRET.
+# Engine timer stub (P3-08b finishes it; ADR-048). Vercel Hobby has no sub-daily cron, so GitHub
+# Actions calls the tick endpoint every 5 minutes. The job does nothing until the owner sets the
+# repository variable ENGINE_TICK_ENABLED to true.
+# Needs Actions secrets: ENGINE_CRON_URL (the tick endpoint URL) and CRON_SECRET.
 name: engine-tick
 on:
   schedule:
@@ -13,9 +14,13 @@ jobs:
     steps:
       - name: Call the engine tick endpoint
         env:
-          ENGINE_CRON_URL: ${{ vars.ENGINE_CRON_URL }}
+          ENGINE_CRON_URL: ${{ secrets.ENGINE_CRON_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
+          if [ -z "${ENGINE_CRON_URL}" ]; then
+            echo "ENGINE_CRON_URL is not set; skipping."
+            exit 0
+          fi
           curl --fail --silent --show-error --max-time 55 -X POST \
             -H "Authorization: Bearer ${CRON_SECRET}" \
             "${ENGINE_CRON_URL}"
