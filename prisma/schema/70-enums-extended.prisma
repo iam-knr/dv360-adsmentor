@@ -1,0 +1,816 @@
+// Enums for the tables added by P3-05c
+// Source: docs/specs/data-model.md section 4 and the module deltas. Owner session: P3-05c.
+
+// ---- Partner and advertiser extras ----
+
+enum PartnerContactRole {
+  PRIMARY
+  DATA_PROTECTION_OFFICER
+  EU_REPRESENTATIVE
+}
+
+enum PartnerFeatureKey {
+  ENHANCED_AUTOMATION
+  PRODUCT_IMPROVEMENT
+  GOOGLE_PARTNER_INVENTORY
+  YOUTUBE_GUARANTEED_INSTANT_DEALS
+  AUTO_TAGGING
+  ADVANCED_AD_SERVING
+  APP_MEDIATION_FEES // DELTA-02-7
+  CREATIVE_RANDOM_DISAPPROVAL_RATE // Δ12-13
+  REPORTING_MAX_ROWS // Δ16-9
+}
+
+enum FeatureScope {
+  ALL_ADVERTISERS
+  SELECTED
+}
+
+enum InvoiceLevel {
+  ADVERTISER
+  INSERTION_ORDER
+  CAMPAIGN
+}
+
+enum InvoiceStatus {
+  OPEN
+  ISSUED
+  PAID
+}
+
+enum LinkedAccountType {
+  ADS_DATA_HUB
+  EXTERNAL_DATA_PARTNER
+  YOUTUBE_CHANNEL
+  YOUTUBE_CREATOR_VIDEOS
+  GOOGLE_ADS
+  BIGQUERY_EXPORTER
+  GOOGLE_ANALYTICS
+  CM360
+  MERCHANT_CENTER
+  GOOGLE_MY_BUSINESS
+}
+
+enum LinkedAccountStatus {
+  LINKED
+  PENDING
+  REMOVED
+}
+
+enum PolicyCertificateKind {
+  ADDICTION_SERVICES
+  CRYPTOCURRENCY
+  PHARMA_DRUG_SALES
+  SPECULATIVE_FINANCIAL
+  GAMBLING
+  ONLINE_PHARMACY
+  PHARMA_MANUFACTURER
+  PHARMA_NON_PRESCRIPTION
+  POLITICAL_EU
+  POLITICAL_INDIA
+  POLITICAL_US
+  NEW_YORK_REGISTRATION
+  CALIFORNIA_ELECTIONS
+  SOCIAL_CASINO
+}
+
+enum CertificateStatus {
+  NONE
+  REQUESTED
+  APPROVED
+  REJECTED
+}
+
+enum ThirdPartyVendorGroup {
+  VIEWABILITY
+  BRAND_SAFETY
+  REACH
+  BRAND_LIFT
+  CONVERSION_ATTRIBUTION
+  YT_MEASUREMENT
+  BIDDING
+}
+
+enum BrandSuitabilityMode {
+  MAXIMUM
+  STANDARD
+  LIMITED
+}
+
+// ---- Creatives ----
+
+enum CreativeUrlType {
+  LANDING_PAGE
+  CLICK_TRACKER
+  IMPRESSION_TRACKER
+  DETECTED_DESTINATION
+}
+
+enum AppealStatus {
+  OPEN
+  ACCEPTED
+  REJECTED
+}
+
+enum CreativeRestrictionKind {
+  LEGAL_COUNTRY
+  POLICY
+  AGE_RATING
+}
+
+enum UploadPurpose {
+  CREATIVE_ASSET
+  ADVERTISER_LOGO
+  CUSTOMER_MATCH
+  SDF
+  OTHER
+}
+
+enum UploadStatus {
+  PENDING
+  READY
+  FAILED
+}
+
+// ---- Audiences, channels, lists ----
+
+enum GoogleAudienceKind {
+  AFFINITY
+  IN_MARKET
+  LIFE_EVENT
+  DETAILED_DEMOGRAPHIC
+}
+
+enum ContactType {
+  EMAIL
+  PHONE
+  MAIL_ADDRESS
+  MOBILE_DEVICE_ID
+}
+
+enum AudienceTagOperator {
+  EQUALS
+  NOT_EQUALS
+  CONTAINS
+  STARTS_WITH
+  GREATER_THAN
+  LESS_THAN
+}
+
+enum CombinedAudienceMode {
+  INCLUDE
+  EXCLUDE
+}
+
+enum CombinedAudienceMemberKind {
+  AUDIENCE
+  GOOGLE_AUDIENCE
+  CUSTOM_LIST
+}
+
+enum CustomListEntryKind {
+  INTEREST
+  URL
+  APP
+  KEYWORD
+}
+
+enum CustomerMatchUploadStatus {
+  PROCESSING
+  DONE
+  FAILED
+}
+
+enum AudienceDataSource {
+  CONNECTED
+  UPLOAD
+  LATER
+}
+
+enum AppPlatform {
+  ANDROID
+  IOS
+  CTV
+}
+
+enum ChannelEntryKind {
+  URL
+  ANDROID_APP
+  IOS_APP
+  CTV_APP
+}
+
+enum LocationListType {
+  REGIONAL
+  PROXIMITY
+}
+
+enum YoutubeAssetKind {
+  LOCATION
+  AFFILIATE_LOCATION
+  SITELINK
+}
+
+// ---- Inventory ----
+
+enum DealType {
+  PRIVATE_AUCTION
+  PREFERRED_DEAL
+  PROGRAMMATIC_GUARANTEED
+  INSTANT_DEAL
+}
+
+enum DealCommitment {
+  GUARANTEED
+  NON_GUARANTEED
+}
+
+enum DealDeliveryMethod {
+  PROGRAMMATIC
+  TAGGED
+}
+
+enum DealRateType {
+  FIXED
+  FLOOR
+}
+
+enum DealSource {
+  NEGOTIATED
+  INSTANT
+  MARKETPLACE
+}
+
+enum NegotiationStatus {
+  DRAFT
+  PROPOSED
+  COUNTERED
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+enum NegotiationAwaiting {
+  BUYER
+  SELLER
+  NONE
+}
+
+enum NegotiationAuthorKind {
+  BUYER
+  SELLER
+}
+
+enum SellerKind {
+  EXCHANGE
+  PUBLISHER
+}
+
+enum MarketplaceProductType {
+  CENTRAL_PARTNER_DEAL
+  DEAL
+  PACKAGE
+  PUBLISHER
+}
+
+enum InventoryFormat {
+  DISPLAY
+  VIDEO
+  AUDIO
+}
+
+enum DealGroupKind {
+  DEAL_GROUP
+  PREFERRED_DEAL_GROUP
+}
+
+enum DealGroupMemberKind {
+  DEAL
+  PACKAGE
+}
+
+enum LineItemInventoryKind {
+  DEAL
+  PACKAGE
+  GROUP
+}
+
+enum InventoryMode {
+  INCLUDE
+  EXCLUDE
+}
+
+// ---- Floodlight and custom bidding ----
+
+enum FloodlightPlatform {
+  WEB
+  MOBILE_APP
+  CONNECTED_TV
+}
+
+enum FloodlightFormat {
+  GOOGLE_TAG
+  IFRAME_TAG
+  IMAGE_TAG
+}
+
+enum FloodlightType {
+  COUNTER
+  SALE
+}
+
+enum CountingMethod {
+  STANDARD
+  UNIQUE
+  PER_SESSION
+  TRANSACTIONS
+  ITEMS_SOLD
+}
+
+enum FloodlightCategory {
+  PURCHASE
+  ADD_TO_CART
+  BEGIN_CHECKOUT
+  SUBSCRIBE_PAID
+  CONTACT
+  SUBMIT_LEAD_FORM
+  BOOK_APPOINTMENT
+  SIGN_UP
+  REQUEST_QUOTE
+  GET_DIRECTIONS
+  OUTBOUND_CLICK
+  QUALIFIED_LEAD
+  CONVERTED_LEAD
+  PAGE_VIEW
+}
+
+enum PersonalizedAdExclusion {
+  DONT_EXCLUDE
+  EXCLUDE_ALL_LOCATIONS
+}
+
+enum FloodlightVariableType {
+  STRING
+  NUMBER
+}
+
+enum AttributionModelKind {
+  FLOODLIGHT_DEFAULT
+  LAST_CLICK
+  FIRST_CLICK
+  LINEAR
+  TIME_DECAY
+  POSITION_BASED
+  DATA_DRIVEN
+}
+
+enum CustomBiddingSource {
+  RULE_BASED
+  SCRIPT
+  GOAL
+}
+
+enum CustomBiddingObjective {
+  BRAND_AWARENESS
+  CLICKS
+  CONVERSIONS
+  CUSTOM
+}
+
+enum CustomBiddingStatus {
+  ACTIVE
+  SUSPENDED
+  TRAINING
+}
+
+enum CustomBiddingReadiness {
+  NOT_READY
+  TRAINING
+  READY
+}
+
+enum CustomBiddingMultiplierKind {
+  AD_POSITION
+  CREATIVE_DIMENSION
+  DAY_AND_TIME
+  DEVICE_TYPE
+  GENRE
+  DELIVERY_TYPE
+  DURATION
+}
+
+enum CustomBiddingMatchMode {
+  ANY
+  ALL
+}
+
+enum CustomBiddingScriptState {
+  ACCEPTED
+  REJECTED
+  PENDING
+}
+
+enum OwnerScope {
+  PARTNER
+  ADVERTISER
+}
+
+// ---- Reporting ----
+
+enum ReportKind {
+  INSTANT
+  OFFLINE_FLOODLIGHT
+  OFFLINE_INVENTORY_AVAILABILITY
+}
+
+enum ReportVisualization {
+  TABLE
+  PIVOT_TABLE
+  COLUMN
+  TIME_SERIES
+  PIE
+  SCATTER
+}
+
+enum ReportTimeZone {
+  ADVERTISER
+  UTC
+}
+
+enum ReportFormat {
+  CSV
+  XLSX
+}
+
+enum ReportRepeat {
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum ReportRunStatus {
+  QUEUED
+  RUNNING
+  DONE
+  FAILED
+}
+
+enum ReportFieldKind {
+  DIMENSION
+  METRIC
+}
+
+enum ReportFieldStatus {
+  LIVE
+  ZERO
+  NA
+}
+
+enum ReportFieldSensitivity {
+  NONE
+  PARTNER_COST
+}
+
+enum CrossMediaCountry {
+  ARGENTINA
+  AUSTRALIA
+  BRAZIL
+  CANADA
+  CHILE
+  COLOMBIA
+  FRANCE
+  GERMANY
+  JAPAN
+  MEXICO
+  UNITED_KINGDOM
+  UNITED_STATES
+  VIETNAM
+}
+
+enum CrossMediaScope {
+  NATIONAL
+  SUB_LOCATION
+}
+
+enum CrossMediaStatus {
+  PROCESSING
+  DONE
+  FAILED
+}
+
+enum SavedViewGrid {
+  CAMPAIGN
+  IO
+  LI
+  AD_GROUP
+  DEAL
+  PLAN
+}
+
+enum ChartCardScope {
+  CAMPAIGN
+  IO
+  LI
+}
+
+enum ChartCardKind {
+  BAR
+  LINE
+  PIE
+  BUBBLE
+  BUILT_IN_IMPRESSIONS_LOST
+}
+
+enum InboxMessageKind {
+  REPORT_READY
+  REPORT_FAILED
+  SYSTEM
+}
+
+// ---- Planning ----
+
+enum PlanStatus {
+  PLANNED
+  TRAFFICKED
+}
+
+enum PlanBuyingMethod {
+  OPEN_AUCTION
+  PROGRAMMATIC_GUARANTEED
+  PREFERRED_DEAL
+  PRIVATE_AUCTION
+  YOUTUBE_RESERVE
+}
+
+enum PlanChannel {
+  DIGITAL
+  TV
+  CROSS_MEDIA
+}
+
+enum PlanReachBasis {
+  CENSUS
+  DIGITAL
+}
+
+// ---- Experiments and lift ----
+
+enum ExperimentTarget {
+  INSERTION_ORDER
+  LINE_ITEM
+}
+
+enum ExperimentGoal {
+  CLICKS
+  CONVERSIONS
+  REACH
+  CUSTOM_IMPRESSION_VALUE
+  VIDEO_COMPLETIONS
+  VIEWS_YOUTUBE
+}
+
+enum ExperimentStatus {
+  SCHEDULED
+  ACTIVE
+  COMPLETED
+}
+
+enum ExperimentChannelScope {
+  CROSS_EXCHANGE
+  YOUTUBE
+  DEMAND_GEN
+  MIXED
+}
+
+enum ConfidenceLevel {
+  P90
+  P95
+}
+
+enum LiftType {
+  BRAND_LIFT
+  SEARCH_LIFT
+}
+
+enum BrandLiftMetric {
+  VIDEO_AD_RECALL
+  AWARENESS
+  CONSIDERATION
+  FAVORABILITY
+  PURCHASE_INTENT
+  ASSOCIATION
+}
+
+enum LiftStrength {
+  STANDARD
+  ENHANCED
+}
+
+enum IntendedAction {
+  BUY
+  CHOOSE
+  USE
+}
+
+enum LiftStatus {
+  ELIGIBLE
+  NOT_ELIGIBLE
+  IN_PROGRESS
+  COMPLETE
+  PAUSED
+  ENDED
+}
+
+enum LiftSlice {
+  OVERALL
+  AGE
+  GENDER
+  INSERTION_ORDER
+  LINE_ITEM
+  DEVICE
+  YOUTUBE_AD_VIDEO
+  CREATIVE
+  PUBLISHER_DOMAIN
+  PUBLISHER_VERTICAL
+}
+
+enum LiftMeasure {
+  ABSOLUTE
+  RELATIVE
+  HEADROOM
+}
+
+enum LiftResultScope {
+  YOUTUBE_DEMAND_GEN
+  CROSS_EXCHANGE
+}
+
+// ---- Bulk jobs ----
+
+enum BulkSource {
+  DUPLICATION
+  BULK_EDIT
+  CAMPAIGN_DOWNLOAD
+  SDF_DOWNLOAD
+  SDF_UPLOAD
+  CREATIVE_BULK_ADD // Δ12-10
+}
+
+enum BulkAction {
+  ACTIVATE
+  PAUSE
+  ARCHIVE
+  UNARCHIVE // Δ-11-2
+  DUPLICATE
+  APPLY_TARGETING_TEMPLATE
+  EDIT_SETTINGS
+  EDIT_CREATIVE_ASSIGNMENT
+  DOWNLOAD_SDF
+  DOWNLOAD_QA
+  DOWNLOAD_METADATA // Δ-11-2
+  UPLOAD_SDF
+  UPLOAD_CREATIVES // Δ12-10
+}
+
+enum BulkJobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum BulkResultKind {
+  ENTITY_LIST
+  FILE
+}
+
+enum BulkItemStatus {
+  OK
+  FAILED
+}
+
+enum SdfEntityFile {
+  CAMPAIGNS
+  MEDIA_PRODUCTS
+  INSERTION_ORDERS
+  LINE_ITEMS
+  AD_GROUPS
+  ADS
+}
+
+// ---- Training layer ----
+
+enum ScenarioStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  PASSED
+  FAILED
+  ABANDONED
+}
+
+enum ScenarioCheckKind {
+  ENTITY_EXISTS
+  FIELD_EQUALS
+  FIELD_RANGE
+  METRIC_THRESHOLD
+  ALERT_CLEARED
+  STATUS_IS
+  ENTITY_STATE
+  METRIC
+  DIAGNOSTIC
+  ALERT_ABSENT
+  LEARNING
+  PACING
+  CUSTOM_FN
+}
+
+enum ScenarioStepKind {
+  TASK
+  QUESTION
+  INFO
+}
+
+enum ScenarioLatch {
+  STICKY
+  LIVE
+}
+
+enum ScenarioPatchOp {
+  CREATE
+  UPDATE
+  DELETE
+  SET_STATUS
+  SET_METRIC_BIAS
+}
+
+enum NotificationKind {
+  ANNOUNCEMENT
+}
+
+enum NotificationSeverity {
+  INFO
+  WARNING
+}
+
+enum NotificationAudience {
+  ALL
+  STUDENT
+  INSTRUCTOR
+}
+
+enum HelpArticleKind {
+  ARTICLE
+  VIDEO
+  TUTORIAL
+}
+
+enum AdvisorRole {
+  USER
+  TUTOR
+}
+
+enum AdvisorVote {
+  UP
+  DOWN
+}
+
+// ---- Alerts, recommendations ----
+
+enum RecommendationType {
+  ENABLE_AUTOMATED_BID_BUDGET_IO
+  ENABLE_AUTOMATED_BIDDING_LI
+  ENABLE_AUTO_BUDGET_ALLOCATION
+  USE_OPTIMIZED_TARGETING
+  ADD_CREATIVES
+  RAISE_BID
+  BROADEN_TARGETING
+  BID_LEARNING
+}
+
+enum RecommendationStatus {
+  OPEN
+  DISMISSED
+  APPLIED
+}
+
+// ---- Simulation output ----
+
+enum SimScopeType {
+  LINE_ITEM
+  IO
+  CAMPAIGN
+  ADVERTISER
+}
+
+enum SimConversionType {
+  POST_CLICK
+  POST_VIEW
+}
+
+enum SimTickStatus {
+  OK
+  FAILED
+  SKIPPED
+}

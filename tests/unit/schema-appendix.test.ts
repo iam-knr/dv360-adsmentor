@@ -2,13 +2,13 @@
 // checked by a test that parses the document. Differences are listed here, each with the rule that caused it.
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { parseEnums, parseModels, readSchemaText } from '@/lib/db/schema-info';
+import { parseEnums, parseModels, readCoreSchemaText } from '@/lib/db/schema-info';
 
 const doc = readFileSync('docs/specs/data-model.md', 'utf8');
 const appendix = /## Appendix A[\s\S]*?```prisma\n([\s\S]*?)\n```/.exec(doc)?.[1] ?? '';
 const docModels = parseModels(appendix);
 const docEnums = parseEnums(appendix);
-const schemaText = readSchemaText();
+const schemaText = readCoreSchemaText();
 const models = new Map(parseModels(schemaText).map((m) => [m.name, m]));
 const enums = parseEnums(schemaText);
 

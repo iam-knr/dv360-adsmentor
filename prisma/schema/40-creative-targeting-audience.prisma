@@ -45,6 +45,9 @@ model Creative {
   assets      CreativeAsset[]
   reviews     CreativeReview[]
   assignments CreativeAssignment[]
+  creativeRestrictions CreativeRestriction[]
+  creativeUrls         CreativeUrl[]
+  creativeAppeals      CreativeAppeal[]
 
   @@unique([id, sandboxId])
   @@index([sandboxId, advertiserId, status])
@@ -192,6 +195,11 @@ model Audience {
   updatedAt            DateTime       @updatedAt
 
   advertiser Advertiser @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  audienceTagRules      AudienceTagRule[]
+  audienceSeeds         AudienceSeed[]
+  combinedAudienceTerms CombinedAudienceTerm[]
+  customListEntries     CustomListEntry[]
+  customerMatchUploads  CustomerMatchUpload[]
 
   @@unique([id, sandboxId])
   @@index([sandboxId, advertiserId, type])

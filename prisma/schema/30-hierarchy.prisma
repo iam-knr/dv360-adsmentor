@@ -115,6 +115,7 @@ model BudgetSegment {
   updatedAt        DateTime @updatedAt
 
   io InsertionOrder @relation(fields: [ioId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  simPacingSnapshots SimPacingSnapshot[]
 
   @@unique([id, sandboxId])
   @@index([sandboxId, ioId, startDate])
@@ -213,6 +214,9 @@ model LineItem {
   hourly      SimHourlyMetric[]
   daily       SimDailyMetric[]
   diagnostics DeliveryDiagnostic[]
+  lineItemFloodlightActivities LineItemFloodlightActivity[]
+  lineItemInventories          LineItemInventory[]
+  simConversionDailies         SimConversionDaily[]
 
   @@unique([id, sandboxId])
   @@index([sandboxId, ioId, status])
@@ -239,6 +243,7 @@ model AdGroup {
   advertiser Advertiser            @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
   ads        Ad[]
   targeting  TargetingAssignment[]
+  adSequenceSteps AdSequenceStep[]
 
   @@unique([id, sandboxId])
   @@index([sandboxId, lineItemId, status])

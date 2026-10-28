@@ -1,0 +1,421 @@
+// Training layer extras: seed templates, roles, scenarios, notifications, help, global catalogues
+// Source: docs/specs/data-model.md 5.1 and Appendix C, modules 01, 04, 09, 13, 14, 18. Owner session: P3-05c.
+// Global tables have no sandboxId. User, Classroom and Exchange ids are plain strings on purpose: those tables
+// belong to P3-05a and a relation would need a back-relation field there.
+
+// ---------------------------------------------------------------------------
+// Seed templates, roles, permissions (global)
+// ---------------------------------------------------------------------------
+
+model SeedTemplate {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  title       String
+  description String?
+  version     Int      @default(1)
+  sizeKnobs   Json
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Role {
+  key         String   @id
+  label       String
+  description String?
+  createdAt   DateTime @default(now())
+
+  permissions RolePermission[]
+}
+
+model Permission {
+  key       String   @id
+  label     String
+  createdAt DateTime @default(now())
+
+  roles RolePermission[]
+}
+
+model RolePermission {
+  roleKey       String
+  permissionKey String
+
+  role       Role       @relation(fields: [roleKey], references: [key], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionKey], references: [key], onDelete: Cascade)
+
+  @@id([roleKey, permissionKey])
+}
+
+// ---------------------------------------------------------------------------
+// Scenarios (global authoring tables; attempts and results are tenant rows)
+// ---------------------------------------------------------------------------
+
+model Scenario {
+  id               String   @id @default(cuid())
+  key              String   @unique
+  title            String
+  description      String?
+  difficulty       Int      @default(1)
+  estimatedMinutes Int      @default(15)
+  seedTemplateKey  String   @default("blank")
+  version          Int      @default(1)
+  classroomId      String? // null = global
+  isPublished      Boolean  @default(false)
+  setup            Json? // Δ18-13
+  completion       Json? // Δ18-13
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  steps       ScenarioStep[]
+  patches     ScenarioSeedPatch[]
+  events      ScenarioEvent[]
+  assignments ScenarioAssignment[]
+  attempts    ScenarioAttempt[]
+
+  @@index([classroomId, isPublished])
+}
+
+model ScenarioStep {
+  id                 String            @id @default(cuid())
+  scenarioId         String
+  key                String
+  ordinal            Int
+  kind               ScenarioStepKind  @default(TASK)
+  instruction        String
+  hint               String?
+  hintPenalty        Int               @default(0)
+  required           Boolean           @default(true)
+  latch              ScenarioLatch     @default(STICKY)
+  unlockAfterStepKey String?
+  options            Json?
+  checkKind          ScenarioCheckKind @default(ENTITY_EXISTS)
+  checkSpec          Json
+  points             Int               @default(1)
+
+  scenario Scenario              @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  results  ScenarioCheckResult[]
+
+  @@unique([scenarioId, key])
+  @@unique([scenarioId, ordinal])
+}
+
+model ScenarioSeedPatch {
+  id         String          @id @default(cuid())
+  scenarioId String
+  ordinal    Int
+  op         ScenarioPatchOp
+  entityType EntityType
+  selector   Json
+  payload    Json?
+
+  scenario Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
+  @@unique([scenarioId, ordinal])
+}
+
+model ScenarioEvent {
+  id               String @id @default(cuid())
+  scenarioId       String
+  afterTick        Int
+  faultSpec        Json
+  revertAfterHours Int?
+
+  scenario Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
+  @@index([scenarioId, afterTick])
+}
+
+model ScenarioAssignment {
+  id          String    @id @default(cuid())
+  classroomId String
+  scenarioId  String
+  opensAt     DateTime?
+  dueAt       DateTime?
+  maxAttempts Int       @default(3)
+  createdAt   DateTime  @default(now())
+
+  scenario Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
+  @@unique([classroomId, scenarioId])
+}
+
+// A student's run of a scenario inside the student's own sandbox.
+model ScenarioAttempt {
+  id                    String         @id @default(cuid())
+  sandboxId             String
+  scenarioId            String
+  userId                String
+  classroomId           String // denormalised
+  status                ScenarioStatus @default(NOT_STARTED)
+  startedAt             DateTime       @default(now())
+  finishedAt            DateTime?
+  score                 Int?
+  maxScore              Int            @default(0)
+  bindings              Json?
+  hintsUsed             Json?
+  startedFromSnapshotId String?
+  lastCheckedAt         DateTime?
+  scoreBreakdown        Json?
+
+  sandbox  Sandbox               @relation(fields: [sandboxId], references: [id], onDelete: Cascade)
+  scenario Scenario              @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  results  ScenarioCheckResult[]
+
+  @@unique([id, sandboxId])
+  @@unique([scenarioId, sandboxId, startedAt])
+  @@index([classroomId, scenarioId])
+  @@index([sandboxId])
+}
+
+model ScenarioCheckResult {
+  id            String    @id @default(cuid())
+  sandboxId     String
+  attemptId     String
+  stepId        String
+  passed        Boolean   @default(false)
+  passedNow     Boolean   @default(false)
+  firstPassedAt DateTime?
+  evaluatedAt   DateTime  @default(now())
+  evidence      Json?
+  points        Int       @default(0)
+
+  attempt ScenarioAttempt @relation(fields: [attemptId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  step    ScenarioStep    @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, stepId])
+  @@index([sandboxId])
+}
+
+model InstructorNote {
+  id            String   @id @default(cuid())
+  classroomId   String
+  studentUserId String
+  authorId      String
+  text          String
+  createdAt     DateTime @default(now())
+
+  @@index([classroomId, studentUserId])
+}
+
+model SandboxSnapshot {
+  id              String   @id @default(cuid())
+  classroomId     String
+  sourceSandboxId String
+  name            String
+  createdById     String
+  storageKey      String
+  createdAt       DateTime @default(now())
+
+  @@index([classroomId])
+}
+
+// ---------------------------------------------------------------------------
+// Notifications and help (global; one notice reaches every sandbox of a classroom)
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id             String               @id @default(cuid())
+  classroomId    String? // null = platform wide
+  kind           NotificationKind     @default(ANNOUNCEMENT)
+  severity       NotificationSeverity @default(INFO)
+  audienceRole   NotificationAudience @default(ALL)
+  title          String
+  body           String
+  learnMoreRoute String?
+  pinned         Boolean              @default(false)
+  publishedAt    DateTime             @default(now())
+  expiresAt      DateTime?
+  createdById    String
+
+  dismissals NotificationDismissal[]
+
+  @@index([classroomId, publishedAt])
+}
+
+model NotificationDismissal {
+  id             String   @id @default(cuid())
+  notificationId String
+  userId         String
+  dismissedAt    DateTime @default(now())
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, userId])
+}
+
+model HelpArticle {
+  id            String          @id @default(cuid())
+  slug          String          @unique
+  title         String
+  kind          HelpArticleKind @default(ARTICLE)
+  bodyMd        String
+  routePatterns String[]
+  rank          Int             @default(0)
+  durationMin   Int?
+}
+
+// ---------------------------------------------------------------------------
+// Global catalogues
+// ---------------------------------------------------------------------------
+
+model YoutubeVideo {
+  id           String  @id @default(cuid())
+  videoId      String  @unique
+  title        String
+  channelName  String
+  durationSec  Int
+  orientation  String // HORIZONTAL | VERTICAL
+  thumbnailUrl String?
+  category     String?
+  isPublic     Boolean @default(true)
+}
+
+model AppCatalog {
+  id       String      @id @default(cuid())
+  platform AppPlatform
+  appId    String
+  name     String
+  category String?
+
+  @@unique([platform, appId])
+}
+
+model ThirdPartyVendor {
+  id          String                @id @default(cuid())
+  key         String                @unique
+  name        String
+  group       ThirdPartyVendorGroup
+  onByDefault Boolean               @default(false)
+  feePct      Decimal?              @db.Decimal(6, 3)
+  termsText   String?
+}
+
+model GoogleAudience {
+  id              String             @id @default(cuid())
+  kind            GoogleAudienceKind
+  code            String
+  name            String
+  path            String
+  parentId        String?
+  sizeDisplay     BigInt?
+  sizeYoutube     BigInt?
+  sizeMobileApp   BigInt?
+  sizeCtv         BigInt?
+  eligibleDisplay Boolean            @default(true)
+  eligibleYoutube Boolean            @default(true)
+
+  @@unique([kind, code])
+  @@index([kind, parentId])
+}
+
+model MarketplaceProduct {
+  id                      String                 @id @default(cuid())
+  type                    MarketplaceProductType
+  exchangeId              String
+  name                    String
+  description             String?
+  sellerKind              SellerKind?
+  isInstantSeller         Boolean                @default(false)
+  instantTargetingOptions Json?
+  sevenDayImpressions     BigInt                 @default(0)
+  floorPrice              Decimal?               @db.Decimal(14, 4)
+  floorCurrency           String                 @default("USD")
+  startAt                 DateTime?
+  endAt                   DateTime?
+  featuredCarousel        String?
+  featuredCarouselOrder   Int?
+  bannerKey               String?
+  categories              String[]
+  googleAudienceCount     Int                    @default(0)
+  scale                   Json?
+  searchText              String                 @default("")
+
+  @@index([type, featuredCarousel])
+}
+
+model ReportField {
+  id             String                 @id @default(cuid())
+  key            String                 @unique
+  label          String
+  category       String
+  kind           ReportFieldKind
+  dataType       String
+  currency       String?
+  sourceKind     String?
+  sourceSpec     Json?
+  expression     String?
+  status         ReportFieldStatus      @default(LIVE)
+  downloadOnly   Boolean                @default(false)
+  frequentlyUsed Boolean                @default(false)
+  offlineTypes   ReportKind[]
+  sensitivity    ReportFieldSensitivity @default(NONE)
+  compatGroups   String[]
+  ordinal        Int                    @default(0)
+
+  @@index([category, ordinal])
+}
+
+model ReportTemplate {
+  id          String  @id @default(cuid())
+  family      String // BASIC | REACH | VIDEO
+  title       String
+  description String?
+  definition  Json
+  ordinal     Int     @default(0)
+
+  @@unique([family, title])
+}
+
+model FxRate {
+  id           String   @id @default(cuid())
+  fromCurrency String
+  toCurrency   String
+  rate         Decimal  @db.Decimal(18, 8)
+  validFrom    DateTime
+
+  @@unique([fromCurrency, toCurrency, validFrom])
+}
+
+model PlanCountry {
+  id                String  @id @default(cuid())
+  countryCode       String  @unique
+  name              String
+  currencyCode      String
+  censusPopulation  BigInt
+  digitalPopulation BigInt
+  tvPopulation      BigInt
+  youtubePopulation BigInt
+  demoShares        Json
+  engineMarket      String?
+}
+
+model SubLocation {
+  id              String  @id @default(cuid())
+  countryCode     String
+  code            String
+  name            String
+  populationShare Decimal @db.Decimal(8, 6)
+
+  @@unique([countryCode, code])
+}
+
+model TvCampaign {
+  id               String    @id @default(cuid())
+  countryCode      String
+  company          String
+  brand            String
+  campaign         String
+  startDate        DateTime  @db.Date
+  endDate          DateTime  @db.Date
+  spend            Decimal   @db.Decimal(16, 2)
+  grps             Decimal   @db.Decimal(10, 2)
+  reachPct         Decimal   @db.Decimal(6, 3)
+  avgFrequency     Decimal   @db.Decimal(6, 2)
+  impressions      BigInt
+  subLocationReach Json?
+  availableFrom    DateTime? @db.Date
+  availableTo      DateTime? @db.Date
+  nextUpdate       DateTime?
+
+  @@index([countryCode, company])
+}
