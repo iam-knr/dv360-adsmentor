@@ -1,0 +1,518 @@
+// Reporting, planning, experiments and lift, bulk jobs, simulation output
+// Source: docs/specs/data-model.md 5.14 to 5.18, modules 04, 11, 16, 17. Owner session: P3-05c.
+// SimTickLog, SimConversionDaily, SimReachSnapshot and SimPacingSnapshot are written by the engine only.
+
+// ---------------------------------------------------------------------------
+// Reporting (5.14)
+// ---------------------------------------------------------------------------
+
+model Report {
+  id                    String         @id @default(cuid())
+  sandboxId             String
+  publicId              BigInt         @unique @default(dbgenerated("next_public_id()"))
+  partnerId             String
+  advertiserId          String?
+  ownerUserId           String
+  kind                  ReportKind     @default(INSTANT)
+  name                  String
+  definition            Json
+  timeZone              ReportTimeZone @default(ADVERTISER)
+  dateRange             Json
+  autoRun               Boolean        @default(false)
+  template              String?
+  languageFormatting    String         @default("RAW")
+  schedule              Json?
+  delivery              Json?
+  lastRunAt             DateTime?
+  nextRunSimAt          DateTime?
+  lastScheduledRunSimAt DateTime?
+  scheduleRunCount      Int            @default(0)
+  version               Int            @default(1)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  partner    Partner       @relation(fields: [partnerId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  advertiser Advertiser?   @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  runs       ReportRun[]
+  shares     ReportShare[]
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, ownerUserId, updatedAt])
+}
+
+model ReportRun {
+  id                 String          @id @default(cuid())
+  sandboxId          String
+  publicId           BigInt          @unique @default(dbgenerated("next_public_id()"))
+  reportId           String
+  dateRangeStart     DateTime        @db.Date
+  dateRangeEnd       DateTime        @db.Date
+  createdById        String
+  status             ReportRunStatus @default(QUEUED)
+  scheduled          Boolean         @default(false)
+  completedAt        DateTime?
+  completedAtSim     DateTime?
+  format             ReportFormat    @default(CSV)
+  fileName           String?
+  storageKey         String?
+  sizeBytes          BigInt?
+  rowCount           Int?
+  definitionSnapshot Json?
+  warnings           Json?
+  error              String?
+
+  report Report @relation(fields: [reportId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, reportId, status])
+}
+
+model ReportShare {
+  id        String  @id @default(cuid())
+  sandboxId String
+  reportId  String
+  userId    String
+  canEdit   Boolean @default(false)
+
+  report Report @relation(fields: [reportId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([reportId, userId])
+  @@index([sandboxId])
+}
+
+model CrossMediaReachReport {
+  id               String            @id @default(cuid())
+  sandboxId        String
+  publicId         BigInt            @unique @default(dbgenerated("next_public_id()"))
+  partnerId        String
+  advertiserId     String?
+  createdById      String
+  name             String
+  country          CrossMediaCountry
+  currencyCode     String
+  scope            CrossMediaScope   @default(NATIONAL)
+  subLocations     String[]
+  ioIds            String[]
+  tvCampaigns      Json?
+  tvDatasetVersion Int               @default(1)
+  dateStart        DateTime?         @db.Date
+  dateEnd          DateTime?         @db.Date
+  status           CrossMediaStatus  @default(PROCESSING)
+  result           Json?
+  createdAt        DateTime          @default(now())
+
+  partner    Partner     @relation(fields: [partnerId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  advertiser Advertiser? @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, partnerId])
+}
+
+// ---------------------------------------------------------------------------
+// Planning (5.15)
+// ---------------------------------------------------------------------------
+
+model Plan {
+  id                  String         @id @default(cuid())
+  sandboxId           String
+  publicId            BigInt         @unique @default(dbgenerated("next_public_id()"))
+  advertiserId        String
+  name                String
+  status              PlanStatus     @default(PLANNED)
+  locationCountry     String
+  currencyCode        String
+  startDate           DateTime       @db.Date
+  endDate             DateTime       @db.Date
+  totalBudget         Decimal?       @db.Decimal(16, 2)
+  channels            PlanChannel[]
+  demographics        Json?
+  additionalSettings  Json?
+  frequencyGoal       Int            @default(3)
+  reachBasis          PlanReachBasis @default(CENSUS)
+  includeYoutube      Boolean        @default(true)
+  forecastStale       Boolean        @default(true)
+  savedAt             DateTime?
+  savedAtSim          DateTime?
+  convertedCampaignId String?
+  version             Int            @default(1)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  advertiser Advertiser     @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  rows       PlanRow[]
+  forecasts  PlanForecast[]
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, advertiserId, status])
+}
+
+model PlanRow {
+  id           String           @id @default(cuid())
+  sandboxId    String
+  planId       String
+  ordinal      Int
+  name         String
+  buyingMethod PlanBuyingMethod @default(OPEN_AUCTION)
+  locations    String[]
+  startDate    DateTime         @db.Date
+  endDate      DateTime         @db.Date
+  targeting    Json?
+  audienceRefs Json?
+  pricing      String           @default("Auction")
+  dealId       String?
+  feePct       Decimal          @default(0) @db.Decimal(6, 3)
+  budgetNet    Decimal          @default(0) @db.Decimal(16, 2)
+  budgetTotal  Decimal          @default(0) @db.Decimal(16, 2)
+  maxCpm       Decimal?         @db.Decimal(14, 4)
+  isCpmLocked  Boolean          @default(false)
+
+  plan Plan @relation(fields: [planId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([planId, ordinal])
+  @@index([sandboxId])
+}
+
+model PlanForecast {
+  id                  String   @id @default(cuid())
+  sandboxId           String
+  planId              String
+  asOf                DateTime
+  onTargetReachPct    Decimal? @db.Decimal(7, 3)
+  avgFrequency        Decimal? @db.Decimal(7, 3)
+  totalCpm            Decimal? @db.Decimal(14, 4)
+  onTargetCpm         Decimal? @db.Decimal(14, 4)
+  censusTrps          Decimal? @db.Decimal(10, 3)
+  censusCpp           Decimal? @db.Decimal(14, 4)
+  censusPopulation    BigInt?
+  digitalPopulation   BigInt?
+  tvPopulation        BigInt?
+  youtubePopulation   BigInt?
+  actionCpa           Decimal? @db.Decimal(14, 4)
+  cpa                 Decimal? @db.Decimal(14, 4)
+  viewableCpm         Decimal? @db.Decimal(14, 4)
+  viewabilityRate     Decimal? @db.Decimal(7, 3)
+  perRow              Json?
+  curves              Json?
+  reachByFrequency    Json?
+  tabs                Json?
+  engineParamsVersion Int      @default(1)
+  inputsHash          String?
+
+  plan Plan @relation(fields: [planId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, planId, asOf])
+}
+
+// ---------------------------------------------------------------------------
+// Experiments and lift studies (5.16)
+// ---------------------------------------------------------------------------
+
+model Experiment {
+  id                       String                 @id @default(cuid())
+  sandboxId                String
+  publicId                 BigInt                 @unique @default(dbgenerated("next_public_id()"))
+  advertiserId             String
+  name                     String
+  hypothesis               String?
+  startDate                DateTime               @db.Date
+  endDate                  DateTime?              @db.Date
+  target                   ExperimentTarget
+  goal                     ExperimentGoal         @default(CONVERSIONS)
+  confidence               ConfidenceLevel        @default(P90)
+  excludeUnidentifiedUsers Boolean                @default(false)
+  channelScope             ExperimentChannelScope @default(CROSS_EXCHANGE)
+  status                   ExperimentStatus       @default(SCHEDULED)
+  controlArmId             String?
+  liftStudyId              String?
+  endedAt                  DateTime?
+  endedById                String?
+  version                  Int                    @default(1)
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+
+  advertiser Advertiser         @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  arms       ExperimentArm[]
+  results    ExperimentResult[]
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, advertiserId, status])
+}
+
+model ExperimentArm {
+  id           String  @id @default(cuid())
+  sandboxId    String
+  experimentId String
+  name         String  @default("Arm 1")
+  splitPct     Int     @default(50)
+  isControl    Boolean @default(false)
+  ordinal      Int     @default(0)
+
+  experiment Experiment            @relation(fields: [experimentId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  entities   ExperimentArmEntity[]
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, experimentId, ordinal])
+}
+
+model ExperimentArmEntity {
+  id           String  @id @default(cuid())
+  sandboxId    String
+  experimentId String // denormalised for the cross-arm uniqueness rule AB-015
+  armId        String
+  ioId         String?
+  lineItemId   String?
+
+  arm ExperimentArm @relation(fields: [armId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([experimentId, ioId])
+  @@unique([experimentId, lineItemId])
+  @@index([sandboxId, armId])
+}
+
+// A cache keyed by report parameters (Δ17-6)
+model ExperimentResult {
+  id           String          @id @default(cuid())
+  sandboxId    String
+  experimentId String
+  armId        String
+  controlArmId String?
+  metric       String
+  confidence   ConfidenceLevel @default(P90)
+  rangeHash    String          @default("")
+  value        Decimal         @db.Decimal(20, 6)
+  lift         Decimal?        @db.Decimal(12, 6)
+  pValue       Decimal?        @db.Decimal(10, 8)
+  isBest       Boolean         @default(false)
+  computedAt   DateTime        @default(now())
+
+  experiment Experiment @relation(fields: [experimentId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([experimentId, armId, controlArmId, metric, confidence, rangeHash])
+  @@index([sandboxId, experimentId])
+}
+
+model LiftStudy {
+  id                 String            @id @default(cuid())
+  sandboxId          String
+  publicId           BigInt            @unique @default(dbgenerated("next_public_id()"))
+  advertiserId       String
+  name               String
+  types              LiftType[]
+  brandLiftMetrics   BrandLiftMetric[]
+  brandName          String
+  competitors        String[]
+  language           String            @default("en-US")
+  objectType         String?
+  intendedAction     IntendedAction?
+  strength           LiftStrength      @default(STANDARD)
+  status             LiftStatus        @default(ELIGIBLE)
+  originExperimentId String?
+  endedAt            DateTime?
+  version            Int               @default(1)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  advertiser  Advertiser            @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  entities    LiftStudyEntity[]
+  flights     LiftFlight[]
+  searchTerms LiftSearchTermGroup[]
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, advertiserId, status])
+}
+
+model LiftStudyEntity {
+  id                String  @id @default(cuid())
+  sandboxId         String
+  studyId           String
+  ioId              String
+  containsYoutubePg Boolean @default(false)
+
+  study LiftStudy @relation(fields: [studyId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([studyId, ioId])
+  @@index([sandboxId])
+}
+
+model LiftFlight {
+  id                String     @id @default(cuid())
+  sandboxId         String
+  studyId           String
+  liftType          LiftType
+  number            Int
+  status            LiftStatus @default(ELIGIBLE)
+  pctComplete       Int        @default(0)
+  requiredMediaCost Decimal?   @db.Decimal(16, 2)
+  mediaCostSoFar    Decimal    @default(0) @db.Decimal(16, 2)
+  startedAt         DateTime
+  endedAt           DateTime?
+
+  study   LiftStudy    @relation(fields: [studyId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  results LiftResult[]
+
+  @@unique([id, sandboxId])
+  @@unique([studyId, liftType, number])
+}
+
+model LiftSearchTermGroup {
+  id        String   @id @default(cuid())
+  sandboxId String
+  studyId   String
+  ordinal   Int
+  terms     String[]
+
+  study LiftStudy @relation(fields: [studyId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([studyId, ordinal])
+  @@index([sandboxId])
+}
+
+model LiftResult {
+  id              String          @id @default(cuid())
+  sandboxId       String
+  flightId        String
+  scope           LiftResultScope @default(YOUTUBE_DEMAND_GEN)
+  metric          String
+  slice           LiftSlice       @default(OVERALL)
+  sliceValue      String          @default("")
+  surveyResponses Int             @default(0)
+  absoluteLift    Decimal?        @db.Decimal(10, 6)
+  relativeLift    Decimal?        @db.Decimal(10, 6)
+  headroomLift    Decimal?        @db.Decimal(10, 6)
+  baselineRate    Decimal?        @db.Decimal(10, 6)
+  exposedRate     Decimal?        @db.Decimal(10, 6)
+  significant     Boolean         @default(false)
+
+  flight LiftFlight @relation(fields: [flightId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([flightId, scope, metric, slice, sliceValue])
+  @@index([sandboxId])
+}
+
+// ---------------------------------------------------------------------------
+// Bulk jobs (5.17)
+// ---------------------------------------------------------------------------
+
+model BulkJob {
+  id               String          @id @default(cuid())
+  sandboxId        String
+  publicId         BigInt          @unique @default(dbgenerated("next_public_id()"))
+  advertiserId     String?
+  partnerId        String
+  requestedById    String
+  source           BulkSource
+  action           BulkAction
+  description      String
+  status           BulkJobStatus   @default(QUEUED)
+  requestedAt      DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  payload          Json?
+  selectionCount   Int             @default(0)
+  resultKind       BulkResultKind?
+  resultEntityId   String?
+  resultStorageKey String?
+  errorSummary     String?
+
+  advertiser Advertiser?   @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  items      BulkJobItem[]
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, requestedAt])
+  @@index([sandboxId, advertiserId, requestedAt])
+}
+
+model BulkJobItem {
+  id         String         @id @default(cuid())
+  sandboxId  String
+  jobId      String
+  entityType EntityType
+  entityId   String?
+  status     BulkItemStatus
+  message    String?
+  rowNumber  Int?
+  ruleId     String?
+  field      String?
+
+  job BulkJob @relation(fields: [jobId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, jobId])
+}
+
+// ---------------------------------------------------------------------------
+// Simulation output (5.18), engine writes only
+// ---------------------------------------------------------------------------
+
+model SimConversionDaily {
+  id             String            @id @default(cuid())
+  sandboxId      String
+  lineItemId     String
+  activityId     String
+  simDate        DateTime          @db.Date
+  conversionType SimConversionType
+  lagBucket      Int               @default(0)
+  count          Decimal           @default(0) @db.Decimal(20, 4)
+  salesCount     Decimal           @default(0) @db.Decimal(20, 4)
+  revenue        Decimal           @default(0) @db.Decimal(20, 4)
+  itemsSold      Decimal           @default(0) @db.Decimal(20, 4)
+
+  lineItem LineItem           @relation(fields: [lineItemId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  activity FloodlightActivity @relation(fields: [activityId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([lineItemId, activityId, simDate, conversionType, lagBucket])
+  @@index([sandboxId, simDate])
+}
+
+model SimReachSnapshot {
+  id               String       @id @default(cuid())
+  sandboxId        String
+  scopeType        SimScopeType
+  scopeId          String
+  simDate          DateTime     @db.Date
+  windowDays       Int // 1, 7, 30; 0 = lifetime
+  impressionReach  BigInt       @default(0)
+  coViewedReach    BigInt       @default(0)
+  clickReach       BigInt       @default(0)
+  avgFrequency     Decimal      @default(0) @db.Decimal(10, 4)
+  reachByFrequency Json?
+
+  sandbox Sandbox @relation(fields: [sandboxId], references: [id], onDelete: Cascade)
+
+  @@unique([scopeType, scopeId, simDate, windowDays])
+  @@index([sandboxId, simDate])
+}
+
+model SimPacingSnapshot {
+  id                 String   @id @default(cuid())
+  sandboxId          String
+  ioId               String
+  budgetSegmentId    String
+  simDate            DateTime @db.Date
+  plannedSpendToDate Decimal  @default(0) @db.Decimal(20, 4)
+  actualSpendToDate  Decimal  @default(0) @db.Decimal(20, 4)
+  remainingBudget    Decimal  @default(0) @db.Decimal(20, 4)
+  pacingPct          Decimal  @default(0) @db.Decimal(10, 4)
+  budgetAtRisk       Decimal  @default(0) @db.Decimal(20, 4)
+  daysLeft           Int      @default(0)
+  likelyToSpendPct   Decimal  @default(0) @db.Decimal(10, 4)
+  underpacing        Boolean  @default(false)
+
+  segment BudgetSegment @relation(fields: [budgetSegmentId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([budgetSegmentId, simDate])
+  @@index([sandboxId, ioId, simDate])
+}
+
+model SimTickLog {
+  id                 String        @id @default(cuid())
+  sandboxId          String
+  tickNo             BigInt
+  simHour            DateTime
+  startedAt          DateTime      @default(now())
+  durationMs         Int           @default(0)
+  lineItemsProcessed Int           @default(0)
+  rowsWritten        Int           @default(0)
+  status             SimTickStatus @default(OK)
+  error              String?
+
+  sandbox Sandbox @relation(fields: [sandboxId], references: [id], onDelete: Cascade)
+
+  @@unique([sandboxId, tickNo])
+}

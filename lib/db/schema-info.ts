@@ -41,6 +41,16 @@ export function readSchemaText(root = process.cwd()): string {
     .join('\n');
 }
 
+/** Schema files of P3-05a and P3-01 only (numeric prefix 00 to 69). P3-05c adds 70 to 89 in later migrations. */
+export function readCoreSchemaText(root = process.cwd()): string {
+  const dir = schemaDir(root);
+  return readdirSync(dir)
+    .filter((f) => f.endsWith('.prisma') && Number(f.slice(0, 2)) < 70)
+    .sort()
+    .map((f) => readFileSync(join(dir, f), 'utf8'))
+    .join('\n');
+}
+
 /** Parse model blocks. Fields only; block attributes (@@) are ignored. */
 export function parseModels(text: string): ModelInfo[] {
   const models: ModelInfo[] = [];

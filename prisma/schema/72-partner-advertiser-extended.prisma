@@ -1,0 +1,451 @@
+// Partner, advertiser and UI-state tables
+// Source: docs/specs/data-model.md 5.1, 5.2, 5.3, 5.14, 5.19, modules 01, 02, 03, 05, 11, 12. Owner session: P3-05c.
+// User ids are plain strings (User is a global table owned by P3-05a). Every table here has a sandboxId.
+
+// ---------------------------------------------------------------------------
+// Partner level
+// ---------------------------------------------------------------------------
+
+model PartnerContact {
+  id              String             @id @default(cuid())
+  sandboxId       String
+  partnerId       String
+  role            PartnerContactRole
+  name            String?
+  email           String?
+  address         String?
+  phone           String?
+  isContactPerson Boolean            @default(false)
+
+  partner Partner @relation(fields: [partnerId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([partnerId, role])
+  @@index([sandboxId])
+}
+
+model PartnerFeatureFlag {
+  id                String            @id @default(cuid())
+  sandboxId         String
+  partnerId         String
+  key               PartnerFeatureKey
+  enabled           Boolean           @default(false)
+  scope             FeatureScope      @default(ALL_ADVERTISERS)
+  numericValue      Int? // reporting.maxRows, creativeRandomDisapprovalRate
+  termsVersion      Int               @default(1) // DELTA-02-5
+  termsAcceptedAt   DateTime?
+  termsAcceptedById String?
+
+  partner     Partner                    @relation(fields: [partnerId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  advertisers PartnerFeatureAdvertiser[]
+
+  @@unique([id, sandboxId])
+  @@unique([partnerId, key])
+  @@index([sandboxId])
+}
+
+model PartnerFeatureAdvertiser {
+  id           String @id @default(cuid())
+  sandboxId    String
+  flagId       String
+  advertiserId String
+
+  flag       PartnerFeatureFlag @relation(fields: [flagId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  advertiser Advertiser         @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([flagId, advertiserId])
+  @@index([sandboxId])
+}
+
+model BillingProfile {
+  id            String       @id @default(cuid())
+  sandboxId     String
+  partnerId     String
+  name          String
+  currencyCode  String
+  invoiceLevel  InvoiceLevel @default(ADVERTISER)
+  purchaseOrder String?
+  billToName    String
+  billToAddress String?
+  isDefault     Boolean      @default(false)
+  status        EntityStatus @default(ACTIVE)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  partner  Partner   @relation(fields: [partnerId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  invoices Invoice[]
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, partnerId])
+}
+
+model Invoice {
+  id               String        @id @default(cuid())
+  sandboxId        String
+  billingProfileId String
+  invoiceNumber    String
+  periodMonth      DateTime      @db.Date
+  status           InvoiceStatus @default(OPEN)
+  subtotal         Decimal       @default(0) @db.Decimal(16, 2)
+  tax              Decimal       @default(0) @db.Decimal(16, 2)
+  total            Decimal       @default(0) @db.Decimal(16, 2)
+  currencyCode     String
+  issuedAt         DateTime?
+
+  billingProfile BillingProfile @relation(fields: [billingProfileId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  lines          InvoiceLine[]
+
+  @@unique([id, sandboxId])
+  @@unique([sandboxId, invoiceNumber])
+  @@index([sandboxId, billingProfileId, periodMonth])
+}
+
+model InvoiceLine {
+  id           String  @id @default(cuid())
+  sandboxId    String
+  invoiceId    String
+  advertiserId String
+  ioId         String?
+  description  String
+  mediaCost    Decimal @default(0) @db.Decimal(16, 2)
+  feeCost      Decimal @default(0) @db.Decimal(16, 2)
+  amount       Decimal @default(0) @db.Decimal(16, 2)
+
+  invoice    Invoice    @relation(fields: [invoiceId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  advertiser Advertiser @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, invoiceId])
+}
+
+// partnerId or advertiserId is set, not both (CHECK in 0002)
+model ThirdPartyRateCard {
+  id              String    @id @default(cuid())
+  sandboxId       String
+  partnerId       String?
+  advertiserId    String?
+  vendorKey       String
+  vendorName      String
+  rateMediaFeePct Decimal   @db.Decimal(6, 3)
+  termsAcceptedAt DateTime?
+
+  partner    Partner?    @relation(fields: [partnerId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  advertiser Advertiser? @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, partnerId])
+  @@index([sandboxId, advertiserId])
+}
+
+// ---------------------------------------------------------------------------
+// Advertiser level
+// ---------------------------------------------------------------------------
+
+model AdvertiserAlertPreference {
+  id              String    @id @default(cuid())
+  sandboxId       String
+  advertiserId    String
+  alertType       AlertType
+  enabled         Boolean   @default(true)
+  thresholdPct    Int? // UNDERPACING default 90 (DELTA-03-1)
+  thresholdAmount Decimal?  @db.Decimal(16, 2) // EXCEEDED_SPEND_THRESHOLD default 0
+
+  advertiser Advertiser @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([advertiserId, alertType])
+  @@index([sandboxId])
+}
+
+model LinkedAccount {
+  id           String              @id @default(cuid())
+  sandboxId    String
+  advertiserId String
+  type         LinkedAccountType
+  externalId   String
+  displayName  String
+  status       LinkedAccountStatus @default(LINKED)
+  linkedAt     DateTime            @default(now())
+
+  advertiser Advertiser @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([advertiserId, externalId]) // DELTA-03-6
+  @@index([sandboxId])
+}
+
+model PolicyCertificate {
+  id              String                @id @default(cuid())
+  sandboxId       String
+  advertiserId    String
+  kind            PolicyCertificateKind
+  countryCode     String                @default("")
+  status          CertificateStatus     @default(NONE)
+  details         Json?
+  notes           String? // DELTA-03-4
+  rejectionReason String?
+  requestedAt     DateTime              @default(now())
+  decidedAt       DateTime?
+  decidedById     String?
+
+  advertiser Advertiser @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([advertiserId, kind, countryCode])
+  @@index([sandboxId])
+}
+
+model AdvertiserVendorSelection {
+  id           String    @id @default(cuid())
+  sandboxId    String
+  advertiserId String
+  vendorKey    String // ThirdPartyVendor.key (global table)
+  enabled      Boolean   @default(false)
+  affirmedAt   DateTime?
+
+  advertiser Advertiser @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([advertiserId, vendorKey])
+  @@index([sandboxId])
+}
+
+model YoutubeAsset {
+  id           String           @id @default(cuid())
+  sandboxId    String
+  advertiserId String
+  kind         YoutubeAssetKind
+  name         String
+  filters      Json?
+  status       EntityStatus     @default(ACTIVE)
+  parentId     String?
+
+  advertiser Advertiser @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, advertiserId, kind])
+}
+
+model HistoryNote {
+  id           String     @id @default(cuid())
+  sandboxId    String
+  advertiserId String
+  entityType   EntityType
+  entityId     String
+  noteDate     DateTime   @db.Date
+  authorId     String
+  authorLabel  String
+  text         String
+  createdAt    DateTime   @default(now())
+
+  advertiser Advertiser @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, entityType, entityId, noteDate])
+}
+
+model Recommendation {
+  id           String               @id @default(cuid())
+  sandboxId    String
+  advertiserId String
+  scopeType    SimScopeType
+  scopeId      String
+  type         RecommendationType
+  title        String
+  detail       String?
+  status       RecommendationStatus @default(OPEN)
+  payload      Json?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  advertiser Advertiser @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, advertiserId, status])
+  @@index([sandboxId, scopeType, scopeId])
+}
+
+model Upload {
+  id          String        @id @default(cuid())
+  sandboxId   String
+  purpose     UploadPurpose
+  fileName    String
+  sizeBytes   BigInt        @default(0)
+  contentType String
+  storageKey  String
+  status      UploadStatus  @default(PENDING)
+  createdById String
+  createdAt   DateTime      @default(now())
+
+  sandbox Sandbox @relation(fields: [sandboxId], references: [id], onDelete: Cascade)
+
+  @@index([sandboxId, createdById])
+}
+
+// ---------------------------------------------------------------------------
+// UI state (module 01 DELTA-01-1 to 01-6, module 05 DELTA-05-6). Not logged by withChangeLog.
+// ---------------------------------------------------------------------------
+
+model Workspace {
+  id          String   @id @default(cuid())
+  sandboxId   String
+  partnerId   String
+  ownerUserId String
+  name        String
+  layout      Json
+  isDefault   Boolean  @default(false)
+  version     Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  partner Partner          @relation(fields: [partnerId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  shares  WorkspaceShare[]
+
+  @@unique([id, sandboxId])
+  @@unique([sandboxId, ownerUserId, partnerId, name])
+}
+
+model WorkspaceShare {
+  id          String   @id @default(cuid())
+  sandboxId   String
+  workspaceId String
+  userId      String
+  canEdit     Boolean  @default(false)
+  sharedAt    DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([sandboxId])
+}
+
+model PinnedItem {
+  id         String     @id @default(cuid())
+  sandboxId  String
+  userId     String
+  partnerId  String
+  entityType EntityType
+  entityId   String
+  pinnedAt   DateTime   @default(now())
+
+  partner Partner @relation(fields: [partnerId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([sandboxId, userId, entityType, entityId])
+  @@index([sandboxId, userId, partnerId])
+}
+
+model RecentlyViewed {
+  id         String     @id @default(cuid())
+  sandboxId  String
+  userId     String
+  partnerId  String
+  entityType EntityType
+  entityId   String
+  viewedAt   DateTime   @default(now())
+
+  partner Partner @relation(fields: [partnerId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([sandboxId, userId, entityType, entityId])
+  @@index([sandboxId, userId, viewedAt])
+}
+
+// Deviation: sandboxId is required here (module 01 allows null); a preference is kept per sandbox.
+model UserPreference {
+  id        String   @id @default(cuid())
+  sandboxId String
+  userId    String
+  key       String
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  sandbox Sandbox @relation(fields: [sandboxId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sandboxId, key])
+}
+
+model UserEmailPreference {
+  id        String   @id @default(cuid())
+  sandboxId String
+  userId    String
+  alerts    Boolean  @default(true)
+  news      Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+
+  sandbox Sandbox @relation(fields: [sandboxId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sandboxId])
+}
+
+model AdvisorSession {
+  id            String   @id @default(cuid())
+  sandboxId     String
+  userId        String
+  title         String
+  createdAt     DateTime @default(now())
+  lastMessageAt DateTime @default(now())
+
+  sandbox  Sandbox          @relation(fields: [sandboxId], references: [id], onDelete: Cascade)
+  messages AdvisorMessage[]
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, userId, lastMessageAt])
+}
+
+model AdvisorMessage {
+  id           String       @id @default(cuid())
+  sandboxId    String
+  sessionId    String
+  role         AdvisorRole
+  text         String
+  vote         AdvisorVote?
+  contextRoute String?
+  createdAt    DateTime     @default(now())
+
+  session AdvisorSession @relation(fields: [sessionId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, sessionId, createdAt])
+}
+
+model InboxMessage {
+  id           String           @id @default(cuid())
+  sandboxId    String
+  userId       String
+  kind         InboxMessageKind
+  title        String
+  body         String
+  reportRunId  String?
+  createdAtSim DateTime
+  readAt       DateTime?
+
+  sandbox Sandbox @relation(fields: [sandboxId], references: [id], onDelete: Cascade)
+
+  @@index([sandboxId, userId, readAt])
+}
+
+model SavedView {
+  id                String        @id @default(cuid())
+  sandboxId         String
+  advertiserId      String
+  ownerUserId       String
+  grid              SavedViewGrid
+  name              String
+  columns           Json // { order: string[]; groups?: string[] }
+  isPinned          Boolean       @default(false)
+  sharedWithSandbox Boolean       @default(false)
+  version           Int           @default(1)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  advertiser Advertiser @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, advertiserId, grid])
+}
+
+model ChartCard {
+  id                String         @id @default(cuid())
+  sandboxId         String
+  advertiserId      String
+  ownerUserId       String
+  scope             ChartCardScope
+  scopeId           String
+  kind              ChartCardKind
+  viewKey           String?
+  definition        Json
+  ordinal           Int            @default(0)
+  sharedWithSandbox Boolean        @default(false)
+  version           Int            @default(1)
+
+  advertiser Advertiser @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, advertiserId, scope, scopeId])
+}

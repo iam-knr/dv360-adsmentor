@@ -1,0 +1,736 @@
+// Audience details, channels and lists, inventory, Floodlight, custom bidding, creative extras
+// Source: docs/specs/data-model.md 5.7 (extras), 5.9 to 5.13, modules 09, 12, 13, 14, 15. Owner session: P3-05c.
+
+// ---------------------------------------------------------------------------
+// Audience detail tables (parent: Audience, P3-05a)
+// ---------------------------------------------------------------------------
+
+model AudienceTagRule {
+  id          String              @id @default(cuid())
+  sandboxId   String
+  audienceId  String
+  activityId  String
+  variableKey String?
+  operator    AudienceTagOperator @default(EQUALS)
+  value       String
+  ordinal     Int                 @default(0)
+
+  audience Audience @relation(fields: [audienceId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, audienceId, ordinal])
+}
+
+model AudienceSeed {
+  id             String @id @default(cuid())
+  sandboxId      String
+  audienceId     String
+  seedAudienceId String
+
+  audience Audience @relation(fields: [audienceId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([audienceId, seedAudienceId])
+  @@index([sandboxId])
+}
+
+model CombinedAudienceTerm {
+  id         String                     @id @default(cuid())
+  sandboxId  String
+  audienceId String
+  mode       CombinedAudienceMode
+  groupIndex Int                        @default(0)
+  memberKind CombinedAudienceMemberKind
+  memberId   String
+
+  audience Audience @relation(fields: [audienceId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, audienceId, mode, groupIndex])
+}
+
+model CustomListEntry {
+  id         String              @id @default(cuid())
+  sandboxId  String
+  audienceId String
+  kind       CustomListEntryKind
+  value      String
+  appId      String? // AppCatalog.id when kind = APP (Δ14-7)
+  ordinal    Int                 @default(0)
+
+  audience Audience @relation(fields: [audienceId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, audienceId, ordinal])
+}
+
+model CustomerMatchUpload {
+  id           String                    @id @default(cuid())
+  sandboxId    String
+  audienceId   String
+  contactType  ContactType
+  fileName     String
+  rowCount     Int                       @default(0)
+  matchedCount Int                       @default(0)
+  matchRatePct Decimal?                  @db.Decimal(5, 2)
+  status       CustomerMatchUploadStatus @default(PROCESSING)
+  uploadedAt   DateTime                  @default(now())
+
+  audience Audience @relation(fields: [audienceId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, audienceId])
+}
+
+// ---------------------------------------------------------------------------
+// Creative extras (parent: Creative, P3-05a)
+// ---------------------------------------------------------------------------
+
+model CreativeRestriction {
+  id                 String                  @id @default(cuid())
+  sandboxId          String
+  creativeId         String
+  kind               CreativeRestrictionKind
+  countryCode        String?
+  message            String
+  blocksGeoTargeting Boolean                 @default(false)
+
+  creative Creative @relation(fields: [creativeId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, creativeId])
+}
+
+model CreativeUrl {
+  id         String          @id @default(cuid())
+  sandboxId  String
+  creativeId String
+  type       CreativeUrlType
+  url        String
+  ordinal    Int             @default(0)
+
+  creative Creative @relation(fields: [creativeId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, creativeId, ordinal])
+}
+
+model CreativeAppeal {
+  id             String       @id @default(cuid())
+  sandboxId      String
+  creativeId     String?
+  adId           String?
+  exchangeId     String?
+  reviewId       String?
+  campaignImpact String?
+  appealType     String
+  inventory      String?
+  policy         String?
+  reasonText     String?
+  status         AppealStatus @default(OPEN)
+  initiatedById  String?
+  createdAt      DateTime     @default(now())
+  decideAt       DateTime?
+  completedAt    DateTime?
+  result         String?
+
+  creative Creative? @relation(fields: [creativeId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, status])
+  @@index([sandboxId, creativeId])
+}
+
+// ---------------------------------------------------------------------------
+// Ad sequence (YouTube, Δ-09-7) and line item to Floodlight
+// ---------------------------------------------------------------------------
+
+model AdSequenceStep {
+  id        String  @id @default(cuid())
+  sandboxId String
+  adGroupId String
+  ordinal   Int
+  adId      String
+  condition String?
+
+  adGroup AdGroup @relation(fields: [adGroupId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([adGroupId, ordinal])
+  @@index([sandboxId])
+}
+
+model LineItemFloodlightActivity {
+  id         String @id @default(cuid())
+  sandboxId  String
+  lineItemId String
+  activityId String
+
+  lineItem LineItem           @relation(fields: [lineItemId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  activity FloodlightActivity @relation(fields: [activityId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([lineItemId, activityId])
+  @@index([sandboxId, activityId])
+}
+
+// ---------------------------------------------------------------------------
+// Channels, keyword lists, location lists (5.10)
+// ---------------------------------------------------------------------------
+
+model Channel {
+  id           String       @id @default(cuid())
+  sandboxId    String
+  publicId     BigInt       @unique @default(dbgenerated("next_public_id()"))
+  partnerId    String?
+  advertiserId String?
+  name         String
+  status       EntityStatus @default(ACTIVE)
+  version      Int          @default(1)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  partner    Partner?       @relation(fields: [partnerId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  advertiser Advertiser?    @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  entries    ChannelEntry[]
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, advertiserId])
+  @@index([sandboxId, partnerId])
+}
+
+model ChannelEntry {
+  id          String           @id @default(cuid())
+  sandboxId   String
+  channelId   String
+  kind        ChannelEntryKind
+  value       String
+  displayName String?
+
+  channel Channel @relation(fields: [channelId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([channelId, kind, value])
+  @@index([sandboxId])
+}
+
+model KeywordList {
+  id           String   @id @default(cuid())
+  sandboxId    String
+  publicId     BigInt   @unique @default(dbgenerated("next_public_id()"))
+  advertiserId String
+  partnerId    String?
+  name         String
+  version      Int      @default(1)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  advertiser Advertiser         @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  entries    KeywordListEntry[]
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, advertiserId])
+}
+
+model KeywordListEntry {
+  id            String @id @default(cuid())
+  sandboxId     String
+  keywordListId String
+  keyword       String
+
+  keywordList KeywordList @relation(fields: [keywordListId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([keywordListId, keyword])
+  @@index([sandboxId])
+}
+
+model LocationList {
+  id           String           @id @default(cuid())
+  sandboxId    String
+  publicId     BigInt           @unique @default(dbgenerated("next_public_id()"))
+  advertiserId String
+  name         String
+  type         LocationListType
+  version      Int              @default(1)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  advertiser Advertiser          @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  entries    LocationListEntry[]
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, advertiserId])
+}
+
+model LocationListEntry {
+  id               String   @id @default(cuid())
+  sandboxId        String
+  locationListId   String
+  value            String
+  resolvedOptionId String?
+  resolvedLabel    String?
+  lat              Decimal? @db.Decimal(9, 6)
+  lng              Decimal? @db.Decimal(9, 6)
+  radiusKm         Decimal? @default(5) @db.Decimal(8, 2)
+
+  locationList LocationList @relation(fields: [locationListId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, locationListId])
+}
+
+// ---------------------------------------------------------------------------
+// Inventory: orders, deals, packages, groups, negotiations (5.11)
+// Exchange ids are plain strings (Exchange is a P3-05a global table).
+// ---------------------------------------------------------------------------
+
+model InventoryOrder {
+  id           String       @id @default(cuid())
+  sandboxId    String
+  publicId     BigInt       @unique @default(dbgenerated("next_public_id()"))
+  partnerId    String
+  exchangeId   String
+  sellerName   String
+  externalCode String
+  name         String
+  status       EntityStatus @default(ACTIVE)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  partner Partner               @relation(fields: [partnerId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  deals   InventorySourceDeal[]
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, partnerId])
+}
+
+model InventorySourceDeal {
+  id                   String             @id @default(cuid())
+  sandboxId            String
+  publicId             BigInt             @unique @default(dbgenerated("next_public_id()"))
+  partnerId            String
+  orderId              String?
+  exchangeId           String
+  dealId               String
+  name                 String
+  description          String?
+  status               EntityStatus       @default(ACTIVE)
+  dealType             DealType
+  sellerName           String
+  sellerKind           SellerKind?
+  allowPausing         Boolean            @default(false)
+  deliveryMethod       DealDeliveryMethod @default(PROGRAMMATIC)
+  commitment           DealCommitment     @default(NON_GUARANTEED)
+  pgDirect             Boolean            @default(false)
+  rateType             DealRateType       @default(FIXED)
+  rate                 Decimal            @db.Decimal(14, 4)
+  floorPrice           Decimal?           @db.Decimal(14, 4)
+  cost                 Decimal?           @db.Decimal(16, 2)
+  quantityImpressions  BigInt?
+  shareOfVoicePct      Decimal?           @db.Decimal(5, 2)
+  startAt              DateTime
+  endAt                DateTime
+  dayTimeSpec          Json?
+  frequencyCap         Json?
+  format               InventoryFormat    @default(DISPLAY)
+  durationSeconds      Int?
+  creativeSource       String             @default("Advertiser provided")
+  targetingSummary     Json?
+  bidRatioPct          Decimal?           @db.Decimal(6, 2)
+  centralPartnerDeal   Boolean            @default(false)
+  allAdvertisers       Boolean            @default(false)
+  sizes                String[]
+  source               DealSource         @default(NEGOTIATED)
+  fillPct              Decimal?           @db.Decimal(5, 2)
+  lastDeliveredAt      DateTime?
+  shortfallImpressions BigInt?
+  version              Int                @default(1)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  partner Partner         @relation(fields: [partnerId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  order   InventoryOrder? @relation(fields: [orderId, sandboxId], references: [id, sandboxId], onDelete: NoAction)
+  access  DealAccess[]
+
+  @@unique([id, sandboxId])
+  @@unique([partnerId, exchangeId, dealId])
+  @@index([sandboxId, partnerId, status])
+}
+
+model DealAccess {
+  id                  String  @id @default(cuid())
+  sandboxId           String
+  dealId              String
+  partnerId           String?
+  advertiserId        String?
+  isDefaultAdvertiser Boolean @default(false)
+
+  deal       InventorySourceDeal @relation(fields: [dealId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  partner    Partner?            @relation(fields: [partnerId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  advertiser Advertiser?         @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, dealId])
+  @@index([sandboxId, advertiserId])
+}
+
+model InventoryPackage {
+  id                   String          @id @default(cuid())
+  sandboxId            String
+  publicId             BigInt          @unique @default(dbgenerated("next_public_id()"))
+  partnerId            String
+  exchangeId           String
+  name                 String
+  packageUuid          String
+  format               InventoryFormat @default(DISPLAY)
+  dealType             DealType        @default(PRIVATE_AUCTION)
+  rate                 Decimal         @db.Decimal(14, 4)
+  floorPrice           Decimal?        @db.Decimal(14, 4)
+  currencyCode         String
+  rateCurrencyOriginal String?
+  rateOriginal         Decimal?        @db.Decimal(14, 4)
+  bidRatioPct          Decimal?        @db.Decimal(6, 2)
+  startAt              DateTime
+  endAt                DateTime?
+  status               EntityStatus    @default(ACTIVE)
+  marketplaceProductId String?
+  version              Int             @default(1)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  partner Partner @relation(fields: [partnerId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, partnerId, status])
+}
+
+// advertiserId set = advertiser level group (Δ13-8); otherwise partner level
+model DealGroup {
+  id           String        @id @default(cuid())
+  sandboxId    String
+  publicId     BigInt        @unique @default(dbgenerated("next_public_id()"))
+  partnerId    String?
+  advertiserId String?
+  name         String
+  kind         DealGroupKind @default(DEAL_GROUP)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  partner    Partner?          @relation(fields: [partnerId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  advertiser Advertiser?       @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  members    DealGroupMember[]
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, advertiserId])
+  @@index([sandboxId, partnerId])
+}
+
+model DealGroupMember {
+  id         String              @id @default(cuid())
+  sandboxId  String
+  groupId    String
+  memberKind DealGroupMemberKind
+  memberId   String
+
+  group DealGroup @relation(fields: [groupId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([groupId, memberKind, memberId])
+  @@index([sandboxId])
+}
+
+model LineItemInventory {
+  id         String                @id @default(cuid())
+  sandboxId  String
+  lineItemId String
+  kind       LineItemInventoryKind
+  refId      String
+  mode       InventoryMode         @default(INCLUDE)
+
+  lineItem LineItem @relation(fields: [lineItemId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([lineItemId, kind, refId])
+  @@index([sandboxId, kind, refId])
+}
+
+model Negotiation {
+  id              String              @id @default(cuid())
+  sandboxId       String
+  publicId        BigInt              @unique @default(dbgenerated("next_public_id()"))
+  partnerId       String
+  advertiserId    String?
+  exchangeId      String
+  sellerName      String
+  name            String
+  rfpId           String
+  status          NegotiationStatus   @default(DRAFT)
+  awaiting        NegotiationAwaiting @default(SELLER)
+  round           Int                 @default(1)
+  sellerPolicy    Json?
+  terms           Json?
+  deliveryMethod  DealDeliveryMethod  @default(PROGRAMMATIC)
+  commitment      DealCommitment      @default(NON_GUARANTEED)
+  volume          BigInt?
+  averagePrice    Decimal?            @db.Decimal(14, 4)
+  spend           Decimal?            @db.Decimal(16, 2)
+  lastEditedAt    DateTime            @default(now())
+  resultingDealId String?
+  createdAt       DateTime            @default(now())
+
+  partner    Partner              @relation(fields: [partnerId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  advertiser Advertiser?          @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  messages   NegotiationMessage[]
+
+  @@unique([id, sandboxId])
+  @@unique([partnerId, rfpId])
+  @@index([sandboxId, partnerId, status])
+}
+
+model NegotiationMessage {
+  id             String                @id @default(cuid())
+  sandboxId      String
+  negotiationId  String
+  authorKind     NegotiationAuthorKind
+  body           String
+  proposedRate   Decimal?              @db.Decimal(14, 4)
+  proposedVolume BigInt?
+  replyToId      String?
+  sentAt         DateTime              @default(now())
+
+  negotiation Negotiation @relation(fields: [negotiationId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, negotiationId, sentAt])
+}
+
+// ---------------------------------------------------------------------------
+// Floodlight (5.12)
+// ---------------------------------------------------------------------------
+
+// partnerId is set on partner level groups (FL-001); advertiserId is always set
+model FloodlightGroup {
+  id                        String                  @id @default(cuid())
+  sandboxId                 String
+  publicId                  BigInt                  @unique @default(dbgenerated("next_public_id()"))
+  advertiserId              String
+  partnerId                 String?
+  ownerScope                OwnerScope              @default(ADVERTISER)
+  name                      String
+  clickWindowDays           Int                     @default(30)
+  impressionWindowDays      Int                     @default(1)
+  imageTagOnly              Boolean                 @default(false)
+  dynamicTag                Boolean                 @default(true)
+  personalizedAdExclusion   PersonalizedAdExclusion @default(DONT_EXCLUDE)
+  defaultConsent            Json?
+  importedDataConsent       Json?
+  viewableImpressionPct     Int                     @default(50)
+  engagedViewMetricVariable String?
+  activeViewMetricVariable  String?
+  enhancedConversions       Boolean                 @default(false)
+  appAttributionPartners    Json?
+  googleAnalyticsLinked     Boolean                 @default(false)
+  googleTagId               String?
+  tagStatus                 String?
+  lastSeenAt                DateTime?
+  version                   Int                     @default(1)
+  createdAt                 DateTime                @default(now())
+  updatedAt                 DateTime                @updatedAt
+
+  advertiser       Advertiser                   @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  activities       FloodlightActivity[]
+  variables        FloodlightVariable[]
+  models           FloodlightAttributionModel[]
+  conversionGroups ConversionGroup[]
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, advertiserId])
+}
+
+model FloodlightActivity {
+  id                         String                  @id @default(cuid())
+  sandboxId                  String
+  publicId                   BigInt                  @unique @default(dbgenerated("next_public_id()"))
+  groupId                    String
+  name                       String
+  status                     EntityStatus            @default(ACTIVE)
+  platform                   FloodlightPlatform      @default(WEB)
+  format                     FloodlightFormat        @default(GOOGLE_TAG)
+  type                       FloodlightType          @default(COUNTER)
+  countingMethod             CountingMethod          @default(STANDARD)
+  category                   FloodlightCategory?
+  remarketingEnabled         Boolean                 @default(false)
+  youtubeEnabled             Boolean                 @default(false)
+  valueBasedBidding          Boolean                 @default(false)
+  commercePartnerMeasurement Boolean                 @default(false)
+  personalizedAdExclusion    PersonalizedAdExclusion @default(DONT_EXCLUDE)
+  customVariableKeys         String[]
+  appId                      String?
+  ctvAppId                   String?
+  appStoreId                 String?
+  conversionEventName        String?
+  lockedFieldsAt             DateTime?
+  version                    Int                     @default(1)
+  createdAt                  DateTime                @default(now())
+  updatedAt                  DateTime                @updatedAt
+
+  group            FloodlightGroup              @relation(fields: [groupId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  lineItems        LineItemFloodlightActivity[]
+  conversionGroups ConversionGroupActivity[]
+  conversions      SimConversionDaily[]
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, groupId, status])
+}
+
+model FloodlightVariable {
+  id        String                 @id @default(cuid())
+  sandboxId String
+  groupId   String
+  key       String
+  name      String
+  dataType  FloodlightVariableType @default(STRING)
+  ordinal   Int                    @default(0)
+
+  group FloodlightGroup @relation(fields: [groupId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([groupId, key])
+  @@index([sandboxId])
+}
+
+model FloodlightAttributionModel {
+  id        String               @id @default(cuid())
+  sandboxId String
+  groupId   String
+  name      String
+  isPrimary Boolean              @default(false)
+  kind      AttributionModelKind @default(FLOODLIGHT_DEFAULT)
+
+  group FloodlightGroup @relation(fields: [groupId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, groupId])
+}
+
+model ConversionGroup {
+  id        String @id @default(cuid())
+  sandboxId String
+  groupId   String
+  name      String
+
+  group      FloodlightGroup           @relation(fields: [groupId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  activities ConversionGroupActivity[]
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, groupId])
+}
+
+model ConversionGroupActivity {
+  id                String @id @default(cuid())
+  sandboxId         String
+  conversionGroupId String
+  activityId        String
+
+  conversionGroup ConversionGroup    @relation(fields: [conversionGroupId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  activity        FloodlightActivity @relation(fields: [activityId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([conversionGroupId, activityId])
+  @@index([sandboxId])
+}
+
+// ---------------------------------------------------------------------------
+// Custom bidding (5.13)
+// ---------------------------------------------------------------------------
+
+model CustomBiddingAlgorithm {
+  id                  String                 @id @default(cuid())
+  sandboxId           String
+  publicId            BigInt                 @unique @default(dbgenerated("next_public_id()"))
+  advertiserId        String?
+  partnerId           String?
+  ownerScope          OwnerScope             @default(ADVERTISER)
+  name                String
+  source              CustomBiddingSource    @default(RULE_BASED)
+  objective           CustomBiddingObjective @default(CLICKS)
+  status              CustomBiddingStatus    @default(ACTIVE)
+  modelReadiness      CustomBiddingReadiness @default(NOT_READY)
+  readinessPct        Int                    @default(0)
+  trainingImpressions BigInt                 @default(0)
+  errorPct            Decimal?               @db.Decimal(6, 3)
+  activeLineItems     Int                    @default(0)
+  lastTestRunId       String?
+  version             Int                    @default(1)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  advertiser  Advertiser?               @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  partner     Partner?                  @relation(fields: [partnerId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  rules       CustomBiddingRule[]
+  multipliers CustomBiddingMultiplier[]
+  testRuns    CustomBiddingTestRun[]
+  scripts     CustomBiddingScript[]
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, advertiserId])
+  @@index([sandboxId, partnerId])
+}
+
+model CustomBiddingRule {
+  id          String                 @id @default(cuid())
+  sandboxId   String
+  algorithmId String
+  groupKey    String
+  matchMode   CustomBiddingMatchMode @default(ANY)
+  signal      String
+  signalKey   String?
+  operator    String                 @default("IS")
+  value       String
+  score       Decimal                @default(1) @db.Decimal(10, 4)
+  ordinal     Int                    @default(0)
+
+  algorithm CustomBiddingAlgorithm @relation(fields: [algorithmId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, algorithmId, ordinal])
+}
+
+model CustomBiddingMultiplier {
+  id          String                      @id @default(cuid())
+  sandboxId   String
+  algorithmId String
+  kind        CustomBiddingMultiplierKind
+  ordinal     Int                         @default(1)
+
+  algorithm CustomBiddingAlgorithm         @relation(fields: [algorithmId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  values    CustomBiddingMultiplierValue[]
+
+  @@unique([id, sandboxId])
+  @@unique([algorithmId, kind])
+}
+
+model CustomBiddingMultiplierValue {
+  id           String  @id @default(cuid())
+  sandboxId    String
+  multiplierId String
+  valueKey     String
+  multiplier   Decimal @db.Decimal(6, 3)
+
+  multiplierRow CustomBiddingMultiplier @relation(fields: [multiplierId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([multiplierId, valueKey])
+  @@index([sandboxId])
+}
+
+model CustomBiddingTestRun {
+  id                String   @id @default(cuid())
+  sandboxId         String
+  algorithmId       String
+  ranAt             DateTime @default(now())
+  sampleImpressions BigInt   @default(0)
+  scoreHistogram    Json?
+  warnings          Json?
+  passed            Boolean  @default(false)
+
+  algorithm CustomBiddingAlgorithm @relation(fields: [algorithmId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, algorithmId, ranAt])
+}
+
+// Dormant in v1 (RC-037): no engine evaluator
+model CustomBiddingScript {
+  id          String                   @id @default(cuid())
+  sandboxId   String
+  algorithmId String
+  version     Int                      @default(1)
+  sourceText  String
+  state       CustomBiddingScriptState @default(PENDING)
+  errors      Json?
+  uploadedAt  DateTime                 @default(now())
+
+  algorithm CustomBiddingAlgorithm @relation(fields: [algorithmId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([algorithmId, version])
+  @@index([sandboxId])
+}

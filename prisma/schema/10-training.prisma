@@ -168,6 +168,14 @@ model Sandbox {
   partners  Partner[]
   grants    UserAccessGrant[]
   changes   ChangeGroup[]
+  scenarioAttempts     ScenarioAttempt[]
+  uploads              Upload[]
+  userPreferences      UserPreference[]
+  userEmailPreferences UserEmailPreference[]
+  advisorSessions      AdvisorSession[]
+  inboxMessages        InboxMessage[]
+  simReachSnapshots    SimReachSnapshot[]
+  simTickLogs          SimTickLog[]
 
   @@unique([classroomId, ownerUserId])
   @@index([classroomId, status])

@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { prisma, withBypass, withSandbox } from '@/lib/db';
-import { parseModels, readSchemaText, tenantModels } from '@/lib/db/schema-info';
+import { parseModels, readCoreSchemaText, tenantModels } from '@/lib/db/schema-info';
 import { createWorld, dropWorld, type World } from './helpers';
 
-const TENANT_TABLES = tenantModels(parseModels(readSchemaText())).map((m) => m.name);
+const TENANT_TABLES = tenantModels(parseModels(readCoreSchemaText())).map((m) => m.name);
 
 describe('row level security', () => {
   let a: World;

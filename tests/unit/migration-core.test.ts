@@ -2,13 +2,18 @@
 // with prisma/sql. These checks need no database.
 import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { parseModels, readSchemaText, renderRlsApplySql, tenantModels } from '@/lib/db/schema-info';
+import {
+  parseModels,
+  readCoreSchemaText,
+  renderRlsApplySql,
+  tenantModels,
+} from '@/lib/db/schema-info';
 
 const migration = readFileSync('prisma/migrations/0001_core/migration.sql', 'utf8');
 const sqlFiles = readdirSync('prisma/sql')
-  .filter((f) => f.endsWith('.sql'))
+  .filter((f) => f.endsWith('.sql') && Number(f.slice(0, 2)) < 70) // 70 and up belong to 0002 (P3-05c)
   .sort();
-const models = parseModels(readSchemaText());
+const models = parseModels(readCoreSchemaText());
 
 describe('migration 0001_core', () => {
   it('contains every prisma/sql file verbatim', () => {
