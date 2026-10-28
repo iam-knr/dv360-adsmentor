@@ -256,7 +256,7 @@ One explore file per item; screenshots on demo data only.
 - ✅ P1-14 Advertiser settings (§5.11) → docs/explore/14-advertiser-settings.md
 - 🟨 P1-15 Bulk tools, SDF, rules, experiments, optimisation, alerts (§5.3) → docs/explore/15-bulk-sdf-experiments.md (SDF download/upload dialogs, bulk Action bar, custom charts, Intelligence panel, lift study form, targeting templates done; A/B test create and bulk edit panels blocked by Limited Access; no separate rules page exists — revisit)
 - ✅ P1-16 Change history, notifications, misc (§5.12) → docs/explore/16-history-notifications.md
-- ⬜ P1-17 Gap sweep: click every remaining menu item; add anything missing to §5
+- ✅ P1-17 Gap sweep: click every remaining menu item; add anything missing to §5 → docs/explore/17-gap-sweep.md (filled creative page/history, audience detail, Google tag, channel & keyword list editors, report runs, 404; remaining blocked gaps listed there for Phase 2 from public docs)
 
 ### Phase 2 — Specs & architecture — target: 31 Oct–1 Nov
 - ⬜ P2-01 Data model (all entities & relationships) → `docs/specs/data-model.md`
@@ -386,6 +386,7 @@ Partner · Advertiser · Campaign · InsertionOrder · BudgetSegment · LineItem
 | 2026-10-28 | P1-14 | Advertiser settings: basic details (identity, SDF, ad server, authorizations, EU political ads, Demand Gen conversion, business name/logo, additional settings, third-party services), targeting rules, data manager, alert preferences, policy center documented | P1-15 Bulk/SDF/experiments |
 | 2026-10-28 | P1-15 | SDF download/upload dialogs, bulk Action bar, custom charts builder, Intelligence panel, lift study form, targeting templates documented; A/B tests and bulk edit panels blocked in demo | P1-16 Change history, notifications |
 | 2026-10-28 | P1-16 | History page (spend chart, date range, local timezone / system changes toggles, download, day cards with field-level old → new), notes panel, notifications, right rail documented | P1-17 Gap sweep |
+| 2026-10-28 | P1-17 | Gap sweep: image creative page, creative History table, audience detail, Floodlight Google tag, channel and negative keyword list editors, report run files, 404 page documented; still-blocked gaps tabled for Phase 2 | P2-01 Data model |
 
 ---
 
