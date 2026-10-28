@@ -11,7 +11,7 @@
 | Target fidelity | 100% — every section, screen, option and workflow of DV360 |
 | Doc owner | Kailas Nath R (Adsmetor) |
 | Created | 2026-10-28 |
-| Current phase | **Phase 0 — Planning** |
+| Current phase | **Phase 1 — Exploration** |
 
 ---
 
@@ -124,6 +124,10 @@ After every task: tick the checklist item, add one line to §10 (date, task ID, 
 - Left navigation (changes by level: Partner / Advertiser)
 - Breadcrumbs, entity status chips, date-range picker, "Compare" toggle
 - Change history panel, notes/comments, recently viewed
+- Ask Advisor (AI chat assistant panel), Quick help panel, Intelligence panel (advertiser health + optimisation suggestions)
+- Partner Overview home page with workspaces, tutorials, pinned items, recently opened
+- Bulk status page (history of bulk jobs)
+- Keyboard shortcuts dialog
 
 ### 5.2 Partner level
 - Advertisers list (create, edit, archive, columns, filters)
@@ -212,11 +216,11 @@ Status keys: ⬜ Not started · 🟨 In progress · ✅ Done · ⛔ Blocked
 - ⬜ P0-04 Connect repo to Claude Code on the web (GitHub App)
 - ⬜ P0-05 Connect repo to Vercel; set up Postgres (Neon/Supabase)
 - ⬜ P0-06 Turn off "usage credits" toggle in Claude settings (avoid surprise charges)
-- 🟨 P0-07 Browser = Claude in Chrome; waiting on Google "Verify it's you" sign-in
+- ✅ P0-07 Browser = Claude in Chrome ("Browser 1" profile); DV360 signed in
 
 ### Phase 1 — Full DV360 exploration (Cowork + browser) — target: 29–31 Oct
 One explore file per item; screenshots on demo data only.
-- ⬜ P1-01 Global shell & navigation (§5.1)
+- ✅ P1-01 Global shell & navigation (§5.1) → docs/explore/01-global-shell.md
 - ⬜ P1-02 Partner level (§5.2)
 - ⬜ P1-03 Campaigns (§5.3)
 - ⬜ P1-04 Insertion orders (§5.3)
@@ -345,6 +349,7 @@ Partner · Advertiser · Campaign · InsertionOrder · BudgetSegment · LineItem
 |---|---|---|---|
 | 2026-10-28 | P0-01 | Master plan drafted | Kailas reviews; create GitHub repo; choose browser |
 | 2026-10-28 | P0-03 | PROJECT.md and docs/ skeleton committed to `iam-knr/dv360-adsmentor` via cloud session | Kailas completes Google sign-in in Chrome; start P1-01 |
+| 2026-10-28 | P1-01 | Global shell, partner + advertiser nav, top bar, right rail, Overview, Bulk status, shortcuts documented | P1-02 Partner level |
 
 ---
 
