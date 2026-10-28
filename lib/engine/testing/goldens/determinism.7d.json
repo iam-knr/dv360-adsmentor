@@ -1,0 +1,21 @@
+{
+  "paramsHash": "d826adde1b9ecd48f82f76c96e776c27",
+  "ticks": 168,
+  "dailyHash": "6dd20b6595fd28a64bdcd3c0e2242001",
+  "hourlyHash": "019d82fca87411b129e6db900c9fd211",
+  "funnelHash": "e355cd5280a24a9cec93fa7e240e7d95",
+  "stateHash": "20cf1f89ca39713498e1e87ef4e8a2c1",
+  "totals": {
+    "impressions": 1683049,
+    "clicks": 4291,
+    "revenue": 230747715246,
+    "mediaCost": 210713043822,
+    "convTotal": 189,
+    "bidRequests": 1751656535,
+    "lostTargeting": 1572917927,
+    "lostBudget": 0,
+    "lostPacing": 55069673,
+    "lostFrequency": 14999,
+    "lostInternal": 14227893
+  }
+}

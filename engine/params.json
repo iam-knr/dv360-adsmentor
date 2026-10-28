@@ -1,1 +1,853 @@
-{}
+{
+  "schemaVersion": 1,
+  "currency": "INR",
+  "tickMinutesSimulated": 60,
+  "fx": {
+    "asOf": "2026-10-01",
+    "perUSD": {
+      "INR": 88.0,
+      "SGD": 1.34,
+      "AED": 3.67,
+      "GBP": 0.78,
+      "EUR": 0.92,
+      "AUD": 1.52,
+      "IDR": 16300,
+      "BRL": 5.4,
+      "USD": 1.0,
+      "JPY": 150.0
+    }
+  },
+  "markets": {
+    "IN": {
+      "priceIdx": 1.0,
+      "ctrIdx": 1.0,
+      "viewIdx": 1.0,
+      "cvrIdx": 1.0,
+      "volumeIdx": 1.0,
+      "tz": "Asia/Kolkata",
+      "currency": "INR",
+      "regionShare": {
+        "IN-DL": 0.12,
+        "IN-MH": 0.15,
+        "IN-KA": 0.09,
+        "IN-TN": 0.08,
+        "IN-TG": 0.06,
+        "IN-WB": 0.07,
+        "IN-GJ": 0.06,
+        "IN-UP": 0.12,
+        "IN-REST": 0.25
+      },
+      "regionPriceIdx": {
+        "IN-DL": 1.12,
+        "IN-MH": 1.15,
+        "IN-KA": 1.1,
+        "IN-TN": 1.0,
+        "IN-TG": 1.04,
+        "IN-WB": 0.9,
+        "IN-GJ": 0.95,
+        "IN-UP": 0.78,
+        "IN-REST": 0.72
+      }
+    },
+    "ID": {
+      "priceIdx": 0.75,
+      "ctrIdx": 1.05,
+      "viewIdx": 0.97,
+      "cvrIdx": 0.9,
+      "volumeIdx": 0.35,
+      "tz": "Asia/Jakarta",
+      "currency": "IDR"
+    },
+    "AE": {
+      "priceIdx": 3.4,
+      "ctrIdx": 0.9,
+      "viewIdx": 1.05,
+      "cvrIdx": 1.1,
+      "volumeIdx": 0.04,
+      "tz": "Asia/Dubai",
+      "currency": "AED"
+    },
+    "SG": {
+      "priceIdx": 4.6,
+      "ctrIdx": 0.85,
+      "viewIdx": 1.08,
+      "cvrIdx": 1.15,
+      "volumeIdx": 0.03,
+      "tz": "Asia/Singapore",
+      "currency": "SGD"
+    },
+    "AU": {
+      "priceIdx": 6.0,
+      "ctrIdx": 0.88,
+      "viewIdx": 1.08,
+      "cvrIdx": 1.2,
+      "volumeIdx": 0.07,
+      "tz": "Australia/Sydney",
+      "currency": "AUD"
+    },
+    "UK": {
+      "priceIdx": 6.5,
+      "ctrIdx": 0.85,
+      "viewIdx": 1.08,
+      "cvrIdx": 1.2,
+      "volumeIdx": 0.14,
+      "tz": "Europe/London",
+      "currency": "GBP"
+    },
+    "DE": {
+      "priceIdx": 5.8,
+      "ctrIdx": 0.82,
+      "viewIdx": 1.07,
+      "cvrIdx": 1.15,
+      "volumeIdx": 0.12,
+      "tz": "Europe/Berlin",
+      "currency": "EUR"
+    },
+    "US": {
+      "priceIdx": 8.5,
+      "ctrIdx": 0.9,
+      "viewIdx": 1.1,
+      "cvrIdx": 1.3,
+      "volumeIdx": 0.8,
+      "tz": "America/New_York",
+      "currency": "USD"
+    },
+    "BR": {
+      "priceIdx": 1.2,
+      "ctrIdx": 1.1,
+      "viewIdx": 0.95,
+      "cvrIdx": 0.85,
+      "volumeIdx": 0.3,
+      "tz": "America/Sao_Paulo",
+      "currency": "BRL"
+    }
+  },
+  "supply": {
+    "supplyScale": 1.0,
+    "noiseSigma": 0.08,
+    "hodPriceExponent": 0.35,
+    "basePeakRequestsPerHour": {
+      "display": 4000000,
+      "native": 600000,
+      "video_instream": 900000,
+      "ctv": 250000,
+      "audio": 80000,
+      "youtube": 1500000
+    },
+    "exchangeShare": {
+      "display": {
+        "google_ad_manager": 0.38,
+        "index_exchange": 0.1,
+        "pubmatic": 0.1,
+        "openx": 0.08,
+        "magnite": 0.08,
+        "equativ": 0.06,
+        "adform": 0.04,
+        "gumgum": 0.02,
+        "long_tail": 0.14
+      },
+      "native": { "triplelift": 0.35, "google_ad_manager": 0.3, "equativ": 0.15, "long_tail": 0.2 },
+      "video_instream": {
+        "google_ad_manager": 0.34,
+        "freewheel_ssp": 0.16,
+        "magnite": 0.14,
+        "index_exchange": 0.1,
+        "pubmatic": 0.08,
+        "long_tail": 0.18
+      },
+      "ctv": {
+        "freewheel_ssp": 0.3,
+        "magnite_springserve": 0.28,
+        "google_ad_manager": 0.22,
+        "index_exchange": 0.1,
+        "long_tail": 0.1
+      },
+      "audio": {
+        "adswizz": 0.42,
+        "spotify_ad_exchange": 0.3,
+        "google_ad_manager": 0.2,
+        "long_tail": 0.08
+      },
+      "youtube": { "youtube": 1.0 }
+    },
+    "deviceShare": {
+      "display": { "computer": 0.28, "smartphone": 0.66, "tablet": 0.06 },
+      "native": { "computer": 0.28, "smartphone": 0.66, "tablet": 0.06 },
+      "video_instream": { "computer": 0.3, "smartphone": 0.64, "tablet": 0.06 },
+      "ctv": { "ctv": 1.0 },
+      "audio": { "smartphone": 0.88, "computer": 0.1, "tablet": 0.02 },
+      "youtube": { "smartphone": 0.7, "computer": 0.18, "ctv": 0.1, "tablet": 0.02 }
+    },
+    "appShareBySmartphone": {
+      "display": 0.62,
+      "native": 0.62,
+      "video_instream": 0.55,
+      "audio": 0.97,
+      "youtube": 0.95,
+      "ctv": 1.0
+    },
+    "appShareByDevice": { "computer": 0.0, "smartphone": 1.0, "tablet": 0.5, "ctv": 1.0 },
+    "hourOfDay": {
+      "default": [
+        0.55, 0.42, 0.35, 0.32, 0.34, 0.45, 0.65, 0.85, 1.0, 1.05, 1.05, 1.05, 1.05, 1.0, 0.98,
+        0.98, 1.0, 1.08, 1.2, 1.35, 1.5, 1.55, 1.4, 0.98
+      ],
+      "ctv": [
+        0.5, 0.35, 0.28, 0.25, 0.25, 0.3, 0.45, 0.6, 0.7, 0.75, 0.8, 0.85, 0.95, 0.95, 0.9, 0.95,
+        1.1, 1.45, 1.9, 2.2, 2.3, 2.1, 1.55, 0.9
+      ],
+      "audio": [
+        0.3, 0.2, 0.18, 0.2, 0.35, 0.7, 1.3, 1.8, 1.9, 1.3, 1.1, 1.0, 1.0, 1.0, 1.0, 1.1, 1.4, 1.9,
+        1.8, 1.2, 0.9, 0.7, 0.5, 0.35
+      ]
+    },
+    "dayOfWeek": {
+      "default": [0.98, 0.99, 1.0, 1.0, 1.0, 1.03, 1.05],
+      "ctv": [0.92, 0.92, 0.94, 0.97, 1.03, 1.18, 1.22]
+    },
+    "seasonality": []
+  },
+  "exchanges": {
+    "google_ad_manager": {
+      "auctionType": "first",
+      "priceIdx": 1.08,
+      "latencyDropRate": 0.02,
+      "creativeRejectRate": 0.01,
+      "lossReportedShare": 0.6,
+      "ivtRate": 0.02,
+      "enabledByDefault": true
+    },
+    "index_exchange": {
+      "auctionType": "first",
+      "priceIdx": 1.0,
+      "latencyDropRate": 0.025,
+      "creativeRejectRate": 0.012,
+      "lossReportedShare": 0.8,
+      "ivtRate": 0.025,
+      "enabledByDefault": true
+    },
+    "pubmatic": {
+      "auctionType": "first",
+      "priceIdx": 0.95,
+      "latencyDropRate": 0.03,
+      "creativeRejectRate": 0.015,
+      "lossReportedShare": 0.7,
+      "ivtRate": 0.03,
+      "enabledByDefault": true
+    },
+    "openx": {
+      "auctionType": "second",
+      "priceIdx": 0.9,
+      "latencyDropRate": 0.035,
+      "creativeRejectRate": 0.018,
+      "lossReportedShare": 0.65,
+      "ivtRate": 0.035,
+      "enabledByDefault": true
+    },
+    "magnite": {
+      "auctionType": "first",
+      "priceIdx": 1.0,
+      "latencyDropRate": 0.025,
+      "creativeRejectRate": 0.012,
+      "lossReportedShare": 0.75,
+      "ivtRate": 0.025,
+      "enabledByDefault": true
+    },
+    "equativ": {
+      "auctionType": "first",
+      "priceIdx": 0.98,
+      "latencyDropRate": 0.03,
+      "creativeRejectRate": 0.014,
+      "lossReportedShare": 0.7,
+      "ivtRate": 0.03,
+      "enabledByDefault": true
+    },
+    "adform": {
+      "auctionType": "first",
+      "priceIdx": 0.95,
+      "latencyDropRate": 0.03,
+      "creativeRejectRate": 0.015,
+      "lossReportedShare": 0.65,
+      "ivtRate": 0.03,
+      "enabledByDefault": true
+    },
+    "gumgum": {
+      "auctionType": "second",
+      "priceIdx": 0.92,
+      "latencyDropRate": 0.035,
+      "creativeRejectRate": 0.018,
+      "lossReportedShare": 0.6,
+      "ivtRate": 0.035,
+      "enabledByDefault": true
+    },
+    "triplelift": {
+      "auctionType": "first",
+      "priceIdx": 1.0,
+      "latencyDropRate": 0.03,
+      "creativeRejectRate": 0.015,
+      "lossReportedShare": 0.7,
+      "ivtRate": 0.025,
+      "enabledByDefault": true
+    },
+    "freewheel_ssp": {
+      "auctionType": "first",
+      "priceIdx": 1.05,
+      "latencyDropRate": 0.025,
+      "creativeRejectRate": 0.012,
+      "lossReportedShare": 0.75,
+      "ivtRate": 0.02,
+      "enabledByDefault": true
+    },
+    "magnite_springserve": {
+      "auctionType": "first",
+      "priceIdx": 1.05,
+      "latencyDropRate": 0.025,
+      "creativeRejectRate": 0.012,
+      "lossReportedShare": 0.75,
+      "ivtRate": 0.02,
+      "enabledByDefault": true
+    },
+    "adswizz": {
+      "auctionType": "second",
+      "priceIdx": 1.0,
+      "latencyDropRate": 0.03,
+      "creativeRejectRate": 0.015,
+      "lossReportedShare": 0.6,
+      "ivtRate": 0.015,
+      "enabledByDefault": true
+    },
+    "spotify_ad_exchange": {
+      "auctionType": "second",
+      "priceIdx": 1.05,
+      "latencyDropRate": 0.025,
+      "creativeRejectRate": 0.012,
+      "lossReportedShare": 0.6,
+      "ivtRate": 0.01,
+      "enabledByDefault": true
+    },
+    "long_tail": {
+      "auctionType": "second",
+      "priceIdx": 0.7,
+      "latencyDropRate": 0.05,
+      "creativeRejectRate": 0.03,
+      "lossReportedShare": 0.4,
+      "ivtRate": 0.06,
+      "enabledByDefault": true
+    },
+    "youtube": {
+      "auctionType": "second",
+      "priceIdx": 1.0,
+      "latencyDropRate": 0.005,
+      "creativeRejectRate": 0.005,
+      "lossReportedShare": 0.0,
+      "ivtRate": 0.008,
+      "enabledByDefault": true
+    }
+  },
+  "formats": {
+    "display": {
+      "floor": { "median": 15, "sigma": 0.35 },
+      "clear": { "median": 65, "sigma": 0.45 },
+      "internalDelta": -0.1,
+      "ctr": 0.0014,
+      "measurable": 0.88,
+      "viewable": 0.52,
+      "viewableKappa": 12,
+      "cvrClick": 0.02,
+      "cvrView": 0.0001,
+      "engagementRate": 0.004,
+      "requestsPerUserPerDay": 9
+    },
+    "native": {
+      "floor": { "median": 25, "sigma": 0.35 },
+      "clear": { "median": 110, "sigma": 0.42 },
+      "internalDelta": -0.1,
+      "ctr": 0.004,
+      "measurable": 0.85,
+      "viewable": 0.62,
+      "viewableKappa": 12,
+      "cvrClick": 0.024,
+      "cvrView": 0.00012,
+      "engagementRate": 0.003,
+      "requestsPerUserPerDay": 6
+    },
+    "video_instream": {
+      "floor": { "median": 70, "sigma": 0.35 },
+      "clear": { "median": 260, "sigma": 0.42 },
+      "internalDelta": -0.1,
+      "ctr": 0.003,
+      "measurable": 0.97,
+      "viewable": 0.7,
+      "viewableKappa": 15,
+      "startRate": 0.94,
+      "quartiles": { "q1": 0.82, "q2": 0.68, "q3": 0.62, "q4": 0.62 },
+      "skippableViewRate": 0.28,
+      "cvrClick": 0.018,
+      "cvrView": 0.0002,
+      "requestsPerUserPerDay": 3
+    },
+    "ctv": {
+      "floor": { "median": 220, "sigma": 0.3 },
+      "clear": { "median": 700, "sigma": 0.4 },
+      "internalDelta": -0.08,
+      "ctr": 0.0005,
+      "measurable": 0.99,
+      "viewable": 0.95,
+      "viewableKappa": 30,
+      "startRate": 0.99,
+      "quartiles": { "q1": 0.98, "q2": 0.97, "q3": 0.96, "q4": 0.95 },
+      "cvrClick": 0.01,
+      "cvrView": 0.00015,
+      "requestsPerUserPerDay": 2
+    },
+    "audio": {
+      "floor": { "median": 90, "sigma": 0.32 },
+      "clear": { "median": 320, "sigma": 0.4 },
+      "internalDelta": -0.08,
+      "ctr": 0.001,
+      "measurable": 0.9,
+      "viewable": 0.88,
+      "viewableKappa": 20,
+      "startRate": 0.97,
+      "quartiles": { "q1": 0.95, "q2": 0.92, "q3": 0.9, "q4": 0.88 },
+      "cvrClick": 0.012,
+      "cvrView": 0.00008,
+      "requestsPerUserPerDay": 4
+    },
+    "youtube": {
+      "floor": { "median": 45, "sigma": 0.3 },
+      "clear": { "median": 130, "sigma": 0.38 },
+      "internalDelta": 0.0,
+      "ctr": 0.004,
+      "measurable": 0.99,
+      "viewable": 0.85,
+      "viewableKappa": 20,
+      "startRate": 0.92,
+      "quartiles": { "q1": 0.55, "q2": 0.4, "q3": 0.3, "q4": 0.22 },
+      "skippableViewRate": 0.26,
+      "completionSkippable": 0.22,
+      "completionBumper": 0.94,
+      "cvrClick": 0.016,
+      "cvrView": 0.00018,
+      "requestsPerUserPerDay": 3
+    }
+  },
+  "multipliers": {
+    "device": {
+      "computer": { "price": 1.0, "ctr": 0.85, "view": 1.0 },
+      "smartphone": { "price": 0.82, "ctr": 1.1, "view": 0.95 },
+      "tablet": { "price": 0.9, "ctr": 0.95, "view": 1.0 },
+      "ctv": { "price": 1.0, "ctr": 1.0, "view": 1.0 }
+    },
+    "environment": {
+      "web": { "price": 1.0, "ctr": 1.0, "view": 1.0 },
+      "app": { "price": 0.92, "ctr": 1.15, "view": 1.1 }
+    },
+    "position": {
+      "above_fold": { "price": 1.1, "ctr": 1.25, "view": 1.2 },
+      "below_fold": { "price": 0.8, "ctr": 0.65, "view": 0.7 },
+      "unknown": { "price": 0.9, "ctr": 0.9, "view": 0.9 }
+    },
+    "audiencePremium": {
+      "none": 1.0,
+      "demographics": 1.04,
+      "affinity": 1.08,
+      "first_party": 1.12,
+      "custom": 1.15,
+      "in_market": 1.18,
+      "lookalike": 1.1
+    },
+    "vertical": {
+      "ecommerce": 1.2,
+      "lead_gen": 1.5,
+      "finance": 1.5,
+      "app_install": 0.6,
+      "education": 1.1,
+      "auto": 0.5,
+      "fmcg": 0.4,
+      "b2b": 0.35,
+      "travel": 0.9,
+      "default": 1.0
+    }
+  },
+  "competitors": {
+    "pressure": 1.0,
+    "internalPresence": 0.2,
+    "privateAuctionBidders": { "mean": 4, "min": 2 },
+    "preferredFirstLookFill": 0.9
+  },
+  "bidding": {
+    "learning": {
+      "exitEvents": {
+        "clicks": 200,
+        "conversions": 30,
+        "viewable_impressions": 5000,
+        "reach_impressions": 20000,
+        "completed_views": 400
+      },
+      "tau": {
+        "clicks": 150,
+        "conversions": 25,
+        "viewable_impressions": 4000,
+        "reach_impressions": 15000,
+        "completed_views": 300
+      },
+      "exploreSigmaStart": 0.35,
+      "exploreSigmaEnd": 0.08,
+      "initialQuality": 0.25,
+      "relearnQualityFloor": 0.25,
+      "relearnHours": [24, 72],
+      "firstDaySpendCap": 0.75,
+      "lambdaDamping": 0.5,
+      "optimizedTargetingEventWeight": 1.4,
+      "significantChangePct": 20,
+      "significantBudgetChangePct": 30
+    },
+    "bidNoise": 0.05,
+    "maxBidMultipleOfClear": 4.0,
+    "firstPriceShadeMax": 0.35,
+    "feeAwareBids": true,
+    "lambdaIterations": 14,
+    "tos10Share": { "display": 0.55, "video": 0.65 },
+    "audibleRate": { "ctv": 0.95, "app": 0.8, "web": 0.6 },
+    "ioOptimizer": {
+      "credibilityEvents": 300,
+      "exponent": 1.5,
+      "minShare": 0.05,
+      "lookbackDays": 3,
+      "autoAllocateStep": 0.25
+    }
+  },
+  "pacing": {
+    "aheadFactor": 0.15,
+    "aheadMaxDailyMultiple": 2.0,
+    "overshootMax": 1.15,
+    "allocationHeadroom": 2.0,
+    "intraday": "flat",
+    "ewmaAlpha": 0.5,
+    "underpacing": {
+      "defaultThresholdPct": 90,
+      "minHoursSinceSegmentStart": 24,
+      "rateWindowDays": 7
+    }
+  },
+  "outcomes": {
+    "frequencyCtrDecay": 0.92,
+    "frequencyCvrDecay": 0.95,
+    "ivtRefundShare": 1.0,
+    "reachNegBinK": 1.5,
+    "lag": {
+      "click": { "medianHours": 2.0, "sigma": 1.6 },
+      "view": { "medianHours": 18.0, "sigma": 1.4 }
+    },
+    "windows": { "clickDays": 30, "viewDays": 1 },
+    "multiTouchShare": 0.25,
+    "identifiedShare": { "web": 0.55, "app": 0.85, "ctv": 0.7 },
+    "conversionDateBasis": "conversion_date",
+    "ivtFraudVerifyCut": 0.7,
+    "invalidClickShare": 0.02,
+    "beginToRenderRate": 0.985,
+    "creativeQualitySigma": 0.12,
+    "ctrNoise": 0.05,
+    "hodCtr": [
+      1.0, 1.02, 1.04, 1.05, 1.05, 1.03, 1.0, 0.97, 0.95, 0.94, 0.94, 0.95, 0.96, 0.97, 0.98, 0.98,
+      0.99, 1.0, 1.01, 1.02, 1.03, 1.03, 1.02, 1.01
+    ],
+    "audienceLift": {
+      "none": 1.0,
+      "demographics": 1.04,
+      "affinity": 1.1,
+      "first_party": 1.8,
+      "custom": 1.25,
+      "in_market": 1.35,
+      "lookalike": 1.15
+    },
+    "audienceCvrLift": {
+      "none": 1.0,
+      "demographics": 1.04,
+      "affinity": 1.05,
+      "first_party": 2.2,
+      "custom": 1.2,
+      "in_market": 1.3,
+      "lookalike": 1.1
+    },
+    "quartileSmartphoneScale": 0.92,
+    "quartileLargePlayerScale": 1.04,
+    "coViewShare": { "ctv": 0.25, "default": 0.02 },
+    "categoryMult": {
+      "page_view": 12,
+      "add_to_cart": 3,
+      "begin_checkout": 1.8,
+      "purchase": 1,
+      "subscribe": 1.4,
+      "sign_up": 1.4,
+      "contact": 0.8,
+      "submit_lead_form": 1,
+      "book_appointment": 0.8,
+      "request_quote": 0.9,
+      "get_directions": 2,
+      "outbound_click": 8,
+      "qualified_lead": 0.25,
+      "converted_lead": 0.08
+    },
+    "repeatPerUserDay": {
+      "page_view": 0.6,
+      "add_to_cart": 0.25,
+      "purchase": 0.06,
+      "default": 0.04
+    },
+    "defaultAverageOrderValue": 1800,
+    "defaultItemsPerTransaction": 1.8,
+    "attribution": {
+      "timeDecayHalfLifeDays": 7,
+      "dataDrivenIncrementality": {
+        "remarketing": 0.6,
+        "prospecting": 1.0,
+        "youtube_reach": 0.9,
+        "ctv": 0.8
+      }
+    }
+  },
+  "costs": {
+    "dv360FeePct": 0.1,
+    "adServingCpm": 0.0,
+    "dataCpm": { "affinity": 0, "in_market": 0, "third_party": 35 },
+    "verificationCpm": {
+      "dv_abs": 20.95,
+      "dv_brand_safety": 5.71,
+      "dv_viewability": 12.38,
+      "dv_fraud": 5.71,
+      "ias": 14.0,
+      "scope3": 9.0
+    }
+  },
+  "targeting": {
+    "inventoryQuality": { "DIRECT_ONLY": 0.55, "DIRECT_AND_RESELLERS": 0.92, "ALL": 1.0 },
+    "pincodeShare": {
+      "IN-DL": 0.004,
+      "IN-MH": 0.003,
+      "IN-KA": 0.004,
+      "IN-TN": 0.004,
+      "IN-TG": 0.005,
+      "IN-WB": 0.004,
+      "IN-GJ": 0.004,
+      "IN-UP": 0.002,
+      "IN-REST": 0.001
+    },
+    "languageShare": {
+      "IN-DL": { "hi": 0.58, "en": 0.28, "pa": 0.08, "ur": 0.03, "other": 0.03 },
+      "IN-MH": { "mr": 0.5, "hi": 0.22, "en": 0.2, "gu": 0.04, "other": 0.04 },
+      "IN-KA": { "kn": 0.6, "en": 0.22, "hi": 0.08, "te": 0.04, "ta": 0.03, "other": 0.03 },
+      "IN-TN": { "ta": 0.75, "en": 0.15, "te": 0.03, "ml": 0.03, "other": 0.04 },
+      "IN-TG": { "te": 0.62, "en": 0.18, "hi": 0.1, "ur": 0.06, "other": 0.04 },
+      "IN-WB": { "bn": 0.72, "hi": 0.14, "en": 0.1, "other": 0.04 },
+      "IN-GJ": { "gu": 0.78, "hi": 0.1, "en": 0.08, "other": 0.04 },
+      "IN-UP": { "hi": 0.86, "ur": 0.06, "en": 0.05, "other": 0.03 },
+      "IN-REST": {
+        "hi": 0.45,
+        "en": 0.15,
+        "bn": 0.08,
+        "ml": 0.08,
+        "pa": 0.06,
+        "te": 0.05,
+        "ta": 0.05,
+        "other": 0.08
+      },
+      "default": { "en": 1.0 }
+    },
+    "allocation": {
+      "deviceDetail": {
+        "android": 0.78,
+        "ios": 0.14,
+        "windows": 0.05,
+        "macos": 0.02,
+        "other": 0.01
+      },
+      "browser": {
+        "chrome": 0.68,
+        "safari": 0.14,
+        "samsung_internet": 0.07,
+        "firefox": 0.03,
+        "edge": 0.04,
+        "other": 0.04
+      },
+      "connection": { "wifi": 0.46, "4g": 0.34, "5g": 0.14, "3g": 0.04, "2g": 0.02 },
+      "carrier": { "jio": 0.4, "airtel": 0.32, "vi": 0.17, "bsnl": 0.04, "other": 0.07 },
+      "category": {
+        "news": 0.14,
+        "entertainment": 0.18,
+        "sports": 0.1,
+        "technology": 0.08,
+        "finance": 0.06,
+        "lifestyle": 0.12,
+        "travel": 0.05,
+        "education": 0.07,
+        "shopping": 0.1,
+        "other": 0.1
+      },
+      "position": { "above_fold": 0.45, "below_fold": 0.45, "unknown": 0.1 },
+      "age": {
+        "18-24": 0.22,
+        "25-34": 0.3,
+        "35-44": 0.2,
+        "45-54": 0.12,
+        "55-64": 0.08,
+        "65+": 0.08
+      },
+      "gender": { "female": 0.45, "male": 0.55 },
+      "parental": { "parent": 0.38, "not_parent": 0.62 },
+      "income": {
+        "top10": 0.1,
+        "11-20": 0.1,
+        "21-30": 0.1,
+        "31-40": 0.1,
+        "41-50": 0.1,
+        "lower50": 0.5
+      }
+    },
+    "keyword": {
+      "minShare": 0.04,
+      "maxShare": 0.2,
+      "listSizeForMax": 50,
+      "negativeShareEach": 0.01,
+      "negativeShareMax": 0.3
+    },
+    "appUrl": { "universeSize": 5000, "includeExponent": 0.7 },
+    "brandSuitability": {
+      "maximum": 1.0,
+      "standard": 0.88,
+      "limited": 0.62,
+      "perLabelShare": 0.02,
+      "perCategoryShare": 0.03
+    },
+    "verificationBlockShare": {
+      "dv_fraud": 0.03,
+      "dv_brand_safety": 0.06,
+      "dv_abs": 0.1,
+      "dv_viewability": 0.0,
+      "ias": 0.05,
+      "scope3": 0.04
+    },
+    "audience": {
+      "sizeRange": {
+        "affinity": [0.02, 0.09],
+        "in_market": [0.01, 0.05],
+        "custom": [0.005, 0.03],
+        "lookalike": [0.01, 0.05]
+      },
+      "userPool": 300000000,
+      "lookalikeExpansion": 4,
+      "lookalikeCap": 0.25,
+      "minUsableSize": 1000,
+      "usableAfterHours": 4,
+      "premiumPerSizeBoost": 0.0
+    },
+    "optimizedExpansion": 0.35,
+    "optimizedRateMult": 0.9,
+    "viewabilityPremiumSlope": 0.6
+  },
+  "creatives": {
+    "slotSizes": {
+      "300x250": 0.3,
+      "320x50": 0.18,
+      "728x90": 0.12,
+      "300x600": 0.08,
+      "160x600": 0.04,
+      "970x250": 0.04,
+      "336x280": 0.03,
+      "320x100": 0.03,
+      "other": 0.18
+    },
+    "explorationTicks": 24,
+    "optimizationSharpness": 2,
+    "qualityBonusRich": 0.1,
+    "qualityPenaltyScaled": 0.15,
+    "qualityPenaltyTracking": 0.1
+  },
+  "alerts": {
+    "limitedAudienceMinRequestsPerHour": 400,
+    "underperformingPct": 20,
+    "noSpendMinTicksIntoDay": 6,
+    "resolveAfterClearTicks": 2,
+    "minSample": { "impressions": 1000, "clicks": 30, "conversions": 10, "views": 100 },
+    "suggestions": {
+      "rateThreshold": 0.7,
+      "sizeMismatchThreshold": 0.3,
+      "targetingThreshold": 0.95,
+      "limitedByCreatives": 0.5
+    }
+  },
+  "aggregation": {
+    "dailySliceKinds": [
+      "total",
+      "exchange",
+      "device",
+      "environment",
+      "region",
+      "format",
+      "hourOfDay",
+      "creative",
+      "activity",
+      "exchangeDevice",
+      "regionDevice"
+    ]
+  },
+  "experiments": {
+    "contaminationShare": 0.08,
+    "identifiedOnlyShare": 0.45,
+    "zCritical": { "0.90": 1.645, "0.95": 1.96 }
+  },
+  "lift": {
+    "costPerResponse": 36,
+    "baseline": {
+      "ad_recall": 0.22,
+      "awareness": 0.3,
+      "consideration": 0.18,
+      "favorability": 0.35,
+      "purchase_intent": 0.12,
+      "association": 0.2
+    },
+    "maxRelLift": {
+      "ad_recall": 0.4,
+      "awareness": 0.18,
+      "consideration": 0.15,
+      "favorability": 0.1,
+      "purchase_intent": 0.08,
+      "association": 0.12
+    }
+  },
+  "calibration": {
+    "ctrBand": [0.0008, 0.0035],
+    "ctrBandByFormat": {
+      "native": [0.0025, 0.008],
+      "video_instream": [0.0015, 0.006],
+      "ctv": [0.0002, 0.001],
+      "audio": [0.0005, 0.0025],
+      "youtube": [0.002, 0.009]
+    },
+    "videoCompletionBand": [0.55, 0.8],
+    "viewRateBand": { "video_instream": [0.2, 0.4], "youtube": [0.18, 0.38] },
+    "marketPriceTolerance": 0.1,
+    "cpmBand": {
+      "display": [35, 120],
+      "native": [60, 180],
+      "video_instream": [150, 450],
+      "ctv": [450, 1100],
+      "audio": [200, 500],
+      "youtube": [70, 220]
+    },
+    "viewabilityBand": {
+      "display": [0.45, 0.65],
+      "video_instream": [0.6, 0.85],
+      "ctv": [0.9, 0.98]
+    },
+    "winRateAtClear": [0.4, 0.55],
+    "winRateAt06": [0.08, 0.22],
+    "winRateAt15Min": 0.75,
+    "targetingFilteredSingleRegion": [0.55, 0.95],
+    "lostInternalShare": [0.03, 0.15],
+    "eOtherShare": [0.01, 0.06],
+    "flightEvenPct": [0.97, 1.03],
+    "aheadShareByDay27": [0.92, 0.96]
+  }
+}

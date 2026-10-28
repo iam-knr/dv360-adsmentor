@@ -290,7 +290,7 @@ Plan: `docs/specs/build-plan.md` (owner prerequisites, waves, file ownership, me
 - 🟨 P3-05 Full data model + seed generator (partners, advertisers, campaigns, IOs, LIs, creatives, deals, audiences) → sessions ✅ P3-05a schema core and `withChangeLog` (4.3), ⬜ P3-05b seed generator (4.7), ⬜ P3-05c remaining tables (4.8)
 - ⬜ P3-06 Campaigns → IOs → Line items CRUD with full validation → sessions P3-06a validation library (4.4), P3-06b campaigns and IOs (4.11), P3-06c line items (4.12) - P3-06a validation library done (PR 3)
 - ⬜ P3-07 Targeting panel (all dimensions) → sessions P3-07a card, state and basic editors (4.10), P3-07b geography, apps and URLs, brand suitability, audience builder (4.15)
-- ⬜ P3-08 Simulation engine v1 (auction, pacing, metrics) → sessions P3-08a engine core (4.5), P3-08b engine runtime and tick endpoint (4.13)
+- 🟨 P3-08 Simulation engine v1 (auction, pacing, metrics) → sessions ✅ P3-08a engine core (4.5) (PR 8), ⬜ P3-08b engine runtime and tick endpoint (4.13)
 - ⬜ P3-09 Performance columns on list pages → session P3-09 (4.14)
 - ⬜ P3-INT Integration and hardening: demo path, gap list (added by P2-07; not a PROJECT.md task before) → session P3-INT (4.16)
 
@@ -446,6 +446,7 @@ Full records: `docs/decisions.md` (ADR-001 to ADR-046).
 | 2026-10-28 | P3-06a | Validation core in `lib/validation`: engine, MSG catalogue, matrices MX-01 to MX-06, MX-08, MX-10, MX-17, rules for GEN, CMP, IO, LI and the display, video, CTV, audio, app, DOOH and Demand Gen type files, state machines, bulk applicability, client hooks, server wrapper; 1,151 tests (docs-sync, coverage, matrices, state, dirty) | P3-06b, P3-06c (wave 4); P3-02b and P3-07a also read it |
 | 2026-10-28 | P3-04 | UI kit done: tokens, MUI theme, `DvIcon`, Tier A and B components in `components/dv`, gallery at `/components` (404 in production unless `ENABLE_GALLERY=1`), 314 Vitest component and unit tests with axe on every gallery entry, `tests/e2e/gallery.spec.ts` | P3-03 (shell), P3-06b to P3-06c (forms and grids) |
 | 2026-10-28 | P3-05a | Core schema (35 Appendix A models plus `AuditLog`, module 19 roles `USER`/`ADMIN`/`SUPER_ADMIN`, account, cohort, access-window and forced-password-change columns), migration `0001_core` (additive, RLS roles `app_tenant`/`app_engine`, `NULLS NOT DISTINCT` keys, `AccountPolicy` default row), `withSandbox`/`withBypass`, `withChangeLog` with the Advertiser registry and the scan test | P3-02, P3-05b, P3-05c, P3-03 (wave 3) |
+| 2026-10-28 | P3-08a | Pure engine core in `lib/engine` and `engine/params.json`: `runTick(world, state, params, tick)` with supply cells, eligibility funnel (integer conservation), frequency, bidding (fixed plus 16 goals, learning, lambda), auction, outcomes, Floodlight conversions, pacing, fees and revenue, diagnostics, alert decisions, hourly and daily slices, `forecast`, `estimateAudienceSize`; determinism, property and calibration tests, `npm run engine:golden`; p50 55 ms per sandbox-tick on the benchmark fixture | P3-08b (runtime, tick endpoint), P3-09 |
 
 ---
 
