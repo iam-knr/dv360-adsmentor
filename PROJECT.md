@@ -11,7 +11,7 @@
 | Target fidelity | 100% — every section, screen, option and workflow of DV360 |
 | Doc owner | Kailas Nath R (Adsmetor) |
 | Created | 2026-10-28 |
-| Current phase | **Phase 1 — Exploration** |
+| Current phase | **Phase 2 complete → Phase 3 ready (blocked on owner prerequisites)** |
 
 ---
 
@@ -143,6 +143,8 @@ After every task: tick the checklist item, add one line to §10 (date, task ID, 
 - Cross-media reach reports (partner + advertiser)
 - Email preferences: Alerts; News, announcements and offers
 
+> Scope note (RC-062, RC-066): the demo partner nav has no pages for billing, invoices, partner costs and revenue models, or for partner-level audiences, combined audiences, custom lists, location lists and negative keyword lists, and routes.md has no routes for them. They are not built in Phases 3 and 4. Billing is deferred past Phase 4 (task 02-T14); the owner confirms this scope cut (build-plan 1.9).
+
 ### 5.3 Advertiser level — Campaigns
 - **Campaigns**: list, create/edit (name, goal, KPI, planned spend, flight dates, frequency cap, creative types, inventory source types, demographics/geo defaults), statuses
   - Campaign page: own nav (Campaign, Inventory ▸ My inventory/Marketplace/Negotiations, Campaign settings, Alerts, History), tabs Combined / Insertion orders / Line items, chart cards, saved column views, Alerts page (Critical / Needs attention)
@@ -155,6 +157,8 @@ After every task: tick the checklist item, add one line to §10 (date, task ID, 
 - Bulk tools: bulk edit, duplicate, upload/download **Structured Data Files (SDF)**, rules/automation
 - **Experiments**: A/B tests (2–n arms of IOs or LIs, audience split, control arm, measurement goal, 90/95% confidence, exclude unidentified users, optional brand lift) and Lift studies (Brand lift / Search lift, eligibility + required media cost, survey metrics ≤3, competitors, object type, intended action, study strength, report with absolute/relative/headroom lift and slices)
 - **Optimisation**: recommendations, optimisation score, alerts & troubleshooting (e.g. "line item not spending" diagnostics)
+
+> Scope note (RC-066): there is no separate Over-the-top line item type (OTT is Connected TV plus device targeting). YouTube subtypes are Reach, Target frequency, TrueView views and Ad sequence (explore 06), not Reach/action/view. There is no Rules page (explore 15). Experiments are module 17, bulk and SDF are module 11.
 
 ### 5.4 Targeting (shared panel used at IO / LI / ad group)
 Geography (incl. radius, location lists, postal codes) · Language · Demographics (age, gender, parental status, household income) · Audience lists (first-party, Google, affinity, in-market, custom, combined, lookalike) · Device type, make/model, OS · Browser · Connection speed · Carrier & ISP · Environment (web, app) · Day & time · Viewability · Position (above/below fold, video player size, in-stream/out-stream) · Content (genres, categories, keywords, negative keywords) · Brand safety (digital content labels, sensitive categories, third-party verification: IAS, DoubleVerify, etc.) · Apps & URLs / channels · Inventory sources (exchanges, deals, groups) · Audio/video content duration, livestream · Native & rewarded · Targeting expansion
@@ -205,12 +209,18 @@ Geography (incl. radius, location lists, postal codes) · Language · Demographi
 - Generate report (BETA, AI natural-language report creation)
 - Report field catalogue (~30 categories, ~700 fields) — see docs/explore/12-reporting.md
 
+> Scope note (RC-066): field counts are plans. Module 16 plans about 830 fields in 34 categories; the catalogue test asserts at least the counts seen in the demo.
+
 ### 5.10 Planning
 - Planner / Plans (forecasting reach, impressions & cost for a plan, converting plans to campaigns)
 - Reach planner
 
+> Scope note (RC-066): Planner / Plans and Reach planner are one page in DV360 (explore 13). One module (04), one page.
+
 ### 5.11 Advertiser settings
 Basic details (name, URL, industry, currency, time zone) · Ad serving (CM360 link) · Creative settings (OBA icon, Dynamic creatives) · Floodlight config · Linked accounts · Billing · Targeting defaults · Brand safety defaults · Data access/Integrations
+
+> Scope note (RC-066): Advertiser settings follow explore 14: Basic details, Targeting rules, Data manager, Alert preferences, Policy center. The demo shows no OBA icon, Dynamic creatives or Billing pages. `industry` is an optional field on Create advertiser only (module 03).
 
 ### 5.12 Admin, history & misc
 - Change history (per entity: who, when, field, old → new)
@@ -231,11 +241,11 @@ Status keys: ⬜ Not started · 🟨 In progress · ✅ Done · ⛔ Blocked
 
 ### Phase 0 — Planning & setup (Cowork) — target: 28–29 Oct
 - ✅ P0-01 Draft PROJECT.md master plan
-- ⬜ P0-02 Review & approve PROJECT.md (Kailas)
+- 🟨 P0-02 Review & approve PROJECT.md (Kailas) → blocked on owner: approve PROJECT.md and the stack (ADR-006 to ADR-010; build-plan 1.1 item P-01)
 - ✅ P0-03 GitHub repo `iam-knr/dv360-adsmentor` created; PROJECT.md committed
-- ⬜ P0-04 Connect repo to Claude Code on the web (GitHub App)
-- ⬜ P0-05 Connect repo to Vercel; set up Postgres (Neon/Supabase)
-- ⬜ P0-06 Turn off "usage credits" toggle in Claude settings (avoid surprise charges)
+- ✅ P0-04 Connect repo to Claude Code on the web (GitHub App) → cloud sessions commit successfully
+- 🟨 P0-05 Connect repo to Vercel; set up Postgres (Neon/Supabase) → blocked on owner: Vercel project, database, secrets, cloud environment (build-plan 1.2 to 1.10, items P-02 to P-07)
+- ⬜ P0-06 Turn off "usage credits" toggle in Claude settings (avoid surprise charges) → owner, build-plan item P-12
 - ✅ P0-07 Browser = Claude in Chrome ("Browser 1" profile); DV360 signed in
 
 ### Phase 1 — Full DV360 exploration (Cowork + browser) — target: 29–31 Oct
@@ -269,17 +279,20 @@ One explore file per item; screenshots on demo data only.
 - ⬜ P2-07 Build order & cloud-session prompts written
 
 ### Phase 3 — Foundation build (cloud sessions, $100 credit) — target: 1–5 Nov
-- ⬜ P3-01 Next.js + TypeScript + Prisma + Postgres scaffold; Vercel deploy
-- ⬜ P3-02 Adsmetor auth, roles (student / instructor / admin), classroom access windows
-- ⬜ P3-03 App shell: top bar, switcher, left nav, breadcrumbs, date picker
-- ⬜ P3-04 Shared components: data table (columns picker, filters, bulk actions), side panel forms, dialogs, status chips
-- ⬜ P3-05 Full data model + seed generator (partners, advertisers, campaigns, IOs, LIs, creatives, deals, audiences)
-- ⬜ P3-06 Campaigns → IOs → Line items CRUD with full validation
-- ⬜ P3-07 Targeting panel (all dimensions)
-- ⬜ P3-08 Simulation engine v1 (auction, pacing, metrics)
-- ⬜ P3-09 Performance columns on list pages
+Plan: `docs/specs/build-plan.md` (owner prerequisites, waves, file ownership, merge order, prompts). Session ids below are the prompt ids in build-plan section 4. Starts when owner items P-01 and P-02 are done. A split task is ticked 🟨 until all its sessions are merged.
+- ⬜ P3-01 Next.js + TypeScript + Prisma + Postgres scaffold; Vercel deploy → session P3-01 (build-plan 4.1)
+- ⬜ P3-02 Adsmetor auth, roles (student / instructor / admin), classroom access windows → session P3-02 (4.6; module 18 M18-01 to M18-04)
+- ⬜ P3-03 App shell: top bar, switcher, left nav, breadcrumbs, date picker → session P3-03 (4.9; module 01 T1 to T6)
+- ⬜ P3-04 Shared components: data table (columns picker, filters, bulk actions), side panel forms, dialogs, status chips → session P3-04 (4.2; design-system.md)
+- ⬜ P3-05 Full data model + seed generator (partners, advertisers, campaigns, IOs, LIs, creatives, deals, audiences) → sessions P3-05a schema core and `withChangeLog` (4.3), P3-05b seed generator (4.7), P3-05c remaining tables (4.8)
+- ⬜ P3-06 Campaigns → IOs → Line items CRUD with full validation → sessions P3-06a validation library (4.4), P3-06b campaigns and IOs (4.11), P3-06c line items (4.12)
+- ⬜ P3-07 Targeting panel (all dimensions) → sessions P3-07a card, state and basic editors (4.10), P3-07b geography, apps and URLs, brand suitability, audience builder (4.15)
+- ⬜ P3-08 Simulation engine v1 (auction, pacing, metrics) → sessions P3-08a engine core (4.5), P3-08b engine runtime and tick endpoint (4.13)
+- ⬜ P3-09 Performance columns on list pages → session P3-09 (4.14)
+- ⬜ P3-INT Integration and hardening: demo path, gap list (added by P2-07; not a PROJECT.md task before) → session P3-INT (4.16)
 
 ### Phase 4 — Remaining modules (cloud sessions / normal limits after credit)
+Outline of waves and module tasks: `docs/specs/build-plan.md` section 3.7. Module specs: `docs/specs/modules/README.md`.
 - ⬜ P4-01 Creatives (all types, review statuses)
 - ⬜ P4-02 Inventory, deals, Marketplace & PG negotiation
 - ⬜ P4-03 Audiences (all types, combined, custom, lookalike)
@@ -294,6 +307,7 @@ One explore file per item; screenshots on demo data only.
 - ⬜ P4-12 Change history, notifications
 
 ### Phase 5 — Training layer
+Outline: `docs/specs/build-plan.md` section 3.8. Module 18 holds the tasks.
 - ⬜ P5-01 Instructor console (access windows, class roster, sandbox reset)
 - ⬜ P5-02 Scenario engine + 10 starter exercises with auto-checks
 - ⬜ P5-03 Time-acceleration controls (instructor)
@@ -347,10 +361,13 @@ Partner · Advertiser · Campaign · InsertionOrder · BudgetSegment · LineItem
 | Engine realism | Students learn wrong intuitions | Tune with realistic benchmark ranges (CPMs, CTRs, win rates) by format; instructor review |
 | Classroom access control | Material leaving the classroom | Access windows, no data export outside reports module, session timeouts |
 | Repo is public | Explore notes and screenshots of DV360 are visible to anyone | Kailas accepted (2026-10-28) to allow cloud-session access; revisit before Phase 3 |
+| Platform limits (Vercel Hobby cron and deployment limits, Neon free tier) | Failed deploys, slow or missing ticks | build-plan 5.3 R-05, R-06; ADR-029, ADR-030 |
+| Credit runs out or expires before the minimum viable demo is merged | Phase 3 incomplete | Cut order and fallbacks in build-plan 5.2 and 5.4; merge freeze 5 Nov 9:00 AM IST |
 
 ---
 
 ## 9. Decision Log
+Full records: `docs/decisions.md` (ADR-001 to ADR-038).
 | Date | Decision | By |
 |---|---|---|
 | 2026-10-28 | Product name: DV360 Simulator by Adsmetor | Kailas |
@@ -362,6 +379,18 @@ Partner · Advertiser · Campaign · InsertionOrder · BudgetSegment · LineItem
 | 2026-10-28 | Account confirmed as demo (no real spend); exploration browser = Claude in Chrome | Kailas |
 | 2026-10-28 | All docs and build files live only in GitHub repo `iam-knr/dv360-adsmentor`; nothing saved on local PC | Kailas |
 | 2026-10-28 | Repo made public so cloud sessions can access it | Kailas |
+| 2026-10-28 | ADR-006 to ADR-010: stack detail (Next.js + MUI + TanStack Table + Recharts; Postgres + Prisma; Vercel; Auth.js; Vitest + Playwright) recorded; approval still pending | Proposed (awaiting Kailas) |
+| 2026-10-28 | ADR-015: routes mirror DV360 URLs without `/ng_nav`; simulator pages under `/sim` | Claude (routes.md) |
+| 2026-10-28 | ADR-016: multi-tenancy by `sandboxId` with composite foreign keys and row level security | Claude (data-model.md) |
+| 2026-10-28 | ADR-017: deterministic engine, pure TypeScript core, database only in `io/` | Claude (engine.md) |
+| 2026-10-28 | ADR-018: enum authority rule and key spellings (conflicts.md RC-001 to RC-006) | Claude |
+| 2026-10-28 | ADR-019 to ADR-021: one alert store; diagnostics and metric grain; money, version and wire-type rules (RC-013, RC-018 to RC-025) | Claude |
+| 2026-10-28 | ADR-022 to ADR-027: folder convention, multi-file Prisma schema, embedded Postgres for tests, PR-per-session with ownership and ordered merges, engine v1 scope with history stub, partitioning deferred | Claude (build-plan.md) |
+| 2026-10-28 | ADR-028: one sandbox per student | Proposed (awaiting Kailas) |
+| 2026-10-28 | ADR-029: engine tick by GitHub Actions every 5 minutes plus lazy catch-up (Vercel Pro cron is the upgrade) | Proposed (awaiting Kailas) |
+| 2026-10-28 | ADR-030: Vercel Pro for class use (Hobby is non-commercial and limits cron) | Proposed (awaiting Kailas) |
+| 2026-10-28 | ADR-031 to ADR-036: canned Tutor, vendor names, billing deferred, instructor-created accounts, student uploads, data retention | Proposed (awaiting Kailas) |
+| 2026-10-28 | ADR-037, ADR-038: students are Standard users in their sandbox; script custom bidding disabled in v1 | Claude (RC-047, RC-037) |
 
 ---
 
@@ -393,8 +422,20 @@ Partner · Advertiser · Campaign · InsertionOrder · BudgetSegment · LineItem
 ---
 
 ## 11. Open Questions
+Owner decisions are listed with their conflict-log id (`docs/specs/conflicts.md`) and checklist item (`docs/specs/build-plan.md` section 1). Each has a default, so the build can start; items marked **blocks** stop Phase 3.
 1. ~~Which browser?~~ Answered: Claude in Chrome.
-2. Approve the stack in §7.1?
-3. How many students per class (sizes the load test and seed data)?
-4. Should students share one simulated partner, or get one sandbox each? (Plan assumes one each.)
-5. Any specific exercises you already teach that should become Phase 5 scenarios?
+2. Approve PROJECT.md and the stack in §7.1 (ADR-006 to ADR-010)? **Blocks P3-01** (P-01, RC-060).
+3. Prepare the cloud environment and turn off the usage-credits toggle (P-02, P-12). **Blocks P3-01.**
+4. Keep the repo public, or make it private before code lands? Decide by 31 Oct (RC-059).
+5. Create the Vercel project and the Postgres database, and send the secrets to Vercel only (P-03, P-04, P-07). Preview deploys wait for this.
+6. Engine tick: GitHub Actions every 5 minutes (default), Vercel Pro cron, or manual (P-05, RC-056)? Needed before P3-08b merges.
+7. How many students per class, and which database plan? Default: size for 60 students, free database tier at first (RC-057).
+8. One simulated partner per student (default) or shared sandboxes for pairs (RC-061)?
+9. Adsmetor logo files and reference screenshots (P-09, RC-058). Default: text wordmark.
+10. Real or fictional vendor names (RC-055)? Default: real exchange and verifier names, invented prices.
+11. AI-looking features: canned Tutor (default) or real model calls (RC-054)?
+12. Billing, invoices and partner-level lists deferred past Phase 4 (RC-062)? Please confirm.
+13. Student accounts created by the instructor with temporary passwords, no email (RC-063)? Student uploads allowed (RC-064)? Retention after a course (RC-065)?
+14. Any specific exercises you already teach that should become Phase 5 scenarios? Default: the 10 starters in module 18.
+15. How many cloud sessions can run in parallel on this account? The wave plan assumes up to 5 (build-plan P-12, R-03).
+16. Who merges the pull requests during 1 to 5 Nov: you, or a Cowork session (build-plan P-13)?
