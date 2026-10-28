@@ -25,6 +25,7 @@ export default defineConfig({
         env: {
           DATABASE_URL: process.env.DATABASE_URL_TEST ?? process.env.DATABASE_URL ?? '',
           DIRECT_URL: process.env.DATABASE_URL_TEST ?? process.env.DIRECT_URL ?? '',
+          ENABLE_GALLERY: '1', // tests/e2e/gallery.spec.ts (P3-04); the gallery is 404 in production otherwise
         },
       },
 });
