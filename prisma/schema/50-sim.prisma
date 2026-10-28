@@ -1,0 +1,218 @@
+// Simulation output
+// Source: docs/specs/data-model.md Appendix A (P3-05a). Owner session: P3-05a.
+
+// ---------------------------------------------------------------------------
+// Simulation output
+// ---------------------------------------------------------------------------
+
+// RC-022/RC-023: hourly rows are totals per line item (or ad group), no slices (ENG 9.1). Metric names are ENG 9.2.
+// Unique key uses NULLS NOT DISTINCT (prisma/sql) because adGroupId is nullable.
+model SimHourlyMetric {
+  id                       BigInt   @id @default(autoincrement())
+  sandboxId                String
+  lineItemId               String
+  adGroupId                String?
+  simHour                  DateTime
+  bidRequests              BigInt   @default(0)
+  eligibleRequests         BigInt   @default(0)
+  bidsSubmitted            BigInt   @default(0)
+  bidResponses             BigInt   @default(0)
+  impressions              BigInt   @default(0)
+  billableImpressions      BigInt   @default(0)
+  invalidImpressions       BigInt   @default(0)
+  beginToRenderImpressions BigInt   @default(0)
+  blockedImpressions       BigInt   @default(0)
+  inactiveImpressions      BigInt   @default(0)
+  provisionalImpressions   BigInt   @default(0)
+  floodlightImpressions    BigInt   @default(0)
+  clicks                   BigInt   @default(0)
+  invalidClicks            BigInt   @default(0)
+  engagements              BigInt   @default(0)
+  companionClicks          BigInt   @default(0)
+  qrScans                  BigInt   @default(0)
+  measurableImpressions    BigInt   @default(0)
+  viewableImpressions      BigInt   @default(0)
+  viewable10sImpressions   BigInt   @default(0)
+  audibleImpressions       BigInt   @default(0)
+  audibleVisibleStart      BigInt   @default(0)
+  audibleVisibleQ1         BigInt   @default(0)
+  audibleVisibleMid        BigInt   @default(0)
+  audibleVisibleQ3         BigInt   @default(0)
+  audibleVisibleComplete   BigInt   @default(0)
+  fullyOnScreen2s          BigInt   @default(0)
+  inBackgroundImpressions  BigInt   @default(0)
+  videoStarts              BigInt   @default(0)
+  videoQ1                  BigInt   @default(0)
+  videoMid                 BigInt   @default(0)
+  videoQ3                  BigInt   @default(0)
+  videoCompletions         BigInt   @default(0)
+  skips                    BigInt   @default(0)
+  videoViews               BigInt   @default(0)
+  coViewedImpressions      BigInt   @default(0)
+  companionViews           BigInt   @default(0)
+  adSequenceImpressions    BigInt   @default(0)
+  watchSecondsTotal        BigInt   @default(0)
+  lostTargeting            BigInt   @default(0)
+  lostCreative             BigInt   @default(0)
+  lostFrequency            BigInt   @default(0)
+  lostBudget               BigInt   @default(0)
+  lostPacing               BigInt   @default(0)
+  lostBelowMinBid          BigInt   @default(0)
+  lostInternal             BigInt   @default(0)
+  lostExternalBid          BigInt   @default(0)
+  lostExternalCreative     BigInt   @default(0)
+  lostExternalOther        BigInt   @default(0)
+  lostNotReported          BigInt   @default(0)
+  pgCommittedImpressions   BigInt   @default(0)
+  pgShortfallImpressions   BigInt   @default(0)
+  convPostClick            Decimal  @default(0) @db.Decimal(20, 4)
+  convPostView             Decimal  @default(0) @db.Decimal(20, 4)
+  convTotal                Decimal  @default(0) @db.Decimal(20, 4)
+  convTransactions         Decimal  @default(0) @db.Decimal(20, 4)
+  convItems                Decimal  @default(0) @db.Decimal(20, 4)
+  convRevenue              Decimal  @default(0) @db.Decimal(20, 6)
+  cartRevenue              Decimal  @default(0) @db.Decimal(20, 6)
+  mediaCost                Decimal  @default(0) @db.Decimal(20, 6)
+  refund                   Decimal  @default(0) @db.Decimal(20, 6)
+  cpmFee1                  Decimal  @default(0) @db.Decimal(20, 6)
+  cpmFee2                  Decimal  @default(0) @db.Decimal(20, 6)
+  mediaFee1                Decimal  @default(0) @db.Decimal(20, 6)
+  mediaFee2                Decimal  @default(0) @db.Decimal(20, 6)
+  dataCost                 Decimal  @default(0) @db.Decimal(20, 6)
+  verificationCost         Decimal  @default(0) @db.Decimal(20, 6)
+  adServingCost            Decimal  @default(0) @db.Decimal(20, 6)
+  totalMediaCost           Decimal  @default(0) @db.Decimal(20, 6)
+  revenue                  Decimal  @default(0) @db.Decimal(20, 6)
+  profit                   Decimal  @default(0) @db.Decimal(20, 6)
+  clientCost               Decimal  @default(0) @db.Decimal(20, 6)
+  dealSavings              Decimal  @default(0) @db.Decimal(20, 6)
+  customImpressionValue    Decimal  @default(0) @db.Decimal(20, 6)
+  customImpressionCost     Decimal  @default(0) @db.Decimal(20, 6)
+
+  lineItem LineItem @relation(fields: [lineItemId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([lineItemId, adGroupId, simHour])
+  @@index([sandboxId, simHour])
+}
+
+// Same grain at day level: LI (or ad group) x date x sliceKind x sliceKey. sliceKind 'total' with empty sliceKey is the
+// day total that every list page reads (RC-022, ENG 9.1 and 9.3). Reports read this table.
+model SimDailyMetric {
+  id                       BigInt       @id @default(autoincrement())
+  sandboxId                String
+  classroomId              String
+  lineItemId               String
+  simDate                  DateTime     @db.Date
+  sliceKind                String       @default("total")
+  sliceKey                 String       @default("")
+  exchangeId               String?
+  deviceType               DeviceType?
+  environment              Environment?
+  regionCode               String?
+  creativeId               String?
+  adGroupId                String?
+  dealId                   String?
+  bidRequests              BigInt       @default(0)
+  eligibleRequests         BigInt       @default(0)
+  bidsSubmitted            BigInt       @default(0)
+  bidResponses             BigInt       @default(0)
+  impressions              BigInt       @default(0)
+  billableImpressions      BigInt       @default(0)
+  invalidImpressions       BigInt       @default(0)
+  beginToRenderImpressions BigInt       @default(0)
+  blockedImpressions       BigInt       @default(0)
+  inactiveImpressions      BigInt       @default(0)
+  provisionalImpressions   BigInt       @default(0)
+  floodlightImpressions    BigInt       @default(0)
+  clicks                   BigInt       @default(0)
+  invalidClicks            BigInt       @default(0)
+  engagements              BigInt       @default(0)
+  companionClicks          BigInt       @default(0)
+  qrScans                  BigInt       @default(0)
+  measurableImpressions    BigInt       @default(0)
+  viewableImpressions      BigInt       @default(0)
+  viewable10sImpressions   BigInt       @default(0)
+  audibleImpressions       BigInt       @default(0)
+  audibleVisibleStart      BigInt       @default(0)
+  audibleVisibleQ1         BigInt       @default(0)
+  audibleVisibleMid        BigInt       @default(0)
+  audibleVisibleQ3         BigInt       @default(0)
+  audibleVisibleComplete   BigInt       @default(0)
+  fullyOnScreen2s          BigInt       @default(0)
+  inBackgroundImpressions  BigInt       @default(0)
+  videoStarts              BigInt       @default(0)
+  videoQ1                  BigInt       @default(0)
+  videoMid                 BigInt       @default(0)
+  videoQ3                  BigInt       @default(0)
+  videoCompletions         BigInt       @default(0)
+  skips                    BigInt       @default(0)
+  videoViews               BigInt       @default(0)
+  coViewedImpressions      BigInt       @default(0)
+  companionViews           BigInt       @default(0)
+  adSequenceImpressions    BigInt       @default(0)
+  watchSecondsTotal        BigInt       @default(0)
+  lostTargeting            BigInt       @default(0)
+  lostCreative             BigInt       @default(0)
+  lostFrequency            BigInt       @default(0)
+  lostBudget               BigInt       @default(0)
+  lostPacing               BigInt       @default(0)
+  lostBelowMinBid          BigInt       @default(0)
+  lostInternal             BigInt       @default(0)
+  lostExternalBid          BigInt       @default(0)
+  lostExternalCreative     BigInt       @default(0)
+  lostExternalOther        BigInt       @default(0)
+  lostNotReported          BigInt       @default(0)
+  pgCommittedImpressions   BigInt       @default(0)
+  pgShortfallImpressions   BigInt       @default(0)
+  convPostClick            Decimal      @default(0) @db.Decimal(20, 4)
+  convPostView             Decimal      @default(0) @db.Decimal(20, 4)
+  convTotal                Decimal      @default(0) @db.Decimal(20, 4)
+  convTransactions         Decimal      @default(0) @db.Decimal(20, 4)
+  convItems                Decimal      @default(0) @db.Decimal(20, 4)
+  convRevenue              Decimal      @default(0) @db.Decimal(20, 6)
+  cartRevenue              Decimal      @default(0) @db.Decimal(20, 6)
+  mediaCost                Decimal      @default(0) @db.Decimal(20, 6)
+  refund                   Decimal      @default(0) @db.Decimal(20, 6)
+  cpmFee1                  Decimal      @default(0) @db.Decimal(20, 6)
+  cpmFee2                  Decimal      @default(0) @db.Decimal(20, 6)
+  mediaFee1                Decimal      @default(0) @db.Decimal(20, 6)
+  mediaFee2                Decimal      @default(0) @db.Decimal(20, 6)
+  dataCost                 Decimal      @default(0) @db.Decimal(20, 6)
+  verificationCost         Decimal      @default(0) @db.Decimal(20, 6)
+  adServingCost            Decimal      @default(0) @db.Decimal(20, 6)
+  totalMediaCost           Decimal      @default(0) @db.Decimal(20, 6)
+  revenue                  Decimal      @default(0) @db.Decimal(20, 6)
+  profit                   Decimal      @default(0) @db.Decimal(20, 6)
+  clientCost               Decimal      @default(0) @db.Decimal(20, 6)
+  dealSavings              Decimal      @default(0) @db.Decimal(20, 6)
+  customImpressionValue    Decimal      @default(0) @db.Decimal(20, 6)
+  customImpressionCost     Decimal      @default(0) @db.Decimal(20, 6)
+  budgetSegmentBudget      Decimal?     @db.Decimal(20, 6)
+  liPacingPct              Decimal?     @db.Decimal(9, 4)
+  ioPacingPct              Decimal?     @db.Decimal(9, 4)
+  dailyTarget              Decimal?     @db.Decimal(20, 6)
+
+  lineItem LineItem @relation(fields: [lineItemId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([lineItemId, simDate, sliceKind, sliceKey])
+  @@index([sandboxId, simDate])
+  @@index([classroomId, simDate])
+}
+
+// ENG 3.5 stored shape (RC-021). Additive upsert per tick. Unique key uses NULLS NOT DISTINCT (prisma/sql).
+model DeliveryDiagnostic {
+  id         BigInt    @id @default(autoincrement())
+  sandboxId  String
+  lineItemId String
+  adGroupId  String? // YouTube: diagnostics are kept per ad group as well as per line item
+  date       DateTime  @db.Date // sim day in the ADVERTISER time zone
+  exchangeId String // 'youtube' for YouTube; 'deal:<dealId>' for deal supply
+  stage      DiagStage
+  reasonCode String // 'T.GEO', 'M.WON', ...
+  count      BigInt    @default(0)
+
+  lineItem LineItem @relation(fields: [lineItemId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([lineItemId, adGroupId, date, exchangeId, reasonCode])
+  @@index([sandboxId, date])
+}

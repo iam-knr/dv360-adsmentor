@@ -1,0 +1,91 @@
+// Change history and alerts
+// Source: docs/specs/data-model.md Appendix A (P3-05a). Owner session: P3-05a.
+
+// ---------------------------------------------------------------------------
+// Change history and alerts
+// ---------------------------------------------------------------------------
+
+// One save = one group. No FK to the entity on purpose: history must survive delete and archive.
+model ChangeGroup {
+  id                String       @id @default(cuid())
+  sandboxId         String
+  classroomId       String
+  advertiserId      String?
+  campaignId        String?
+  ioId              String?
+  lineItemId        String?
+  entityType        EntityType
+  entityId          String
+  entityPublicId    BigInt?
+  entityName        String?
+  actorType         ChangeActor  @default(USER)
+  userId            String?
+  actorLabel        String?
+  systemActor       String?
+  source            ChangeSource @default(UI)
+  bulkJobId         String?
+  summary           String
+  note              String?
+  fanOutFromGroupId String? // DELTA-05-2
+  idempotencyKey    String? // lets a retried bulk job skip a second group (module 05 4.1.7)
+  schemaVersion     Int          @default(1)
+  isHidden          Boolean      @default(false)
+  occurredAt        DateTime     @default(now())
+
+  sandbox Sandbox       @relation(fields: [sandboxId], references: [id], onDelete: Cascade)
+  entries ChangeEntry[]
+
+  @@index([sandboxId, advertiserId, occurredAt])
+  @@index([sandboxId, advertiserId, isHidden, occurredAt])
+  @@index([fanOutFromGroupId])
+  @@index([sandboxId, idempotencyKey])
+  @@index([sandboxId, entityType, entityId, occurredAt])
+  @@index([sandboxId, ioId, occurredAt])
+  @@index([sandboxId, lineItemId, occurredAt])
+  @@index([classroomId, occurredAt])
+}
+
+model ChangeEntry {
+  id         String     @id @default(cuid())
+  groupId    String
+  sandboxId  String
+  kind       ChangeKind @default(UPDATE)
+  fieldPath  String
+  label      String
+  oldValue   String?
+  newValue   String?
+  parentPath String? // DELTA-05-3
+  sortOrder  Int        @default(0)
+
+  group ChangeGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, sortOrder])
+  @@index([sandboxId, fieldPath])
+}
+
+model Alert {
+  id             String        @id @default(cuid())
+  sandboxId      String
+  advertiserId   String
+  campaignId     String?
+  ioId           String?
+  lineItemId     String?
+  type           AlertType
+  severity       AlertSeverity
+  category       AlertCategory
+  state          AlertState    @default(OPEN)
+  title          String
+  detail         String?
+  affectedCount  Int           @default(1)
+  diagnosticCode String?
+  payload        Json?
+  firstSeenAt    DateTime      @default(now())
+  lastSeenAt     DateTime      @default(now())
+  resolvedAt     DateTime?
+
+  advertiser Advertiser @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, advertiserId, state, severity])
+  @@index([sandboxId, campaignId, state])
+  @@index([sandboxId, lineItemId, type, state])
+}
