@@ -27,6 +27,7 @@ import {
   DvHealthList,
   DvHelp,
   DvHoverDetail,
+  DvInlineEdit,
   DvKbd,
   DvKpiTile,
   DvModal,
@@ -38,6 +39,7 @@ import {
   DvRadioGroup,
   DvRightRail,
   DvSectionCard,
+  DvShortcutsModal,
   DvSelect,
   DvSkeleton,
   DvSlideOver,
@@ -1138,6 +1140,36 @@ function SlideOverDemo() {
   );
 }
 
+function InlineEditDemo() {
+  const [budget, setBudget] = useState('1200');
+  return (
+    <Stack gap={4} sx={{ maxWidth: 320 }}>
+      <Variant label="Resting cell (hover shows the pencil), Enter commits, Esc cancels, invalid shows a tooltip">
+        <DvInlineEdit
+          label="Budget"
+          prefix="₹"
+          value={budget}
+          display={`₹${Number(budget).toLocaleString('en-US')}.00`}
+          validate={(v) => (Number(v) > 0 ? undefined : 'Enter a number greater than 0')}
+          onCommit={setBudget}
+        />
+      </Variant>
+    </Stack>
+  );
+}
+
+function ShortcutsDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button variant="outlined" onClick={() => setOpen(true)}>
+        Keyboard shortcuts
+      </Button>
+      <DvShortcutsModal open={open} onClose={() => setOpen(false)} />
+    </>
+  );
+}
+
 function FeedbackDemo() {
   const toast = useToast();
   return (
@@ -1469,6 +1501,7 @@ export const GALLERY_ENTRIES: GalleryEntry[] = [
   { id: 'panel-states', title: 'Panel states, health list', Demo: PanelStatesDemo },
   { id: 'grid', title: 'Grid', Demo: GridDemo },
   { id: 'grid-states', title: 'Grid states', Demo: GridStatesDemo },
+  { id: 'inline-edit', title: 'Inline edit cell', Demo: InlineEditDemo },
   { id: 'bulk-bar', title: 'Bulk action bar', Demo: BulkBarDemo },
   { id: 'filter-bar', title: 'Filter bar', Demo: FilterBarDemo },
   { id: 'date-range', title: 'Date range', Demo: DateRangeDemo },
@@ -1477,6 +1510,7 @@ export const GALLERY_ENTRIES: GalleryEntry[] = [
   { id: 'form-page', title: 'Form page', Demo: FormPageDemo },
   { id: 'status', title: 'Status dots, chips, help, tooltips', Demo: StatusDemo },
   { id: 'modals', title: 'Modals', Demo: ModalsDemo },
+  { id: 'shortcuts', title: 'Keyboard shortcuts dialog', Demo: ShortcutsDemo },
   { id: 'slide-over', title: 'Slide-over', Demo: SlideOverDemo },
   { id: 'feedback', title: 'Banners and toasts', Demo: FeedbackDemo },
   { id: 'empty', title: 'Empty states', Demo: EmptyDemo },

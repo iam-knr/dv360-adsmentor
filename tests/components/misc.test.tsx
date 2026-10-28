@@ -13,11 +13,13 @@ import {
   DvGoalProgress,
   DvHelp,
   DvHoverDetail,
+  DvInlineEdit,
   DvKbd,
   DvKpiTile,
   DvPageHeader,
   DvPickerDialog,
   DvRouteProgress,
+  DvShortcutsModal,
   DvSkeleton,
   DvSparkBars,
   DvSpinner,
@@ -621,5 +623,84 @@ describe('DvCardCarousel', () => {
 
   it('works without a ThemeProvider crash for plain render (smoke)', () => {
     expect(() => render(<span>ok</span>)).not.toThrow();
+  });
+});
+
+describe('DvInlineEdit', () => {
+  it('turns into a 32 px input on click; Enter commits', async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    renderDv(<DvInlineEdit label="Budget" value="1200" display="₹1,200.00" onCommit={onCommit} />);
+    await user.click(screen.getByRole('button', { name: /^Edit Budget/ }));
+    const input = screen.getByRole('textbox', { name: 'Budget' });
+    expect(input).toHaveValue('1200');
+    expect(input.closest('.MuiOutlinedInput-root')).toHaveStyle({ height: '32px' });
+    await user.clear(input);
+    await user.type(input, '1500{Enter}');
+    expect(onCommit).toHaveBeenCalledWith('1500');
+    expect(screen.getByRole('button', { name: /^Edit Budget/ })).toBeInTheDocument();
+  });
+
+  it('Escape cancels and keeps the old value', async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    renderDv(<DvInlineEdit label="Budget" value="1200" onCommit={onCommit} />);
+    await user.click(screen.getByRole('button', { name: /^Edit Budget/ }));
+    await user.type(screen.getByRole('textbox', { name: 'Budget' }), '9{Escape}');
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /^Edit Budget/ })).toHaveTextContent('1200');
+  });
+
+  it('an invalid value stays open with a red border and a tooltip, and is not committed', async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    renderDv(
+      <DvInlineEdit
+        label="Budget"
+        value="5"
+        validate={(v) => (Number(v) > 0 ? undefined : 'Enter a number greater than 0')}
+        onCommit={onCommit}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: /^Edit Budget/ }));
+    const input = screen.getByRole('textbox', { name: 'Budget' });
+    await user.clear(input);
+    await user.type(input, '0{Enter}');
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Enter a number greater than 0');
+  });
+
+  it('does not call onCommit when nothing changed', async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    renderDv(<DvInlineEdit label="Budget" value="5" onCommit={onCommit} />);
+    await user.click(screen.getByRole('button', { name: /^Edit Budget/ }));
+    await user.keyboard('{Enter}');
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+});
+
+describe('DvShortcutsModal', () => {
+  it('lists every shortcut of design-system 5.4 as keycaps', () => {
+    renderDv(<DvShortcutsModal open onClose={() => {}} />);
+    const dialog = screen.getByRole('dialog', { name: 'Keyboard shortcuts' });
+    expect(within(dialog).getByRole('columnheader', { name: 'Action' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('columnheader', { name: 'Keys' })).toBeInTheDocument();
+    const rows = within(dialog).getAllByRole('row');
+    expect(rows).toHaveLength(1 + 8 + 1);
+    const dup = within(dialog).getByText('Duplicate').closest('tr')!;
+    expect(within(dup).getByText('Ctrl').tagName).toBe('KBD');
+    expect(within(dup).getByText('D').tagName).toBe('KBD');
+    expect(within(dialog).getByText('Esc').tagName).toBe('KBD');
+  });
+
+  it('shows ⌘ on a Mac and closes with the button', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderDv(<DvShortcutsModal open mac onClose={onClose} />);
+    expect(screen.getAllByText('⌘').length).toBeGreaterThan(0);
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    expect(onClose).toHaveBeenCalledOnce();
   });
 });

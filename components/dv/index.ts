@@ -105,6 +105,8 @@ export {
   formatCurrencyCompact,
   formatPercent,
 } from './grid-format';
+export { DvInlineEdit, type DvInlineEditProps } from './DvInlineEdit';
+export { DvShortcutsModal, SHORTCUTS, type DvShortcutsModalProps } from './DvShortcutsModal';
 export { DvBreadcrumbs, type DvBreadcrumbsProps, type DvCrumb } from './DvBreadcrumbs';
 export { DvAppBar, type DvAppBarProps, type DvNotification, type AppBarActionId } from './DvAppBar';
 export { DvNav, type DvNavProps, type NavItem } from './DvNav';
