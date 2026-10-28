@@ -58,7 +58,7 @@ Status: ✅ done · 🟨 partly done · ⬜ not started
 | P1-13 | Planning & reach planner | 🟨 | `13-planning.md` | Plans list; plan forecast page (KPIs, tabs, line-items table, columns); Cross-media reach create flow. Gaps: New plan, editable settings, forecast charts, plan → campaign |
 | P1-14 | Advertiser settings | ✅ | `14-advertiser-settings.md` | Basic details (SDF, ad server, authorizations, EU political, Demand Gen Floodlight switch, 3P services); targeting rules; data manager; alert preferences (10 alerts); policy center certificates |
 | P1-15 | Bulk, SDF, rules, experiments, optimisation | 🟨 | `15-bulk-sdf-experiments.md` | SDF download/upload; bulk Action bar; custom charts; Intelligence panel; lift study form; targeting templates. Gaps: A/B test create, bulk edit panels |
-| P1-16 | Change history, notifications | ⬜ | | |
+| P1-16 | Change history, notifications | ✅ | `16-history-notifications.md` | History page at advertiser/IO level (toggles, date range, day cards, old → new), notes panel, notifications, right rail |
 | P1-17 | Gap sweep | ⬜ | | Revisit 🟨 items |
 
 ### Known gaps to revisit
@@ -73,6 +73,7 @@ Status: ✅ done · 🟨 partly done · ⬜ not started
 - Planning: New plan flow; editable Location/Dates/Demographics/Additional Settings; forecast charts per tab; plan line-item editor; Copy dialog; plan → campaign conversion (demo has Limited Access and only past-dated plans).
 - Advertiser settings: other ad server options; Google tag Manage page; Link new account flows; Schedule for deletion dialog; targeting rules editors.
 - Bulk/SDF/experiments: A/B test create flow; bulk edit Settings/Creative assignment panels; SDF Download step 2; Download metadata/QA outputs; lift study Object type/Intended action options.
+- History: user-made field change row format (only system rows seen); Download file format.
 
 ## 5. Build details
 
@@ -132,5 +133,5 @@ Partner · Advertiser · Campaign · InsertionOrder · BudgetSegment · LineItem
 6. Access to an IO without objective and a Floodlight-optimised advertiser to finish LI gaps?
 
 ## 8. Next steps
-1. P1-16 → P1-17.
+1. P1-17 gap sweep.
 2. Phase 2 specs by 1 Nov so Phase 3 can use the cloud credit before 5 Nov 2026.

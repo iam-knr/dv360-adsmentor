@@ -255,7 +255,7 @@ One explore file per item; screenshots on demo data only.
 - 🟨 P1-13 Planning & reach planner (§5.10) → docs/explore/13-planning.md (Plans list, plan forecast page, columns, Cross-media reach create flow done; New plan, editable plan settings, forecast charts, plan → campaign conversion blocked by Limited Access + past-dated demo plans — revisit)
 - ✅ P1-14 Advertiser settings (§5.11) → docs/explore/14-advertiser-settings.md
 - 🟨 P1-15 Bulk tools, SDF, rules, experiments, optimisation, alerts (§5.3) → docs/explore/15-bulk-sdf-experiments.md (SDF download/upload dialogs, bulk Action bar, custom charts, Intelligence panel, lift study form, targeting templates done; A/B test create and bulk edit panels blocked by Limited Access; no separate rules page exists — revisit)
-- ⬜ P1-16 Change history, notifications, misc (§5.12)
+- ✅ P1-16 Change history, notifications, misc (§5.12) → docs/explore/16-history-notifications.md
 - ⬜ P1-17 Gap sweep: click every remaining menu item; add anything missing to §5
 
 ### Phase 2 — Specs & architecture — target: 31 Oct–1 Nov
@@ -385,6 +385,7 @@ Partner · Advertiser · Campaign · InsertionOrder · BudgetSegment · LineItem
 | 2026-10-28 | P1-13 | Plans list (status filter, columns), plan forecast page (KPI strip + metric switches, forecast tabs, line-items table, Modify columns), Cross-media reach create flow documented; editors blocked in demo | P1-14 Advertiser settings |
 | 2026-10-28 | P1-14 | Advertiser settings: basic details (identity, SDF, ad server, authorizations, EU political ads, Demand Gen conversion, business name/logo, additional settings, third-party services), targeting rules, data manager, alert preferences, policy center documented | P1-15 Bulk/SDF/experiments |
 | 2026-10-28 | P1-15 | SDF download/upload dialogs, bulk Action bar, custom charts builder, Intelligence panel, lift study form, targeting templates documented; A/B tests and bulk edit panels blocked in demo | P1-16 Change history, notifications |
+| 2026-10-28 | P1-16 | History page (spend chart, date range, local timezone / system changes toggles, download, day cards with field-level old → new), notes panel, notifications, right rail documented | P1-17 Gap sweep |
 
 ---
 
