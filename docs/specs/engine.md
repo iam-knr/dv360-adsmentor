@@ -79,7 +79,7 @@ Rules every engine module must follow (enforced by an ESLint rule `no-restricted
 ### 1.4 Tick scheduler (Vercel Cron + server actions)
 
 ```
-Cron trigger (see open question 1 / RC-056)  ->  POST /api/sim/engine/tick   (auth: header x-cron-secret = CRON_SECRET; RC-027)
+Cron trigger (see open question 1 / RC-056)  ->  POST /api/sim/engine/tick   (auth: Authorization Bearer CRON_SECRET or header x-cron-secret; RC-027)
     1. claimDueSandboxes(limit=40)           SELECT ... FOR UPDATE SKIP LOCKED on SimClock
                                              where state='RUNNING' and window open and due>0
     2. pool(concurrency=6): runSandboxBatch(sb, maxTicks=24, deadline)
