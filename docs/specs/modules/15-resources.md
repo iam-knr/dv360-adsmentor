@@ -292,6 +292,8 @@ P4-04 maps to M15-01..07, 09 (Floodlight needed early by audiences and LIs); P4-
 ## 8. Open questions and conflicts
 
 ### Conflicts found between specs
+
+> Resolved: every conflict below is consolidated in [`../conflicts.md`](../conflicts.md) (crosswalk table, rows `RC-nnn`). Where a proposal here and the RC row differ, the RC row wins.
 | # | Conflict | Files and sections | Proposed resolution |
 |---|---|---|---|
 | C1 | Script custom bidding: data-model (`source SCRIPT`, `CustomBiddingScript` table) and validation CB-003/CB-009 define scripts; engine open question 13 puts scripts out of scope | data-model.md 5.13; validation.md CB-003, CB-009; engine.md Q13 | v1 disables the Script card; keep tables and rules dormant; revisit with the engine's restricted evaluator |

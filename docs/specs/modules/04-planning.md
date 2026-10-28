@@ -495,6 +495,8 @@ Determinism: the plan forecast uses a seeded noise term `hash(sandboxSeed, plan.
 
 ### 8.2 Conflicts and gaps between specs
 
+> Resolved: every conflict below is consolidated in [`../conflicts.md`](../conflicts.md) (crosswalk table, rows `RC-nnn`). Where a proposal here and the RC row differ, the RC row wins.
+
 | # | Conflict | Where | Proposed resolution |
 |---|---|---|---|
 | C-04-1 | PROJECT.md 5.10 lists "Planner / Plans" and "Reach planner" as separate items; explore 13 shows the plan page is the reach planner | `PROJECT.md` 5.10 vs `docs/explore/13` | One module, one page |

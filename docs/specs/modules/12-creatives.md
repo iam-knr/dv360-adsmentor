@@ -385,6 +385,8 @@ Order: 01, 02, 03, 04 in parallel, then 05, 06, 11, then 07, 08, 09, 10, 12, 13,
 ## 8. Open questions and conflicts
 
 ### Conflicts found between specs
+
+> Resolved: every conflict below is consolidated in [`../conflicts.md`](../conflicts.md) (crosswalk table, rows `RC-nnn`). Where a proposal here and the RC row differ, the RC row wins.
 | # | Conflict | Files and sections | Proposed resolution |
 |---|---|---|---|
 | C1 | Three vocabularies for creative kind: routes `CreativeInput.kind` (`UPLOAD_IMAGE_OR_HTML5`, `UPLOAD_VIDEO`, `UPLOAD_AUDIO`, `FORMAT_GALLERY`...), data-model `CreativeKind` (`STANDARD_IMAGE`, `STANDARD_HTML5`, `VIDEO_FILE`, `AUDIO_FILE`...), validation MX-09 (`IMAGE`, `HTML5`, `VIDEO_FILE`, `TP_DISPLAY`, `TP_VIDEO`, `TP_AUDIO`) | routes.md 8.9; data-model.md 4.5; validation.md MX-09 | DB value = data-model. `lib/creatives/kinds.ts` holds the three-way map (tested by `kind-map.test.ts`). Routes DTO is a wire shape only |

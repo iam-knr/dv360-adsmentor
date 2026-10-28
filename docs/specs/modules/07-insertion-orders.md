@@ -374,6 +374,8 @@ Whitelist for IOs: pacing (period, type, daily amount), KPI (type, value), frequ
 | Q-07-09 | The advertiser tab "Segment by": hidden (as seen) or present? | hidden |
 
 ### 8.2 Conflicts between specs
+
+> Resolved: every conflict below is consolidated in [`../conflicts.md`](../conflicts.md) (crosswalk table, rows `RC-nnn`). Where a proposal here and the RC row differ, the RC row wins.
 | # | Conflict | Where | Proposal |
 |---|---|---|---|
 | C-07-1 | IO-automation enum keys differ | DM 4.3 (`LINE_ITEM_CONTROLLED`), VAL IO-050 (`LI_CONTROLLED`), RT 8.5 (`CONTROL_AT_LI`, `AUTOMATE_AT_IO`) | VAL keys |

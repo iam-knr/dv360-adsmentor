@@ -666,6 +666,8 @@ P4-10 in PROJECT.md (bulk edit, SDF, rules, experiments) = T11-01 to T11-13 here
 | Q-11-12 | Should dismissed suggestions re-appear after 7 sim days? | yes |
 
 ### 8.2 Conflicts between specs
+
+> Resolved: every conflict below is consolidated in [`../conflicts.md`](../conflicts.md) (crosswalk table, rows `RC-nnn`). Where a proposal here and the RC row differ, the RC row wins.
 | # | Conflict | Where | Proposal |
 |---|---|---|---|
 | C-11-1 | `BulkSource` values: DM 4.10 `DUPLICATION, BULK_EDIT, CAMPAIGN_DOWNLOAD, SDF_DOWNLOAD, SDF_UPLOAD`; RT 8.15 filter lists only `DUPLICATION, BULK_EDIT, CAMPAIGN_DOWNLOAD, SDF_UPLOAD`; explore 01 shows Duplication, Bulk Edit, Campaign Download. Same as module 01 C-01-12 | DM vs RT vs 01 | keep all five; label `SDF_DOWNLOAD` rows "Campaign Download" for campaign scope and "SDF Download" otherwise (01 resolution); add to RT filter |

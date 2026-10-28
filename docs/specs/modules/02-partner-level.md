@@ -257,7 +257,7 @@ createAdvertiser(input: {
 | Copy source must be in the same partner | `ADV-022` (proposed) | `[SIM] Choose an advertiser from this partner.` |
 | Advertiser cap per partner (sandbox safety) | `ADV-023` (proposed) | `[SIM] This partner can have up to 50 advertisers.` |
 
-Permission `STD`. Side effects: ChangeLog (CREATE group, up to 60 entries); a default `FloodlightGroup`; 10 `AdvertiserAlertPreference` rows with defaults (DM 5.3) or copied; `PartnerFeatureFlag` rows with scope ALL_ADVERTISERS apply automatically (SELECTED ones do not); `Advertiser.sdfVersion` set from copy source or default `V9` (see C-02-4); status `ACTIVE`.
+Permission `STD`. Side effects: ChangeLog (CREATE group, up to 60 entries); a default `FloodlightGroup`; 10 `AdvertiserAlertPreference` rows with defaults (DM 5.3) or copied; `PartnerFeatureFlag` rows with scope ALL_ADVERTISERS apply automatically (SELECTED ones do not); `Advertiser.sdfVersion` set from the copy source or the partner `sdfVersion` (V11) (RC-045); status `ACTIVE`.
 
 ### 4.3 Advertiser status from the list
 
@@ -479,12 +479,14 @@ Freshness: list and summary call `engine.ensureCaughtUp(sandboxId)` before readi
 
 ### 8.2 Conflicts and gaps between specs
 
+> Resolved: every conflict below is consolidated in [`../conflicts.md`](../conflicts.md) (crosswalk table, rows `RC-nnn`). Where a proposal here and the RC row differ, the RC row wins.
+
 | # | Conflict | Where | Proposed resolution |
 |---|---|---|---|
 | C-02-1 | PROJECT.md 5.2 lists partner-level audiences, combined audiences, custom lists, location lists, negative keyword lists, inventory lists, billing, partner costs and revenue models, and partner reporting; RT 3.2 and the demo partner nav have none of them (RT Q21 only covers billing) | `PROJECT.md` 5.2 vs `routes.md` 3.2, 4.2 | Treat 5.2 as aspirational. Update PROJECT.md 5.2 or add routes in a later phase |
 | C-02-2 | Who may pause an advertiser: RT 3.11 gives `[A]/details` write `ADM`, VAL 4.1 allows `ADMIN, STANDARD`, RT 8.2 `setAdvertiserStatus` is `STD`, DM 5.1 permission `partner.settings.write` is ADMIN only. Students are `STANDARD` (RT Q10) | `routes.md` 3.11, 8.2; `validation.md` 4.1; `data-model.md` 5.1 | Make `entity.write` on Advertiser details `STD` for status, name, website, SDF, authorizations, EU ads and Demand Gen switch (module 03 edits), keep Schedule for deletion and partner settings `ADM`. Change RT 3.11 to `RO / STD` |
 | C-02-3 | `User.email` is unique across the platform (DM 5.1) but `/users/new` needs sandbox-local fake colleagues; USR-004 says unique "user with this email already exists" | `data-model.md` 5.1 vs `validation.md` USR-004 | DELTA-02-2 |
-| C-02-4 | SDF version defaults: partner `V11`, advertiser `V9`, VAL 4.1 says new advertiser copies defaults from the partner | `data-model.md` 5.2, 5.3 vs `validation.md` 4.1, ADV-006 | Advertiser default stays `V9` (demo value); "Copy settings from" can override. Update VAL 4.1 wording |
+| C-02-4 | SDF version defaults: partner `V11`, advertiser `V9`, VAL 4.1 says new advertiser copies defaults from the partner | `data-model.md` 5.2, 5.3 vs `validation.md` 4.1, ADV-006 | Resolved RC-045: a new advertiser copies the partner `sdfVersion` (V11); `V9` only on the seeded demo advertisers; "Copy settings from" can override |
 | C-02-5 | `industry` exists in DM 5.3 and ENG 2.7 but not in `AdvertiserDetails` (RT 8.14), not in VAL ADV rules, not in explore 14 | `data-model.md` 5.3, `engine.md` 2.7 vs `routes.md` 8.14 | DELTA-02-6; add to RT 8.14 and to the Create form only |
 | C-02-6 | Partner `status` can be Paused (02, DM 5.2) but RT 4.5 has banners only for advertiser pause; VAL 4.1 covers advertiser only | `routes.md` 4.5; `validation.md` 4.1 | Add partner pause banner and state table; or lock partner status to Active |
 | C-02-7 | VAL, ENG and RT define no behaviour for Enhanced automation, Auto-tagging, Advanced ad serving or Product improvement beyond PRT-009; ENG has no hook | `engine.md` 4.x vs `routes.md` 8.2 | No effect in v1; optionally `ENHANCED_AUTOMATION` could raise the learning-phase speed (ENG 4.3) in a later spec |

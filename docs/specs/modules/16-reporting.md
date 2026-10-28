@@ -432,6 +432,8 @@ Order: 01, 02 in parallel with 03 (needs 01 first), then 04, 05, 06, 07, 08, 09,
 ## 8. Open questions and conflicts
 
 ### Conflicts found between specs
+
+> Resolved: every conflict below is consolidated in [`../conflicts.md`](../conflicts.md) (crosswalk table, rows `RC-nnn`). Where a proposal here and the RC row differ, the RC row wins.
 | # | Conflict | Files and sections | Proposed resolution |
 |---|---|---|---|
 | C1 | Currency: engine 9.2 stores money in three currencies (`...A`, `...P`, `...U`); data-model 5.18 and header say advertiser currency is stored and partner/USD derive at read time from `FxRate` | engine.md 8.7, 9.2; data-model.md header, 5.14, 7.1 | Read-time (Δ16-7): fixed rates make both equal; fewer columns. Update engine 9.2 |

@@ -366,6 +366,8 @@ Parallelisation note: T06-02 and T06-03 can run beside module 07 T07-02. P3-06 (
 | Q-06-10 | Whether the campaign list needs a visible "Archived" entry point (DV360 has one for IOs and LIs only under ⋮) | Filter chip only |
 
 ### 8.2 Conflicts found between specs
+
+> Resolved: every conflict below is consolidated in [`../conflicts.md`](../conflicts.md) (crosswalk table, rows `RC-nnn`). Where a proposal here and the RC row differ, the RC row wins.
 | # | Conflict | Where | Resolution proposed |
 |---|---|---|---|
 | C-06-1 | Campaign goal and KPI enum keys differ in three specs | DM 4.2 (`OFFLINE_ACTION`, `APP_INSTALL`, `VIEWABILITY_PCT`) vs VAL 1.3 (`AWARENESS`, `OFFLINE_SALES`, `APP_INSTALLS`, `VIEWABLE_PCT`) vs RT 8.4 (`BRAND_AWARENESS`, `OFFLINE_SALES`, `APP_INSTALLS`, `VIEWABLE_PCT`) | Use VAL keys (rules and tests are written against them); update DM and RT |

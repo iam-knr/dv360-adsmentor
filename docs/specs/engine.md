@@ -79,7 +79,7 @@ Rules every engine module must follow (enforced by an ESLint rule `no-restricted
 ### 1.4 Tick scheduler (Vercel Cron + server actions)
 
 ```
-Vercel Cron (every minute)  ->  GET /api/engine/cron   (auth: CRON_SECRET)
+Cron trigger (see open question 1 / RC-056)  ->  POST /api/sim/engine/tick   (auth: header x-cron-secret = CRON_SECRET; RC-027)
     1. claimDueSandboxes(limit=40)           SELECT ... FOR UPDATE SKIP LOCKED on SimClock
                                              where state='RUNNING' and window open and due>0
     2. pool(concurrency=6): runSandboxBatch(sb, maxTicks=24, deadline)
@@ -167,10 +167,21 @@ engine.estimateAudienceSize(world, targeting)     // pure; targeting panel size 
 engine.applyFault(sandboxId, FaultSpec)           // 10.1
 engine.evaluateChecks(sandboxId, checks[])        // scenario auto-check (10.4)
 engine.getTroubleshooter(liId, range, exchange?)  // reads DeliveryDiagnostic (3.6)
-engine.getAlerts(scope)                            // reads AlertEvent (3.7)
+engine.getAlerts(scope)                            // reads Alert (3.7)
+// RC-026: functions required by the module specs (pure unless marked job or tick)
+engine.forecastIo(world, ioId, budgetDeltaPct[])       // module 07: Explore budget options at +25 / +50 %
+engine.forecastPlan(world, planDraft)                  // module 04: plan reach, cost, curves, per-row outputs
+engine.crossMediaReach(world, reportDraft)             // module 04: cross-media report
+engine.instantDealForecast(world, dealDraft)           // module 13: p10 / p90 7-day impressions, recommended min bid, estimated cost
+engine.sampleImpressions(world, algorithmId, n)        // module 15: custom bidding Test step
+engine.geoDistribution(world, audienceId) / engine.audienceComposition(world, audienceId)   // module 14: Analysis pages
+engine.scheduleReview(world, creativeId, kind)         // module 12: pure helper used by the service layer
+// tick steps added by modules: advanceReviews, advanceAppeals, advanceAudiences, advanceNegotiations, advanceExperiments, advanceLiftStudies, runDueReports
 ```
 
-### 1.7 Engine-owned tables (proposed; reconcile with data-model.md)
+> Resolved RC-026: the list above includes every engine function the module specs call. The input and output shapes are in the module that owns the screen (modules 04, 07, 08 Δ-08-8 `ForecastBand`, 10 Δ-10-4, 13 section 4.1, 14, 15); this file owns the algorithm.
+
+### 1.7 Engine-owned tables (reconciled with data-model.md: RC-013, RC-021, RC-022)
 
 | Table | Grain | Purpose |
 |---|---|---|
@@ -181,7 +192,7 @@ engine.getAlerts(scope)                            // reads AlertEvent (3.7)
 | `SimDailyMetric` | LI (or ad group) x date x `sliceKind` x `sliceKey` | additive metrics by slice; `sliceKind='total'` is the day total (9.2) |
 | `DeliveryDiagnostic` | LI x date x exchange x reasonCode | funnel counts (3.5) |
 | `PendingConversion` | LI x activity x dueTick x kind | conversions scheduled with lag (6.5) |
-| `AlertEvent` | scope x code x raisedAt | Alerts tab and Intelligence panel rows (3.7) |
+| `Alert` | scope x code x raisedAt | Alerts tab and Intelligence panel rows (3.7) |
 | `ScenarioEvent`, `SimOverride` | sandbox | fault injection (10.1) |
 | `SimEditLog` | sandbox | student edits stamped with `appliedAtTick` |
 | `SimJob` | sandbox | fast-forward, reprocess, reset jobs |
@@ -260,6 +271,8 @@ Region set for India (default): `IN-DL` Delhi NCR, `IN-MH` Maharashtra, `IN-KA` 
 | Native, rewarded | per-format allocation |
 | Optimized targeting | widens the audience pass share by `x(1 + optimizedExpansion)` (default 0.35) while multiplying predicted conversion and click rates of the expansion portion by 0.9; LI learns faster (4.3) |
 
+> Resolved RC-030: audience lists combine as OR inside one group and AND between include groups of the first-party and partner section (implement `firstPartyExpr` as an intersection of group unions), OR between sections, then subtract exclusions. Lookalike expansion is `4 x (reachPct / 5)` (cap 25 %); customer match lists under 1,000 users share 0 of supply (validation AUD-022 warns at config time).
+
 All shares are looked up once per LI per cell family and cached per tick; the funnel uses the product (independence assumption) and attributes blame in a fixed order (3.4).
 
 ### 2.4 Auction price landscape per cell
@@ -325,6 +338,8 @@ Other multipliers (all in params): device price idx (computer 1.00, smartphone 0
 ### 2.7 `engine/params.json`
 
 Single JSON file, validated by a zod schema (`params/schema.ts`), loaded once, hashed (`paramsHash`) and pinned in `SimClock.paramsVersion`. A classroom or scenario can ship a **merge-patch** (`params.override.json`, RFC 7396) on top of the base; the merged result is what gets hashed. Unknown keys fail validation. Money is in the file's `currency` (INR) per 1,000 impressions unless the key says otherwise.
+
+> Resolved RC-029: the data-model `Exchange` table has about 70 rows. Each row carries `simClass`, one of the keys modelled here (the nine exchanges plus `long_tail` and `youtube`). The engine reads supply per `simClass` and splits it over the partner's enabled exchanges with `simSupplyShare` (sums to 1 over enabled rows). Enabling or disabling exchanges moves share between rows, not the total.
 
 ```json
 {
@@ -532,7 +547,7 @@ budget/pacing: r_budget, r_pace from pacing module (7.4), applied as shown in 7.
 - **Integer conservation.** Every stage converts fractional cuts to integers with the largest-remainder method per cell: `sum(cut codes) + survivors = stage input`. Property test 11.2 asserts `A = sum(filtered) + W` at every tick for every LI.
 - Stages 1 to 7 use **expected counts** (deterministic given the cell requests); stage 8's external auction and the outcome events are **sampled** with seeded draws.
 - Creative eligibility per cell: a creative `k` serves in cell `c` iff `active(k) && dv360Servable(k) && approvedOn(k, c.exchange) && fits(k, c) && !geoRestricted(k, c.region)`. `fits` uses the cell's slot-size distribution (`params.slotSizes`, e.g. 300x250 30%, 320x50 18%, 728x90 12%, 300x600 8%, 160x600 4%, 970x250 4%, 336x280 3%, 320x100 3%, other 18%) for display, and player size (small / large / HD) plus duration for video and audio. `pC` = share of slot mass covered by at least one passing creative. If several creatives qualify, the one used for each win is chosen by creative optimisation (6.2).
-- Creative review state machine (08): `PENDING -> SERVABLE | NOT_SERVABLE` at DV360 level (delay 1 to 3 sim hours after creation or edit), exchange level `PENDING -> APPROVED | DISAPPROVED` per exchange (delay 2 to 12 sim hours, seeded; 3% of new third-party tags are disapproved with a random reason unless a scenario forces the outcome). An appeal flips `DISAPPROVED -> PENDING -> APPROVED/DISAPPROVED` after 12 to 36 sim hours.
+- Creative review state machine (08): `PENDING -> SERVABLE | NOT_SERVABLE` at DV360 level (delay 1 to 3 sim hours after creation or edit), exchange level `PENDING -> APPROVED | DISAPPROVED` per exchange (delay 2 to 12 sim hours, seeded; `creativeReview.newTagDisapproveRate`, default 0.03 in free play and 0 in scenario sandboxes; a scenario may force any outcome; RC-033). An appeal flips `DISAPPROVED -> PENDING -> APPROVED/DISAPPROVED` after 12 to 36 sim hours.
 - Audiences become usable 4 sim hours after creation (combined audiences immediately); lookalike seed needs >= 1,000 users; tag-based lists grow from simulated Floodlight hits (11).
 
 ### 3.5 What is recorded: `DeliveryDiagnostic`
@@ -581,7 +596,7 @@ The banner text is "The line item is paused. Go to line item settings" for `PAUS
 
 ### 3.7 Alerts and Intelligence
 
-Alert generation is gated by Advertiser settings > Alert preferences (14): an alert that is off is never created. All alert rules run once per tick for entities touched by the tick, and results are written to `AlertEvent { scopeType, scopeId, code, severity, raisedAtTick, resolvedAtTick, payload }`. An alert is resolved when its condition clears for 2 consecutive ticks.
+Alert generation is gated by Advertiser settings > Alert preferences (14): an alert that is off is never created. All alert rules run once per tick for entities touched by the tick, and results are written to the data-model `Alert` table (RC-013): `code` below goes to `diagnosticCode`, `type` is the preference-aligned key (mapping table in module 01 section 4.8), `raisedAtTick` / `resolvedAtTick` map to `firstSeenAt` / `resolvedAt`. The UI never sets `DISMISSED` in v1. An alert is resolved when its condition clears for 2 consecutive ticks.
 
 | Code | Rule | Severity | Text template (Intelligence, plural-aware) |
 |---|---|---|---|
@@ -590,6 +605,8 @@ Alert generation is gated by Advertiser settings > Alert preferences (14): an al
 | `UNDERPACING_IO` | projected segment spend < `threshold%` x segment budget (7.6), >= 24 h since segment start | Needs attention | "{N} insertion order(s) are underpacing" |
 | `CONFLICT_IO`, `CONFLICT_LI` | any rule in 3.8 fires (alert preference "Mismatched settings") | Needs attention | "{N} insertion order(s) has/have conflicting settings which may prevent your budget from being spent" (campaign page: "1 insertion order has conflicting settings", action Investigate) |
 | `LIMITED_AUDIENCE_LI` | estimated available requests/hour for LI < `limitedAudienceMinRequestsPerHour` (default 400) and underpacing on | Needs attention | "{N} line item(s) have a very limited audience" |
+| `UNDERPERFORMING_IO` | IO KPI worse than its target by more than `alerts.underperformingPct` over the last 7 sim days (4.6); maps to `AlertType.UNDERPERFORMING` (RC-013) | Needs attention | "{N} insertion order(s) are underperforming" |
+| `RESTRICTED_AUDIENCE_LIST_LI` | LI targets an audience list flagged `restricted` by policy; maps to `AlertType.RESTRICTED_AUDIENCE_LIST` (RC-013) | Needs attention | "{N} line item(s) use restricted audience lists" |
 | `DEAL_OFFLINE` | targeted deal delivered 0 requests for 48 sim hours (and underpacing on) | Needs attention | "Deal {name} sent no inventory in the last 48 hours" |
 | `CREATIVE_REJECTED` | LI assigned creative disapproved by >= 1 exchange it can bid on | Critical if all creatives, else Needs attention | "{N} creative(s) rejected" |
 | `YT_AD_REJECTED` | YouTube ad disapproved | Critical | "{N} YouTube ad(s) rejected" |
@@ -600,6 +617,8 @@ Alert generation is gated by Advertiser settings > Alert preferences (14): an al
 Campaign Alerts page grouping (03): Critical (n) and Needs attention (n), each row expandable with the affected child list, e.g. "Line items not spending: 4 of 5 line items aren't spending in {IO}". Filter chips Budget / Creatives map to codes `{NO_SPEND*, UNDERPACING_IO, CONFLICT*, SPEND_THRESHOLD}` and `{CREATIVE_*, YT_AD_REJECTED}`.
 
 Intelligence panel "Advertiser health" returns the top rows by severity, then count, with "+N more". Optimisation suggestions (rules, one-line each): "Enable automatic budget allocation" when an IO has >= 2 active LIs with unused allowance on one and `P.*`/`B.*` filtering on another; "Raise bid, bids are below typical clearing price" when `A.BELOW_MIN_BID + E.BID_TOO_LOW > 70%` of bids; "Add creative sizes" when `C.SIZE_MISMATCH > 30%`; "Broaden targeting" when `T.* > 95%`; "Bid strategy still learning" while learning state is `LEARNING`.
+
+> Resolved RC-014: each suggestion rule below writes a data-model `Recommendation` row (type per the union list in DM 4.10, status `OPEN`; "add creative sizes" maps to `ADD_CREATIVES`). A dismissed suggestion may reappear after 7 sim days (module 11).
 
 Overview/advertiser-list pacing card (02): Underpacing / Underperforming / With rejected creatives IO counts, "Total budget at risk" and "Total flight spend" come from the same data (7.6, 4.6).
 
@@ -822,7 +841,7 @@ DV360's real shading logic is not published; this is a **simulator assumption** 
 
 ### 5.5 Deals
 
-Deal records come from the seed `DealCatalog` (Marketplace packages, instant deal sellers, student-created Private auction deals) and live in Inventory (09). A deal contributes its own supply cells with `exchangeId = 'deal:<id>'`; targeting passes through the same funnel; the Inventory source section of the LI decides whether those cells are in `A`.
+Deal records come from the seed `DealCatalog` (Marketplace packages, instant deal sellers, seed and scenario created Private auction and Preferred deals; students create only instant deals and the deals they accept through Negotiations, RC-036) and live in Inventory (09). A deal contributes its own supply cells with `exchangeId = 'deal:<id>'`; targeting passes through the same funnel; the Inventory source section of the LI decides whether those cells are in `A`.
 
 | Deal type | Supply | Auction mechanics | Delivery and pricing |
 |---|---|---|---|
@@ -1021,6 +1040,8 @@ Slices: Overall, Age, Gender, Insertion order, Line item, Device, YouTube ad vid
 | ASAP | spend as fast as possible |
 | Budget consumption | **Revenue** to the advertiser (including invoiced fees) for currency budgets; billable impressions for impression budgets (8.6) |
 
+> Resolved RC-038: the "Spent" column and budget remaining shown to students are revenue (media cost plus invoiced fees), as paced here. Media cost stays available as "Total media cost".
+
 Valid combinations (04): Flight x (Ahead | Even), Daily x (Even | ASAP). IO "Automate bid and budget" forces LIs to ASAP.
 
 ### 7.2 Which cap binds
@@ -1179,7 +1200,7 @@ Every money metric exists as **Advertiser currency**, **Partner currency**, **US
 | Video/Audio/YouTube | `videoStarts`, `videoQ1`, `videoMid`, `videoQ3`, `videoCompletions`, `skips`, `videoViews` (TrueView), `coViewedImpressions`, `companionViews`, `adSequenceImpressions`, `watchSecondsTotal` |
 | Conversions | `convPostClick`, `convPostView`, `convTotal` (weighted by counting rule and attribution credit), `convRevenue`, `cartRevenue`, `convTransactions`, `convItems`, per activity in slice kind `activity` |
 | Win/Loss | `lostTargeting`, `lostCreative`, `lostFrequency`, `lostBudget`, `lostPacing`, `lostBelowMinBid`, `lostInternal`, `lostExternalBid`, `lostExternalCreative`, `lostExternalOther`, `lostNotReported` (the funnel stage counts rolled up, same numbers as `DeliveryDiagnostic`) |
-| Money (3 currencies each: `...A`, `...P`, `...U`) | `mediaCost`, `refund`, `cpmFee1`, `cpmFee2`, `mediaFee1`(DV360 fee), `mediaFee2`, `dataCost`, `verificationCost`, `adServingCost`, `totalMediaCost`, `revenue`, `profit`, `clientCost` (revenue-based cost to client) |
+| Money (stored once in the advertiser currency; partner and USD values are derived at read time from `FxRate`, RC-025) | `mediaCost`, `refund`, `cpmFee1`, `cpmFee2`, `mediaFee1`(DV360 fee), `mediaFee2`, `dataCost`, `verificationCost`, `adServingCost`, `totalMediaCost`, `revenue`, `profit`, `clientCost` (revenue-based cost to client) |
 | Deals | `pgCommittedImpressions`, `pgShortfallImpressions`, `dealSavings` (PG saving vs open clearing price) |
 | Custom bidding | `customImpressionValue`, `customImpressionCost` |
 | Reach (snapshot, not additive) | stored per day in `SimReachSnapshot(liId, date, impressionReach, avgFreq, viewableImpressionReach, clickReach)` from engine state, see 9.5 |
@@ -1285,7 +1306,7 @@ type FaultSpec =
 ### 10.2 Reset sandbox
 
 `resetSandbox(sandboxId, { toScenarioId, keepEntities, newSeed? })`:
-1. set clock `LOCKED`; delete rows of the sandbox from `SimHourlyMetric`, `SimDailyMetric`, `DeliveryDiagnostic`, `PendingConversion`, `AlertEvent`, `SimState`, `SimSnapshot`, `SimTickLog`, `SimEditLog`, `SimOverride`, lift/experiment results (chunked deletes, 50k rows per statement, partition-friendly keys beginning with `sandboxId`);
+1. set clock `LOCKED`; delete rows of the sandbox from `SimHourlyMetric`, `SimDailyMetric`, `DeliveryDiagnostic`, `PendingConversion`, `Alert`, `SimState`, `SimSnapshot`, `SimTickLog`, `SimEditLog`, `SimOverride`, lift/experiment results (chunked deletes, 50k rows per statement, partition-friendly keys beginning with `sandboxId`);
 2. if `keepEntities = false`: restore the entity tree from the scenario's seed template (seed generator, P3-05);
 3. `tickIndex = 0`, `simStart` from the scenario, seeds as chosen (`newSeed` false keeps the same market so the student can retry and compare);
 4. write `SimJob` result; clock returns to `PAUSED` until the instructor starts it.
@@ -1344,7 +1365,7 @@ With `shared-market` seeds the instructor can clone a student's sandbox into a h
 | No spend when not live | paused, draft, out-of-flight, parent-paused entities have zero funnel rows and zero spend |
 | Frequency cap | simulated average exposures per reached user in the window <= cap (+ rounding); capped share grows monotonically within the window |
 | Targeting monotonicity | adding an include dimension never raises `A`'s passing share; adding an exclude never raises it; removing all targeting passes 100% of format supply |
-| Currency reconciliation | for each row `abs(A_micros / fx - U_micros) <= 1 micro` rounding; sums over slices equal the `total` row (every slice kind reconciles with total) |
+| Currency reconciliation | for each derived row `abs(A_micros / fx - U_micros) <= 1 micro` rounding (derived at read time); sums over slices equal the `total` row (every slice kind reconciles with total) |
 | Dimension allocation | sum over a derived dimension equals the parent slice for every metric |
 | Counting methods | `unique <= standard`, `perSession <= standard`, `unique <= perSession` rarely violated only by rounding; transactions revenue = `raw * AOV` |
 | Window rule | conversions with lag > window never counted |
@@ -1571,7 +1592,7 @@ export function dueTicks(c: SimClock, realNow: Date): { due: number; remainderMs
 
 ## 12. Open questions
 
-1. **Cron frequency on Vercel.** Hobby plans only allow daily cron; per-minute needs Pro. If the project stays on Hobby, use an external trigger (GitHub Actions schedule at 5 min, or a free uptime pinger hitting `/api/engine/cron`) plus lazy `ensureCaughtUp` on page loads. Needs a decision before P3-08.
+1. **Cron frequency on Vercel.** Hobby plans only allow daily cron; per-minute needs Pro. If the project stays on Hobby, use an external trigger (GitHub Actions schedule at 5 min, or a free uptime pinger hitting `/api/sim/engine/tick`) plus lazy `ensureCaughtUp` on page loads. Needs a decision before P3-08 (OWNER decision RC-056; default: Vercel Pro cron if available, else GitHub Actions every 5 minutes plus lazy `ensureCaughtUp`).
 2. **Which budget unit does DV360 pace on?** The spec paces on advertiser **revenue** (incl. invoiced fees). If fees are excluded in real DV360 for some fee types, change 7.1 and 8.6 only.
 3. **First-price shading.** Real DV360 shading is not public; 5.4 is a simulator assumption. Should fixed bids be shaded or pay full bid (current choice: pay full), so students learn automated bidding saves cost?
 4. **Conversion date basis.** Default is `conversion_date`. Verify against DV360 reports (or public docs) whether Date for conversion metrics means impression date or conversion date, then set the default.

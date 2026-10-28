@@ -517,9 +517,11 @@ Panels:
 States: collapsed; open; loading (skeleton rows); empty; error ("Couldn't load. Retry").
 
 ```ts
-interface DvRightRailProps { available: ('advisor' | 'help' | 'intelligence')[]; open?: 'advisor' | 'help' | 'intelligence' | null; onChange(p: DvRightRailProps['open']): void }
+interface DvRightRailProps { available: ('advisor' | 'help' | 'intelligence' | 'exercise')[]; open?: 'advisor' | 'help' | 'intelligence' | 'exercise' | null; onChange(p: DvRightRailProps['open']): void }
 interface HealthRow { id: string; severity: 'error' | 'warning' | 'suggestion'; text: string; onInvestigate(): void; onHistory?(): void }
 ```
+
+> Resolved RC-051: `'exercise'` is the fourth rail panel (RT 4.6, module 18). It is available only while a scenario attempt is active.
 
 ### 2.4 Data grid (`DvGrid`)
 

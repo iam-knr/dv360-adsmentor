@@ -377,6 +377,8 @@ Rules: `ADV-027` (proposed) country required for political, gambling and electio
 
 ### 8.2 Conflicts and gaps between specs
 
+> Resolved: every conflict below is consolidated in [`../conflicts.md`](../conflicts.md) (crosswalk table, rows `RC-nnn`). Where a proposal here and the RC row differ, the RC row wins.
+
 | # | Conflict | Where | Proposed resolution |
 |---|---|---|---|
 | C-03-1 | PROJECT.md 5.11 lists Ad serving (CM360 link), Creative settings (OBA icon, Dynamic creatives), Floodlight config, Linked accounts, Billing, Targeting defaults, Brand safety defaults, Data access / Integrations, and "industry". Explore 14 and RT 3.11 have five pages with a different content split (Targeting rules replaces "Targeting defaults" and "Brand safety defaults"; no OBA icon, Dynamic creatives or Billing) | `PROJECT.md` 5.11 vs `docs/explore/14` and `routes.md` 3.11 | Follow explore 14. Update PROJECT.md 5.11 |

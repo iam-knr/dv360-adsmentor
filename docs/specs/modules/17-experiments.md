@@ -270,6 +270,8 @@ Engine deltas requested: Δ17-14 explicit tick modules `advanceExperiments` (SCH
 ## 8. Open questions and conflicts
 
 ### Conflicts found between specs
+
+> Resolved: every conflict below is consolidated in [`../conflicts.md`](../conflicts.md) (crosswalk table, rows `RC-nnn`). Where a proposal here and the RC row differ, the RC row wins.
 | # | Conflict | Files and sections | Proposed resolution |
 |---|---|---|---|
 | C1 | A/B statuses: data-model `ACTIVE/COMPLETED`; validation 4.8 adds `SCHEDULED` `[SIM]`; validation applicability table says "Draft: - (scheduled, 4.8)". Lift statuses: data-model `ELIGIBLE, NOT_ELIGIBLE, IN_PROGRESS, COMPLETE, PAUSED`; validation 4.8 adds `ENDED` | data-model.md 4.9; validation.md 4.0, 4.8 | Δ17-1: add both values |

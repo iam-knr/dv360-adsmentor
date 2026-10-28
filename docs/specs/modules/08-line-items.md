@@ -524,6 +524,8 @@ Troubleshooter / service:
 | Q-08-11 | Is `OPTIMIZED_TARGETING` allowed with Fixed bid, Audio, CTV (VAL Q25) | allowed except Audio / DG / DOOH |
 
 ### 8.2 Conflicts between specs
+
+> Resolved: every conflict below is consolidated in [`../conflicts.md`](../conflicts.md) (crosswalk table, rows `RC-nnn`). Where a proposal here and the RC row differ, the RC row wins.
 | # | Conflict | Where | Proposal |
 |---|---|---|---|
 | C-08-1 | LI type keys differ; `YT_ON_CTV` missing in DM and RT | see Δ-08-1 | VAL keys |

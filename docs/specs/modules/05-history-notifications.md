@@ -410,6 +410,8 @@ Order: 05-T1 and 05-T2 first (P3 foundation, blocks P3-06), then T3 incrementall
 
 ### 8.2 Conflicts and gaps between specs
 
+> Resolved: every conflict below is consolidated in [`../conflicts.md`](../conflicts.md) (crosswalk table, rows `RC-nnn`). Where a proposal here and the RC row differ, the RC row wins.
+
 | # | Conflict | Where | Proposed resolution |
 |---|---|---|---|
 | C-05-1 | Overlap with module 01: bell and `dismissNotification` appear in both. | `routes.md` 8.1 vs this file | Service and tables here (4.7); UI in module 01. Module 01 4.5 calls into this service |

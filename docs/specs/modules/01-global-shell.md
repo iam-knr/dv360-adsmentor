@@ -477,6 +477,8 @@ Order for the cloud sessions: T1, T2, T3, T4, T5, T6 (all P3), then T7, T8, T9, 
 
 ### 8.2 Conflicts and gaps found between specs
 
+> Resolved: every conflict below is consolidated in [`../conflicts.md`](../conflicts.md) (crosswalk table, rows `RC-nnn`). Where a proposal here and the RC row differ, the RC row wins.
+
 | # | Conflict | Where | Proposed resolution |
 |---|---|---|---|
 | C-01-1 | DM 6.3 says "No route may write tenant rows without `withChangeLog`" (lint rule), but workspaces, pins, recent views, prefs and advisor messages are tenant-scoped UI state that DV360 never logs | `data-model.md` 6.3 vs `data-model.md` 8 Q28 | Add an allow-list `UI_STATE_TABLES` to the lint rule and the scan test |

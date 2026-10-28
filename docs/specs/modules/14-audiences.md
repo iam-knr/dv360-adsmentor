@@ -288,6 +288,8 @@ Engine deltas requested:
 ## 8. Open questions and conflicts
 
 ### Conflicts found between specs
+
+> Resolved: every conflict below is consolidated in [`../conflicts.md`](../conflicts.md) (crosswalk table, rows `RC-nnn`). Where a proposal here and the RC row differ, the RC row wins.
 | # | Conflict | Files and sections | Proposed resolution |
 |---|---|---|---|
 | C1 | State name: data-model `AudienceStatus.PROCESSING`, validation 4.6 `POPULATING`; data-model also has `INACTIVE` unused by validation | data-model.md 4.7; validation.md 4.6 | One name: `PROCESSING` in DB. Validation constants map `POPULATING`→`PROCESSING`. `INACTIVE` documented for empty customer match |

@@ -488,6 +488,8 @@ Critical path for the 5 Nov credit window: M18-01..04 are P3-02 and must land in
 ## 8. Open questions and conflicts
 
 ### Conflicts found between specs
+
+> Resolved: every conflict below is consolidated in [`../conflicts.md`](../conflicts.md) (crosswalk table, rows `RC-nnn`). Where a proposal here and the RC row differ, the RC row wins.
 | # | Conflict | Files and sections | Proposed resolution |
 |---|---|---|---|
 | C1 | Naming of the user role field: data-model `User.appRole` (`STUDENT/INSTRUCTOR/ADMIN`); routes `User.role` lowercase `student/instructor/admin`; DV360 role field `UserAccessGrant.role` vs routes `UserAccess.level` | data-model.md 5.1; routes.md section 2, 8.19 | DB = data-model; session payload lowercase; map in one place (`lib/auth/roles.ts`) |

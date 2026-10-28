@@ -37,7 +37,7 @@
 3. **Locked fields** (padlock or greyed) are not sent to the server as changes. A forged change is rejected with the field's `...-LOCK` rule (severity E, message `[SIM] This setting can't be changed after it is created.` unless the row gives a specific text).
 4. **Draft saves still run all `E` rules.** `A` rules add extra checks when the entity is set to Active. A Draft IO/LI can be saved only if it is structurally valid, but it never delivers.
 5. **Validation never reads from the network.** The caller builds a `ValidationContext` first (section 6). Rules are pure and synchronous, so the same function runs in the browser form, in a server action, in SDF import and in the engine's alert generator.
-6. **Money**: stored as integer minor units plus ISO currency of the advertiser. "Greater than 0" means `> 0` in minor units. Percentages are decimals with 2 places.
+6. **Money**: stored as integer minor units plus ISO currency of the advertiser. "Greater than 0" means `> 0` in minor units. Percentages are decimals with 2 places. The wire (RT `Money`) uses major units; services convert to minor units at the boundary before calling a rule (RC-019).
 
 ### 0.3 Demo vs. public-docs policy
 Anything marked `(from public docs)` is a best-effort reproduction of real DV360 behaviour. The instructor team should confirm each against a full-access account during the SOP-3 fidelity review. Open items are numbered `Q1..Qn` in section 7.
@@ -73,6 +73,11 @@ Anything marked `(from public docs)` is a best-effort reproduction of real DV360
 | `AB` `LS` | A/B tests, lift studies | 18 |
 | `BLK` | Bulk actions, SDF | 15, 01 |
 | `PLN` `RPT` `USR` | Plans and cross-media reach, reports, users | 13, 12, 02 |
+| `SHL` | Global shell: search, workspaces, pins, notes entry points (domain registered by RC-053; IDs `SHL-010..015` live in module 01) | 01 |
+| `HIS` | History pages, notes, notifications (IDs `HIS-001..020` live in module 05) | 16 |
+| `SIM` | Simulator rules: auth, access windows, clock, scenarios (IDs `SIM-001..015` live in module 18) | none |
+
+> Resolved RC-053: rule IDs proposed in module files (`ADV-021..028`, `PRT-011..015`, `USR-010..011`, `PLN-020..031`, `CRE-100..104`, `INV-030..042`, `AUD-023..025` and `AUD-110..114`, `CB-012`, `FL-030..033`, `BLK-020..035`, `RPT-010..020`, `AB-026..029`, `LS-018..019`, `SHL`, `HIS`, `SIM`) are adopted; the module file is their definition until the P3 validation scaffold copies them here. `LS-017` duplicates `LS-002` and is dropped.
 
 ### 1.2 Message catalogue (verbatim strings used by more than one rule)
 These are the exact strings. Code keeps them in `lib/validation/messages.ts` as `MSG.<KEY>`; no rule may inline a string that exists here.
@@ -188,7 +193,7 @@ Module rules reuse these through helpers in `lib/validation/primitives.ts`. A mo
 | ADV-003 | advertiser.website | not a valid URL | E | `[SIM] Enter a valid URL.` | B, S | 14 |
 | ADV-004 | advertiser.currency, advertiser.timeZone | UI: locked after creation; change rejected | E | `[SIM] This setting can't be changed after it is created.` | S | 14 |
 | ADV-005 | advertiser.status | not `Active` or `Paused` (Scheduled for deletion has its own action, ADV-010) | E | `[SIM] Choose a status.` | S | 14 |
-| ADV-006 | advertiser.sdfVersion | not in `9, 9.1, 9.2, 10, 10.1, 11`; default `9` | E | `[SIM] Choose a supported SDF version.` | S | 14 |
+| ADV-006 | advertiser.sdfVersion | not in `9, 9.1, 9.2, 10, 10.1, 11`; default `9` on seeded demo advertisers, a new advertiser copies the partner value (RC-045) | E | `[SIM] Choose a supported SDF version.` | S | 14 |
 | ADV-007 | advertiser.sdfAdminEmail | non-empty and not an email | E | `[SIM] Enter a valid email address.` | B, S | 14 |
 | ADV-008 | advertiser.integrationCode | longer than 500 bytes | E | `[SIM] Use {max} characters or fewer.` | S | (from public docs) |
 | ADV-009 | advertiser.status = Paused | advertiser is paused: banner on every advertiser page, nothing serves | I | `This advertiser is currently paused. None of its campaigns or deals are serving.` | X | 01 |
@@ -197,7 +202,7 @@ Module rules reuse these through helpers in `lib/validation/primitives.ts`. A mo
 | ADV-012 | advertiser.demandGenFloodlightOptimization | toggled off while Demand Gen line items exist | W | `[SIM] {n} Demand Gen line items will stop delivering until this is turned back on.` | X | 14, 05 |
 | ADV-013 | advertiser.businessName | longer than 25 | E | `[SIM] Use 25 characters or fewer.` | B, S | 14 |
 | ADV-014 | advertiser.authorizations.productImprovement | unchecked while data-processing terms are not accepted | E | `[SIM] Product improvement can only be turned off after the data processing terms are accepted.` | S | 14 |
-| ADV-015 | advertiser.alerts.underpacing.thresholdPct | outside 1-100 (default 90) | E | `[SIM] Enter a number between 0 and 100.` | B, S | 14 |
+| ADV-015 | advertiser.alerts.underpacing.thresholdPct | outside 1-100 (default 90) | E | `[SIM] Enter a number between 1 and 100.` (RC-046) | B, S | 14 |
 | ADV-016 | advertiser.alerts.spendThreshold.amount | negative; only editable when the toggle is on | E | `[SIM] Enter a number that is 0 or greater.` | B, S | 14 |
 | ADV-017 | advertiser.thirdParty.iasClientId | not a non-negative integer (default 0) | E | `[SIM] Enter a whole number.` | B, S | 14 |
 | ADV-018 | advertiser.thirdParty.rateCards[].affirmed | rate card row ticked without affirming terms checkbox | E | `[SIM] Confirm the terms to use this rate card.` | S | 14 |
@@ -275,7 +280,7 @@ Step 1 rules (type and objective) run when "Next" is pressed. Step 2 rules run o
 | IO-043 | io.kpi | type `DOOH`: KPI is N/A and hidden | I | (none) | X | 04 |
 | IO-050 | io.optimization.mode | not `IO_AUTOMATED` / `LI_CONTROLLED`. Default `IO_AUTOMATED` | E | `[SIM] Choose how to optimize.` | S | 04 |
 | IO-051 | io.optimization.mode | mode `IO_AUTOMATED`: info text under the control | I | `Your insertion order may only contain cross-exchange display, video and Connected TV line items` | X | 04 |
-| IO-052 | io.lineItems[].type | mode `IO_AUTOMATED` and a line item of a type other than `DISPLAY`, `VIDEO`, `CTV` is added (or exists when switching to automated) | E | `[SIM] Line items of this type can't be added to an insertion order that automates bid and budget.` | X | 04, 05 |
+| IO-052 | io.lineItems[].type | mode `IO_AUTOMATED` and a line item of a type other than `DISPLAY`, `VIDEO`, `CTV` is added (or exists when switching to automated); `MOBILE_APP_INSTALL`, `ADS_IN_MOBILE_APPS`, `YT_*`, `DEMAND_GEN` and `DOOH_*` count as other types (RC-041) | E | `[SIM] Line items of this type can't be added to an insertion order that automates bid and budget.` | X | 04, 05 |
 | IO-053 | io.optimization.mode | switching to `IO_AUTOMATED` while line items exist: their pacing becomes ASAP and bid strategy is taken from the IO (MX-05) | I | `[SIM] Line item bid strategy and pacing are managed by this insertion order.` | X | 04, 05 |
 | IO-054 | io.optimization.optimizedTowards | not in the objective's bid strategy list (MX-04). Default for Brand awareness: `MAX_VIEWABLE_IMPRESSIONS` | E | `[SIM] Choose a bid strategy that is available for this objective.` | X | 04 |
 | IO-055 | io.optimization.autoBudgetAllocation | ticked while mode is `IO_AUTOMATED` (option sits under "Additional options" of line-item control) | E | `[SIM] Automatic budget allocation is only available when bid and budget are controlled at the line item level.` | X | 04, (from public docs) |
@@ -309,7 +314,7 @@ Step 1 rules (type and objective) run when "Next" is pressed. Step 2 rules run o
 | LI-006 | li.type | type not allowed by the IO objective (MX-03). UI: card greyed with an info icon | E | `{Type} line items aren't compatible with your insertion order's objective setting.` | X | 05 |
 | LI-007 | li.type | type not allowed by IO type (MX-02: `DOOH` IO allows only `DOOH_DISPLAY`, `DOOH_VIDEO`; `CTV_OTT` IO allows only `CTV`, `YT_ON_CTV`; `STANDARD` IO allows none of those three) | E | `{Type} line items aren't compatible with your insertion order's objective setting.` ‡ (same wording) | X | 04, 05 |
 | LI-008 | li.ioId | IO with `IO_AUTOMATED` mode and type not in `DISPLAY`, `VIDEO`, `CTV` | E | see IO-052 | X | 04 |
-| LI-010 | li.inventory.quality | not one of `AUTHORIZED_DIRECT`, `AUTHORIZED_DIRECT_AND_RESELLERS` (default), `AUTHORIZED_AND_NON_PARTICIPATING` | E | `[SIM] Choose an inventory quality option.` | S | 05 |
+| LI-010 | li.inventory.quality | not one of `AUTHORIZED_DIRECT_SELLERS`, `AUTHORIZED_DIRECT_SELLERS_AND_RESELLERS` (default), `AUTHORIZED_AND_NON_PARTICIPATING` | E | `[SIM] Choose an inventory quality option.` | S | 05 |
 | LI-011 | li.inventory | no public exchange, no deal/package and no deal group selected | E | `[SIM] Select at least one inventory source.` | S | (from public docs), 05 |
 | LI-012 | li.inventory.exchanges[] | exchange is not enabled at partner level (PRT exchanges) | E | `[SIM] This exchange isn't enabled for the partner.` | S | 02, 05 |
 | LI-013 | li.inventory.deals[] | deal not accessible to this advertiser, or deal exchange not enabled, or deal Archived/Not servable | E | `[SIM] This deal isn't available to this advertiser.` | S | 09 |
@@ -425,7 +430,7 @@ Step 1 fields are final; step 2 holds the details form. YouTube audio mirrors vi
 | LI-YT-002 | li.optimization | not `REACH` (default), `TARGET_FREQUENCY`, `TRUEVIEW_VIEWS`, `AD_SEQUENCE` | E | `A selection is required` ‡ | S | 06 |
 | LI-YT-003 | li.adFormatChoice | `REACH`: not `EFFICIENT` (default) / `NON_SKIPPABLE`. `TARGET_FREQUENCY`: not `ALL_FORMATS` (default) / `IN_STREAM_ONLY`. `TRUEVIEW_VIEWS` and `AD_SEQUENCE`: no choice shown (matrix MX-07) | E | `A selection is required` ‡ | S | 06 |
 | LI-YT-004 | li.subtype | edit: subtype (optimization + format choice) differs from the stored one (read-only after step 1) | E | `[SIM] This setting can't be changed after it is created.` | S | 06 |
-| LI-YT-005 | li.adFormats | subtype `EFFICIENT_REACH` or `TARGET_FREQUENCY_ALL`: none of In-stream, In-feed, Shorts ticked (all ticked on new) | E | `[SIM] Select at least one ad format.` | S | 06 |
+| LI-YT-005 | li.adFormats | subtype `EFFICIENT_REACH` or `TARGET_FREQUENCY`: none of In-stream, In-feed, Shorts ticked (all ticked on new) | E | `[SIM] Select at least one ad format.` | S | 06 |
 | LI-YT-006 | li.budget.amount | line item budget "Required" when Daily or Flight chosen (new default Daily) | E | `Enter a value` ‡ | B, S | 06 |
 | LI-YT-007 | li.budget.amount | `<= 0` | E | `Enter a number greater than 0` ‡ | B, S | 06 |
 | LI-YT-008 | li.pacing | YouTube pacing: new default `DAILY` + `EVEN`. Note shown: "Actual spend on a given day may vary." | I | `Actual spend on a given day may vary.` | X | 06 |
@@ -615,7 +620,7 @@ Create forms for upload, native, video, audio and VAST were not visible (17). Ru
 | AUD-031 | audience.combined | same audience in Include and Exclude | E | `[SIM] An item can't be both included and excluded.` ‡ | S | 10 |
 | AUD-040 | audience.lookalike.seeds | zero seeds, or more than 10 first-party lists ("Up to 10 first-party lists can be selected.") | E | `[SIM] Select between 1 and 10 first-party lists.` | S | 10 |
 | AUD-041 | audience.lookalike.seeds[] | any seed list has fewer than 1,000 active users | E | `The first-party list must have a minimum of 1,000 active users.` | S | 10 |
-| AUD-042 | audience.lookalike.reachPct | outside 2.5 to 10 (slider "Least reach (2.5%)" to "Most reach (10%)", default middle) | E | `[SIM] Choose a reach between 2.5% and 10%.` | S | 10 |
+| AUD-042 | audience.lookalike.reachPct | not one of 2.5, 5, 7.5, 10 (slider "Least reach (2.5%)" to "Most reach (10%)", default 5) (RC-008) | E | `[SIM] Choose a reach between 2.5% and 10%.` | S | 10 |
 | AUD-043 | audience.lookalike.geo | no country or region chosen | E | `[SIM] Choose at least one country or region.` | S | 10 |
 | AUD-044 | audience.lookalike | **Save** disabled until AUD-001, 040, 041, 043 pass | E | (button disabled) | X | 10 |
 | AUD-050 | audience.customAffinity | no interest, URL or app entered | E | `[SIM] Add at least one interest, URL or app.` | S | 10 |
@@ -686,13 +691,13 @@ Create forms for upload, native, video, audio and VAST were not visible (17). Ru
 | FL-023 | floodlightGroup (Google tag tab) | read-only mode for users without write access | I | (chip "Read-only mode") | n/a | 17 |
 | CB-001 | customBidding.name | empty | E | `Enter a value` ‡ | B, S | 11 |
 | CB-002 | customBidding.objective | not `BRAND_AWARENESS`, `CLICKS`, `CONVERSIONS`, `CUSTOM` | E | `A selection is required` ‡ | S | 11 |
-| CB-003 | customBidding.source | `SCRIPT` allowed only when objective is `CUSTOM`; other objectives use `RULES` | E | `[SIM] Scripts are only available for the Custom objective.` | X | 11 |
+| CB-003 | customBidding.source | `SCRIPT` allowed only when objective is `CUSTOM`; other objectives use `RULES` | E | `[SIM] Scripts are only available for the Custom objective.` | X | 11 [RC-037: dormant in v1, the Script card is disabled] |
 | CB-004 | customBidding.rules | zero rules ("Match ANY of the following") | E | `At least 1 rule is required` | S | 11 |
 | CB-005 | customBidding.rules[].score | score missing or not a number (default 1) | E | `Enter a value` ‡ | B, S | 11 |
 | CB-006 | customBidding.multipliers | more than 4 | E | `[SIM] You can add up to 4 multipliers.` | S | 11 |
 | CB-007 | customBidding.multipliers[].type | not one of Ad position, Creative dimension, Day and time, Device type, Genre, Delivery type, Duration; or a type used twice | E | `[SIM] Each multiplier can only be used once.` | X | 11 |
 | CB-008 | customBidding.wizard | **Save** (step 3) reachable only after **Test** (step 2) completed | E | (stepper blocks) | X | 11 |
-| CB-009 | customBidding.script | `SCRIPT` source and script does not compile | E | `[SIM] The script has errors. Fix them and test again.` | S | (from public docs) |
+| CB-009 | customBidding.script | `SCRIPT` source and script does not compile | E | `[SIM] The script has errors. Fix them and test again.` | S | (from public docs) [RC-037: dormant in v1] |
 | CB-010 | customBidding.status | algorithm `TRAINING` or `NOT_READY` used by an active LI | W | `[SIM] This algorithm is still training, so bids use a fallback until it is ready.` | X | 11 |
 | CB-011 | customBidding.status | algorithm `SUSPENDED` used by an active LI | E | see LI-047 | X | 11 |
 
@@ -782,7 +787,7 @@ Public docs fill what the create form could not show under Limited Access (18 wa
 | USR-001 | user.name, user.email | empty / not an email | E | `Enter a value` ‡ / `[SIM] Enter a valid email address.` | B, S | 02 |
 | USR-002 | user.access | zero partners or advertisers added (Save disabled) | E | `You can give users different roles for each advertiser or partner they have access to` (empty state) | S | 02 |
 | USR-003 | user.access[].role | row without a role | E | `A selection is required` ‡ | S | 02 |
-| USR-004 | user.email | email already belongs to a user | E | `[SIM] A user with this email already exists.` | S | (from public docs) |
+| USR-004 | user.email | email already belongs to a user | E | `[SIM] A user with this email already exists.` | S | (from public docs) [RC-016: uniqueness applies to login users; simulated colleagues created on /users/new are stored as sandbox-local `SandboxContact` rows] |
 
 ---
 
@@ -884,7 +889,7 @@ Target input per strategy (consumed by LI-043):
 **IO automation forcing line item pacing**
 | IO `optimization.mode` | LI `pacing.type` | LI `bid` | LI `pacing.period` |
 |---|---|---|---|
-| `IO_AUTOMATED` | forced `ASAP`, control locked (05) | forced to the IO strategy (LI-044) | not selectable; stored as `FLIGHT` (Q3) |
+| `IO_AUTOMATED` | forced `ASAP`, control locked (05) | forced to the IO strategy (LI-044) | not selectable; stored as `FLIGHT` and locked (Q3, RC-039) |
 | `LI_CONTROLLED` | free per the table above | free per MX-04 | free |
 
 Consumed by IO-031, LI-034, LI-035, LI-036, IO-053.
@@ -914,8 +919,8 @@ Subtype = optimization + ad format choice, fixed after step 1. `(from public doc
 |---|---|---|---|---|---|
 | `EFFICIENT_REACH` | Reach / Efficient ad formats | In-stream (skippable, bumper), In-feed, Shorts; new LI all ticked; at least 1 | `MAX_REACH` locked | `TARGET_CPM` required (demo showed Target CPM ₹75.00) | exposure cap, view cap |
 | `NON_SKIPPABLE_REACH` | Reach / Non-skippable ad formats (mix of non-skippable 5-30 s) | non-skippable in-stream only (no choice) | `MAX_REACH` `(from public docs)` | `TARGET_CPM` `(from public docs)` | exposure cap, view cap |
-| `TARGET_FREQUENCY_ALL` | Target frequency / bumper, skippable, in-feed or Shorts | In-stream, In-feed, Shorts; at least 1 | `TARGET_CPM` `(from public docs)` | `TARGET_CPM` | target frequency (required, LI-YT-012) |
-| `TARGET_FREQUENCY_INSTREAM` | Target frequency / only in-stream (skippable, bumper, non-skippable up to 15 s) | in-stream only | `TARGET_CPM` `(from public docs)` | `TARGET_CPM` | target frequency (required) |
+| `TARGET_FREQUENCY` | Target frequency / bumper, skippable, in-feed or Shorts | In-stream, In-feed, Shorts; at least 1 | `TARGET_CPM` `(from public docs)` | `TARGET_CPM` | target frequency (required, LI-YT-012) |
+| `TARGET_FREQUENCY_IN_STREAM` | Target frequency / only in-stream (skippable, bumper, non-skippable up to 15 s) | in-stream only | `TARGET_CPM` `(from public docs)` | `TARGET_CPM` | target frequency (required) |
 | `TRUEVIEW_VIEWS` | TrueView views (no format choice) | in-stream skippable + in-feed `(from public docs)` | `MAX_CPV` `(from public docs)` | `MAX_CPV` | exposure cap, view cap |
 | `AD_SEQUENCE` | Ad sequence (under "Show more"; bumper, skippable, non-skippable) | per sequence step | `TARGET_CPM` `(from public docs)`, Q6 | `TARGET_CPM` | exposure cap |
 
@@ -985,6 +990,8 @@ These are simulator defaults chosen to be realistic, not claims about DV360's ex
 Columns: DSP `DISPLAY`, VID `VIDEO`, CTV `CTV`, AUD `AUDIO`, MAI `MOBILE_APP_INSTALL`, AIA `ADS_IN_MOBILE_APPS`, YTLI `YT_VIDEO`/`YT_AUDIO` line item level, YTAG YouTube ad group level, DG `DEMAND_GEN`, DOOH `DOOH_*`.
 Display column fully observed (07). YTLI and YTAG observed (06). Every other column is `(from public docs)` plus D-V1.
 
+> Resolved RC-011: the column labels here (`INVENTORY_SOURCES`, `APPS_URLS`, `AUDIENCE_LISTS`, `KEYWORD_EXCLUSIONS`, `LIVESTREAM`, `DOOH_VENUE_SCREEN`) are matrix labels. `lib/validation/constants/targeting-availability.ts` maps them to the DM `TargetingDimension` keys (`INVENTORY_SOURCE`, `APPS_AND_URLS`, `AUDIENCE_LIST`, `KEYWORD` with mode EXCLUDE, `CONTENT_STREAM_TYPE`, `DOOH_VENUE`) and tests the mapping.
+
 | Dimension key | DSP | VID | CTV | AUD | MAI | AIA | YTLI | YTAG | DG | DOOH |
 |---|---|---|---|---|---|---|---|---|---|---|
 | `INVENTORY_SOURCES` (exchanges, deals, groups, quality) | Y | Y | Y | Y | Y | Y | L (YouTube, Google TV, Video partners) | N | N | Y (DOOH exchanges only) |
@@ -1043,7 +1050,7 @@ Exchange counts used for defaults (05, 02): Display 45 of the partner's 54 enabl
 |---|---|
 | Availability delay | 4 sim-hours after creation; Combined audiences immediate (AUD-060, TGT-103) |
 | Lookalike seed lists | 1 to 10 first-party lists; each ≥ 1,000 active users (AUD-040, AUD-041) |
-| Lookalike reach | 2.5% to 10% (default middle) (AUD-042) |
+| Lookalike reach | slider stops 2.5%, 5%, 7.5%, 10% (default 5%) (AUD-042, RC-008) |
 | Lookalike usable in | `YT_VIDEO`, `YT_AUDIO`, `DEMAND_GEN` (TGT-105) |
 | Customer match minimum | 1,000 matched users to deliver `(from public docs)` (AUD-022) |
 | Small-list warning | display size bucket `< 1K` (TGT-102) |
@@ -1065,6 +1072,8 @@ Exchange counts used for defaults (05, 02): Display 45 of the partner's 54 enabl
 | Required media cost | observed example `₹470,000.00` for Brand lift (INR partner); `required = base[liftType] * strengthFactor * fx(currency)` with `strengthFactor` STANDARD 1, ENHANCED 3. `base[BRAND_LIFT] = 470000 INR`, `base[SEARCH_LIFT]` unknown, Q16 |
 | Eligibility | `Eligible` iff measurableLiCount ≥ 1 and `yourMediaCost >= required`; otherwise `Not eligible` and the list action becomes **Review & fix** |
 | Report slices | Brand/YouTube & Demand Gen tab: Overall, Age, Gender, Insertion order, Line item, Device, YouTube ad video. Cross exchange tab: Overall, Age, Gender, Insertion order, Line item, Device, Creative, Publisher domain, Publisher vertical. Lift views: Absolute, Relative, Headroom |
+
+> Resolved RC-034: the required media cost values here are generated from the engine parameter `lift.requiredMediaCost` (ENG 6.8); do not hard-code the numbers in `lib/validation`.
 
 ### MX-14 A/B test constants (18)
 | Item | Constant |
@@ -1135,6 +1144,8 @@ Exchange counts used for defaults (05, 02): Display 45 of the partner's 54 enabl
 ### MX-17 Partner cost fee types (04)
 CPM fee and media fee "Type" options: `Default`, `Third-Party Ad Server`, `DoubleVerify`, `Adsafe`, `AdXpose`, `Vizu`, `Aggregate Knowledge`, `Teracent`, `Evidon`, `Agency Trading Desk Fee`, `ShopLocal`, `TrustMetrics`, `Integral Ad Science Video`, `MOAT Video`, `Scope3`, `Custom Fee 1`..`Custom Fee 5`. Media fee 1 is always the locked "Automated cost - Display & Video 360 Fee" (invoiced). Amount: CPM fee in money, media fee in percent. In the simulator these are renamed to fictional vendor labels (R5) but keep the count and structure.
 
+> Resolved RC-046: third-party rate-card vendors (DM 5.2 `ThirdPartyRateCard`) are extra fee types in this list and in IO and LI partner costs; the engine reads fees from `partnerCosts` only (ENG 8.2).
+
 ### MX-18 Date rules (03, 04, 05, 18)
 | Entity | Start | End | Locked after start | Order |
 |---|---|---|---|---|
@@ -1181,7 +1192,7 @@ Past dates: not accepted as a new start date on create (CMP-034, LI-024) `(from 
 | Line item | S | S | S | S | D | - |
 | Ad group / Ad | - | S | S | - (deleted via trash) | - | - |
 | Creative | - | S | S | S | - | - |
-| Audience | - (populating, 4.6) | S | - | S | - | - |
+| Audience | - (processing, 4.6) | S | - | S | - | - |
 | Deal | S | S | S | S | S | - |
 | A/B test | - (scheduled, 4.8) | S | - | - | S | - |
 | Lift study | - | S (in progress) | S | - | S | - |
@@ -1261,13 +1272,15 @@ Review state
 ### 4.6 Audience (10)
 | From | To | Who | Trigger | Guard | Side effects |
 |---|---|---|---|---|---|
-| (create) | `POPULATING` | `ADMIN`, `STANDARD` | Save | AUD rules | available in 4 sim-hours (AUD-060); list shows `< 1K` until filled |
+| (create) | `PROCESSING` | `ADMIN`, `STANDARD` | Save | AUD rules | available in 4 sim-hours (AUD-060); list shows `< 1K` until filled |
 | (create, Combined) | `ACTIVE` | same | Save | AUD-030, AUD-031 | immediately available |
-| `POPULATING` | `ACTIVE` | `SYSTEM` | 4 sim-hours elapsed | lookalike: every seed still ≥ 1,000 | size per inventory bucketed |
-| `POPULATING` | `ACTIVE` (size `< 1K`) | `SYSTEM` | | seeds below minimum | usable only with TGT-102 warning |
+| `PROCESSING` | `ACTIVE` | `SYSTEM` | 4 sim-hours elapsed | lookalike: every seed still ≥ 1,000 | size per inventory bucketed |
+| `PROCESSING` | `ACTIVE` (size `< 1K`) | `SYSTEM` | | seeds below minimum | usable only with TGT-102 warning |
 | `ACTIVE` | `ARCHIVED` | same | archive | AUD-100 warns | line items keep the reference; the engine stops matching it |
 | `ARCHIVED` | `ACTIVE` | same | unarchive | | |
 Tag-based audiences fill from simulated Floodlight hits of the chosen activity (11). Customer match uploads take effect after the same 4 h delay.
+
+> Resolved RC-008: the DB state is `PROCESSING` (this table said `POPULATING`). `INACTIVE` (an empty customer match list) and `ARCHIVED` also apply to Audience; `PAUSED` does not.
 
 ### 4.7 Deal (09)
 States exactly as the Status filter shows them: `DRAFT`, `ACTIVE`, `PAUSED`, `ARCHIVED`, `COMPLETED`, `NOT_SERVABLE`. Default filter selects Active, Paused, Draft, Completed, Not servable (5 selected); Archived is off.
@@ -1778,14 +1791,14 @@ Priority tags: **H** blocks a P3 task, **M** fix before fidelity review, **L** l
 |---|---|---|---|
 | Q1 | H | Every `[SIM]` message needs confirming on a full-access account. First: required dropdown messages (goal, KPI, status), invalid date ranges (03 and 04 list them as not tested), overlapping or reversed budget segments, EU political ads left blank, A/B split not 100%, lift study errors | Students compare wording with the real tool. Current: DV360-style wording invented |
 | Q2 | M | Bulk bar when the selection is mixed (some rows eligible): does DV360 disable the item or apply it to the eligible rows? | 03 only shows "Activate disabled if already active". Current: enabled if ≥ 1 eligible row, skipped rows counted (4.10) |
-| Q3 | H | IO automation: does the LI pacing period also lock, or only the type to ASAP? Is `ASAP` also available on `Flight` period when LI-controlled? | MX-05, LI-034, LI-035. Current: type forced `ASAP`, period stored `FLIGHT` |
+| Q3 | H | IO automation: does the LI pacing period also lock, or only the type to ASAP? Is `ASAP` also available on `Flight` period when LI-controlled? | MX-05, LI-034, LI-035. Current: type forced `ASAP`, period stored `FLIGHT` **Resolved RC-039**: type `ASAP` and period `FLIGHT`, both locked. |
 | Q4 | M | Default objective selected in New IO step 1, and the default first KPI for Clicks, Conversions, Custom (04 shows `VCPM` for Brand awareness although the list starts with CPCL) | MX-02, IO-040. Current: Brand awareness default; `CPC`, `CPA`, `VALUE_COST` |
 | Q5 | M | YouTube & partners **audio** line item subtypes and form | LI-YT mirrors video until seen |
 | Q6 | M | Ad sequence builder rules (min steps, allowed formats per step) and bid strategy for Target frequency, TrueView views, Ad sequence | MX-07 marks these `(from public docs)`; LI-YT-020 assumes ≥ 2 steps |
 | Q7 | H | Targeting availability for Audio, CTV, DOOH, Demand Gen, Mobile app install, Ads in mobile apps beyond what 05 notes (D-V1 allows unknowns) | MX-10; wrong `N` cells give false errors, wrong `Y` cells let invalid LIs through |
 | Q8 | M | Demand Gen ad text limits (headline 40? description 90? business name 25?) and required assets | LI-DG-007..009 |
 | Q9 | L | Full text of the lift-not-applicable message (source ends with "…") | AB-018 |
-| Q10 | M | Limits: geography radius range, max entries in location lists, max locations per LI | TGT-012, LOC-005 |
+| Q10 | M | Limits: geography radius range, max entries in location lists, max locations per LI | TGT-012, LOC-005 **Resolved**: 10,000 entries per geography dimension and per apps-and-URLs dimension (module 10 Q-10-04); 5,000 per location list (RC-037). |
 | Q11 | M | Creative size list and file limits (image size, HTML5 zip size, video/audio durations) | MX-09b are simulator defaults |
 | Q12 | L | Maximum number of CPM fees and media fees | IO-074 uses 5 |
 | Q13 | L | Customer match file format and minimum matched users | AUD-021, AUD-022 |
@@ -1793,11 +1806,11 @@ Priority tags: **H** blocks a P3 task, **M** fix before fidelity review, **L** l
 | Q15 | L | Lift study competitors: is at least 1 required? | LS-008 current: 0 to 3 |
 | Q16 | M | Search lift required media cost and currency conversion for Brand lift (observed only ₹470,000.00 on an INR partner) | MX-13, LS-014 |
 | Q17 | L | Maximum number of A/B arms | MX-14: none beyond splits being whole numbers ≥ 1 |
-| Q18 | L | Advertiser deletion: retention period and whether deletion can be cancelled | 4.1 |
-| Q19 | M | Archiving a campaign or IO: does it cascade to children, or is it blocked until children are archived? | 4.2, 4.3, DLG-03. Current: cascade after confirm |
-| Q20 | L | Duplicate: status and name of the copy (Draft? "Copy of ..."?) | 4.10 |
+| Q18 | L | Advertiser deletion: retention period and whether deletion can be cancelled | 4.1 **Resolved RC-046**: deletion can be cancelled until the retention date; retention is a classroom setting (default 7 sim days). |
+| Q19 | M | Archiving a campaign or IO: does it cascade to children, or is it blocked until children are archived? | 4.2, 4.3, DLG-03. Current: cascade after confirm **Resolved RC-040**: cascade after confirm. |
+| Q20 | L | Duplicate: status and name of the copy (Draft? "Copy of ..."?) | 4.10 **Resolved RC-040**: campaign copy PAUSED, IO and LI copy DRAFT, ad group and ad copy PAUSED; name `Copy of {name}`. |
 | Q21 | M | Campaign: is KPI selection mandatory when a goal is chosen? Is the KPI value mandatory? | CMP-011, CMP-012 |
-| Q22 | M | Are past start dates accepted when creating a campaign or LI? | CMP-034, LI-024 |
+| Q22 | M | Are past start dates accepted when creating a campaign or LI? | CMP-034, LI-024 **Resolved RC-040**: past start dates are rejected on create (CMP-034, LI-024). |
 | Q23 | L | Can an IO be activated with zero line items? Are overlapping segments across different IOs allowed? | IO-090..092 |
 | Q24 | M | Does saving with warnings ever show a confirm dialog (for example LI budget above IO budget)? | Current: never |
 | Q25 | M | Optimized targeting compatibility with fixed bid and with Audio / CTV / YouTube | MX-10 `OPTIMIZED_TARGETING` |

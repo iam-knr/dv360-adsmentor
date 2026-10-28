@@ -310,6 +310,8 @@ Engine deltas requested: Δ13-14 `inventory/negotiations.ts` pure module: `advan
 ## 8. Open questions and conflicts
 
 ### Conflicts found between specs
+
+> Resolved: every conflict below is consolidated in [`../conflicts.md`](../conflicts.md) (crosswalk table, rows `RC-nnn`). Where a proposal here and the RC row differ, the RC row wins.
 | # | Conflict | Files and sections | Proposed resolution |
 |---|---|---|---|
 | C1 | Engine says deals include "student-created Private auction deals"; routes Q19 and validation 4.7 say deals are view-only except status, frequency cap and access, and only instant deals are created by students. The scenario "Add PG deal" needs a way for a student to create a PG deal. | engine.md 5.5; routes.md Q19, 8.10; validation.md 4.7 | Students never type a deal ID. PG deals come from the Negotiation accept flow (this spec). Update engine 5.5 wording |

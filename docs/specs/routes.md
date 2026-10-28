@@ -57,7 +57,7 @@ What each DV360 level can do
 | Level | View | Write | UI effect |
 |---|---|---|---|
 | `ADMIN` | everything, incl. `/users` for their partners | everything, incl. users and partner settings | none |
-| `STANDARD` | everything except user admin | create / edit / activate / pause / archive / bulk / SDF / reports | none |
+| `STANDARD` | everything; `/users` opens read-only (New user and edits need `ADMIN`, RC-048) | create / edit / activate / pause / archive / bulk / SDF / reports | none |
 | `READ_ONLY` | all pages except report building | nothing. Create buttons disabled, bulk edit items disabled, forms render read-only | grey "Limited Access" chip next to the page title (as seen in the demo) |
 | `REPORTING_ONLY` | only reporting routes (`[P]/reporting/**`, cross-media reach) and `/bulk-status` of own jobs | create and run reports | left nav shows only Reports. Any other DV360 route renders the 404 page |
 | `PARTNER_CLIENT` | like `READ_ONLY`, hides partner-level fee and cost columns | nothing | Limited Access chip (Q11) |
@@ -107,6 +107,7 @@ Each file entry below is a folder holding `page.tsx`. Tree root is `app/(dv)/(ap
 | `[P]/floodlights` | `$P/(partner)/floodlights` | P | Partner Floodlight groups | Partner | 02, 11 | RO / STD |
 | `[P]/cross-media-reach` | `$P/(partner)/cross-media-reach` | P | Cross-media reach reports list (empty state "Welcome to Cross-media reach!") | Partner | 02, 13 | REP / STD |
 | `[P]/cross-media-reach/new` † | `$P/cross-media-reach/new` | F | Create a report (progressive form) | Partner | 13 | REP / STD |
+| `[P]/cross-media-reach/{reportId}` † | `$P/cross-media-reach/[reportId]` | F | Cross-media reach report detail (RC-052, module 04) | Partner | 13 | REP / STD |
 | (billing, invoices, partner costs) | not routed | - | Hidden in demo (Limited Access). No nav entry, no route (Q21) | Partner | 02 | - |
 
 ### 3.3 Advertiser level (frame A)
@@ -228,6 +229,7 @@ Tabs shown by LI type: YouTube video/audio: Ad groups, Line item details, Troubl
 | `[A]/marketplace/negotiations` | `$A/(advertiser)/marketplace/negotiations` | A | Negotiations list, Import negotiation | Advertiser | 09 | RO / STD |
 | `[A]/cross-media-reach` | `$A/(advertiser)/cross-media-reach` | A | Cross-media reach reports (advertiser scope) | Advertiser | 13 | REP / STD |
 | `[A]/cross-media-reach/new` | `$A/cross-media-reach/new` | F | Create a report | Advertiser | 13 | REP / STD |
+| `[A]/cross-media-reach/{reportId}` † | `$A/cross-media-reach/[reportId]` | F | Cross-media reach report detail (RC-052, module 04) | Advertiser | 13 | REP / STD |
 
 ### 3.10 Resources (frame A, forms F)
 
@@ -255,12 +257,14 @@ Tabs shown by LI type: YouTube video/audio: Ad groups, Line item details, Troubl
 
 | DV360 path | Simulator folder | Frame | Purpose | Level | Explore | Access |
 |---|---|---|---|---|---|---|
-| `[A]/details` | `$A/(advertiser)/details` | A | Basic details (identity, SDF, ad server panel, authorizations, EU political ads, YouTube / Demand Gen, additional settings, Schedule for deletion) | Advertiser | 14 | RO / ADM |
+| `[A]/details` | `$A/(advertiser)/details` | A | Basic details (identity, SDF, ad server panel, authorizations, EU political ads, YouTube / Demand Gen, additional settings, Schedule for deletion) | Advertiser | 14 | RO / STD |
 | `[A]/targeting` | `$A/(advertiser)/targeting` | A | Targeting rules (locked summary) | Advertiser | 14 | RO / ADM |
 | `[A]/data-manager` | `$A/(advertiser)/data-manager` | A | Data manager, tab Connected products | Advertiser | 14 | RO / ADM |
 | `[A]/linked-accounts` | `$A/(advertiser)/linked-accounts` | A | Data manager, tab Linked accounts | Advertiser | 14 | RO / ADM |
 | `[A]/alert-config` | `$A/(advertiser)/alert-config` | A | Alert preferences (10 toggles, underpacing threshold, spend threshold) | Advertiser | 14 | RO / STD |
 | `[A]/policy-center` | `$A/(advertiser)/policy-center` | A | Policy center certificates | Advertiser | 14 | RO / STD |
+
+> Resolved RC-047: write on `[A]/details` is `STD` for name, status, website, SDF version, authorizations, EU political ads and the Demand Gen switch. "Schedule for deletion" and partner settings stay `ADM`.
 
 ### 3.12 Reporting app (frame R)
 
@@ -414,6 +418,8 @@ Page banner (under top bar, in the advertiser layout)
 - Advertiser paused: "This advertiser is currently paused. None of its campaigns or deals are serving." + Learn more.
 - Advertiser scheduled for deletion: same slot, own text.
 - Simulator banners use the same slot, stacked below: view-as-student, access window ends in 5 minutes, active exercise (Phase 5).
+
+> Resolved RC-049: the Partner status is not offered as Paused to students in v1 (no partner pause banner is built). Only the advertiser paused banner and the simulator banners exist.
 
 ### 4.6 Right rail
 
@@ -755,9 +761,9 @@ interface ListResult<R> {
 interface Issue { path: string; severity: 'error'|'warning'; code: string; message: string }
 type Result<T> = { ok: true; data: T; warnings?: Issue[] } | { ok: false; issues: Issue[] };
 interface WriteMeta { expectedVersion?: Version; changeNote?: string }   // "Optional: Enter a note about this change"
-interface FrequencyCap { enabled: boolean; exposures?: number; period?: Period }   // enabled=false means No limit / inherit
+interface FrequencyCap { mode: 'UNLIMITED'|'INHERIT'|'LIMITED'; exposures?: number; period?: Period }   // RC-018: mode replaces `enabled`; campaign uses UNLIMITED or LIMITED, IO and LI use INHERIT or LIMITED (DM FrequencyMode)
 
-type BulkEntity = 'CAMPAIGN'|'INSERTION_ORDER'|'LINE_ITEM'|'CREATIVE'|'AD_GROUP'|'AUDIENCE'|'DEAL';
+type BulkEntity = 'CAMPAIGN'|'INSERTION_ORDER'|'LINE_ITEM'|'CREATIVE'|'AD_GROUP'|'AUDIENCE'|'DEAL';   // RC-042: AD_GROUP supports ACTIVATE, PAUSE, DUPLICATE and DELETE only (no ARCHIVE)
 type BulkAction =
   | { type: 'ACTIVATE' } | { type: 'PAUSE' } | { type: 'ARCHIVE' } | { type: 'UNARCHIVE' }
   | { type: 'DUPLICATE'; targetParentId?: Id; copies?: number }
@@ -766,8 +772,10 @@ type BulkAction =
   | { type: 'EDIT_CREATIVE_ASSIGNMENT'; add?: Id[]; remove?: Id[] }
   | { type: 'EDIT_TARGETING'; group: 'INVENTORY'|'CONTENT'|'AUDIENCE'|'TECHNOLOGY'; patch: unknown };
 interface BulkRequest { entity: BulkEntity; ids: Id[]; action: BulkAction }
-interface BulkResponse { jobId: Id; status: 'RUNNING'|'COMPLETED'|'FAILED'; failed?: { id: Id; issue: Issue }[] }
+interface BulkResponse { jobId: Id; status: 'QUEUED'|'RUNNING'|'COMPLETED'|'FAILED';   // RC-012 failed?: { id: Id; issue: Issue }[] }
 ```
+
+> Resolved RC-052: the actions `setIoStatus(id, status)` and `setLineItemStatus(id, status)` (module 07 Δ-07-11, module 08 Δ-08-14), `POST /api/dv/insertion-orders/:ioId/creative-candidates` (module 08 Δ-08-5) and the wire types named in module sections 3.3 / 4 (`ForecastBand`, `AlertGroup`, `ChartCardSpec`, `PreviewModel`, `AdGroupRow`, `AdRow`, `OverviewData`) are part of this section. Where this file and a module Δ disagree on a type, the module Δ wins for the wire shape.
 
 Disabled bulk items are decided by `GET .../bulk-capabilities?ids=` (returns which `BulkAction.type`s apply to the selection) so the menu can grey out items like DV360.
 
@@ -841,7 +849,7 @@ interface CampaignRow { id: Id; name: string; status: EntityStatus; alertCount: 
 // GET  /api/dv/campaigns/:cid
 interface CampaignInput extends WriteMeta {
   name: string; status: 'ACTIVE'|'PAUSED';
-  goal: 'BRAND_AWARENESS'|'ONLINE_ACTION'|'OFFLINE_SALES'|'APP_INSTALLS';
+  goal: 'AWARENESS'|'ONLINE_ACTION'|'OFFLINE_SALES'|'APP_INSTALLS';   // RC-001
   kpi: { type: 'CPM'|'CPC'|'CPA'|'CTR'|'CPV'|'VIEWABLE_PCT'|'CPIAVC'|'OTHER'; value?: number; otherText?: string };
   creativeTypes: ('DISPLAY'|'VIDEO'|'AUDIO')[];
   plannedSpend?: Money; startDate: IsoDate; endDate?: IsoDate;
@@ -863,7 +871,7 @@ interface CampaignInput extends WriteMeta {
 
 ```ts
 // GET /api/dv/advertisers/:aid/insertion-orders   and   GET /api/dv/campaigns/:cid/insertion-orders
-//     ListQuery<{ status: EntityStatus[]; type: string[]; archived: ['true'] }> (same handler, scope differs)
+//     ListQuery<{ status: EntityStatus[]; type: string[] }> (archived rows are `f.status=ARCHIVED`, RC-052) (same handler, scope differs)
 interface IoRow { id: Id; campaignId: Id; name: string; status: EntityStatus; alertCount: number; type: 'STANDARD'|'CTV_OTT'|'DOOH';
   budget: Money|null; goal: string; impressions: number; revenue: Money; interactions: number; conversions: number; cpa: Money|null;
   customImpressionValue: number|null; customImpressionCost: Money|null }
@@ -872,18 +880,19 @@ interface IoRow { id: Id; campaignId: Id; name: string; status: EntityStatus; al
 interface InsertionOrderInput extends WriteMeta {
   type: 'STANDARD'|'CTV_OTT'|'DOOH';
   objective: 'BRAND_AWARENESS'|'CLICKS'|'CONVERSIONS'|'CUSTOM'|'NONE';
-  name: string; status: 'DRAFT'|'ACTIVE'|'PAUSED';
+  name: string; status: 'DRAFT'|'ACTIVE';   // RC-040: create rejects PAUSED (IO-012); pause with setIoStatus
   budgetType: 'CURRENCY'|'IMPRESSIONS';                                 // locked after create
   segments: { id?: Id; amount: Money; description?: string; startDate: IsoDate; endDate: IsoDate }[];
   pacing: { period: 'FLIGHT'|'DAILY'; type: 'EVEN'|'AHEAD'|'ASAP'; dailyAmount?: Money };
   kpi: { type: string; value: number };
-  optimization: { mode: 'AUTOMATE_AT_IO'|'CONTROL_AT_LI'; optimizedTowards?: string; prioritizeFullBudget?: boolean;
+  optimization: { mode: 'IO_AUTOMATED'|'LI_CONTROLLED';   // RC-002
+                   optimizedTowards?: string; prioritizeFullBudget?: boolean;
                   autoBudgetAllocation?: boolean; youtubeReachFrequency?: boolean };
-  frequencyCap: FrequencyCap;                                           // enabled=false -> inherit campaign cap
+  frequencyCap: FrequencyCap;                                           // mode INHERIT -> use the campaign cap
   partnerCosts: { cpmFees: Fee[]; mediaFees: Fee[] };                   // media fee 1 = locked DV360 fee
   integrationCode?: string; detail?: string;
 }
-interface Fee { slot: number; amount: number; feeType: string; invoiced: boolean }
+interface Fee { slot: number; amount: number; percentage?: number; feeType: string; invoiced: boolean }   // RC-006: media fees may be a percentage
 // action createInsertionOrder(campaignId, InsertionOrderInput) | updateInsertionOrder(id, InsertionOrderInput)
 // action validateInsertionOrder(campaignId, Partial<InsertionOrderInput>) -> Issue[]
 // action setIoObjectiveToNone(id)        (details page dropdown; unlocks any KPI / bid strategy)
@@ -896,8 +905,8 @@ interface Fee { slot: number; amount: number; feeType: string; invoiced: boolean
 
 ```ts
 // GET /api/dv/insertion-orders/:ioId/line-items | /api/dv/campaigns/:cid/line-items | /api/dv/advertisers/:aid/line-items | /api/dv/audiences/:audId/line-items
-//     ListQuery<{ status: EntityStatus[]; type: LineItemType[]; archived: ['true'] }>
-type LineItemType = 'DISPLAY'|'VIDEO'|'CTV'|'AUDIO'|'MOBILE_APP_INSTALL'|'ADS_IN_MOBILE_APPS'|'YOUTUBE_VIDEO'|'YOUTUBE_AUDIO'|'DEMAND_GEN'|'DOOH_DISPLAY'|'DOOH_VIDEO';
+//     ListQuery<{ status: EntityStatus[]; type: LineItemType[] }>   // archived rows: f.status=ARCHIVED (RC-052)
+type LineItemType = 'DISPLAY'|'VIDEO'|'CTV'|'AUDIO'|'MOBILE_APP_INSTALL'|'ADS_IN_MOBILE_APPS'|'YT_VIDEO'|'YT_AUDIO'|'YT_ON_CTV'|'DEMAND_GEN'|'DOOH_DISPLAY'|'DOOH_VIDEO';   // RC-003
 interface LineItemRow { id: Id; ioId: Id; name: string; status: EntityStatus; alertCount: number; type: LineItemType;
   budget: Money|null; goal: string; impressions: number; revenue: Money; clicks: number; conversions: number; cpa: Money|null;
   trueViewViews?: number }
@@ -918,15 +927,16 @@ interface LineItemInputBase extends WriteMeta {
   bid: { mode: 'AUTOMATED'; optimizedTowards: string; prioritize: 'FULL_BUDGET'|'TARGET'; targetValue?: number } | { mode: 'FIXED'; cpm: Money };
   frequencyCap: FrequencyCap;
   creativeIds: Id[]; creativeOptimization: 'LI_BID_STRATEGY'|string;
-  conversions: { activityIds: Id[]; counting: 'ALL'|'POST_CLICK'|'PERCENT'; percent?: number; attributionModelId?: Id };
+  conversions: { activityIds: Id[]; counting: 'ALL'|'POST_CLICK_ONLY'|'PERCENTAGE';   // RC-006: DM keys
+    percent?: number; attributionModelId?: Id };
   euPoliticalAds: 'YES'|'NO';                                   // required
-  revenueModel?: { kind: 'MARKUP_PCT'|'CPM'; value: number };
+  revenueModel?: { kind: 'TOTAL_MEDIA_COST_MARKUP'|'CPM_VALUE'; value: number };   // RC-006: DM keys
   partnerCosts: { cpmFees: Fee[]; mediaFees: Fee[] }; integrationCode?: string; detail?: string;
 }
 type LineItemInput = LineItemInputBase
   | (LineItemInputBase & { type: 'MOBILE_APP_INSTALL'; app: { platform: 'ALL'|'IOS'|'ANDROID'; appId: string }; adType: 'DISPLAY'|'VIDEO' })
   | (LineItemInputBase & { type: 'ADS_IN_MOBILE_APPS'; adType: 'DISPLAY'|'VIDEO' })
-  | (LineItemInputBase & { type: 'YOUTUBE_VIDEO'; youtube: YoutubeLiSettings });   // 8.7
+  | (LineItemInputBase & { type: 'YT_VIDEO'|'YT_AUDIO'|'YT_ON_CTV'; youtube: YoutubeLiSettings });   // 8.7
 // action createLineItem(ioId, LineItemInput) | updateLineItem(id, LineItemInput) | validateLineItem(ioId, Partial<LineItemInput>) -> Issue[]
 // POST /api/dv/line-items/bulk (BulkRequest)  all BulkAction types; DUPLICATE supports copies
 // POST /api/dv/line-items/forecast  { ioId; draft: Partial<LineItemInput> }  -> { inventoryAvailability: ForecastBand|null; spendForecast: { risk: 'LOW'|'MEDIUM'|'HIGH'|null; missing: string[] } }
@@ -945,7 +955,7 @@ interface TroubleshooterData { banner?: { text: string; link: string };
 
 ```ts
 interface YoutubeLiSettings {
-  subtype: 'REACH_EFFICIENT'|'REACH_NON_SKIPPABLE'|'TARGET_FREQUENCY_ANY'|'TARGET_FREQUENCY_IN_STREAM'|'TRUEVIEW_VIEWS'|'AD_SEQUENCE';   // step 1, read-only after
+  subtype: 'EFFICIENT_REACH'|'NON_SKIPPABLE_REACH'|'TARGET_FREQUENCY'|'TARGET_FREQUENCY_IN_STREAM'|'TRUEVIEW_VIEWS'|'AD_SEQUENCE'|'AUDIO_REACH';   // RC-005: DM keys   // step 1, read-only after
   adFormats: { inStream: boolean; inFeed: boolean; shorts: boolean };
   frequencyCap: { exposure: FrequencyCap; view: FrequencyCap };
   productFeed?: { merchantCenterId: string }; relatedVideoIds: string[];
@@ -988,7 +998,7 @@ interface Sel { id: string; mode: 'INCLUDE'|'EXCLUDE' }
 // POST /api/dv/targeting/suggestions         { kind: 'KEYWORD'|'CATEGORY'|'URL'|'AUDIENCE'; advertiserId; seed? }  -> { items: string[] }
 // POST /api/dv/targeting/verification-cost   { provider; options[] }       -> { cpm: Money }
 // Templates
-// GET  /api/dv/advertisers/:aid/targeting-templates   ListQuery<{ status: EntityStatus[]; type: LineItemType[] }>
+// GET  /api/dv/advertisers/:aid/targeting-templates   ListQuery<{ status: EntityStatus[]; type: LineItemType[] }>   // RC-052: URL filter keys are f.status and f.type
 // GET  /api/dv/targeting-templates/:id
 // action createTargetingTemplate(aid, { type: LineItemType; name: string; description?: string; inventorySource; targeting: TargetingState; optimizedTargeting: boolean })
 // action updateTargetingTemplate(id, ...) | archiveTargetingTemplate(id)
@@ -1004,7 +1014,7 @@ interface CreativeRow { id: Id; name: string; status: 'ACTIVE'|'PAUSED'|'ARCHIVE
   companions: number; dimensions?: string; durationSec?: number; source: string; created: IsoDateTime; modified: IsoDateTime; tag: boolean; lineItems: number }
 // GET /api/dv/creatives/:id
 type CreativeInput = WriteMeta & { name: string; status: 'ACTIVE'|'PAUSED'; landingPageUrl: string; integrationCode?: string; notes?: string;
-  appendTag?: boolean; aiLabel?: 'AI'|'NONE'; dontScale?: boolean } & (
+  appendTag?: boolean; aiLabel?: 'UNSET'|'AI_GENERATED'|'NOT_AI_GENERATED';   // RC-007: DM AiLabel dontScale?: boolean } & (
   | { kind: 'THIRD_PARTY_DISPLAY'; width: number; height: number; requiresMraid: boolean; requiresHtml5: boolean; expandingDirection: string; expandsOnHover: boolean; tag: string; requiresPing: boolean }
   | { kind: 'THIRD_PARTY_VIDEO'; vastTag: string }          | { kind: 'THIRD_PARTY_AUDIO'; vastTag: string }
   | { kind: 'UPLOAD_IMAGE_OR_HTML5'; uploadId: Id }          | { kind: 'UPLOAD_VIDEO'; uploadId: Id }
@@ -1053,7 +1063,7 @@ type CreativeInput = WriteMeta & { name: string; status: 'ACTIVE'|'PAUSED'; land
 // GET  /api/dv/advertisers/:aid/negotiations   ListQuery<{ status: string[] }> -> NegotiationRow
 // action importNegotiation(aid, { rfpId }) | sendProposal(id) | acceptProposal(id) | declineProposal(id)           // gap, public docs
 // Plans
-// GET  /api/dv/advertisers/:aid/plans          ListQuery<{ status: ('PLANNED'|'TRAFFICKED')[] }> -> PlanRow { id; name; totalBudget: Money|null; startDate; endDate; channels: string[] }
+// GET  /api/dv/advertisers/:aid/plans          ListQuery<{ status: ('PLANNED'|'TRAFFICKED')[] }> -> PlanListRow { id; name; totalBudget: Money|null; startDate; endDate; channels: string[] }   // RC-035: renamed, `PlanRow` is the plan line-item row (DM 5.15)
 // GET  /api/dv/plans/:id                       -> Plan { header: { name; location; dates; demographics; additional }; forecast: PlanForecast|null; rows: PlanRow[]; savedAt: IsoDateTime; locked: boolean }
 // action createPlan(aid)                       -> { id }   (name "New Plan (Mon D, YYYY)")
 // action updatePlan(id, WriteMeta & { name; location; dates; demographics; additional; rows: PlanLineInput[] }) | copyPlan(id) | removePlan(id)
@@ -1107,13 +1117,14 @@ type AudienceInput = WriteMeta & { name: string; description?: string } & (
 //          viewableImpressionPct; appAttributionLinks; analyticsLinks; conversionGroups; customVariables: { slot: number; name: string }[]; enhancedConversions })
 // GET  /api/dv/advertisers/:aid/floodlight-conversions  ListQuery<{ status: string[] }> -> FloodlightRow
 // GET  /api/dv/floodlight-conversions/:id
-// action createFloodlightConversion(aid, { surface: 'WEB'|'APP'|'CTV'; name; status; format: 'GOOGLE_TAG'|'IFRAME'|'IMAGE'; type: 'COUNTER'|'SALE';
+// action createFloodlightConversion(aid, { platform: 'WEB'|'MOBILE_APP'|'CONNECTED_TV'; name; status; format: 'GOOGLE_TAG'|'IFRAME_TAG'|'IMAGE_TAG';   // RC-009: DM keys
+    type: 'COUNTER'|'SALE';
 //          counting: 'STANDARD'|'UNIQUE'|'PER_SESSION'|'TRANSACTIONS'|'ITEMS_SOLD'; category?: string; personalizedAdExclusion: boolean;
 //          customVariableIds: string[]; remarketing: boolean; youtubeEnabled: boolean; valueBasedBidding?: boolean; commercePartner?: boolean })
 // action updateFloodlightConversion(id, ...)
 // GET  /api/dv/advertisers/:aid/google-tag (read only)
 // Custom bidding
-// GET  /api/dv/{advertisers|partners}/:id/custom-bidding  ListQuery<{ source: string[]; owner: string[]; status: string[] }> -> { id; name; source: 'RULES'|'SCRIPT'|'GOAL'; owner; status: 'ACTIVE'|'SUSPENDED'|'TRAINING'; readiness; updated; activeLis: number; errorPct: number }
+// GET  /api/dv/{advertisers|partners}/:id/custom-bidding  ListQuery<{ source: string[]; owner: string[]; status: string[] }> -> { id; name; source: 'RULE_BASED'|'SCRIPT'|'GOAL'; owner; status: 'ACTIVE'|'SUSPENDED'|'TRAINING'; readiness; updated; activeLis: number; errorPct: number }
 // action saveCustomBiddingDraft(parent, { name; objective: 'BRAND_AWARENESS'|'CLICKS'|'CONVERSIONS'|'CUSTOM'; rules: { signal: string; value: boolean|string; score: number }[]; multipliers: { dimension: string; values: Record<string, number> }[] /* max 4 */ })
 // POST /api/dv/custom-bidding/:id/test  -> TestResult   |  action activateCustomBidding(id) | suspendCustomBidding(id)
 // YouTube assets / creator partnerships
@@ -1133,8 +1144,8 @@ interface ReportDefinition {
   timeZone: 'ADVERTISER'|'UTC'; dateRange: DateRangeParam;
   filters: { field: string; op: 'IN'|'NOT_IN'|'EQ'; values: string[] }[];     // always includes Partner
   dimensions: string[]; metrics: string[];
-  viz: { type: 'TABLE'|'PIVOT'|'COLUMN'|'TIME_SERIES'|'PIE'|'SCATTER'; options?: unknown };
-  schedule?: { active: boolean; timeZone: string; repeats: 'DAILY'|'WEEKLY'|'MONTHLY'; every: number; starts: IsoDate; expires?: IsoDate };
+  viz: { type: 'TABLE'|'PIVOT_TABLE'|'COLUMN'|'TIME_SERIES'|'PIE'|'SCATTER'; options?: unknown };
+  schedule?: { active: boolean; timeZone: string; repeats: 'DAILY'|'WEEKLY'|'MONTHLY'|'QUARTERLY'|'YEARLY'; every: number; starts: IsoDate; expires?: IsoDate };
   delivery?: { format: 'CSV'|'XLSX'; fileName: string; emailOwner: boolean; attachment?: boolean; shareWith: Id[] };
 }
 // GET  /api/dv/partners/:pid/reports?kind=&createdBy=me      ListQuery -> { id; kind; name; createdBy; modified; files: number }
@@ -1176,13 +1187,14 @@ interface AlertPreferences { noSpend: boolean; underpacing: { on: boolean; thres
   spendThreshold: { on: boolean; amount: Money }; mismatchedSettings: boolean }
 // GET /api/dv/advertisers/:aid/policy-certificates   -> { type; status: string }[]
 // action requestPolicyCertificate(aid, { type; country? })      (internal request, instructor approves)
+// action decidePolicyCertificate(certId, { decision: 'APPROVED'|'REJECTED'; note? })   ADMIN-SIM / INS only; RC-052 (shown in the instructor console "Requests" tab)
 ```
 
 ### 8.15 Bulk jobs, SDF, exports
 
 ```ts
 // Bulk status page
-// GET /api/dv/bulk-jobs   ListQuery<{ partnerId; advertiserId; source: ('DUPLICATION'|'BULK_EDIT'|'CAMPAIGN_DOWNLOAD'|'SDF_UPLOAD')[]; allUsers: ['true'] }> (max 100 most recent)
+// GET /api/dv/bulk-jobs   ListQuery<{ partnerId; advertiserId; source: ('DUPLICATION'|'BULK_EDIT'|'CAMPAIGN_DOWNLOAD'|'SDF_DOWNLOAD'|'SDF_UPLOAD')[]; allUsers: ['true'] }> (max 100 most recent)
 interface BulkJobRow { id: Id; requested: IsoDateTime; partnerId: Id; advertiserId: Id|null; description: string; source: string; user: string; lastUpdated: IsoDateTime;
   status: 'RUNNING'|'COMPLETED'|'FAILED'; action?: { label: 'View'|'Results'; href: string } }
 // GET /api/dv/bulk-jobs/:id/result       file stream (SDF-ResultFiles.zip, download zip)
@@ -1206,7 +1218,7 @@ interface AbTestInput extends WriteMeta {
   name: string; hypothesis?: string; startDate: IsoDate; endDate?: IsoDate;
   compare: 'INSERTION_ORDERS'|'LINE_ITEMS';
   arms: { name: string; splitPct: number; isControl: boolean; entityIds: Id[] }[];     // splits total 100; one control
-  goal: 'CLICKS'|'CONVERSIONS'|'REACH'|'CUSTOM_IMPRESSION_VALUE'|'VIDEO_COMPLETIONS'|'VIEWS';
+  goal: 'CLICKS'|'CONVERSIONS'|'REACH'|'CUSTOM_IMPRESSION_VALUE'|'VIDEO_COMPLETIONS'|'VIEWS_YOUTUBE';
   confidence: 90|95; excludeUnidentifiedUsers: boolean; brandLift?: BrandLiftInput;
 }
 // action createAbTest(aid, AbTestInput) | updateAbTest(id, AbTestInput) | endAbTest(id)
@@ -1215,7 +1227,7 @@ interface AbTestInput extends WriteMeta {
 // GET /api/dv/advertisers/:aid/experiment-candidates?compare=&q  -> { id; name; warning?: string }[]   (arm picker)
 // Lift studies
 // GET /api/dv/advertisers/:aid/lift-studies  ListQuery -> { id; name; ios: number; brandLift?: { flight: number; state: 'COMPLETE'|'IN_PROGRESS'|'NOT_ELIGIBLE'; pct?: number }; searchLift?: unknown }
-interface BrandLiftInput { metrics: ('AD_RECALL'|'AWARENESS'|'CONSIDERATION'|'FAVORABILITY'|'PURCHASE_INTENT'|'ASSOCIATION')[] /* max 3 */;
+interface BrandLiftInput { metrics: ('VIDEO_AD_RECALL'|'AWARENESS'|'CONSIDERATION'|'FAVORABILITY'|'PURCHASE_INTENT'|'ASSOCIATION')[] /* max 3 */;
   brandName: string; competitors: string[] /* max 3 */; language: string; objectType?: string; intendedAction?: 'BUY'|'CHOOSE'|'USE'; strength: 'STANDARD'|'ENHANCED' }
 interface LiftStudyInput extends WriteMeta { name: string; ioIds: Id[]; brandLift?: BrandLiftInput; searchLift?: { termGroups: string[][] /* max 5 */ } }
 // POST /api/dv/lift-studies/eligibility { advertiserId; ioIds; types; brandLift?: ... } -> { perType: { type; eligible: boolean; requiredMediaCost: Money; yourMediaCost: Money; window: [IsoDate, IsoDate] }[] }
@@ -1232,7 +1244,7 @@ interface LiftStudyInput extends WriteMeta { name: string; ioIds: Id[]; brandLif
 //        changes: { time: string; user: string; system: boolean; summary: string; lines: string[] }[] }[] }
 //   line format: "{field}: {label} changed from "{old}" to "{new}""; creation lines "{Field} is {value}" (17)
 // GET /api/dv/history/download?...same params    CSV
-// GET /api/dv/history/notes?entityType&entityId&date   |  action addHistoryNote({ entityType; entityId; date; text })
+// GET /api/dv/history/notes?entityType&entityId&date   |  action addHistoryNote({ entityType; entityId; date; text })   [STD write, RC-048]
 // GET /api/dv/intelligence?scope=ADVERTISER|CAMPAIGN|IO|LI_FORM&id=
 //   -> { health: { severity: 'ERROR'|'WARNING'; text: string; count: number; investigate: { route: string; query: Record<string,string[]> }; historyRoute?: string }[];
 //        suggestions: { text: string; investigate: { route: string; query: Record<string,string[]> } }[] }
@@ -1273,7 +1285,7 @@ interface AccessWindow { id: Id; classId: Id; startsAt: IsoDateTime; endsAt: Iso
 // action resetSandbox({ scope: 'USER'|'CLASS'; userIds?: Id[]; classId?: Id; snapshotId?: Id })
 // action createSnapshot(classId | userId, name) | restoreSnapshot(snapshotId)
 // Clock (engine ticks are one simulated hour)
-interface SimClock { classId: Id; simNow: IsoDateTime; mode: 'RUNNING'|'PAUSED'; speedX: number /* sim seconds per real second; 288 = 1 sim day per 5 real minutes */ }
+interface SimClock { classId: Id; simNow: IsoDateTime; mode: 'RUNNING'|'PAUSED'|'STEPPING'|'LOCKED'; speedX: number /* sim seconds per real second; 288 = 1 sim day per 5 real minutes */ }
 // GET /api/sim/classes/:id/clock  | action setClock({ classId; mode?; speedX?; jumpTo?: IsoDateTime }) | action stepClock({ classId; ticks: number })
 // Scenarios
 interface Scenario { id: Id; title: string; brief: string /* markdown */; seedTemplateId: Id; accessOverride?: AccessLevel; estimatedMinutes: number;
@@ -1290,6 +1302,8 @@ interface Scenario { id: Id; title: string; brief: string /* markdown */; seedTe
 // action runEngineNow(classId)   instructor / admin; same code path as the cron
 // View-as: GET any DV URL with ?sim_as=; no separate endpoint (resolved in `(dv)/layout.tsx`)
 ```
+
+> Resolved RC-028: the clock is stored per sandbox (DM `SimClock`, ENG 1.2); a class-level action applies to every sandbox of the class. `speedX` is a display conversion of `minutesPerSimDay`.
 
 ---
 

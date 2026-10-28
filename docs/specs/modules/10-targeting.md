@@ -415,6 +415,8 @@ P3-07 (Targeting panel, all dimensions) = T10-03, T10-04, T10-05, T10-06, T10-07
 | Q-10-10 | Should the AI chip call a model or canned logic? (DS Q12) | canned |
 
 ### 8.2 Conflicts between specs
+
+> Resolved: every conflict below is consolidated in [`../conflicts.md`](../conflicts.md) (crosswalk table, rows `RC-nnn`). Where a proposal here and the RC row differ, the RC row wins.
 | # | Conflict | Where | Proposal |
 |---|---|---|---|
 | C-10-1 | Audience group logic: explore 07 says include groups are joined by OR, but also "intersect groups to narrow"; DM `AudienceSection` says "include groups are joined by OR"; DM `CombinedAudienceTerm` says groups OR-ed yet intersect via multiple groups; ENG 2.3 models only a union over included lists | explore 07, DM 4.7 / 5.9, ENG 2.3 | Use the model in 2.5 (OR between sections, AND between first-party groups, OR inside a group); ENG to implement `firstPartyExpr` intersection |

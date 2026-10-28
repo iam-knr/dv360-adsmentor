@@ -9,9 +9,11 @@ Conventions used in this file:
 - **Source tags.** Nothing is tagged when the field or option list was seen in the demo account (the explore file is named where it helps). Items that were blocked in the demo (see `17-gap-sweep.md` and PROJECT-LOG "Known gaps") are filled from public DV360 knowledge and carry the tag `(from public docs)`. Where I was unsure even about public behaviour the item says `(assumption)` and is repeated in section 8.
 - **Types.** `str` text, `text` long text, `int`, `bigint`, `dec` Decimal(20,6) for money unless stated, `pct` Decimal(9,4), `bool`, `ts` timestamptz, `date` calendar date, `json` jsonb, `X[]` Postgres array, `enum X` Prisma enum (values in section 4).
 - **Null column.** `N` = not null, `Y` = nullable.
-- **Base columns.** Every tenant table has `id` (cuid, PK), `sandboxId`, `createdAt`, `updatedAt` unless noted. Tables marked **PID** also have `publicId` (bigint, unique, from the sequence `entity_public_id_seq`); `publicId` is the number that appears in URLs and in the grids (the "ID" column). Base columns are not repeated in the field tables.
-- **Money.** Stored in the currency of the owning advertiser (`Advertiser.currencyCode`). Partner and USD figures in reports are computed at read time from a fixed FX table (`FxRate`, global).
+- **Base columns.** Every tenant table has `id` (cuid, PK), `sandboxId`, `createdAt`, `updatedAt` unless noted. Every editable entity (partner, advertiser, campaign, IO, LI, ad group, ad, creative, audience, list, deal, report, plan, experiment) also has `version int not null default 1`, +1 on every update (optimistic lock, RT `expectedVersion`; RC-020). Tables marked **PID** also have `publicId` (bigint, unique, from the sequence `entity_public_id_seq`); `publicId` is the number that appears in URLs and in the grids (the "ID" column). Base columns are not repeated in the field tables.
+- **Money.** Stored in the currency of the owning advertiser (`Advertiser.currencyCode`). Partner and USD figures in reports are computed at read time from a fixed FX table (`FxRate`, global). Services convert at the boundary: the wire uses major units (RT `Money`), validation rules receive integer minor units (VAL 0.2) (RC-019).
 - **Time.** Wall-clock times (`createdAt`) are real UTC. Everything the engine produces (`simHour`, `simDate`, flight dates as the student sees them) is in **sim time**, which is advertised in the advertiser time zone. See `SimClock`.
+
+> Resolved RC-052: the spec deltas (`Δ-nn-m` / `DELTAnn-m`) listed in each module file (`docs/specs/modules/*`, section 3 or 4) are part of this data model. Each module's first build task applies its deltas as a migration; `docs/specs/conflicts.md` lists the precedence rules.
 
 ---
 
@@ -218,7 +220,7 @@ Classroom (instructor owns)
 ### 2.3 Physical layout notes
 
 - `SimHourlyMetric`, `SimDailyMetric`, `DeliveryDiagnostic`, `ChangeEntry` are the big tables. Plan: native Postgres **hash partitioning on `sandboxId`** (16 partitions) created in the migration SQL (Prisma cannot express partitions, so the Prisma model is the parent table and the migration adds `PARTITION BY HASH`). Reset of one sandbox is a targeted delete using the partition key.
-- Sim rows are kept for **90 sim days** of hourly data and the full history in daily data. A nightly engine job trims hourly rows older than 90 sim days.
+- Hourly rows (totals per line item, no slices) are kept for **14 sim days**; daily rows (with slices) are kept for the life of the sandbox. A nightly engine job trims hourly rows older than 14 sim days (RC-024, ENG 1.4).
 - Size guide: 60 students x 1 advertiser x ~12 active line items x 24 hours x ~30 slices/hour = ~520k hourly rows per sim day for the class. This is why the slice grain is capped (see `SimHourlyMetric` in section 5.18) and why the instructor can slow the clock.
 
 ### 2.4 Roles and permissions across tenants
@@ -226,7 +228,7 @@ Classroom (instructor owns)
 Two separate role systems, deliberately not mixed:
 
 1. **App role** (`User.appRole`): `STUDENT`, `INSTRUCTOR`, `ADMIN`. Decides which app you get (DV360 UI, instructor console, admin).
-2. **DV360 role** (`UserAccessGrant.role`): `ADMIN`, `STANDARD`, `READ_ONLY`, `REPORTING_ONLY`, `PARTNER_CLIENT`, `CREATIVE`. Per partner or per advertiser inside a sandbox, exactly as on the DV360 Users page ("You can give users different roles for each advertiser or partner they have access to"). A student is `ADMIN` of their own sandbox partner by default; instructors can hand out lower roles to practise permission scenarios (for example a scenario that gives the student `READ_ONLY` on one advertiser). Roles seen in the demo: Standard, Read only, Partner client, Reporting only; `ADMIN` and `CREATIVE` are `(from public docs)`.
+2. **DV360 role** (`UserAccessGrant.role`): `ADMIN`, `STANDARD`, `READ_ONLY`, `REPORTING_ONLY`, `PARTNER_CLIENT`, `CREATIVE`. Per partner or per advertiser inside a sandbox, exactly as on the DV360 Users page ("You can give users different roles for each advertiser or partner they have access to"). A student is `STANDARD` on their own sandbox partner by default (RC-047; a scenario may raise it to `ADMIN` through `accessOverride`); instructors can hand out lower roles to practise permission scenarios (for example a scenario that gives the student `READ_ONLY` on one advertiser). Roles seen in the demo: Standard, Read only, Partner client, Reporting only; `ADMIN` and `CREATIVE` are `(from public docs)`.
 
 ---
 
@@ -242,7 +244,7 @@ All data in the simulator is synthetic (R5). No real client names, URLs, e-mails
    - `GoogleAudience` catalogue (affinity and in-market paths such as the "Sports & Fitness » Sports Fans » Basketball Fans" example, life events, detailed demographics `(from public docs)`), with a generated size per inventory type.
    - `MarketplaceProduct` (Featured carousels, Discover results, instant-deal sellers), `ReportField` (the ~700-field catalogue from `12-reporting.md`), `ReportTemplate` (7 suggested templates), `Role`/`Permission`, `FxRate`.
 2. **Sandbox seed** (per student, runs inside one transaction on sandbox creation or reset). Input: `SeedTemplate.key`, `Sandbox.seedValue`. A deterministic PRNG (seeded from `seedValue`) makes every student's world unique but reproducible, which helps the instructor debug ("same seed, same data").
-3. **Backfill**: the sim engine is run in a fast mode for N sim days before the student first logs in, so lists, charts, History and reports are not empty. `SimClock.simNow` ends at "today" in the advertiser time zone.
+3. **Backfill**: an `engine.fastForward` job (ENG 10.3) runs 14 sim days hourly plus 90 sim days daily before the student first logs in (RC-024), so lists, charts, History and reports are not empty. `SimClock.simNow` ends at "today" in the advertiser time zone.
 4. **Scenario patches**: when an instructor loads a `Scenario`, its `ScenarioSeedPatch` rows are applied on top of the sandbox (for example "make IO 2 underpace", "disapprove creative 3 on two exchanges"). Every patch writes `ChangeGroup` rows with `source = SCENARIO` and a system actor so the History page shows them only when "Include system changes" is on.
 
 ### 3.2 Seed templates
@@ -295,12 +297,14 @@ Format: `ENUM_VALUE` = label shown in the UI. Where the value name is the label 
 | `SdfVersion` | `V9` = 9, `V9_1` = 9.1, `V9_2` = 9.2, `V10` = 10, `V10_1` = 10.1, `V11` = 11 (dropdown order). Version 9 shows the deprecation note (unsupported from 28 Jan 2027). |
 | `AdServerType` | `THIRD_PARTY_ONLY` = Third-party ad servers only (seen); `CM360_HYBRID` = Campaign Manager 360 hybrid `(from public docs)` |
 | `EuPoliticalAds` | `CONTAINS_EU_POLITICAL_ADS` = Yes, ... plans to serve EU political ads; `DOES_NOT_CONTAIN_EU_POLITICAL_ADS` = No, ... doesn't. `NULL` = unanswered (the LI form blocks Create; SDF upload turns NULL into "No"). |
-| `CampaignGoal` | `BRAND_AWARENESS` = Raise awareness of my brand or product; `ONLINE_ACTION` = Drive online action or visits; `OFFLINE_ACTION` = Drive offline or in-store sales; `APP_INSTALL` = Drive app installs or engagements |
-| `Kpi` | `CPM`, `CPV` (Cost per YouTube view), `VIEWABILITY_PCT` (Viewability % / "Viewable %"), `CPIAVC` (Cost per impression audible and visible at completion), `CPC`, `CPA`, `CTR`, `CPCL` (Cost per complete audio listen), `CPCV` (Cost per complete video view), `COMPL_RATE_AUDIO` (Completion rate, Audio), `COMPL_RATE_VIDEO` (Completion rate, Video), `TOS10` (Time on screen 10+ seconds), `VCPM` (Cost per thousand viewable impressions), `VTR` (YouTube view rate), `CUSTOM_IMPRESSION_VALUE_COST` (Custom impression value / cost, shown as "Value/Cost"), `CLICK_CVR` (Click conversion rate), `IMPRESSION_CVR` (Impression conversion rate), `OTHER` (free text, campaign only). |
+| `CampaignGoal` | `AWARENESS` = Raise awareness of my brand or product; `ONLINE_ACTION` = Drive online action or visits; `OFFLINE_SALES` = Drive offline or in-store sales; `APP_INSTALLS` = Drive app installs or engagements |
+| `Kpi` | `CPM`, `CPV` (Cost per YouTube view), `VIEWABLE_PCT` (Viewability % / "Viewable %"), `CPIAVC` (Cost per impression audible and visible at completion), `CPC`, `CPA`, `CTR`, `CPCL` (Cost per complete audio listen), `CPCV` (Cost per complete video view), `COMPL_AUDIO` (Completion rate, Audio), `COMPL_VIDEO` (Completion rate, Video), `TOS10` (Time on screen 10+ seconds), `VCPM` (Cost per thousand viewable impressions), `VTR` (YouTube view rate), `VALUE_COST` (Custom impression value / cost, shown as "Value/Cost"), `CLICK_CVR` (Click conversion rate), `IMPR_CVR` (Impression conversion rate), `OTHER` (free text, campaign only). |
 | `CampaignKpiRecommendation` (static table, not a DB enum) | Raise awareness: recommended CPV, CPM, Viewable %, CPIAVC; not recommended CPA, CPC, CTR. Online action: recommended CPM, CPC, CPA, CTR, Viewable %; not recommended CPV (+ others). Offline sales: recommended CPV, CPM, Viewable %, CPIAVC; not recommended CPA, CPC, CTR. App installs: recommended CPM, CPC, CPA, CTR, Viewable %; not recommended CPV (+ others). All lists end with Other.... A non-recommended KPI is a non-blocking warning. |
 | `CampaignCreativeType` | `DISPLAY`, `VIDEO`, `AUDIO` (at least one required) |
 | `FrequencyMode` | `INHERIT` (IO: "Unlimited up to the campaign's frequency cap"; LI: "Unlimited up to the higher level frequency cap"), `UNLIMITED` (campaign "No limit"; YouTube "No limit"), `LIMITED` ("Limit frequency to n exposures per ...") |
 | `FrequencyUnit` | `MONTH`, `WEEK`, `DAY`, `HOUR`, `MINUTE` (this order in the dropdown) |
+
+> Resolved RC-001: campaign goal and KPI keys follow `validation.md` 1.3 (`AWARENESS`, `OFFLINE_SALES`, `APP_INSTALLS`, `VIEWABLE_PCT`, `COMPL_AUDIO`, `COMPL_VIDEO`, `IMPR_CVR`, `VALUE_COST`). The IO objective `BRAND_AWARENESS` is a different enum and keeps its name.
 
 ### 4.3 Insertion order
 
@@ -311,7 +315,7 @@ Format: `ENUM_VALUE` = label shown in the UI. Where the value name is the label 
 | `BudgetUnit` | `CURRENCY` = {currency}; `IMPRESSIONS`. Locked after IO creation. |
 | `PacingPeriod` | `FLIGHT` (Recommended), `DAILY` |
 | `PacingType` | `AHEAD`, `EVEN`, `ASAP`. Allowed combinations in the UI: Flight x {Ahead (default for new IO), Even}; Daily x {Even, ASAP} plus a daily amount. LI pacing allows Flight / Daily x Even / ASAP, and only ASAP when the IO automates bid and budget. Flight x ASAP exists in the public API `(from public docs)` and is stored but not offered. |
-| `IoBidBudgetControl` | `IO_AUTOMATED` = Automate bid & budget at insertion order level; `LINE_ITEM_CONTROLLED` = Control bid and budget at the line item level |
+| `IoBidBudgetControl` | `IO_AUTOMATED` = Automate bid & budget at insertion order level; `LI_CONTROLLED` = Control bid and budget at the line item level |
 | `IoOptimizeTarget` | `MAX_VIEWABLE_IMPRESSIONS` (default), `MAX_VIEWABLE_10S` = Maximize viewable for at least 10 seconds, `MAX_COMPLETED_IN_VIEW_AUDIBLE` = Maximize completed in-view and audible, `MAX_CUSTOM_VALUE_COST` = Maximize custom value / cost, `MAX_REACH` = Maximize reach. Plus `prioritizeFullBudget` = "while prioritizing spending my full budget (recommended)". |
 | `FeeKind` | `CPM_FEE` (CPM fee 1, 2), `MEDIA_FEE` (Media fee 1 locked system fee, Media fee 2) |
 | `FeeType` | `DEFAULT`, `THIRD_PARTY_AD_SERVER`, `DOUBLEVERIFY`, `ADSAFE`, `ADXPOSE`, `VIZU`, `AGGREGATE_KNOWLEDGE`, `TERACENT`, `EVIDON`, `AGENCY_TRADING_DESK`, `SHOPLOCAL`, `TRUSTMETRICS`, `INTEGRAL_AD_SCIENCE_VIDEO`, `MOAT_VIDEO`, `SCOPE3`, `CUSTOM_FEE_1` to `CUSTOM_FEE_5`, plus `DV360_FEE` for the locked "Automated cost - Display & Video 360 Fee" row |
@@ -320,19 +324,19 @@ Format: `ENUM_VALUE` = label shown in the UI. Where the value name is the label 
 
 | Objective | KPIs allowed | Bid strategies allowed | LI types allowed |
 |---|---|---|---|
-| `BRAND_AWARENESS` | CPCL, CPCV, CPIAVC, CPM, CPV, COMPL_RATE_AUDIO, COMPL_RATE_VIDEO, TOS10, VCPM, VTR, CUSTOM_IMPRESSION_VALUE_COST, VIEWABILITY_PCT | MAXIMIZE_COMPLETED_IN_VIEW_AUDIBLE, MAXIMIZE_CUSTOM_VALUE_COST, MAXIMIZE_REACH, MAXIMIZE_VIEWABLE_10S, MAXIMIZE_VIEWABLE_IMPRESSIONS, MAXIMUM_CPV, TARGET_CPM, TARGET_CPV, TARGET_CUSTOM_VALUE_COST, TARGET_VIEWABLE_IMPRESSIONS | DISPLAY, VIDEO, CONNECTED_TV, AUDIO, MOBILE_APP_INSTALL, ADS_IN_MOBILE_APPS, YOUTUBE_VIDEO, YOUTUBE_AUDIO |
-| `CLICKS` | CPC, CTR, CUSTOM_IMPRESSION_VALUE_COST | MAXIMIZE_CLICKS, MAXIMIZE_CUSTOM_VALUE_COST, TARGET_CPC, TARGET_CUSTOM_VALUE_COST | DISPLAY, VIDEO, MOBILE_APP_INSTALL, ADS_IN_MOBILE_APPS, DEMAND_GEN |
-| `CONVERSIONS` | CPA, CLICK_CVR, IMPRESSION_CVR, CUSTOM_IMPRESSION_VALUE_COST | MAXIMIZE_CONVERSION_VALUE, MAXIMIZE_CONVERSIONS, MAXIMIZE_CUSTOM_VALUE_COST, TARGET_CPA, TARGET_ROAS, TARGET_CUSTOM_VALUE_COST | DISPLAY, VIDEO, CONNECTED_TV, AUDIO, MOBILE_APP_INSTALL, ADS_IN_MOBILE_APPS, DEMAND_GEN |
-| `CUSTOM` | CUSTOM_IMPRESSION_VALUE_COST | MAXIMIZE_CUSTOM_VALUE_COST, TARGET_CUSTOM_VALUE_COST | DISPLAY, VIDEO, CONNECTED_TV, AUDIO, MOBILE_APP_INSTALL, ADS_IN_MOBILE_APPS |
-| `NONE` | any | any | DISPLAY, VIDEO, AUDIO, CONNECTED_TV, MOBILE_APP_INSTALL, ADS_IN_MOBILE_APPS, YOUTUBE_VIDEO, YOUTUBE_AUDIO, DEMAND_GEN |
+| `BRAND_AWARENESS` | CPCL, CPCV, CPIAVC, CPM, CPV, COMPL_AUDIO, COMPL_VIDEO, TOS10, VCPM, VTR, VALUE_COST, VIEWABLE_PCT | MAX_COMPLETED_IN_VIEW_AUDIBLE, MAX_CUSTOM_VALUE_COST, MAX_REACH, MAX_VIEWABLE_10S, MAX_VIEWABLE_IMPRESSIONS, MAX_CPV, TARGET_CPM, TARGET_CPV, TARGET_CUSTOM_VALUE_COST, TARGET_VIEWABLE_IMPRESSIONS | DISPLAY, VIDEO, CTV, AUDIO, MOBILE_APP_INSTALL, ADS_IN_MOBILE_APPS, YT_VIDEO, YT_AUDIO |
+| `CLICKS` | CPC, CTR, VALUE_COST | MAX_CLICKS, MAX_CUSTOM_VALUE_COST, TARGET_CPC, TARGET_CUSTOM_VALUE_COST | DISPLAY, VIDEO, MOBILE_APP_INSTALL, ADS_IN_MOBILE_APPS, DEMAND_GEN |
+| `CONVERSIONS` | CPA, CLICK_CVR, IMPR_CVR, VALUE_COST | MAX_CONVERSION_VALUE, MAX_CONVERSIONS, MAX_CUSTOM_VALUE_COST, TARGET_CPA, TARGET_ROAS, TARGET_CUSTOM_VALUE_COST | DISPLAY, VIDEO, CTV, AUDIO, MOBILE_APP_INSTALL, ADS_IN_MOBILE_APPS, DEMAND_GEN |
+| `CUSTOM` | VALUE_COST | MAX_CUSTOM_VALUE_COST, TARGET_CUSTOM_VALUE_COST | DISPLAY, VIDEO, CTV, AUDIO, MOBILE_APP_INSTALL, ADS_IN_MOBILE_APPS |
+| `NONE` | any | any | DISPLAY, VIDEO, AUDIO, CTV, MOBILE_APP_INSTALL, ADS_IN_MOBILE_APPS, YT_VIDEO, YT_AUDIO, DEMAND_GEN |
 
-Type rules: `CTV_OTT` disables `CLICKS`; with `BRAND_AWARENESS` its KPIs are CPM and CUSTOM_IMPRESSION_VALUE_COST and its LI types are CONNECTED_TV plus YouTube on CTV. `DOOH` allows only objective `NONE`, no KPI, fixed bid, LI types `DOOH_DISPLAY` and `DOOH_VIDEO`.
+Type rules: `CTV_OTT` disables `CLICKS`; with `BRAND_AWARENESS` its KPIs are CPM and VALUE_COST and its LI types are `CTV` plus `YT_ON_CTV`. `DOOH` allows only objective `NONE`, no KPI, fixed bid, LI types `DOOH_DISPLAY` and `DOOH_VIDEO`.
 
 ### 4.4 Line item and YouTube
 
 | Enum | Values |
 |---|---|
-| `LineItemType` | `DISPLAY` = Display; `VIDEO` = Video; `CONNECTED_TV` = Connected TV; `AUDIO` = Audio; `MOBILE_APP_INSTALL` = Mobile app install; `ADS_IN_MOBILE_APPS` = Ads in mobile apps; `YOUTUBE_VIDEO` = YouTube & partners video; `YOUTUBE_AUDIO` = YouTube & partners audio; `DEMAND_GEN` = Demand Gen; `DOOH_DISPLAY` = Display digital out of home; `DOOH_VIDEO` = Video digital out of home. Over-the-top (OTT) is covered by `CONNECTED_TV` plus device targeting `(assumption)`. |
+| `LineItemType` | `DISPLAY` = Display; `VIDEO` = Video; `CTV` = Connected TV; `AUDIO` = Audio; `MOBILE_APP_INSTALL` = Mobile app install; `ADS_IN_MOBILE_APPS` = Ads in mobile apps; `YT_VIDEO` = YouTube & partners video; `YT_AUDIO` = YouTube & partners audio; `YT_ON_CTV` = YouTube & partners on connected TV (CTV IO only); `DEMAND_GEN` = Demand Gen; `DOOH_DISPLAY` = Display digital out of home; `DOOH_VIDEO` = Video digital out of home. Over-the-top (OTT) is covered by `CONNECTED_TV` plus device targeting `(assumption)`. |
 | `AppAdFormat` | `DISPLAY` (image, H5, rich media), `VIDEO` (for Mobile app install and Ads in mobile apps) |
 | `MobileAppPlatform` | `ALL` = All platforms, `IOS`, `ANDROID` |
 | `YouTubeSubtype` | `EFFICIENT_REACH` = Efficient reach (bumper, skippable, in-feed, Shorts), `NON_SKIPPABLE_REACH` = Non-skippable (5-30 s), `TARGET_FREQUENCY` = Target frequency (bumper, skippable, in-feed or Shorts), `TARGET_FREQUENCY_IN_STREAM` = Target frequency, only in-stream formats, `TRUEVIEW_VIEWS` = TrueView views, `AD_SEQUENCE` = Ad sequence (bumper, skippable, non-skippable). `VIDEO_ACTION` = Video action and `AUDIO_REACH` = YouTube audio reach are `(from public docs)`. UI step 1 radio: Reach / Target frequency / TrueView views / (Show more) Ad sequence. |
@@ -343,10 +347,16 @@ Type rules: `CTV_OTT` disables `CLICKS`; with `BRAND_AWARENESS` its KPIs are CPM
 | `FlightDateMode` | `INHERIT_IO` = Use same dates as insertion order; `CUSTOM` = Custom dates |
 | `BudgetMode` | `UNLIMITED_UP_TO_IO` = Unlimited up to the insertion order's budget; `FIXED` = {amount} |
 | `BidStrategyKind` | `AUTOMATED` = Automated bidding; `FIXED` = Fixed bid (CPM). YouTube LIs use `AUTOMATED` with the goal locked by subtype; ad groups hold the Target CPM. |
-| `BidGoal` | `MAXIMIZE_CLICKS`, `MAXIMIZE_CONVERSIONS`, `MAXIMIZE_CONVERSION_VALUE`, `MAXIMIZE_VIEWABLE_IMPRESSIONS`, `MAXIMIZE_VIEWABLE_10S`, `MAXIMIZE_COMPLETED_IN_VIEW_AUDIBLE`, `MAXIMIZE_REACH`, `MAXIMIZE_CUSTOM_VALUE_COST`, `MAXIMUM_CPV`, `TARGET_CPM`, `TARGET_CPV`, `TARGET_CPC`, `TARGET_CPA`, `TARGET_ROAS`, `TARGET_CUSTOM_VALUE_COST`, `TARGET_VIEWABLE_IMPRESSIONS` |
+| `BidGoal` | `MAX_CLICKS`, `MAX_CONVERSIONS`, `MAX_CONVERSION_VALUE`, `MAX_VIEWABLE_IMPRESSIONS`, `MAX_VIEWABLE_10S`, `MAX_COMPLETED_IN_VIEW_AUDIBLE`, `MAX_REACH`, `MAX_CUSTOM_VALUE_COST`, `MAX_CPV`, `TARGET_CPM`, `TARGET_CPV`, `TARGET_CPC`, `TARGET_CPA`, `TARGET_ROAS`, `TARGET_CUSTOM_VALUE_COST`, `TARGET_VIEWABLE_IMPRESSIONS` |
 | `BidPriority` | `SPEND_FULL_BUDGET` = while prioritizing spending my full budget (recommended); `TARGET_VALUE` = while prioritizing a target CPC (or CPA, ROAS...) with `bidTargetValue` |
 | `ConversionCounting` | `ALL` = Count all conversions; `POST_CLICK_ONLY` = Count only post-click conversions; `PERCENTAGE` = Count a percentage of conversions (`conversionCountingPct`, default 100, applies to post-views; all post-clicks still count) |
 | `RevenueModelType` | `TOTAL_MEDIA_COST_MARKUP` = Total media cost markup (%); `CPM_VALUE` = CPM value; `MEDIA_COST_MARKUP` `(from public docs)` |
+
+> Resolved RC-005: these are the canonical YouTube subtype keys. `validation.md` and `routes.md` are edited to match (`TARGET_FREQUENCY`, `TARGET_FREQUENCY_IN_STREAM`, `EFFICIENT_REACH`, `NON_SKIPPABLE_REACH`).
+
+> Resolved RC-004: `BidGoal` values are the `validation.md` `BidStrategy` keys (`MAX_*`, `MAX_CPV`, `TARGET_*`). `FIXED_BID` in VAL equals `bidKind = FIXED` with no `bidGoal`; `bidKind = AUTOMATED` carries one `bidGoal`.
+
+> Resolved RC-003: line item type keys follow `validation.md` 1.3 (`CTV`, `YT_VIDEO`, `YT_AUDIO`, `YT_ON_CTV`). There is no separate OTT type. `CreativeKind.YOUTUBE_VIDEO` and `FloodlightPlatform.CONNECTED_TV` are different enums and keep their names.
 
 ### 4.5 Creatives
 
@@ -370,7 +380,7 @@ Type rules: `CTV_OTT` disables `CLICKS`; with `BRAND_AWARENESS` its KPIs are CPM
 | `TargetMode` | `INCLUDE`, `EXCLUDE` |
 | `TargetOwnerType` | `PARTNER` (default for new LIs), `ADVERTISER` (locked rules), `TEMPLATE`, `LINE_ITEM`, `AD_GROUP` |
 | `TargetRefType` | `AUDIENCE`, `GOOGLE_AUDIENCE`, `CHANNEL`, `COLLECTION`, `KEYWORD_LIST`, `LOCATION_LIST`, `EXCHANGE`, `DEAL`, `PACKAGE`, `DEAL_GROUP`, `CUSTOM_LIST` |
-| `AudienceSection` | `FIRST_PARTY_AND_PARTNER` ("AND & OR"), `GOOGLE` ("OR"), `COMBINED` ("OR"), `CUSTOM_LIST` ("OR"); include groups are joined by OR |
+| `AudienceSection` | `FIRST_PARTY_AND_PARTNER` ("AND & OR"), `GOOGLE` ("OR"), `COMBINED` ("OR"), `CUSTOM_LIST` ("OR"); sections are joined by OR; inside the first-party and partner section, groups are AND-ed (intersect to narrow) and the lists inside one group are OR-ed; excluded lists are subtracted (RC-030) |
 | Option lists | Position on screen: Above the fold, Below the fold, Unknown. Position in content (Display): In-article, In-feed, Interstitial, In-banner, Unknown; (Native): In-article, In-feed, Peripheral, Recommendation, Unknown. Active View predicted viewability: 90% or greater ... 10% or greater, All impressions (default). Connection speed: Unknown, Dialup (56kbps and slower), Broadband/4G (2mbps and faster), EDGE/2G (57kbps and faster), UMTS/3G (384kbps and faster), Basic DSL (768kbps and faster), HSDPA/3.5G (1.8mbps and faster), All connection speeds (default). Device type: Computer, Smartphone, Tablet, Connected TV. Gender: Male, Female, Unknown. Age: 18, 25, 35, 45, 55, 65, 65+ and Unknown. Parental status: Parent, Not a parent, Unknown. Household income: Top 10%, Top 11-20%, Top 21-30%, Top 31-40%, Top 41-50%, Lower 50%, Unknown. Day & time time zone: Local, Advertiser; presets Custom, All days, Mondays-Fridays, Saturdays-Sundays. Environment: Web, App. Video player size: Large, HD, ... (Small, Medium, Unknown `(from public docs)`). Third-party verifier: No third party verification, DoubleVerify, Integral Ad Science, Scope3. Inventory mode: Maximum inventory (locked), Not yet labeled. Apps & URLs categories: Channels, Collections, URLs, Apps. |
 
 ### 4.7 Audiences, inventory
@@ -432,13 +442,13 @@ Type rules: `CTV_OTT` disables `CLICKS`; with `BRAND_AWARENESS` its KPIs are CPM
 | `PlanChannel` | `DIGITAL` (seen), `TV`, `CROSS_MEDIA` `(from public docs)` |
 | `ExperimentTarget` | `INSERTION_ORDER`, `LINE_ITEM` |
 | `ExperimentGoal` | Standard: `CLICKS`, `CONVERSIONS` (default), `REACH`; channel specific: `CUSTOM_IMPRESSION_VALUE`, `VIDEO_COMPLETIONS`, `VIEWS_YOUTUBE`. Report-only metrics: Impressions, Clicks, Conversions, Reach, Video completions, AVOC, Custom impression value, Engagements (Demand Gen, cross exchange), Engagements (YouTube), Views (YouTube). |
-| `ExperimentStatus` | `ACTIVE`, `COMPLETED` (ended with "End") |
+| `ExperimentStatus` | `SCHEDULED` `[SIM]` (start date in the future), `ACTIVE`, `COMPLETED` (ended with "End") |
 | `ConfidenceLevel` | `P90` (default), `P95` |
 | `LiftType` | `BRAND_LIFT`, `SEARCH_LIFT` |
 | `BrandLiftMetric` | `VIDEO_AD_RECALL`, `AWARENESS`, `CONSIDERATION`, `FAVORABILITY`, `PURCHASE_INTENT`, `ASSOCIATION` (max 3 per study) |
 | `LiftStrength` | `STANDARD` (detects lift of 2% and above), `ENHANCED` (YouTube only, 3x budget, detects 1.2% and above) |
 | `IntendedAction` | `BUY`, `CHOOSE`, `USE` (required when Purchase intent is selected) |
-| `LiftStatus` | `ELIGIBLE`, `NOT_ELIGIBLE`, `IN_PROGRESS`, `COMPLETE`, `PAUSED` |
+| `LiftStatus` | `ELIGIBLE`, `NOT_ELIGIBLE`, `IN_PROGRESS`, `COMPLETE`, `PAUSED`, `ENDED` (RC-010) |
 | `LiftSlice` | `OVERALL`, `AGE`, `GENDER`, `INSERTION_ORDER`, `LINE_ITEM`, `DEVICE`, `YOUTUBE_AD_VIDEO` (YT tab); `CREATIVE`, `PUBLISHER_DOMAIN`, `PUBLISHER_VERTICAL` (cross exchange tab) |
 | `LiftMeasure` | `ABSOLUTE`, `RELATIVE`, `HEADROOM` |
 
@@ -451,18 +461,18 @@ Type rules: `CTV_OTT` disables `CLICKS`; with `BRAND_AWARENESS` its KPIs are CPM
 | `SdfEntityFile` | `CAMPAIGNS`, `MEDIA_PRODUCTS`, `INSERTION_ORDERS`, `LINE_ITEMS`, `AD_GROUPS`, `ADS` |
 | `ChangeActor` | `USER`, `SYSTEM` |
 | `ChangeKind` | `CREATE`, `UPDATE`, `DELETE`, `STATUS_CHANGE` |
-| `ChangeSource` | `UI`, `SDF_UPLOAD`, `BULK_EDIT`, `DUPLICATION`, `ENGINE`, `SCENARIO`, `INSTRUCTOR`, `SEED` |
+| `ChangeSource` | `UI`, `SDF_UPLOAD`, `BULK_EDIT`, `DUPLICATION`, `ENGINE`, `SCENARIO`, `INSTRUCTOR`, `SEED`, `PARTNER_FANOUT` (partner-level change copied onto each advertiser History) |
 | `EntityType` | `PARTNER`, `ADVERTISER`, `CAMPAIGN`, `INSERTION_ORDER`, `LINE_ITEM`, `AD_GROUP`, `AD`, `CREATIVE`, `AUDIENCE`, `CHANNEL`, `KEYWORD_LIST`, `LOCATION_LIST`, `DEAL`, `FLOODLIGHT_GROUP`, `FLOODLIGHT_ACTIVITY`, `CUSTOM_BIDDING_ALGORITHM`, `TARGETING_TEMPLATE`, `EXPERIMENT`, `LIFT_STUDY`, `REPORT`, `PLAN` |
 | `AlertType` | `NO_SPEND` (No spend), `UNDERPACING`, `UNDERPERFORMING`, `LIMITED_AUDIENCE_SIZE`, `DEALS_OFFLINE`, `RESTRICTED_AUDIENCE_LIST`, `REJECTED_CREATIVE`, `RESTRICTED_CREATIVE`, `EXCEEDED_SPEND_THRESHOLD`, `CONFLICTING_SETTINGS` (these ten match Alert preferences), plus `YOUTUBE_AD_REJECTED` and `AD_GROUP_NOT_RUNNING` (campaign Intelligence panel list) |
 | `AlertSeverity` | `CRITICAL` (red), `NEEDS_ATTENTION` (amber) |
 | `AlertCategory` | `BUDGET`, `CREATIVES` (the two chip filters on the Alerts page) plus `PERFORMANCE`, `TARGETING`, `SETTINGS`, `SPEND_THRESHOLD` |
 | `DeviceType` / `Environment` | Computer, Smartphone, Tablet, Connected TV / Web, App (sim slice dimensions) |
-| `DiagStage` | `TOTAL_AVAILABLE_REQUESTS`, `FILTERED_IMPRESSIONS`, `ELIGIBLE_IMPRESSIONS`, `FILTERED_ELIGIBLE_IMPRESSIONS`, `BIDS_SUBMITTED`, `FILTERED_BY_AUCTION`, `BID_RESPONSES`, `EXTERNALLY_FILTERED_RESPONSES`, `IMPRESSIONS_WON` |
-| `DiagReason` | `NONE`; filtered impressions: `TARGETING`, `CREATIVES`; filtered eligible: `FREQUENCY`, `BUDGET`, `PACING`; filtered by auction: `BELOW_MINIMUM_BID`, `AUCTION_LOST_INTERNAL`; externally filtered: `BID_TOO_LOW`, `CREATIVES_EXTERNAL`, `OTHERS`, `EXTERNALLY_LOST_NOT_REPORTED` |
+| `DiagFunnelStage` (UI constant, not a DB enum; RC-021) | `TOTAL_AVAILABLE_REQUESTS`, `FILTERED_IMPRESSIONS`, `ELIGIBLE_IMPRESSIONS`, `FILTERED_ELIGIBLE_IMPRESSIONS`, `BIDS_SUBMITTED`, `FILTERED_BY_AUCTION`, `BID_RESPONSES`, `EXTERNALLY_FILTERED_RESPONSES`, `IMPRESSIONS_WON` |
+| `DiagFunnelReason` (UI constant, not a DB enum; RC-021) | `NONE`; filtered impressions: `TARGETING`, `CREATIVES`; filtered eligible: `FREQUENCY`, `BUDGET`, `PACING`; filtered by auction: `BELOW_MINIMUM_BID`, `AUCTION_LOST_INTERNAL`; externally filtered: `BID_TOO_LOW`, `CREATIVES_EXTERNAL`, `OTHERS`, `EXTERNALLY_LOST_NOT_REPORTED` |
 | `AccessRole` etc. | `AppRole` = STUDENT, INSTRUCTOR, ADMIN. `DvRole` = ADMIN `(from public docs)`, STANDARD, READ_ONLY, REPORTING_ONLY, PARTNER_CLIENT, CREATIVE `(from public docs)`. |
 | `ScenarioStatus` | `NOT_STARTED`, `IN_PROGRESS`, `PASSED`, `FAILED`, `ABANDONED` |
-| `ScenarioCheckKind` | `ENTITY_EXISTS`, `FIELD_EQUALS`, `FIELD_RANGE`, `METRIC_THRESHOLD`, `ALERT_CLEARED`, `STATUS_IS`, `CUSTOM_SQL` (engine-evaluated checks) |
-| `RecommendationType` | `ENABLE_AUTOMATED_BID_BUDGET_IO`, `ENABLE_AUTOMATED_BIDDING_LI`, `ENABLE_AUTO_BUDGET_ALLOCATION`, `USE_OPTIMIZED_TARGETING`, `ADD_CREATIVES` (first three seen in Intelligence panel) |
+| `ScenarioCheckKind` | `ENTITY_EXISTS`, `FIELD_EQUALS`, `FIELD_RANGE`, `METRIC_THRESHOLD`, `ALERT_CLEARED`, `STATUS_IS`, plus the engine kinds `ENTITY_STATE`, `METRIC`, `DIAGNOSTIC`, `ALERT_ABSENT`, `LEARNING`, `PACING`, and `CUSTOM_FN` (a registered function; instructors never author raw SQL). The DSL is module 18 section 4.7 (RC-017) |
+| `RecommendationType` | `ENABLE_AUTOMATED_BID_BUDGET_IO`, `ENABLE_AUTOMATED_BIDDING_LI`, `ENABLE_AUTO_BUDGET_ALLOCATION`, `USE_OPTIMIZED_TARGETING`, `ADD_CREATIVES` (first three seen in Intelligence panel), plus the engine rules `RAISE_BID`, `BROADEN_TARGETING`, `BID_LEARNING` (RC-014; engine "add creative sizes" maps to `ADD_CREATIVES`) |
 
 ---
 
@@ -509,6 +519,7 @@ Indexes: `(classroomId, opensAt)`, `(status, closesAt)`.
 | label | str | N | | e.g. "Week 3, Tue 6 pm" |
 | opensAt / closesAt | ts | N | | |
 | status | enum AccessWindowStatus | N | SCHEDULED | a cron flips SCHEDULED to OPEN to CLOSED |
+| repeatRule, seriesId, note | json Y, cuid Y, text Y | | | RC-016: weekly repeat (`byDay`, `until`), series id for repeated windows, instructor note. The wire DTO maps `opensAt/closesAt` to `startsAt/endsAt` |
 | createdById | cuid | Y | | instructor |
 
 #### Sandbox , Prisma
@@ -534,6 +545,7 @@ PK = `sandboxId`. The clock of one sandbox, advanced by the tick job (engine spe
 | epochStart | ts | N | | first sim moment; used for sim-day numbering |
 | realSecondsPerSimDay | int | N | classroom default | instructor can speed up or slow down |
 | paused | bool | N | true | paused when the window is closed |
+| state, minutesPerSimDay, remainderMs, runOutsideSession | | | | RC-028: adopt the engine columns (ENG 1.2): `state` RUNNING / PAUSED / STEPPING / LOCKED replaces `paused`; seeds and tick bookkeeping as in ENG 1.2 |
 | lastTickRealAt | ts | Y | | |
 | tickCount | bigint | N | 0 | one tick = one sim hour |
 
@@ -584,7 +596,7 @@ Exercises ("Launch a CTV campaign", "Fix under-pacing IO", "Add PG deal"). Autho
 Auto-checks read the live tenant tables (entity exists, field equals, metric over threshold, alert cleared) after each save and at each tick.
 
 #### Notification , NotificationDismissal
-Instructor-authored announcements shown in the top-bar bell (replaces Google announcements). `Notification`: `classroomId` Y (null = platform-wide), `kind` ("Announcement"), `title`, `body`, `learnMoreUrl` Y, `publishedAt`, `expiresAt` Y, `createdById`. `NotificationDismissal`: `notificationId`, `userId`, `dismissedAt`; unique `(notificationId, userId)`. Not tenant rows (no `sandboxId`): the same notice reaches every sandbox in the classroom.
+Instructor-authored announcements shown in the top-bar bell (replaces Google announcements). `Notification`: `classroomId` Y (null = platform-wide), `kind` ("Announcement"), `title`, `body`, `learnMoreRoute` Y (a route path, RC-015), `publishedAt`, `expiresAt` Y, `createdById`. `NotificationDismissal`: `notificationId`, `userId`, `dismissedAt`; unique `(notificationId, userId)`. Not tenant rows (no `sandboxId`): the same notice reaches every sandbox in the classroom.
 
 ---
 
@@ -660,12 +672,12 @@ Children: Campaign, InsertionOrder, LineItem, AdGroup, Ad, Creative, Audience, T
 | name | str | N | | required |
 | status | enum EntityStatus | N | ACTIVE | Active / Paused; banner "This advertiser is currently paused..." when Paused. SCHEDULED_FOR_DELETION via the footer button. |
 | websiteUrl | str | N | | required |
-| industry | str | Y | | PROJECT.md §5.11 lists industry `(assumption)` |
+| industry | str | Y | | optional dropdown on Create advertiser only: e-commerce, lead gen, travel, finance, auto, CPG, media, other (RC-046) |
 | currencyCode | str(3) | N | partner | locked after creation; may differ from partner (example INR partner, SGD advertiser) |
 | timeZone | str | N | partner | locked after creation |
 | adServer | enum AdServerType | N | THIRD_PARTY_ONLY | |
 | floodlightGroupId | cuid | Y | | "Attribution settings" link to `FloodlightGroup` |
-| sdfVersion | enum SdfVersion | N | V9 | demo default 9 |
+| sdfVersion | enum SdfVersion | N | V9 | `V9` only on the seeded demo advertisers; a new advertiser copies the partner `sdfVersion` (V11) (RC-045) |
 | sdfAdminEmail | str | Y | | |
 | productImprovement | bool | N | true | Authorizations |
 | orderIdReporting | bool | N | false | |
@@ -705,7 +717,7 @@ One row per `(advertiserId, alertType)`; unique. Defaults in the table below dri
 Data manager > Linked accounts. Fields: `advertiserId`, `type` enum LinkedAccountType, `externalId` (synthetic), `displayName`, `status` (LINKED, PENDING, REMOVED), `linkedAt`. Demo: "Google My Business for YouTube assets 1 linked", "YouTube channels 1 linked". Pure display plus the YouTube users audience source.
 
 #### PolicyCertificate
-Policy center. Fields: `advertiserId`, `kind` enum PolicyCertificateKind, `countryCode` Y (political EU / India / US; gambling per country), `status` enum CertificateStatus, `requestedAt`, `decidedAt` Y, `decidedById` Y (instructor). Unique `(advertiserId, kind, countryCode)`. Californian elections block (provided name, California ID, "Advertisements regarding") is `details` json. Engine rule: LIs in a restricted category do not serve in a country without an APPROVED certificate (scenario hook).
+Policy center. Fields: `advertiserId`, `kind` enum PolicyCertificateKind, `countryCode` Y (political EU / India / US; gambling per country), `status` enum CertificateStatus, `requestedAt`, `decidedAt` Y, `decidedById` Y (instructor). Unique `(advertiserId, kind, countryCode)`. Californian elections block (provided name, California ID, "Advertisements regarding") is `details` json. Certificates are informational in v1: the engine does not block serving for a missing certificate (RC-046). Scenario checks may read `status`. The instructor approves or rejects through `decidePolicyCertificate` (RC-052).
 
 ---
 
@@ -767,7 +779,7 @@ Source: `04-insertion-orders.md`. Keys: unique `(id, sandboxId)`; indexes `(sand
 | kpi | enum Kpi | Y | first KPI of objective | NULL for DOOH |
 | kpiValue | dec | Y | | "Enter a number greater than 0" |
 | kpiOtherText | str | Y | | |
-| bidBudgetControl | enum IoBidBudgetControl | N | LINE_ITEM_CONTROLLED | UI default shows IO_AUTOMATED when objective allows; stored as chosen |
+| bidBudgetControl | enum IoBidBudgetControl | N | IO_AUTOMATED | default `IO_AUTOMATED` when objective and type allow it; the service stores `LI_CONTROLLED` for objective `NONE`, DOOH and other types that cannot automate (RC-002) |
 | optimizeTarget | enum IoOptimizeTarget | Y | MAX_VIEWABLE_IMPRESSIONS | only when IO_AUTOMATED |
 | prioritizeFullBudget | bool | N | true | |
 | autoBudgetAllocation | bool | N | false | "Automatically optimize your budget allocation" |
@@ -833,7 +845,7 @@ Children: PartnerCost, AdGroup, CreativeAssignment, TargetingAssignment, LineIte
 | budgetMode / budgetAmount | enum / dec | N / Y | UNLIMITED_UP_TO_IO | |
 | pacingPeriod / pacingType | enum | N | FLIGHT / EVEN | ASAP forced when IO is `IO_AUTOMATED` |
 | dailyMaxAmount / dailyMaxImpressions | dec / bigint | Y | | YouTube LI: Daily amount required |
-| bidKind | enum BidStrategyKind | N | FIXED | |
+| bidKind | enum BidStrategyKind | N | AUTOMATED | the service sets `FIXED` for `AUDIO` and `DOOH_*` types (RC-040) |
 | bidGoal | enum BidGoal | Y | | when AUTOMATED; list limited by IO objective |
 | bidPriority / bidTargetValue | enum / dec | N / Y | SPEND_FULL_BUDGET | target input appears for TARGET_VALUE |
 | fixedBidCpm | dec | Y | | when FIXED |
@@ -843,7 +855,7 @@ Children: PartnerCost, AdGroup, CreativeAssignment, TargetingAssignment, LineIte
 | viewFreqMode / viewFreqMax / viewFreqUnit / viewFreqUnitCount | | | UNLIMITED | YouTube "View Frequency" block |
 | conversionCounting / conversionCountingPct | enum / int | N / Y | ALL | |
 | attributionModelId | cuid | Y | | NULL = Primary model |
-| euPoliticalAds | enum EuPoliticalAds | Y | advertiser | **required to create** (blocks Create when NULL) |
+| euPoliticalAds | enum EuPoliticalAds | Y | NULL | **required to create**, no prefill from the advertiser; the advertiser value is used only by SDF upload (RC-040) |
 | revenueModelType / revenueMarkupPct / revenueCpm | enum / pct / dec | N / Y | TOTAL_MEDIA_COST_MARKUP | |
 | productFeedEnabled | bool | N | false | Merchant Center feed (YouTube) |
 | relatedVideoIds | str[] | N | {} | YouTube related videos |
@@ -1039,7 +1051,7 @@ Detail tables:
 |---|---|
 | AudienceTagRule | `audienceId`, `activityId` (FloodlightActivity), `variableKey` Y (u1..u100), `operator` (EQUALS, NOT_EQUALS, CONTAINS, STARTS_WITH, GREATER_THAN, LESS_THAN), `value`, `ordinal`. Rows of one audience are AND-ed ("Add rule to narrow"). Required fields on the form: name, activity. |
 | AudienceSeed | lookalike seeds: `audienceId`, `seedAudienceId`; unique pair; max 10 |
-| CombinedAudienceTerm | `audienceId`, `mode` (INCLUDE / EXCLUDE), `groupIndex`, `memberKind` (AUDIENCE / GOOGLE_AUDIENCE / CUSTOM_LIST), `memberId`. Groups OR-ed, intersect via multiple groups ("intersect groups to narrow") |
+| CombinedAudienceTerm | `audienceId`, `mode` (INCLUDE / EXCLUDE), `groupIndex`, `memberKind` (AUDIENCE / GOOGLE_AUDIENCE / CUSTOM_LIST), `memberId`. Within a group: OR. Between include groups: AND ("intersect groups to narrow"). Excluded members are subtracted from the result (RC-030) |
 | CustomListEntry | custom affinity / custom intent: `audienceId`, `kind` (INTEREST, URL, APP, KEYWORD), `value`, `ordinal` |
 | CustomerMatchUpload | `audienceId`, `contactType` enum ContactType, `fileName`, `rowCount`, `matchedCount`, `matchRatePct`, `status`, `uploadedAt`. Rows themselves are not stored; the engine draws the match rate and the list size (hashed-identifier file format is `(from public docs)`: SHA-256 hashed e-mail / phone / address, one column per identifier). |
 
@@ -1068,8 +1080,8 @@ Channel / keyword list create forms are `(from public docs)`: name + textarea of
 | Table | Fields and notes |
 |---|---|
 | InventoryOrder (PID) | order parent row ("MP..." code). `partnerId`, `exchangeId`, `sellerName`, `externalCode` str, `name`, `status` EntityStatus. Expands to child deals. |
-| InventorySourceDeal (PID) | Deal page. `orderId` Y, `exchangeId`, `dealId` str (exchange deal ID), `name`, `description`, `status` EntityStatus, `dealType` enum DealType, `sellerName`, `sellerKind` enum SellerKind Y, `allowPausing` bool, `deliveryMethod` enum, `commitment` enum DealCommitment, `pgDirect` bool (locked once started), `rateType` enum DealRateType (FIXED = CPM fixed), `rate` dec, `cost` dec Y, `quantityImpressions` bigint Y, `shareOfVoicePct` Y, `startAt`, `endAt`, `dayTimeSpec` json Y ("No restrictions"), `frequencyCap` json Y (advanced frequency management), `format` enum InventoryFormat, `durationSeconds` Y, `creativeSource` ("Advertiser provided"), `targetingSummary` json (geography, audience lists, demographics), `bidRatioPct` dec Y, `centralPartnerDeal` bool, `sizes` str[], `source` ("NEGOTIATED", "INSTANT", "MARKETPLACE"). Unique `(partnerId, exchangeId, dealId)`. Derived: Delivery stats, "Action required" (PG deal with no LI, expired, offline 48 h). |
-| DealAccess | `dealId`, `partnerId` Y, `advertiserId` Y, `isDefaultAdvertiser` bool. "All advertisers permissioned" = a single row with both null `(assumption)`. Write access rule: Inventory is view only unless the user can write to all advertisers assigned to the deal. |
+| InventorySourceDeal (PID) | Deal page. `orderId` Y, `exchangeId`, `dealId` str (exchange deal ID), `name`, `description`, `status` EntityStatus, `dealType` enum DealType, `sellerName`, `sellerKind` enum SellerKind Y, `allowPausing` bool (seller attribute, read-only for students, RC-036), `deliveryMethod` enum, `commitment` enum DealCommitment, `pgDirect` bool (locked once started), `rateType` enum DealRateType (FIXED = CPM fixed), `rate` dec, `cost` dec Y, `quantityImpressions` bigint Y, `shareOfVoicePct` Y, `startAt`, `endAt`, `dayTimeSpec` json Y ("No restrictions"), `frequencyCap` json Y (advanced frequency management), `format` enum InventoryFormat, `durationSeconds` Y, `creativeSource` ("Advertiser provided"), `targetingSummary` json (geography, audience lists, demographics), `bidRatioPct` dec Y, `centralPartnerDeal` bool, `allAdvertisers` bool (true = every advertiser of the partner has access; replaces the null `DealAccess` row, RC-036), `sizes` str[], `source` ("NEGOTIATED", "INSTANT", "MARKETPLACE"). Unique `(partnerId, exchangeId, dealId)`. Derived: Delivery stats, "Action required" (PG deal with no LI, expired, offline 48 h). |
+| DealAccess | `dealId`, `partnerId` Y, `advertiserId` Y, `isDefaultAdvertiser` bool. "All advertisers permissioned" = `InventorySourceDeal.allAdvertisers = true` (RC-036). Write access rule: Inventory is view only unless the user can write to all advertisers assigned to the deal. |
 | InventoryPackage (PID) | `partnerId`, `exchangeId`, `name`, `packageUuid` str (the UUID shown as ID), `format` enum InventoryFormat, `rate` dec, `rateCurrencyOriginal` str / `rateOriginal` dec (shown "₹529.29 (€5.00)"), `bidRatioPct`, `startAt`, `endAt` Y, `status`, `marketplaceProductId` Y |
 | DealGroup (PID) | `partnerId` or `advertiserId`, `name`, `kind` (DEAL_GROUP, PREFERRED_DEAL_GROUP) `(from public docs)`, columns Groups, Type, ID, Deals |
 | DealGroupMember | `groupId`, `memberKind` (DEAL / PACKAGE), `memberId`, unique triple |
@@ -1105,9 +1117,9 @@ Counting semantics the engine must implement: STANDARD counts every conversion; 
 | CustomBiddingMultiplier | `algorithmId`, `kind` enum CustomBiddingMultiplierKind, `ordinal` (1 to 4). Unique `(algorithmId, kind)`. |
 | CustomBiddingMultiplierValue | `multiplierId`, `valueKey` (e.g. device `SMARTPHONE`, position `ABOVE_THE_FOLD`, day-hour bucket), `multiplier` dec (0.1 to 10 `(assumption)`) |
 | CustomBiddingTestRun `(from public docs)` | Test step output: `algorithmId`, `ranAt`, `sampleImpressions`, `scoreHistogram` json, `warnings` json, `passed` bool |
-| CustomBiddingScript `(from public docs)` | script algorithms: `algorithmId`, `version` int, `sourceText`, `state` (ACCEPTED, REJECTED, PENDING), `errors` json, `uploadedAt` |
+| CustomBiddingScript `(from public docs)` | script algorithms: `algorithmId`, `version` int, `sourceText`, `state` (ACCEPTED, REJECTED, PENDING), `errors` json, `uploadedAt` Dormant in v1: the Script card is disabled and no engine evaluator exists (RC-037). |
 
-Score at bid time = sum of matched rule scores x product of matched multipliers; used by `MAXIMIZE_CUSTOM_VALUE_COST` and `TARGET_CUSTOM_VALUE_COST` goals. The per-impression custom value is recorded in `SimHourlyMetric.customValue`.
+Score at bid time = sum of matched rule scores x product of matched multipliers; used by `MAX_CUSTOM_VALUE_COST` and `TARGET_CUSTOM_VALUE_COST` goals. The per-impression custom value is recorded in `SimHourlyMetric.customValue`.
 
 ---
 
@@ -1162,7 +1174,7 @@ Source: `18-experiments.md`.
 ### 5.17 Bulk jobs
 
 #### BulkJob (PID)
-Bulk status page (`/ng_nav/bulk-status`): Requested, Partner Id, Advertiser Id, Description, Source, User, Last Updated, Status, action. Shows the last 100 jobs per day grouped by year and day.
+Bulk status page (`/ng_nav/bulk-status`): Requested, Partner Id, Advertiser Id, Description, Source, User, Last Updated, Status, action. Shows the 100 most recent jobs overall, grouped by year and day (RC-032).
 
 | Field | Type | Null | Default | Notes |
 |---|---|---|---|---|
@@ -1181,7 +1193,7 @@ Bulk status page (`/ng_nav/bulk-status`): Requested, Partner Id, Advertiser Id, 
 #### BulkJobItem
 `jobId`, `entityType`, `entityId`, `status` (OK / FAILED), `message`, `rowNumber` Y (SDF upload). Used for SDF upload result files and the "View" link on duplication jobs (`resultEntityId`).
 
-SDF: files per entity are generated from the tenant tables in `SdfEntityFile` order with columns versioned by `Advertiser.sdfVersion`. Upload validates with the P2-04 catalogue and applies inside one transaction per file. Inventory source and Targeting columns at campaign / IO level must be empty (matches the upload dialog note).
+SDF: files per entity are generated from the tenant tables in `SdfEntityFile` order with columns versioned by `Advertiser.sdfVersion`. Upload validates with the P2-04 catalogue and applies row by row with a savepoint per row, so a file can partly succeed and the result zip lists OK and failed rows (RC-032). Inventory source and Targeting columns at campaign / IO level must be empty (matches the upload dialog note).
 
 ---
 
@@ -1190,7 +1202,7 @@ SDF: files per entity are generated from the tenant tables in `SdfEntityFile` or
 Writers: only the engine (`app.bypass_rls` role). Readers: list-page columns, chart cards, reports, Troubleshooter, alerts, Intelligence panel, scenarios.
 
 #### SimHourlyMetric , Prisma
-Grain: **line item x sim hour x slice**. One tick writes a few dozen rows per active line item. Unique `(lineItemId, simHour, sliceKey)`; index `(sandboxId, simHour)`.
+Grain: **line item x sim hour, totals only** (RC-022). One tick writes one row per active line item (`sliceKey` is always the empty string); slices live in `SimDailyMetric`. Unique `(lineItemId, simHour, sliceKey)`; index `(sandboxId, simHour)`.
 `sliceKey` = `{exchangeCode}|{deviceType}|{environment}|{regionCode}|{creativeId}|{dealId}`; empty segments allowed. The engine caps the slice cardinality per LI per hour (default 40) by merging the smallest slices into `other`. The explicit dimension columns (`exchangeId`, `deviceType`, `environment`, `regionCode`, `creativeId`, `adGroupId`, `dealId`) are denormalised from the key for group-by.
 
 | Metric column | Type | Meaning |
@@ -1210,10 +1222,12 @@ Grain: **line item x sim hour x slice**. One tick writes a few dozen rows per ac
 | feeCost | dec | partner CPM + media fees + DV360 fee |
 | revenue | dec | advertiser cost = mediaCost + dataCost + feeCost, then revenue-model markup |
 
+> Resolved RC-023: reporting, grids and the engine use the column names of `engine.md` 9.2 (`bidRequests`, `eligibleRequests`, `convPostClick`, `convTotal`, `viewable10sImpressions`, `lost*`). Rename the columns in this table and in the Prisma model to the engine names when the model is created. Money is stored once, in the advertiser currency (RC-025).
+
 All ratio metrics (CTR, eCPM, viewability %, CPA, VTR, completion rate, ROAS, profit, profit margin) are computed at read time, never stored.
 
 #### SimDailyMetric , Prisma
-Same grain at day level (`simDate`) plus `classroomId`. Written by the hourly rollup and by the history backfill. All reports and grid columns read this table. Unique `(lineItemId, simDate, sliceKey)`; indexes `(sandboxId, simDate)`, `(classroomId, simDate)`. Day boundaries use the advertiser time zone; "Include local timezone" on History only affects display.
+Grain: line item x sim date x `sliceKind` x `sliceKey` plus `classroomId` (RC-022: `sliceKind = 'total'` is the day total; pair slices exist only here). Written by the hourly rollup and by the history backfill. All reports and grid columns read this table. Unique `(lineItemId, simDate, sliceKind, sliceKey)`; indexes `(sandboxId, simDate)`, `(classroomId, simDate)`. Day boundaries use the advertiser time zone; "Include local timezone" on History only affects display.
 
 #### SimConversionDaily
 Floodlight conversions per activity, because counting methods and lags make them different from the totals in `SimDailyMetric`. `lineItemId`, `activityId`, `simDate`, `conversionType` (POST_CLICK / POST_VIEW), `count` dec, `salesCount` dec, `revenue` dec, `itemsSold` dec, `lagBucket` int (days from impression to conversion, for "Time to Conversion"). Unique `(lineItemId, activityId, simDate, conversionType, lagBucket)`. Feeds the Floodlight "Impressions (Yesterday)" column, tag-based audience fill, conversion reports.
@@ -1225,7 +1239,7 @@ Unique reach is not additive, so it is snapshotted. `scopeType` (LINE_ITEM / IO 
 One row per IO budget segment per sim day: `ioId`, `budgetSegmentId`, `simDate`, `plannedSpendToDate`, `actualSpendToDate`, `remainingBudget`, `pacingPct`, `budgetAtRisk`, `daysLeft`, `likelyToSpendPct`, `underpacing` bool. Source for the Advertisers-list donuts ("Budget at risk", "Pacing"), the Overview pacing card and the UNDERPACING alert. Unique `(budgetSegmentId, simDate)`.
 
 #### DeliveryDiagnostic , Prisma
-The Troubleshooter funnel (`05-line-items.md`). Grain: line item x sim hour x inventory x stage x reason x targeting dimension. Unique `(lineItemId, simHour, inventoryKey, stage, reason, dimension)`; index `(sandboxId, lineItemId, simHour)`.
+The Troubleshooter funnel (`05-line-items.md`). **Stored shape = `engine.md` 3.5** (RC-021): grain line item (and ad group) x sim date x exchange x `reasonCode` (`T.GEO`, `M.WON`, ...), with milestone rows `M.*`. The field table below describes the UI funnel view (`DiagFunnelStage` / `DiagFunnelReason`), which module 08 section 5.1 derives from the stored rows by a mapping table. Build the Prisma model from ENG 3.5.
 
 | Field | Type | Null | Default | Notes |
 |---|---|---|---|---|
@@ -1281,7 +1295,7 @@ Indexes: `(sandboxId, advertiserId, state, severity)`, `(sandboxId, campaignId, 
 | payload | json | Y | | affected entity ids |
 | firstSeenAt / lastSeenAt / resolvedAt | ts | | now / now / | |
 
-Alerts are generated only for types enabled in `AdvertiserAlertPreference`.
+Alerts are generated only for types enabled in `AdvertiserAlertPreference`. Resolved RC-013: this table (`Alert`) is the only alert store; the engine's granular code (`NO_SPEND_LI`, `UNDERPACING_IO`, `CONFLICT_IO`, ...) is written to `diagnosticCode`, `type` stays the preference-aligned key. `DISMISSED` is not exposed in the UI in v1; the engine owns `RESOLVED`.
 
 #### Recommendation
 Intelligence "Optimization suggestions". `advertiserId`, `scopeType`, `scopeId`, `type` enum RecommendationType, `title`, `detail`, `status` (OPEN, DISMISSED, APPLIED), `createdAt`, `payload` json (entities affected, proposed values). "Investigate" opens the filtered list.
@@ -1349,7 +1363,7 @@ Covers `16-history-notifications.md` (entity History pages) and the creative His
 
 ### 6.3 Writing the log
 
-1. All mutations go through one service wrapper, `withChangeLog(ctx, entityRef, mutate)`. It loads the before image, runs the mutation, diffs before and after through a **field registry** (`entityType -> [{fieldPath, label, formatter, ignore}]`) and writes the group and entries in the **same transaction**. No route may write tenant rows without it (lint rule + test that scans server actions).
+1. All mutations go through one service wrapper, `withChangeLog(ctx, entityRef, mutate)`. It loads the before image, runs the mutation, diffs before and after through a **field registry** (`entityType -> [{fieldPath, label, formatter, ignore}]`) and writes the group and entries in the **same transaction**. No route may write tenant rows without it (lint rule + test that scans server actions), except the allow-list `UI_STATE_TABLES` (Workspace, PinnedItem, RecentlyViewed, UserPreference, AdvisorMessage, email preferences, SavedView layout, notification dismissals) (RC-031).
 2. Fields with `ignore: true` never log: `updatedAt`, derived caches, engine counters.
 3. Creates write one `CREATE` entry per registered non-null field ("{Label} is {value}"), capped at 60 entries, summary "N changes made.".
 4. Status changes write `STATUS_CHANGE` with label "Status" (so the Activate / Pause bulk action is readable at a glance).
@@ -1358,12 +1372,14 @@ Covers `16-history-notifications.md` (entity History pages) and the creative His
 7. The engine and the instructor tools use the same wrapper with `actorType = SYSTEM`. Constants: `SIM_ENGINE` (auto budget allocation, automated bidding adjustments, status flips such as flight end), `CREATIVE_APPROVAL_SYNC` (exchange review decisions), `DFA_TAG_VALIDATION_SYNC` (CM audit feedback), `PARTNER_SETTING_UPDATER` (partner config propagation), `SIM_SCENARIO_LOADER`, `SIM_INSTRUCTOR` (resets and instructor edits), `SIM_SEED` (seed writes, hidden by default and excluded from counts).
 8. Values are stored canonical, not as UI text. The renderer maps enums to the labels in section 4 at read time, so renaming a label never rewrites history. If a field has no registered formatter the raw string is shown.
 
+> Resolved RC-031: engine automation state (budget allocation, bid adjustments) lives in `SimState` / `SimSnapshot` and is not logged. Only structural engine edits (status flips such as flight end, creative review decisions) call `withChangeLog` with `source = ENGINE`. `source` is the channel and `systemActor` the identity; both columns stay. The scenario actor constant is `SIM_SCENARIO_LOADER`.
+
 ### 6.4 Reading the log
 
 | View | Query |
 |---|---|
 | Advertiser History | `advertiserId = ? AND occurredAt BETWEEN ? AND ?` + `(actorType = USER OR includeSystem)` ordered by `occurredAt desc`, grouped by year then day in the advertiser time zone (or local zone when toggled) |
-| Campaign / IO / LI History | same with `campaignId` / `ioId` / `lineItemId`. Whether an IO's History also lists its line items' changes is not shown in the demo (IO log showed "changes to insertion order"). Default: IO shows the IO and its direct children (line items); LI shows itself and its ad groups and ads. Open question 3. |
+| Campaign / IO / LI History | same with `campaignId` / `ioId` / `lineItemId`. Whether an IO's History also lists its line items' changes is not shown in the demo (IO log showed "changes to insertion order"). Resolved RC-032: IO and LI History use the stored chain ids and show all descendants (an IO lists its line items, ad groups and ads; a LI lists its ad groups and ads). |
 | Creative History | `entityType = CREATIVE AND entityId = ?`, filters: date range chip, user, field; table Date / User / Change, 25 per page |
 | Chart ("Spend" tab) | not from the log; reads `SimDailyMetric` |
 | Download | CSV columns: Time, Time zone, Entity type, Entity ID, Entity name, User, Source, Field, Old value, New value, Note |
@@ -1405,7 +1421,7 @@ Indexes: see Appendix A on `ChangeGroup` (`advertiserId + occurredAt`, entity, `
 1. First column of every tenant index is `sandboxId`.
 2. Foreign keys that are used as list filters carry `(sandboxId, parentId, status)` indexes (see Appendix A).
 3. Big append-only tables (`SimHourlyMetric`, `SimDailyMetric`, `DeliveryDiagnostic`, `ChangeEntry`) use hash partitions on `sandboxId` and have only the unique key, one time index and (daily) one classroom index.
-4. Grid date ranges always filter `SimDailyMetric` by `(lineItemId IN ..., simDate BETWEEN ..)`; the unique key `(lineItemId, simDate, sliceKey)` serves that. Dimension reports add `GROUP BY` on the denormalised slice columns.
+4. Grid date ranges always filter `SimDailyMetric` by `(lineItemId IN ..., simDate BETWEEN ..)`; the unique key `(lineItemId, simDate, sliceKind, sliceKey)` serves that. Dimension reports add `GROUP BY` on the denormalised slice columns.
 5. Do not add an index for a query before it shows up in the explain plans of the P3 build.
 
 ### 7.3 Soft-delete and archive
@@ -1422,10 +1438,10 @@ Each item states the assumption used in this spec so work can start.
 |---|---|---|
 | 1 | One sandbox per student, or shared partners for pair work? (PROJECT.md open question 4) | One sandbox per student. A shared sandbox is possible: `Sandbox.ownerUserId` is nullable and `UserAccessGrant` can give several students a role in one sandbox. |
 | 2 | Students per class (PROJECT.md open question 3)? | 60 concurrent sandboxes for sizing (partitions and tick cost). |
-| 3 | Does the IO History tab include line item changes? Demo log did not show it. | IO shows itself and child line items; LI shows itself, ad groups and ads (6.4). |
+| 3 | Does the IO History tab include line item changes? Demo log did not show it. | Resolved RC-032: both show all descendants through the chain ids (6.4). |
 | 4 | Exact permission matrix for `PARTNER_CLIENT`, `CREATIVE`, `REPORTING_ONLY`. Role picker was unreachable in the demo. | Matrix in 5.1 from public docs knowledge; to be corrected with a full-access login. |
 | 5 | Sim clock per sandbox (assumed) or one classroom clock so everyone sees the same "today"? | Per sandbox, because pausing and resetting must not affect others; the classroom default speed copies into each sandbox. Instructor "sync all" action aligns `simNow`. |
-| 6 | Hourly data retention (90 sim days) and the slice cap of 40 per LI per hour. Enough for the Troubleshooter and reports? | Yes for lessons; dimension reports (device x region x exchange) may look coarse for tiny LIs. Revisit with P2-05. |
+| 6 | Hourly data retention (14 sim days, totals only) and slices only in daily rows (RC-022, RC-024). Enough for the Troubleshooter and reports? | Yes for lessons; dimension reports (device x region x exchange) may look coarse for tiny LIs. Revisit with P2-05. |
 | 7 | Reach is not additive. Are snapshots per scope and window precise enough for the Unique Reach reports? | Snapshot table plus an analytic estimator (Poisson reach curve per audience size); not real user-level simulation. |
 | 8 | Real third-party names (DoubleVerify, Integral Ad Science, Scope3, Adjust, Appsflyer) appear in targeting and Floodlight forms. `14-advertiser-settings.md` says to use fictional vendor names for third-party services. | Keep real names where the form option list requires them (verification providers in targeting; fee types), with invented prices; use fictional names for the Advertiser settings vendor checkboxes. Needs Kailas' decision. |
 | 9 | Exchange names are real companies. R5 forbids real client data, not vendor names. | Keep names (reference data); seat and network IDs synthetic. |
@@ -1434,7 +1450,7 @@ Each item states the assumption used in this spec so work can start.
 | 12 | Campaign and IO level targeting: the demo says Inventory source and Targeting moved to LI level. Are legacy IO-level targeting columns needed for SDF compatibility? | Not modelled. SDF columns for them must be empty. |
 | 13 | Ad sequence (YouTube) builder UI was not seen. | Not modelled; an `AdSequenceStep` table (adGroupId, ordinal, adId, rule) is expected `(from public docs)`. |
 | 14 | DOOH and Demand Gen forms, Mobile app install step 2, YouTube audio and target frequency forms. | Modelled with the generic LI columns plus the `(from public docs)` items above; validate when a full-access account is available. |
-| 15 | Creative asset storage. Upload types (HTML5 zip, video, audio) need real files. | Generated placeholders by default; students may upload small files to object storage (Vercel Blob), with a 5 MB limit and no scanning in v1. `CreativeAsset.storageKey` abstracts it. |
+| 15 | Creative asset storage. Upload types (HTML5 zip, video, audio) need real files. | Generated placeholders by default; students may upload small files to object storage (Vercel Blob), with a 5 MB limit (10 MB for HTML5 zips and video or audio files; browser uploads go straight to Blob by signed URL, RC-007) and no scanning in v1 (content policy: RC-064). `CreativeAsset.storageKey` abstracts it. |
 | 16 | Report field catalogue is incomplete (Date, Fees, Conversions, YouTube lists). | Seed what `12-reporting.md` captured; add fields as reports need them. |
 | 17 | SDF column layout per version (9 to 11) is not in the explore notes. | Needs its own mini spec before P4-10; `BulkJob` and `BulkJobItem` are format agnostic. |
 | 18 | Custom bidding multiplier value range and the Test step output. | 0.1 to 10; test run shows a score histogram (assumption). |
@@ -1443,7 +1459,7 @@ Each item states the assumption used in this spec so work can start.
 | 21 | RLS needs `SET LOCAL` per transaction; Neon/Supabase poolers in transaction mode support it only inside a transaction. | Wrap every request in a transaction (Prisma interactive transaction); engine uses a bypass role. |
 | 22 | Unique constraints with NULL columns (`UserAccessGrant`, others) behave as distinct in Postgres. | Use `NULLS NOT DISTINCT` (Postgres 15+) in migration SQL, otherwise service-layer checks. |
 | 23 | Soft references (`TargetingAssignment.refId`, alert scope ids) can dangle after hard deletes. | A cleanup step in each delete service and a nightly consistency job; archive instead of delete wherever possible. |
-| 24 | A/B test arm splitting needs a stable user-to-arm hash inside the auction. | `hash(sandboxId, experimentId, simUserId) mod 100` against cumulative `splitPct`; defined in P2-05. |
+| 24 | A/B test arm splitting needs a stable user-to-arm hash inside the auction. | Not used (RC-034). The engine splits supply into cohort pools per arm (ENG 6.7). |
 | 25 | Brand and search lift survey simulation parameters (baseline rate, response counts, effect size by creative). | Engine spec P2-05; `LiftResult` stores outputs only. |
 | 26 | Billing and invoices are hidden in the demo. How deep should the simulator go? | Minimal: monthly invoice per advertiser from `SimDailyMetric` (5.2). |
 | 27 | Multi-currency: advertiser currency can differ from partner currency (SGD vs INR). IO budgets are in advertiser currency; partner-level totals convert with `FxRate`. Are fixed FX rates acceptable? | Yes, one fixed rate table, no daily change. |
@@ -1534,30 +1550,30 @@ enum EuPoliticalAds {
 }
 
 enum CampaignGoal {
-  BRAND_AWARENESS
+  AWARENESS
   ONLINE_ACTION
-  OFFLINE_ACTION
-  APP_INSTALL
+  OFFLINE_SALES
+  APP_INSTALLS
 }
 
 enum Kpi {
   CPM
   CPV
-  VIEWABILITY_PCT
+  VIEWABLE_PCT
   CPIAVC
   CPC
   CPA
   CTR
   CPCL
   CPCV
-  COMPL_RATE_AUDIO
-  COMPL_RATE_VIDEO
+  COMPL_AUDIO
+  COMPL_VIDEO
   TOS10
   VCPM
   VTR
-  CUSTOM_IMPRESSION_VALUE_COST
+  VALUE_COST
   CLICK_CVR
-  IMPRESSION_CVR
+  IMPR_CVR
   OTHER
 }
 
@@ -1613,7 +1629,7 @@ enum FrequencyUnit {
 
 enum IoBidBudgetControl {
   IO_AUTOMATED
-  LINE_ITEM_CONTROLLED
+  LI_CONTROLLED
 }
 
 enum IoOptimizeTarget {
@@ -1656,12 +1672,13 @@ enum FeeType {
 enum LineItemType {
   DISPLAY
   VIDEO
-  CONNECTED_TV
+  CTV
   AUDIO
   MOBILE_APP_INSTALL
   ADS_IN_MOBILE_APPS
-  YOUTUBE_VIDEO
-  YOUTUBE_AUDIO
+  YT_VIDEO
+  YT_AUDIO
+  YT_ON_CTV
   DEMAND_GEN
   DOOH_DISPLAY
   DOOH_VIDEO
@@ -1717,15 +1734,15 @@ enum BidStrategyKind {
 }
 
 enum BidGoal {
-  MAXIMIZE_CLICKS
-  MAXIMIZE_CONVERSIONS
-  MAXIMIZE_CONVERSION_VALUE
-  MAXIMIZE_VIEWABLE_IMPRESSIONS
-  MAXIMIZE_VIEWABLE_10S
-  MAXIMIZE_COMPLETED_IN_VIEW_AUDIBLE
-  MAXIMIZE_REACH
-  MAXIMIZE_CUSTOM_VALUE_COST
-  MAXIMUM_CPV
+  MAX_CLICKS
+  MAX_CONVERSIONS
+  MAX_CONVERSION_VALUE
+  MAX_VIEWABLE_IMPRESSIONS
+  MAX_VIEWABLE_10S
+  MAX_COMPLETED_IN_VIEW_AUDIBLE
+  MAX_REACH
+  MAX_CUSTOM_VALUE_COST
+  MAX_CPV
   TARGET_CPM
   TARGET_CPV
   TARGET_CPC
@@ -2391,7 +2408,7 @@ model InsertionOrder {
   kpi                     Kpi?
   kpiValue                Decimal?           @db.Decimal(20, 6)
   kpiOtherText            String?
-  bidBudgetControl        IoBidBudgetControl @default(LINE_ITEM_CONTROLLED)
+  bidBudgetControl        IoBidBudgetControl @default(IO_AUTOMATED)
   optimizeTarget          IoOptimizeTarget?
   prioritizeFullBudget    Boolean            @default(true)
   autoBudgetAllocation    Boolean            @default(false)
@@ -2487,7 +2504,7 @@ model LineItem {
   pacingType               PacingType         @default(EVEN)
   dailyMaxAmount           Decimal?           @db.Decimal(20, 6)
   dailyMaxImpressions      BigInt?
-  bidKind                  BidStrategyKind    @default(FIXED)
+  bidKind                  BidStrategyKind    @default(AUTOMATED)
   bidGoal                  BidGoal?
   bidPriority              BidPriority        @default(SPEND_FULL_BUDGET)
   bidTargetValue           Decimal?           @db.Decimal(20, 6)
@@ -2838,6 +2855,7 @@ model SimDailyMetric {
   classroomId           String
   lineItemId            String
   simDate               DateTime     @db.Date
+  sliceKind             String       @default("total")
   sliceKey              String
   exchangeId            String?
   deviceType            DeviceType?
@@ -2873,7 +2891,7 @@ model SimDailyMetric {
 
   lineItem LineItem @relation(fields: [lineItemId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
 
-  @@unique([lineItemId, simDate, sliceKey])
+  @@unique([lineItemId, simDate, sliceKind, sliceKey])
   @@index([sandboxId, simDate])
   @@index([classroomId, simDate])
 }
@@ -2886,7 +2904,7 @@ model DeliveryDiagnostic {
   simHour      DateTime
   inventoryKey String     @default("ALL")
   stage        DiagStage
-  reason       DiagReason @default(NONE)
+  reason       DiagReason @default(NONE)  // RC-021: replace this model with ENG 3.5 (date, exchangeId, reasonCode); enums above are the UI funnel
   dimension    String     @default("")
   count        BigInt     @default(0)
 

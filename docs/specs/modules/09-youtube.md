@@ -138,11 +138,11 @@ Subtype mapping (UI step 1 → key; MX-07):
 |---|---|---|---|---|
 | Reach | Efficient | `EFFICIENT_REACH` | `EFFICIENT_REACH` | `REACH_EFFICIENT` |
 | Reach | Non-skippable | `NON_SKIPPABLE_REACH` | `NON_SKIPPABLE_REACH` | `REACH_NON_SKIPPABLE` |
-| Target frequency | Any | `TARGET_FREQUENCY_ALL` | `TARGET_FREQUENCY` | `TARGET_FREQUENCY_ANY` |
-| Target frequency | In-stream only | `TARGET_FREQUENCY_INSTREAM` | `TARGET_FREQUENCY_IN_STREAM` | `TARGET_FREQUENCY_IN_STREAM` |
+| Target frequency | Any | `TARGET_FREQUENCY` | `TARGET_FREQUENCY` | `TARGET_FREQUENCY` |
+| Target frequency | In-stream only | `TARGET_FREQUENCY_IN_STREAM` | `TARGET_FREQUENCY_IN_STREAM` | `TARGET_FREQUENCY_IN_STREAM` |
 | TrueView views | n/a | `TRUEVIEW_VIEWS` | `TRUEVIEW_VIEWS` | `TRUEVIEW_VIEWS` |
 | Ad sequence | n/a | `AD_SEQUENCE` | `AD_SEQUENCE` | `AD_SEQUENCE` |
-Recommendation: VAL keys (conflict C-09-1).
+Resolved RC-005: DM keys (`EFFICIENT_REACH`, `NON_SKIPPABLE_REACH`, `TARGET_FREQUENCY`, `TARGET_FREQUENCY_IN_STREAM`, `TRUEVIEW_VIEWS`, `AD_SEQUENCE`, `AUDIO_REACH`). The VAL and RT columns above are the old spellings.
 
 ---
 
@@ -199,7 +199,7 @@ Role shorthand as in 06. Common wrapper: `assertAccess` → validate → `withCh
 Types from RT 8.7: `YoutubeLiSettings`, `AdGroupInput`, `AdInput`. Extra types:
 
 ```ts
-type YtSubtype = 'EFFICIENT_REACH'|'NON_SKIPPABLE_REACH'|'TARGET_FREQUENCY_ALL'|'TARGET_FREQUENCY_INSTREAM'|'TRUEVIEW_VIEWS'|'AD_SEQUENCE'|'AUDIO_REACH';
+type YtSubtype = 'EFFICIENT_REACH'|'NON_SKIPPABLE_REACH'|'TARGET_FREQUENCY'|'TARGET_FREQUENCY_IN_STREAM'|'TRUEVIEW_VIEWS'|'AD_SEQUENCE'|'AUDIO_REACH';
 interface YtLiStep1 { type: 'YT_VIDEO'|'YT_AUDIO'; name: string; optimization: 'REACH'|'TARGET_FREQUENCY'|'TRUEVIEW_VIEWS'|'AD_SEQUENCE'; adFormatChoice?: 'EFFICIENT'|'NON_SKIPPABLE'|'ALL_FORMATS'|'IN_STREAM_ONLY' }
 interface AdGroupRow { id: Id; lineItemId: Id; name: string; status: 'ACTIVE'|'PAUSED'; alertCount: number; adFormatLabel: string; adSource: string; cm360Id?: string;
   impressions: number; coViewedImpressions: number; revenue: Money; avgCpm: Money|null; views: number; viewRate: number|null; avgCpv: Money|null; conversions: number; avgCpa: Money|null; adCount: number }
@@ -393,6 +393,8 @@ Engine gaps found: no YouTube ad review simulation (Δ-09-8), no per-surface vol
 | Q-09-10 | The ad group list header says "Responsive" (the ad format label of the first ad). What does it show for mixed formats? | "Mixed" `[SIM]` |
 
 ### 8.2 Conflicts between specs
+
+> Resolved: every conflict below is consolidated in [`../conflicts.md`](../conflicts.md) (crosswalk table, rows `RC-nnn`). Where a proposal here and the RC row differ, the RC row wins.
 | # | Conflict | Where | Proposal |
 |---|---|---|---|
 | C-09-1 | Subtype keys differ in three specs (2.7 table) | DM 4.4, VAL 1.3 / MX-07, RT 8.7 | VAL keys |
