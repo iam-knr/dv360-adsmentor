@@ -1,0 +1,280 @@
+// Hierarchy: campaign, insertion order, line item, ad group, ad
+// Source: docs/specs/data-model.md Appendix A (P3-05a). Owner session: P3-05a.
+
+// ---------------------------------------------------------------------------
+// Campaign, insertion order, budget segments, fees
+// ---------------------------------------------------------------------------
+
+model Campaign {
+  id               String                 @id @default(cuid())
+  sandboxId        String
+  publicId         BigInt                 @unique @default(dbgenerated("next_public_id()"))
+  advertiserId     String
+  name             String
+  status           EntityStatus           @default(ACTIVE)
+  goal             CampaignGoal?
+  kpi              Kpi?
+  kpiValue         Decimal?               @db.Decimal(20, 6)
+  kpiOtherText     String?
+  creativeTypes    CampaignCreativeType[]
+  plannedSpend     Decimal?               @db.Decimal(20, 6)
+  plannedStart     DateTime               @db.Date
+  plannedEnd       DateTime?              @db.Date
+  freqMode         FrequencyMode          @default(UNLIMITED)
+  freqMaxExposures Int?
+  freqUnit         FrequencyUnit?
+  freqUnitCount    Int?
+  landingPageUrls  String[]
+  keywords         String[]
+  copiedFromId     String? // Δ-06-6
+  budgetUnit       BudgetUnit             @default(CURRENCY) // Δ-06-2: one budget type for the whole grid
+  version          Int                    @default(1)
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  advertiser      Advertiser       @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  budgets         CampaignBudget[]
+  insertionOrders InsertionOrder[]
+  lineItems       LineItem[]
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, advertiserId, status])
+}
+
+model CampaignBudget {
+  id                String    @id @default(cuid())
+  sandboxId         String
+  campaignId        String
+  amount            Decimal   @db.Decimal(20, 6)
+  name              String
+  startDate         DateTime? @db.Date
+  endDate           DateTime? @db.Date
+  invoiceGroupingId String?
+  externalBudgetId  String?
+
+  campaign Campaign @relation(fields: [campaignId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, campaignId])
+}
+
+model InsertionOrder {
+  id                      String             @id @default(cuid())
+  sandboxId               String
+  publicId                BigInt             @unique @default(dbgenerated("next_public_id()"))
+  campaignId              String
+  advertiserId            String
+  name                    String
+  status                  EntityStatus       @default(DRAFT)
+  type                    IoType             @default(STANDARD)
+  objective               IoObjective
+  budgetUnit              BudgetUnit         @default(CURRENCY)
+  pacingPeriod            PacingPeriod       @default(FLIGHT)
+  pacingType              PacingType         @default(AHEAD)
+  dailyMaxAmount          Decimal?           @db.Decimal(20, 6)
+  dailyMaxImpressions     BigInt?
+  kpi                     Kpi?
+  kpiValue                Decimal?           @db.Decimal(20, 6)
+  kpiOtherText            String?
+  bidBudgetControl        IoBidBudgetControl @default(IO_AUTOMATED)
+  optimizeTarget          IoOptimizeTarget?
+  prioritizeFullBudget    Boolean            @default(true)
+  autoBudgetAllocation    Boolean            @default(false)
+  ytReachFreqOptimization Boolean            @default(false)
+  freqMode                FrequencyMode      @default(INHERIT)
+  freqMaxExposures        Int?
+  freqUnit                FrequencyUnit?
+  freqUnitCount           Int?
+  integrationCode         String?
+  integrationDetail       String?
+  version                 Int                @default(1)
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+
+  campaign   Campaign        @relation(fields: [campaignId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  advertiser Advertiser      @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  segments   BudgetSegment[]
+  fees       PartnerCost[]
+  lineItems  LineItem[]
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, campaignId, status])
+  @@index([sandboxId, advertiserId])
+}
+
+model BudgetSegment {
+  id               String   @id @default(cuid())
+  sandboxId        String
+  ioId             String
+  ordinal          Int      @default(0)
+  amount           Decimal  @db.Decimal(20, 6)
+  description      String?
+  startDate        DateTime @db.Date
+  endDate          DateTime @db.Date
+  externalBudgetId String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  io InsertionOrder @relation(fields: [ioId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, ioId, startDate])
+}
+
+model PartnerCost {
+  id         String   @id @default(cuid())
+  sandboxId  String
+  ioId       String?
+  lineItemId String?
+  kind       FeeKind
+  slot       Int
+  feeType    FeeType  @default(DEFAULT)
+  amount     Decimal? @db.Decimal(20, 6)
+  percentage Decimal? @db.Decimal(9, 4)
+  invoiced   Boolean  @default(false)
+  isSystem   Boolean  @default(false)
+
+  io       InsertionOrder? @relation(fields: [ioId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  lineItem LineItem?       @relation(fields: [lineItemId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@index([sandboxId, ioId])
+  @@index([sandboxId, lineItemId])
+}
+
+// ---------------------------------------------------------------------------
+// Line item, YouTube ad group and ad
+// ---------------------------------------------------------------------------
+
+model LineItem {
+  id                       String             @id @default(cuid())
+  sandboxId                String
+  publicId                 BigInt             @unique @default(dbgenerated("next_public_id()"))
+  ioId                     String
+  campaignId               String
+  advertiserId             String
+  name                     String
+  status                   EntityStatus       @default(DRAFT)
+  type                     LineItemType
+  appAdFormat              AppAdFormat?
+  mobileAppPlatform        MobileAppPlatform?
+  mobileAppId              String?
+  ytSubtype                YouTubeSubtype?
+  ytSurfaces               YouTubeSurface[]
+  inventoryQuality         InventoryQuality   @default(AUTHORIZED_DIRECT_SELLERS_AND_RESELLERS)
+  targetCuratedCtv         Boolean            @default(false)
+  optimizedTargeting       Boolean            @default(false)
+  targetingTemplateId      String?
+  flightMode               FlightDateMode     @default(INHERIT_IO)
+  flightStart              DateTime?
+  flightEnd                DateTime?
+  budgetMode               BudgetMode         @default(UNLIMITED_UP_TO_IO)
+  budgetAmount             Decimal?           @db.Decimal(20, 6)
+  pacingPeriod             PacingPeriod       @default(FLIGHT)
+  pacingType               PacingType         @default(EVEN)
+  dailyMaxAmount           Decimal?           @db.Decimal(20, 6)
+  dailyMaxImpressions      BigInt?
+  bidKind                  BidStrategyKind    @default(AUTOMATED)
+  bidGoal                  BidGoal?
+  bidPriority              BidPriority        @default(SPEND_FULL_BUDGET)
+  bidTargetValue           Decimal?           @db.Decimal(20, 6)
+  fixedBidCpm              Decimal?           @db.Decimal(20, 6)
+  customBiddingAlgorithmId String?
+  creativeOptimization     Boolean            @default(true)
+  freqMode                 FrequencyMode      @default(INHERIT)
+  freqMaxExposures         Int?
+  freqUnit                 FrequencyUnit?
+  freqUnitCount            Int?
+  viewFreqMode             FrequencyMode      @default(UNLIMITED)
+  viewFreqMax              Int?
+  viewFreqUnit             FrequencyUnit?
+  viewFreqUnitCount        Int?
+  conversionCounting       ConversionCounting @default(ALL)
+  conversionCountingPct    Int?
+  attributionModelId       String?
+  euPoliticalAds           EuPoliticalAds?
+  revenueModelType         RevenueModelType   @default(TOTAL_MEDIA_COST_MARKUP)
+  revenueMarkupPct         Decimal?           @db.Decimal(9, 4)
+  revenueCpm               Decimal?           @db.Decimal(20, 6)
+  productFeedEnabled       Boolean            @default(false)
+  relatedVideoIds          String[]
+  integrationCode          String?
+  integrationDetail        String?
+  copiedFromId             String?
+  version                  Int                @default(1)
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+
+  io          InsertionOrder        @relation(fields: [ioId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  campaign    Campaign              @relation(fields: [campaignId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  advertiser  Advertiser            @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  fees        PartnerCost[]
+  adGroups    AdGroup[]
+  assignments CreativeAssignment[]
+  targeting   TargetingAssignment[]
+  hourly      SimHourlyMetric[]
+  daily       SimDailyMetric[]
+  diagnostics DeliveryDiagnostic[]
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, ioId, status])
+  @@index([sandboxId, advertiserId, type])
+  @@index([sandboxId, campaignId])
+}
+
+model AdGroup {
+  id            String       @id @default(cuid())
+  sandboxId     String
+  publicId      BigInt       @unique @default(dbgenerated("next_public_id()"))
+  lineItemId    String
+  advertiserId  String
+  name          String
+  status        EntityStatus @default(ACTIVE)
+  adSourceLabel String?
+  bidValue      Decimal?     @db.Decimal(20, 6)
+  cm360Id       String?
+  version       Int          @default(1)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  lineItem   LineItem              @relation(fields: [lineItemId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  advertiser Advertiser            @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  ads        Ad[]
+  targeting  TargetingAssignment[]
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, lineItemId, status])
+}
+
+model Ad {
+  id               String         @id @default(cuid())
+  sandboxId        String
+  publicId         BigInt         @unique @default(dbgenerated("next_public_id()"))
+  adGroupId        String
+  advertiserId     String
+  name             String
+  status           EntityStatus   @default(ACTIVE)
+  format           YtAdFormat     @default(RESPONSIVE)
+  reviewStatus     AdReviewStatus @default(PENDING)
+  reviewFeedback   String?
+  youtubeVideoId   String
+  logoAssetId      String?
+  companionAssetId String?
+  headline         String?
+  longHeadline     String?
+  description      String?
+  callToAction     String?
+  businessName     String?
+  displayUrl       String?
+  path1            String?
+  path2            String?
+  landingPageUrl   String
+  clickTrackerUrl  String?
+  version          Int            @default(1)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  adGroup    AdGroup    @relation(fields: [adGroupId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+  advertiser Advertiser @relation(fields: [advertiserId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
+
+  @@unique([id, sandboxId])
+  @@index([sandboxId, adGroupId, status])
+}
