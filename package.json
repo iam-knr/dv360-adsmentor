@@ -27,7 +27,8 @@
     "db:reset": "prisma migrate reset --force --skip-seed",
     "db:gen-rls": "tsx prisma/sql/generate-rls.ts",
     "db:seed": "tsx prisma/seed/index.ts",
-    "db:bootstrap": "tsx scripts/bootstrap.ts"
+    "db:bootstrap": "tsx scripts/bootstrap.ts",
+    "engine:golden": "tsx lib/engine/testing/golden.ts"
   },
   "dependencies": {
     "@date-fns/tz": "1.5.0",
