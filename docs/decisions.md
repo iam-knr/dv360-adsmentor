@@ -46,7 +46,7 @@ Sources: `PROJECT.md` section 9, `docs/PROJECT-LOG.md` section 2, `docs/specs/ro
 - Consequences: Local sessions hand content to cloud sessions, which commit it.
 
 ### ADR-012 Repository is public
-- Status: Accepted. Date: 2026-10-28. By: Kailas. Revisit: before P3-01 (RC-059).
+- Status: Accepted. Date: 2026-10-28. By: Kailas. Revisit: decided, the repo stays public (ADR-044, RC-059).
 - Decision: The repo is public so cloud sessions can reach it.
 - Consequences: Explore notes about DV360 are visible to anyone. No secrets may be committed; secret scanning and push protection are required (build-plan 1.6). The owner can switch to private; Vercel and cloud sessions work with private repos.
 
@@ -61,32 +61,32 @@ Sources: `PROJECT.md` section 9, `docs/PROJECT-LOG.md` section 2, `docs/specs/ro
 
 ---
 
-## Stack (proposed, one approval covers ADR-006 to ADR-010)
+## Stack (approved by ADR-039, covers ADR-006 to ADR-010)
 
 ### ADR-006 Framework and UI
-- Status: Proposed-awaiting-owner (RC-060, owner item P-01). Date: 2026-10-28.
+- Status: Accepted by ADR-039 (2026-10-28, Kailas). Was Proposed-awaiting-owner (RC-060, owner item P-01). Date: 2026-10-28.
 - Decision: Next.js App Router with TypeScript, Material UI (MUI) with a custom DV360-like theme, TanStack Table for grids, Recharts for charts, Material Symbols icons, self-hosted fonts.
 - Why: DV360 is built on Material Design; Next.js deploys natively on Vercel; TanStack Table avoids the MUI X Pro licence for sticky columns and trees (design-system Q5).
 - Consequences if changed: the design-system and routes specs assume this stack (Next 15 async `params`, route groups). A different framework means rewriting routes.md 5 and the component kit.
 
 ### ADR-007 Data
-- Status: Proposed-awaiting-owner. Date: 2026-10-28.
-- Decision: PostgreSQL with Prisma (6.x, multi-file schema). Neon is recommended, Supabase is the alternative.
+- Status: Accepted by ADR-039 (2026-10-28, Kailas); the database host is Supabase (ADR-040), not Neon. Date: 2026-10-28.
+- Decision: PostgreSQL with Prisma (6.x, multi-file schema). Neon was recommended and Supabase was the alternative; the owner chose Supabase (ADR-040).
 - Why: The hierarchy Partner to Line item is relational; row level security gives sandbox isolation (ADR-016).
 - Consequences if changed: Appendix A of data-model.md is Prisma and Postgres-specific (RLS, `NULLS NOT DISTINCT`).
 
 ### ADR-008 Hosting and jobs
-- Status: Proposed-awaiting-owner. Date: 2026-10-28.
+- Status: Accepted by ADR-039 (2026-10-28, Kailas). Scheduler and plan: ADR-041. Date: 2026-10-28.
 - Decision: Vercel for hosting, preview deploys per branch and production on `main`. The simulation tick is an HTTP endpoint (`POST /api/sim/engine/tick`) called by a scheduler plus lazy catch-up on page loads. The scheduler choice is ADR-029.
 - Consequences: Vercel plan limits matter (ADR-030).
 
 ### ADR-009 Authentication
-- Status: Proposed-awaiting-owner. Date: 2026-10-28.
+- Status: Accepted by ADR-039 (2026-10-28, Kailas). Date: 2026-10-28.
 - Decision: Auth.js v5 with the credentials provider and argon2id password hashing. Roles: student, instructor, admin, plus DV360-style access levels (Standard, Read only, Reporting only, Partner client, Creative, Admin) inside a sandbox.
 - Consequences: Auth.js v5 is a beta package; all use goes through `lib/auth/session.ts` so it can be swapped (build-plan R-19).
 
 ### ADR-010 Tests
-- Status: Proposed-awaiting-owner. Date: 2026-10-28.
+- Status: Accepted by ADR-039 (2026-10-28, Kailas). Date: 2026-10-28.
 - Decision: Vitest for unit, component and database tests, fast-check for engine properties, Playwright for end-to-end tests, vitest-axe for accessibility checks.
 
 ---
@@ -171,19 +171,19 @@ Sources: `PROJECT.md` section 9, `docs/PROJECT-LOG.md` section 2, `docs/specs/ro
 ## Owner decisions with a default (Proposed-awaiting-owner)
 
 ### ADR-028 One sandbox per student
-- Status: Proposed-awaiting-owner (RC-061). Default: one sandbox per student; session picks the class with an open window; instructors can override with `?sim_class=`. Changing to shared sandboxes for pairs needs `Sandbox.ownerUserId` to be nullable and extra grants (already supported by the model).
+- Status: Proposed-awaiting-owner (RC-061). Still open. Default: one sandbox per student; session picks the class with an open window; instructors can override with `?sim_class=`. Changing to shared sandboxes for pairs needs `Sandbox.ownerUserId` to be nullable and extra grants (already supported by the model).
 
 ### ADR-029 Cron plan for the engine tick
-- Status: Proposed-awaiting-owner (RC-056, owner item P-05). Default: GitHub Actions every 5 minutes plus lazy catch-up; Vercel Pro cron every minute if the owner upgrades; manual stepping as the weakest option. Needed before P3-08b merges.
+- Status: Superseded by ADR-041 (2026-10-28): the default is now Vercel Cron on Pro; GitHub Actions is the fallback. Original proposal (RC-056, owner item P-05): Default: GitHub Actions every 5 minutes plus lazy catch-up; Vercel Pro cron every minute if the owner upgrades; manual stepping as the weakest option. Needed before P3-08b merges.
 
 ### ADR-030 Vercel plan
-- Status: Proposed-awaiting-owner (owner item P-03). Default: Pro for class use. Hobby is for non-commercial use, allows daily cron only (a deploy with a faster cron fails) and limits deployments per day (build-plan R-05).
+- Status: Accepted and made binding by ADR-041 (2026-10-28): Pro is required. Original proposal (owner item P-03): Default: Pro for class use. Hobby is for non-commercial use, allows daily cron only (a deploy with a faster cron fails) and limits deployments per day (build-plan R-05).
 
 ### ADR-031 AI-looking features are canned
 - Status: Proposed-awaiting-owner (RC-054). Default: Ask Advisor, search, report generation and chart prompts use canned logic with a visible "Tutor" label and no model calls. Revisit after the credit window.
 
 ### ADR-032 Vendor names
-- Status: Proposed-awaiting-owner (RC-055). Default: real exchange and verifier names where option lists need them, with invented prices and synthetic IDs; fictional names for Advertiser settings vendor checkboxes. A fictional-name pass is a constants change.
+- Status: Superseded by ADR-042 (2026-10-28): real names also for the Advertiser settings checkboxes. Original proposal (RC-055): Default: real exchange and verifier names where option lists need them, with invented prices and synthetic IDs; fictional names for Advertiser settings vendor checkboxes. A fictional-name pass is a constants change.
 
 ### ADR-033 Billing and partner-level lists deferred
 - Status: Proposed-awaiting-owner (RC-062). Default: billing profiles, invoices, partner costs and revenue models pages, and partner-level audiences and lists are built after Phase 4 (task 02-T14). Tables stay in the schema.
@@ -199,6 +199,52 @@ Sources: `PROJECT.md` section 9, `docs/PROJECT-LOG.md` section 2, `docs/specs/ro
 
 ---
 
+## Owner decisions of 2026-10-28
+
+Answered by Kailas in chat on 2026-10-28 and recorded here. They close owner items P-01, P-05, P-10 and P-13, and partly P-09 (build-plan section 1.1), and conflict rows RC-055 to RC-060.
+
+### ADR-039 Stack and plan approved
+- Status: Accepted. Date: 2026-10-28. By: Kailas. Closes: P-01, P0-02, RC-060. Supersedes the "Proposed" status of ADR-006 to ADR-010.
+- Decision: The stack in PROJECT.md section 7.1 is approved as proposed: Next.js App Router with TypeScript, MUI, Prisma with PostgreSQL, Auth.js, Vercel, Recharts, Vitest and Playwright. PROJECT.md is approved as the project plan and the action plan (Phases 0 to 2 are done).
+- Consequences: P3-01 is no longer blocked by approval. Still open before P3-01: P-02 (cloud environment `dv360-build`), P-03, P-04, P-06, P-07, P-12.
+
+### ADR-040 Database is Supabase
+- Status: Accepted. Date: 2026-10-28. By: Kailas. Refines ADR-007 (Neon is not used).
+- Decision: Use the existing Supabase project (non-secret ref `bwqzdhyatvhpssxtwjza`, region eu-west-1 Ireland, free Nano tier) as plain Postgres through Prisma. No Supabase client, auth or storage is used. `DATABASE_URL` is the Supavisor transaction pooler (port 6543, `?pgbouncer=true&connection_limit=1`); `DIRECT_URL` is the direct or session connection (port 5432) for Prisma migrations. The owner copies both from the Supabase dashboard (Project, Connect, ORM, Prisma) and pastes them only into Vercel Environment Variables, never into chat or the repo.
+- Consequences: Free-tier limits are 500 MB, projects pause after 7 days of inactivity, about 60 pooled connections (build-plan 1.4, R-06). Vercel function region is `dub1` (ADR-041). Build-plan 1.4 and 1.10 are rewritten for Supabase. Open item P-04 remains.
+
+### ADR-041 Vercel Pro required; Vercel Cron is the engine trigger
+- Status: Accepted. Date: 2026-10-28. By: Kailas. Closes: P-05, RC-056. Supersedes ADR-029; makes ADR-030 binding.
+- Decision: The Vercel team is "BIGSEO's projects" (Hobby today). The simulator is used with paying Ads Mentor students and Hobby is non-commercial, so **Vercel Pro is required**. The owner upgrades in Vercel, Settings, Billing, before production use. With Pro, cron may run every minute, so Vercel Cron is the default engine tick trigger (`CRON_MODE=vercel`); the GitHub Actions timer stays as an optional fallback. Function region is `dub1` (Dublin, nearest to eu-west-1), not `bom1` or `sin1`.
+- Consequences: Build-plan 1.3, 1.5, R-05 updated. P3-08b adds the per-minute cron entry only when `CRON_MODE=vercel` is set and the project is on Pro. Open item P-03 (project import and Pro upgrade) remains.
+
+### ADR-042 Real vendor names as reference data
+- Status: Accepted. Date: 2026-10-28. By: Kailas. Closes: P-10, RC-055. Supersedes ADR-032.
+- Decision: Keep real exchange, verifier and vendor names as reference data with invented prices and synthetic IDs, including the Advertiser settings checkboxes. No fictional-name pass.
+- Consequences: Real names come only from the allow-list `data/reference/vendors.json` (build-plan P3-05b). Rule R5 still forbids real client data.
+
+### ADR-043 Logo committed; screenshots still missing
+- Status: Accepted. Date: 2026-10-28. By: Kailas. Partly closes: P-09, RC-058.
+- Decision: The logo is committed at `docs/brand/adsmentor-logo-horizontal.png` (836 x 257 PNG, black "ADS", blue "MENTOR", tagline "LEARN. APPLY. SCALE.", arrow mark). P3-03 and P3-04 use it in the app bar and login. P3-03 derives a square icon crop from the arrow mark (task note).
+- Consequences: The text wordmark default is dropped. Reference screenshots are still not in the repo (`docs/screenshots/` is empty); design-system open question Q1 stays open.
+
+### ADR-044 Repo stays public; secrets rule
+- Status: Accepted. Date: 2026-10-28. By: Kailas. Closes: RC-059. Confirms ADR-012.
+- Decision: The repo stays public. Hard rule: never commit secrets, `.env*` files (except `.env.example` with safe local values), keys, database URLs or student data. A secret-scanning step (gitleaks or GitHub secret scanning) is added to the P3-01 CI list; GitHub secret scanning and push protection are turned on (build-plan 1.6).
+- Consequences: Production values live only in Vercel Environment Variables. Any leaked value is rotated at once.
+
+### ADR-045 Class size up to 25 students
+- Status: Accepted. Date: 2026-10-28. By: Kailas. Closes: RC-057.
+- Decision: Up to 25 concurrent students. Size sandboxes, seed data and the load test (P6-03) for 25; 60 stays as a stretch target. The free Supabase tier is acceptable for the pilot with reduced hourly retention and slice caps from engine.md 1.4.
+- Consequences: Revisit the database plan if a class exceeds 25 or storage nears 500 MB.
+
+### ADR-046 Merge authority for the Cowork assistant
+- Status: Accepted. Date: 2026-10-28. By: Kailas. Closes: P-13.
+- Decision: The Cowork assistant session may merge Phase 3+ build PRs into `main` on the owner's behalf only when (a) required checks (lint, typecheck, unit tests, Playwright, secret scan) are green, (b) the Vercel preview deployment is green, (c) merge order follows build-plan 3.5, and (d) there are no unresolved review comments. Squash-merge only. Never force-push, never delete other branches, never merge a docs-only PR that touches specs without reading the diff. The assistant reports every merge to the owner.
+- Consequences: Build-plan 3.6 carries the rule. Other owner items stay open: P-02, P-03, P-04, P-06, P-07, P-12.
+
+---
+
 ## Index
 
 | ID | Title | Status |
@@ -208,11 +254,11 @@ Sources: `PROJECT.md` section 9, `docs/PROJECT-LOG.md` section 2, `docs/specs/ro
 | ADR-003 | Demo account use | Accepted |
 | ADR-004 | Classroom-only access | Accepted |
 | ADR-005 | Build in cloud sessions on the $100 credit | Accepted |
-| ADR-006 | Framework and UI | Proposed-awaiting-owner |
-| ADR-007 | Data | Proposed-awaiting-owner |
-| ADR-008 | Hosting and jobs | Proposed-awaiting-owner |
-| ADR-009 | Authentication | Proposed-awaiting-owner |
-| ADR-010 | Tests | Proposed-awaiting-owner |
+| ADR-006 | Framework and UI | Accepted (ADR-039) |
+| ADR-007 | Data | Accepted (ADR-039, ADR-040) |
+| ADR-008 | Hosting and jobs | Accepted (ADR-039, ADR-041) |
+| ADR-009 | Authentication | Accepted (ADR-039) |
+| ADR-010 | Tests | Accepted (ADR-039) |
 | ADR-011 | Files only in GitHub | Accepted |
 | ADR-012 | Repository is public | Accepted |
 | ADR-013 | Local to cloud hand-off | Accepted |
@@ -231,13 +277,21 @@ Sources: `PROJECT.md` section 9, `docs/PROJECT-LOG.md` section 2, `docs/specs/ro
 | ADR-026 | Engine v1 scope, history stub | Accepted |
 | ADR-027 | Partitioning deferred, RLS flag | Accepted |
 | ADR-028 | One sandbox per student | Proposed-awaiting-owner |
-| ADR-029 | Cron plan | Proposed-awaiting-owner |
-| ADR-030 | Vercel plan | Proposed-awaiting-owner |
+| ADR-029 | Cron plan | Superseded by ADR-041 |
+| ADR-030 | Vercel plan | Accepted (ADR-041) |
 | ADR-031 | Canned AI features | Proposed-awaiting-owner |
-| ADR-032 | Vendor names | Proposed-awaiting-owner |
+| ADR-032 | Vendor names | Superseded by ADR-042 |
 | ADR-033 | Billing deferred | Proposed-awaiting-owner |
 | ADR-034 | Student accounts | Proposed-awaiting-owner |
 | ADR-035 | Student uploads | Proposed-awaiting-owner |
 | ADR-036 | Data retention | Proposed-awaiting-owner |
 | ADR-037 | Students are Standard users | Accepted |
 | ADR-038 | Script custom bidding disabled | Accepted |
+| ADR-039 | Stack and plan approved | Accepted |
+| ADR-040 | Database is Supabase | Accepted |
+| ADR-041 | Vercel Pro required; Vercel Cron is the engine trigger | Accepted |
+| ADR-042 | Real vendor names as reference data | Accepted |
+| ADR-043 | Logo committed; screenshots still missing | Accepted |
+| ADR-044 | Repo stays public; secrets rule | Accepted |
+| ADR-045 | Class size up to 25 students | Accepted |
+| ADR-046 | Merge authority for the Cowork assistant | Accepted |

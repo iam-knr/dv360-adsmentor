@@ -1,5 +1,5 @@
 # DV360 Simulator by Adsmetor — Project Log (tasks, discussions, build details)
-Last updated: 2026-10-28 · Master plan: `PROJECT.md` · Findings: `docs/explore/` · Specs: `docs/specs/` · Decisions: `docs/decisions.md` · Build plan: `docs/specs/build-plan.md`
+Last updated: 2026-10-28 (owner approvals recorded) · Master plan: `PROJECT.md` · Findings: `docs/explore/` · Specs: `docs/specs/` · Decisions: `docs/decisions.md` · Build plan: `docs/specs/build-plan.md`
 
 ---
 
@@ -17,11 +17,19 @@ A classroom-only training simulator that replicates Google Display & Video 360 (
 | D6 | Storage | Nothing stored on the local PC; all docs/code live only in this GitHub repo | Kailas |
 | D7 | Repo visibility | Repo made public so cloud sessions can reach it; revisit before code lands | Kailas |
 | D8 | Workflow | Local session explores DV360 → writes `docs/explore/NN-*.md` content → a Claude Code cloud session commits it to `main` (`docs: status P1-NN`) → verified on GitHub | Claude |
-| D9 | Stack (proposed, pending approval) | Next.js App Router + TypeScript + MUI + Prisma/PostgreSQL + Vercel; Recharts; Auth.js; Vitest + Playwright | Claude |
+| D9 | Stack | Approved 2026-10-28 as proposed: Next.js App Router + TypeScript + MUI + Prisma/PostgreSQL + Vercel; Recharts; Auth.js; Vitest + Playwright (ADR-039) | Kailas |
 | D10 | Build budget | Build in Claude Code cloud sessions using the $100 cloud credit (expires 5 Nov 2026) | Kailas + Claude |
 | D11 | Spec conflicts | 67 conflict rows in `docs/specs/conflicts.md`: 55 resolved and applied to the specs, 12 owner decisions with defaults | Claude |
 | D12 | Phase 3 plan | 16 cloud sessions in 5 waves, one PR each, disjoint file ownership, fixed merge order, cut order if credit runs short (`docs/specs/build-plan.md`) | Claude |
-| D13 | Decision records | ADR-001 to ADR-038 in `docs/decisions.md`; stack approval (ADR-006 to ADR-010) is still pending | Claude |
+| D13 | Decision records | ADR-001 to ADR-046 in `docs/decisions.md`; ADR-039 to ADR-046 record the owner decisions of 2026-10-28 | Claude |
+| D14 | Approvals (2026-10-28) | Stack and plan approved; PROJECT.md is the project plan and action plan. Closes P-01, P0-02, RC-060 (ADR-039) | Kailas |
+| D15 | Database | Supabase (existing project, ref `bwqzdhyatvhpssxtwjza`, eu-west-1, free Nano), Postgres only. Pooler port 6543 for `DATABASE_URL`, direct port 5432 for `DIRECT_URL`; values pasted only into Vercel env vars. Not Neon (ADR-040) | Kailas |
+| D16 | Hosting and cron | Vercel team "BIGSEO's projects"; Pro required for paying students; Vercel Cron is the default tick trigger, GitHub Actions timer is the fallback; function region `dub1`. Closes P-05, RC-056 (ADR-041) | Kailas |
+| D17 | Vendor names | Real exchange, verifier and vendor names with invented prices, also in Advertiser settings. Closes P-10, RC-055 (ADR-042) | Kailas |
+| D18 | Logo | `docs/brand/adsmentor-logo-horizontal.png` committed; used in app bar and login; P3-03 derives a square icon. Screenshots still missing. Closes RC-058, P-09 partly (ADR-043) | Kailas |
+| D19 | Repo visibility | Stays public. Never commit secrets, `.env*`, keys, DB URLs or student data; secret scan in P3-01 CI. Closes RC-059 (ADR-044) | Kailas |
+| D20 | Class size | Up to 25 concurrent students; free Supabase tier for the pilot with reduced retention; P6-03 target 25, 60 stretch. Closes RC-057 (ADR-045) | Kailas |
+| D21 | Merge authority | Cowork assistant may merge Phase 3+ build PRs after green checks and preview, in merge order, with no open comments; squash only; reports every merge. Closes P-13 (ADR-046) | Kailas |
 
 ## 3. Environment notes
 - Reference login has limited partner-level access (create advertiser, partner channels/custom bidding, billing, role picker unavailable) — fill those from public docs.
@@ -36,10 +44,10 @@ Status: ✅ done · 🟨 partly done · ⬜ not started
 | ID | Task | Status | Notes |
 |---|---|---|---|
 | P0-01 | Draft PROJECT.md | ✅ | Goals, rules, SOPs, module map, phases, architecture, risks |
-| P0-02 | Review & approve PROJECT.md | 🟨 | Waiting for the owner: PROJECT.md and stack approval (build-plan P-01) |
+| P0-02 | Review & approve PROJECT.md | ✅ | Approved 2026-10-28 with the stack (build-plan P-01, ADR-039) |
 | P0-03 | Repo + PROJECT.md committed | ✅ | |
 | P0-04 | Repo connected to Claude Code on the web | ✅ | Cloud sessions commit successfully |
-| P0-05 | Vercel + Postgres | 🟨 | Blocked on the owner: build-plan 1.2 to 1.10 (P-02 to P-07) |
+| P0-05 | Vercel + Postgres | 🟨 | Supabase project exists (ref `bwqzdhyatvhpssxtwjza`); pending: Vercel import and Pro upgrade, env vars, secrets, cloud environment (build-plan 1.2 to 1.10, P-02, P-03, P-04, P-06, P-07) |
 | P0-06 | Turn off usage-credits toggle | ⬜ | Kailas (build-plan P-12) |
 | P0-07 | Browser + DV360 sign-in | ✅ | Claude in Chrome |
 
@@ -157,20 +165,16 @@ Authoritative: `docs/specs/build-plan.md` (waves, ownership, merge order, sessio
 - Status: each task → checklist tick + status row + commit `docs: status <task-id>`.
 
 ## 7. Open questions
-Full list with defaults: `PROJECT.md` section 11 and `docs/specs/conflicts.md` section 3 (owner decisions).
-1. Approve PROJECT.md and the stack (blocks P3-01).
-2. Cloud environment, usage-credits toggle, parallel session limit (blocks P3-01).
-3. Vercel project, Postgres, secrets (preview deploys wait).
-4. Engine tick plan: GitHub Actions (default), Vercel Pro cron, or manual.
-5. Students per class and database plan; one sandbox per student (assumed).
-6. Keep the repo public or make it private before code lands.
-7. Logo files; real or fictional vendor names; canned Tutor or model calls.
-8. Billing deferred; student accounts, uploads and retention.
-9. Existing exercises to turn into scenarios (default: the 10 starters in module 18).
-10. Access to an IO without objective and a Floodlight-optimised advertiser to finish the LI gaps (still open from Phase 1).
+Full list with defaults: `PROJECT.md` section 11 and `docs/specs/conflicts.md` section 3 (owner decisions). Answered on 2026-10-28: stack and plan, database (Supabase), cron and Vercel plan, vendor names, logo, repo visibility, class size, merge authority (D14 to D21).
+1. Cloud environment `dv360-build`, usage-credits toggle, $100 balance, parallel session limit (P-02, P-12). Blocks P3-01.
+2. Vercel project import and Pro upgrade (P-03); Supabase URLs into Vercel env vars (P-04); GitHub Actions secrets (P-06); `AUTH_SECRET` and `CRON_SECRET` into Vercel (P-07). Preview deploys wait for these.
+3. Reference screenshots are not in the repo (`docs/screenshots/` is empty); design-system Q1 stays open (P-09 partly done).
+4. One sandbox per student (assumed, RC-061); canned Tutor (RC-054); billing deferred (RC-062); student accounts, uploads and retention (RC-063 to RC-065).
+5. Existing exercises to turn into scenarios (default: the 10 starters in module 18).
+6. Access to an IO without objective and a Floodlight-optimised advertiser to finish the LI gaps (still open from Phase 1).
 
 ## 8. Next steps
-1. Phase 1 and Phase 2 are done (Phase 1 gaps are listed in "Known gaps"; they are filled from public docs in the specs).
-2. Owner: complete the prerequisites in `docs/specs/build-plan.md` section 1 by Sat 31 Oct (P-01, P-02, P-12 and the repo visibility decision block the start; Vercel, Postgres and secrets by Sun 1 Nov morning).
-3. Sun 1 Nov: run wave 1 (P3-01), then waves 2 to 5 as in build-plan section 3. Merge freeze Thu 5 Nov 9:00 AM IST; credit expires 1:29 PM IST.
+1. Phase 1 and Phase 2 are done (Phase 1 gaps are listed in "Known gaps"; they are filled from public docs in the specs). Owner approvals of 2026-10-28 are recorded (ADR-039 to ADR-046).
+2. Owner: complete P-02 (cloud environment `dv360-build`) and P-12 (usage credits off, $100 balance) by Sat 31 Oct; P-03 (Vercel import and Pro upgrade), P-04 (Supabase URLs into Vercel), P-06 (GitHub Actions secrets) and P-07 (`AUTH_SECRET`, `CRON_SECRET` into Vercel) by Sun 1 Nov morning. Values go only into Vercel, never chat or the repo.
+3. Sun 1 Nov: run wave 1 (P3-01, including the secret-scan CI step), then waves 2 to 5 as in build-plan section 3. The Cowork assistant merges build PRs under the conditions in build-plan 3.6. Merge freeze Thu 5 Nov 9:00 AM IST; credit expires 1:29 PM IST.
 4. After Phase 3: planning sessions update the specs from the gap list (`docs/gaps/p3.md`) and write Phase 4 prompts from build-plan 3.7.

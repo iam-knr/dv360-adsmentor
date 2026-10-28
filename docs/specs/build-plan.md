@@ -20,6 +20,7 @@ Contents
 | Sessions | 16 sessions in 6 waves (section 3). Peak parallelism: 5 sessions |
 | Minimum viable classroom demo | Instructor and student login, app shell, campaign then IO then line item create with validation, seed data, engine v1 delivering metrics in list columns. Defined in section 5.2 |
 | Hard rule | No session pushes to `main`. Every session opens one PR from its own branch |
+| Hard rule (repo is public, ADR-044) | Never commit secrets, `.env*` files (only `.env.example` with safe local values), keys, database URLs or student data. Production values live only in Vercel Environment Variables |
 
 Where this file and a spec disagree, the order is: `conflicts.md` rows, then this file (for process and ownership), then the spec.
 
@@ -27,25 +28,25 @@ Where this file and a spec disagree, the order is: `conflicts.md` rows, then thi
 
 ## 1. Owner prerequisites checklist
 
-Nothing here is done yet. Tick each box in a PR to this file or tell the Cowork session; the Cowork session then updates PROJECT.md. Items marked **BLOCKS** stop a Phase 3 session from starting. Items marked **DEFAULT** have a default, so work starts without an answer.
+Owner decisions of 2026-10-28 are recorded below (ADR-039 to ADR-046): P-01, P-05, P-10 and P-13 are done, P-09 is partly done. The rest is still open. Tick each box in a PR to this file or tell the Cowork session; the Cowork session then updates PROJECT.md. Items marked **BLOCKS** stop a Phase 3 session from starting. Items marked **DEFAULT** have a default, so work starts without an answer.
 
 ### 1.1 Checklist
 
 | # | Done | Item | Due | Effect if late |
 |---|---|---|---|---|
-| P-01 | [ ] | Approve PROJECT.md and the stack (P0-02, RC-060). Read PROJECT.md section 7.1 and ADR-006 to ADR-010 in `docs/decisions.md`. Reply "approved" or list changes | Sat 31 Oct | **BLOCKS** P3-01 |
-| P-02 | [ ] | Prepare the Claude Code cloud environment (steps in 1.2) | Sat 31 Oct | **BLOCKS** P3-01 |
-| P-03 | [ ] | Create the Vercel project (steps in 1.3) | Sun 1 Nov, 10:00 IST | Preview deploys and the "preview green" part of the definition of done wait. Sessions still run |
-| P-04 | [ ] | Create the Postgres database and get the two URLs (steps in 1.4) | Sun 1 Nov, 10:00 IST | Same as P-03. Sessions use a local Postgres, so they do not wait |
-| P-05 | [ ] | Decide the cron plan (RC-056, steps in 1.5) | Mon 2 Nov | **DEFAULT** (GitHub Actions every 5 minutes). Needed before P3-08b merges |
-| P-06 | [ ] | GitHub settings and Actions secrets (steps in 1.6) | Sun 1 Nov | Branch protection can wait until P3-01 is merged |
-| P-07 | [ ] | Generate secrets and put them in Vercel (steps in 1.7) | Sun 1 Nov | Preview login fails without `AUTH_SECRET` |
+| P-01 | [x] | Approve PROJECT.md and the stack (P0-02, RC-060). **Done 2026-10-28, Kailas:** stack as in PROJECT.md section 7.1 and ADR-006 to ADR-010 approved; plan approved as the project plan and action plan (Phases 0 to 2 done). ADR-039 | Sat 31 Oct | was **BLOCKS** P3-01; no longer blocks |
+| P-02 | [ ] | Prepare the Claude Code cloud environment `dv360-build` (steps in 1.2). **Open** | Sat 31 Oct | **BLOCKS** P3-01 |
+| P-03 | [ ] | Import the repo into Vercel (team "BIGSEO's projects", Hobby today) and **upgrade to Pro** (steps in 1.3). **Open** | Sun 1 Nov, 10:00 IST | Preview deploys and the "preview green" part of the definition of done wait. Sessions still run. Pro is required before any paying student uses the app |
+| P-04 | [ ] | Copy the two Supabase connection strings into Vercel Environment Variables (steps in 1.4). The Supabase project already exists (ref `bwqzdhyatvhpssxtwjza`, eu-west-1). **Open** | Sun 1 Nov, 10:00 IST | Same as P-03. Sessions use a local Postgres, so they do not wait |
+| P-05 | [x] | Cron plan (RC-056). **Done 2026-10-28, Kailas:** Vercel Cron is the default engine trigger, which needs Vercel Pro (see P-03). The GitHub Actions timer stays as an optional fallback. ADR-041 | Mon 2 Nov | Closed. Vercel Pro (P-03) must be active before the cron entry deploys |
+| P-06 | [ ] | GitHub settings and Actions secrets (steps in 1.6). **Open** | Sun 1 Nov | Branch protection can wait until P3-01 is merged |
+| P-07 | [ ] | Generate `AUTH_SECRET` and `CRON_SECRET` and put them in Vercel (steps in 1.7). **Open** | Sun 1 Nov | Preview login fails without `AUTH_SECRET` |
 | P-08 | [ ] | Create the Vercel Blob store (steps in 1.8) | before Phase 4 | Not needed for Phase 3 |
-| P-09 | [ ] | Supply the Adsmetor logo and reference screenshots (RC-058) | before P3-04 merges | **DEFAULT** (text wordmark). Fidelity checks wait |
-| P-10 | [ ] | Vendor-name decision (RC-055) | before P3-05b starts | **DEFAULT** (real exchange and verifier names, invented prices) |
+| P-09 | [~] | Adsmetor logo and reference screenshots (RC-058). **Partly done 2026-10-28:** logo committed at `docs/brand/adsmentor-logo-horizontal.png` (see 1.9). Reference screenshots are still not in the repo (`docs/screenshots/` is empty); design-system open question Q1 stays open. ADR-043 | before P3-04 merges | Logo: closed. Screenshots: fidelity checks wait |
+| P-10 | [x] | Vendor-name decision (RC-055). **Done 2026-10-28, Kailas:** keep real exchange, verifier and vendor names as reference data with invented prices, also for the Advertiser settings checkboxes. ADR-042 | before P3-05b starts | Closed |
 | P-11 | [ ] | Answer the other owner questions in 1.9 | before the row's wave | **DEFAULT** for each |
-| P-12 | [ ] | Turn off "usage credits" in Claude settings (P0-06). Confirm the $100 balance, its expiry, and how many cloud sessions can run at once | Sat 31 Oct | A surprise charge or a lower session limit changes the wave plan |
-| P-13 | [ ] | Name who merges PRs (the owner, or a Cowork session) and agree the merge cheat sheet in 3.6 | Sun 1 Nov | Waves stall if nobody merges |
+| P-12 | [ ] | Turn off "usage credits" in Claude settings (P0-06). Confirm the $100 balance, its expiry, and how many cloud sessions can run at once. **Open** | Sat 31 Oct | A surprise charge or a lower session limit changes the wave plan |
+| P-13 | [x] | Merge authority. **Done 2026-10-28, Kailas:** the Cowork assistant session may merge Phase 3+ build PRs on the owner's behalf under the conditions in 3.6. ADR-046 | Sun 1 Nov | Closed |
 
 ### 1.2 Claude Code cloud environment (P-02)
 
@@ -55,7 +56,7 @@ Open the cloud environment menu in the session title bar, then Edit. Create one 
    - `registry.npmjs.org` (usually covered by the package-manager box)
    - `binaries.prisma.sh` (Prisma engine download; without it `prisma generate` fails)
    - `github.com`, `objects.githubusercontent.com` (usually covered)
-   Do not add the production database host. Sessions never connect to Neon or Supabase.
+   Do not add the production database host. Sessions never connect to Supabase.
 2. Setup script: leave empty. Session P3-01 adds `npm run db:local`, which starts a real PostgreSQL 17 from the `embedded-postgres` npm package, so no apt step is needed. (If you prefer apt, use `apt-get update && apt-get install -y postgresql postgresql-contrib && service postgresql start`, then set `DATABASE_URL_TEST` below.)
 3. Environment variables (not secrets; these are local test values):
 
@@ -75,41 +76,51 @@ Open the cloud environment menu in the session title bar, then Edit. Create one 
 
 ### 1.3 Vercel project (P-03)
 
-1. vercel.com, Add New, Project, import `iam-knr/dv360-adsmentor`. Install the Vercel GitHub app on that repo if asked.
+1. vercel.com, team "BIGSEO's projects" (Hobby today), Add New, Project, import `iam-knr/dv360-adsmentor`. Install the Vercel GitHub app on that repo if asked.
 2. Framework Next.js (auto), Root Directory `./`, Node.js version 22.x (Project Settings, General), Install Command `npm ci`, Build Command `npm run vercel-build`.
 3. Production Branch `main`. Leave "Preview deployments for all branches" on: each session branch gets its own preview URL.
-4. Region: Mumbai (`bom1`) if offered, else Singapore (`sin1`), to sit near the database.
-5. Plan: use Pro ($20 per month) if the simulator is used for a paid course. Hobby is for non-commercial use and allows cron jobs only once a day (a deploy with a faster cron fails on Hobby). Hobby also limits deployments per day, which many session pushes can hit (see section 5).
+4. Region: set the Function Region to Dublin, Ireland (`dub1`), the nearest to the database in eu-west-1 (Project Settings, Functions). Do not use `bom1` or `sin1`.
+5. Plan: **Vercel Pro is required** (owner decision 2026-10-28, ADR-041). The simulator is used with paying Ads Mentor students and Hobby is for non-commercial use only. Upgrade in Vercel, Settings, Billing, before any production use with students. With Pro, cron can run every minute. Hobby allows cron jobs only once a day (a deploy with a faster cron fails on Hobby) and limits deployments per day, which many session pushes can hit (see section 5). Until the upgrade is done, keep the cron entry out of `vercel.json` (R-05).
 6. Environment variables: add the table in 1.10, each one scoped to Production and Preview separately where the table says so.
 7. Settings, Git: tick "Ignored Build Step" later if the deployment limit becomes a problem (command `git diff --quiet HEAD^ HEAD -- . ':!docs' ':!*.md'` skips docs-only commits).
 8. Settings, Deployment Protection: keep Vercel Authentication on for previews. Copy the "Protection Bypass for Automation" secret and save it for 1.6 (`VERCEL_AUTOMATION_BYPASS_SECRET`).
 9. Done when: the Vercel project shows a first deployment of the repo (it may fail until P3-01 merges, which is expected).
 
-### 1.4 Postgres (P-04)
+### 1.4 Postgres on Supabase (P-04)
 
-Recommended: Neon (free tier is enough for a pilot; paid for 60 students, see ENG open question 8 and RC-057).
+Owner decision 2026-10-28 (ADR-040): the database is **Supabase**, not Neon. The Supabase project already exists. It is used as plain Postgres only: no Supabase client library, Supabase Auth or Supabase Storage is needed.
 
-1. neon.tech, create a project `dv360-sim`, Postgres 17, region Asia Pacific (Mumbai) `aws-ap-south-1` if offered.
-2. Create two branches: `main` (production) and `preview` (all Vercel previews share it).
-3. For each branch open Connection details and copy two strings:
-   - Pooled connection (host contains `-pooler`). Append `&pgbouncer=true&connect_timeout=15` to the existing `?sslmode=require`. This is `DATABASE_URL`.
-   - Direct connection (host without `-pooler`). This is `DIRECT_URL`. Prisma uses it for migrations.
-4. The database role in the URL must be allowed to create roles and enable row level security (the default Neon owner role can). The migration in P3-05a creates the role `app_engine` for the engine bypass.
-5. Put the strings into Vercel (1.10): the `main` branch strings go to the Production scope, the `preview` branch strings go to the Preview scope.
-6. Alternative: Supabase. Use the Transaction pooler string (port 6543, add `?pgbouncer=true`) for `DATABASE_URL` and the Direct string (port 5432) for `DIRECT_URL`. Everything else is the same.
-7. Done when: you hold four strings (pooled and direct for each branch) in a password manager. Never paste them in chat or commit them.
+| Item | Value |
+|---|---|
+| Project ref (not a secret) | `bwqzdhyatvhpssxtwjza` |
+| Region | eu-west-1 (Ireland) |
+| Tier | Free, Nano compute |
+| Used for | Postgres only (Prisma). Auth is Auth.js, files are Vercel Blob |
+
+1. Open the Supabase dashboard, project `bwqzdhyatvhpssxtwjza`, then Connect (top bar), then the ORM tab, then Prisma. The dashboard shows two connection strings there.
+2. `DATABASE_URL` (runtime): the Supavisor transaction pooler string, port **6543**. Make sure the query part is `?pgbouncer=true&connection_limit=1`.
+3. `DIRECT_URL` (Prisma migrations): the direct or session connection string, port **5432**.
+4. Paste both values **only** into Vercel, Project Settings, Environment Variables (see 1.10). Never paste them in chat, a PR, an issue or any file in the repo. The database password is set in Supabase (Project Settings, Database); keep it in your password manager.
+5. One database for now. Production and Preview can share it at first (use separate Vercel scopes so you can split later). If Preview data must stay apart from Production, create a second Supabase project, or a separate schema, before the pilot.
+6. The database role in the URL must be allowed to create roles and enable row level security (the default `postgres` role in Supabase can). The migration in P3-05a creates the role `app_engine` for the engine bypass.
+7. Free-tier caveats:
+   - 500 MB database size. Use the reduced hourly retention and slice caps from engine.md 1.4 (ADR-045).
+   - A project is paused after 7 days of inactivity. Open or ping the app before each class; restore from the dashboard if it is paused.
+   - About 60 pooled client connections on the free tier. Keep `connection_limit=1` per function instance.
+   - If the class grows beyond 25 or storage nears 500 MB, move to the Pro tier of Supabase.
+8. Done when: both strings are saved in Vercel Environment Variables (Production and Preview) and in your password manager, and not anywhere else.
 
 ### 1.5 Cron plan (P-05, RC-056)
 
-The engine needs a tick about every minute while a class runs. Pick one.
+Decided 2026-10-28 (ADR-041): **Vercel Cron is the default trigger** for the engine tick. It needs Vercel Pro (1.3). With Pro, the cron entry may run every minute, which the engine needs while a class runs. The GitHub Actions timer stays as an optional fallback.
 
 | Option | What you do | Trade-off |
 |---|---|---|
-| A. Vercel Pro cron | Upgrade to Pro. Session P3-08b adds the cron entry only after you set the Vercel env var `CRON_MODE=vercel` | Most reliable. Costs $20 per month |
-| B. GitHub Actions (default) | Add the two values in 1.6. The workflow `engine-tick.yml` calls the tick URL every 5 minutes. Lazy catch-up runs on page loads and at login, so students do not see a gap | Free. GitHub may delay or skip a run. The instructor sees a catch-up step on first load |
+| A. Vercel Cron on Pro (default) | Upgrade to Pro (1.3). Set the Vercel env var `CRON_MODE=vercel`. Session P3-08b adds the cron entry (every minute) to `vercel.json` only when that variable is set | Most reliable. Costs $20 per month, which is already required for paying students |
+| B. GitHub Actions (optional fallback) | Add the two values in 1.6. The workflow `engine-tick.yml` calls the tick URL every 5 minutes. Lazy catch-up runs on page loads and at login. Use it while the project is still on Hobby, or if Vercel Cron misses ticks | Free. GitHub may delay or skip a run |
 | C. Manual | Nothing. The instructor presses Step or Catch up during class | Zero cost, weakest realism |
 
-Send your choice to the Cowork session. Default if you do not answer: B.
+Lazy `ensureCaughtUp` on page loads stays on in every option.
 
 ### 1.6 GitHub settings and Actions secrets (P-06)
 
@@ -119,7 +130,7 @@ Repo, Settings:
 3. Secrets and variables, Actions, Variables: add `ENGINE_TICK_URL` = `https://<your-production-domain>/api/sim/engine/tick` and `E2E_BASE_URL` = your production or preview domain (used by the optional post-deploy smoke test).
 4. Branches: after P3-01 is merged, add a rule for `main`: require a pull request, require status checks `check`, `db-tests` and `e2e`, block force pushes, require branches to be up to date. Do not add this rule before P3-01, because P3-01 creates the checks. Allow squash merging only.
 5. General: tick "Automatically delete head branches".
-6. Code security: turn on secret scanning and push protection.
+6. Code security: turn on secret scanning and push protection. The repo is public (ADR-044), so this is mandatory, not optional.
 7. Claude GitHub app: confirm it has Contents, Pull requests, Workflows and Actions write access to the repo (needed for sessions to open PRs and edit `.github/workflows`).
 
 ### 1.7 Secrets to generate (P-07)
@@ -145,31 +156,31 @@ Vercel project, Storage, Create, Blob. Connect it to the project. Vercel adds `B
 | RC | Question | Default used until you answer | Needed by |
 |---|---|---|---|
 | RC-054 | AI-looking features (Ask Advisor, search, report generation): canned answers or real model calls? | Canned, labelled "Tutor", no model calls | Phase 4 |
-| RC-055 | Real vendor names (exchanges, DoubleVerify, IAS) or fictional names? | Real names for exchanges and verifiers with invented prices; fictional names for settings checkboxes | before P3-05b starts |
-| RC-057 | Class size and database plan | Size for 60 students, start on the free tier with lower speed | before the pilot |
-| RC-058 | Logo files (SVG light, 28 px and 48 px lockups) | Text wordmark | before P3-04 merges |
-| RC-059 | Keep the repo public or make it private | Public until the first code lands. Decide before P3-01 | Sat 31 Oct |
+| RC-055 | **Decided 2026-10-28:** real exchange, verifier and vendor names are kept as reference data with invented prices, also for the Advertiser settings checkboxes (ADR-042) | Closed | n/a |
+| RC-057 | **Decided 2026-10-28:** up to 25 concurrent students. Size sandboxes, seed and the load test for 25. The free Supabase tier is accepted for the pilot with reduced hourly retention and slice caps (engine.md 1.4). Revisit if a class exceeds 25 (ADR-045) | Closed | n/a |
+| RC-058 | **Decided 2026-10-28:** logo committed at `docs/brand/adsmentor-logo-horizontal.png` (836 x 257 PNG, black "ADS", blue "MENTOR", tagline "LEARN. APPLY. SCALE.", arrow mark). P3-03 and P3-04 use it in the app bar and the login page. P3-03 derives a square icon crop from the arrow mark (task note). Reference screenshots are still missing (`docs/screenshots/` is empty); design-system Q1 stays open (ADR-043) | Logo: closed. Screenshots: open | n/a |
+| RC-059 | **Decided 2026-10-28:** the repo **stays public**. Hard rule: never commit secrets, `.env*` files, keys, database URLs or student data. A secret-scanning step is part of the P3-01 CI list (ADR-044) | Closed | n/a |
 | RC-061 | One sandbox per student, or shared sandboxes for pairs | One per student | before P3-02 |
 | RC-062 | Billing, invoices, partner-level lists deferred past Phase 4 | Deferred | before Phase 4 |
 | RC-063 | Student accounts: instructor-created with a temporary password and no email | As stated | before Phase 5 |
 | RC-064 | Allow students to upload their own files | Allowed with size caps, no scanning | before Phase 4 |
 | RC-065 | Student data retention after a course | Archive after 90 days, delete on request | before the pilot |
-| PROJECT.md 11 | Students per class; exercises you already teach | 60 students for sizing; the 10 starters in module 18 | before Phase 5 |
+| PROJECT.md 11 | Exercises you already teach (students per class is decided: up to 25, RC-057) | the 10 starters in module 18 | before Phase 5 |
 
 ### 1.10 Environment variables, complete list
 
-Names are final. `.env.example` (created by P3-01) lists all of them with safe local values.
+Names are final. `.env.example` (created by P3-01) lists all of them with safe local values. Production values go only into Vercel Environment Variables (Project Settings, Environment Variables), never into chat, a PR, an issue or the repo. The function region is `dub1` (1.3).
 
 | Name | Scope in Vercel | Where it comes from | Used by |
 |---|---|---|---|
-| `DATABASE_URL` | Production and Preview, different values | Neon pooled string (1.4) | Prisma client at runtime |
-| `DIRECT_URL` | Production and Preview, different values | Neon direct string (1.4) | `prisma migrate deploy` |
+| `DATABASE_URL` | Production and Preview, different values | Supabase transaction pooler string, port 6543, `?pgbouncer=true&connection_limit=1` (1.4). Pasted only into Vercel | Prisma client at runtime |
+| `DIRECT_URL` | Production and Preview, different values | Supabase direct or session string, port 5432 (1.4). Pasted only into Vercel | `prisma migrate deploy` |
 | `AUTH_SECRET` | Production and Preview | `openssl rand -base64 32` | Auth.js |
 | `AUTH_TRUST_HOST` | Production and Preview | `true` | Auth.js behind the Vercel proxy |
 | `CRON_SECRET` | Production and Preview | `openssl rand -hex 24` | `POST /api/sim/engine/tick` |
 | `SEED_ADMIN_EMAIL` | Production and Preview | your email | `npm run db:bootstrap` creates the first admin |
 | `SEED_ADMIN_PASSWORD` | Production and Preview | strong temporary password | same |
-| `CRON_MODE` | Production | `vercel` or `github` or `manual` | P3-08b (cron entry on or off) |
+| `CRON_MODE` | Production | `vercel` (default, needs Pro) or `github` or `manual` | P3-08b (cron entry on or off) |
 | `ENABLE_GALLERY` | Preview only | `1` | component gallery page (never in Production) |
 | `BLOB_READ_WRITE_TOKEN` | Production and Preview | added by Vercel (1.8) | uploads (Phase 4) |
 | `DATABASE_URL_TEST` | none (CI and cloud env only) | local Postgres | Vitest `db` project |
@@ -227,7 +238,7 @@ dv360-adsmentor/
 │  ├─ seed/  bootstrap/
 ├─ scripts/{dev-db.ts,bootstrap.ts,vercel-build.sh}
 ├─ data/reference/            static JSON for reference catalogues
-├─ public/brand/              logo placeholder
+├─ public/brand/              logo (copied from docs/brand/adsmentor-logo-horizontal.png) and the square icon crop (P3-03)
 └─ tests/{unit,components,db,validation,engine,engine-io,auth,shell,seed,metrics,targeting,changelog,e2e}/
 ```
 
@@ -343,6 +354,8 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run depcruise
+      - uses: gitleaks/gitleaks-action@v2   # secret scan (ADR-044); fails the check on any finding
+      # (or rely on GitHub secret scanning with push protection, 1.6; keep at least one active)
       - run: npm test
   db-tests:
     runs-on: ubuntu-latest
@@ -398,7 +411,7 @@ jobs:
         with: { name: playwright-report, path: playwright-report }
 ```
 
-The three job names `check`, `db-tests` and `e2e` are the required status checks (1.6).
+The three job names `check`, `db-tests` and `e2e` are the required status checks (1.6). The secret scan runs inside `check`, so it is covered by the same required check. P3-01 also adds `.env*` (except `.env.example`) to `.gitignore`.
 
 ### 2.7 Stub contracts created by P3-01
 
@@ -537,7 +550,7 @@ No two sessions that run at the same time own the same path. "Owner" is the only
 
 | When | What |
 |---|---|
-| Fri 30 and Sat 31 Oct | Owner items P-01, P-02, P-12, RC-059. Planning sessions fix any spec question that comes up |
+| Fri 30 and Sat 31 Oct | Owner items P-02, P-03, P-04, P-06, P-07, P-12 (P-01 and RC-059 decided 2026-10-28). Planning sessions fix any spec question that comes up |
 | Sun 1 Nov, morning | Wave 1: P3-01. Merge 1 |
 | Sun 1 Nov, afternoon to night | Wave 2 (4 sessions in parallel). Merge 2 to 5 as each finishes |
 | Mon 2 Nov | Wave 3 (4 sessions). Merge 6 to 9 |
@@ -570,11 +583,19 @@ If fewer than 5 sessions can run at once (P-12), run each wave in the merge orde
 
 ### 3.6 Merge cheat sheet (for whoever merges)
 
+**Merge authority (P-13, ADR-046, 2026-10-28).** The Cowork assistant session may merge Phase 3+ build PRs into `main` on the owner's behalf, only when all of these hold:
+1. Required checks are green: lint, typecheck, unit tests, Playwright and the secret scan (the `check`, `db-tests` and `e2e` jobs).
+2. The Vercel preview deployment is green.
+3. Merge order follows 3.5.
+4. There are no unresolved review comments.
+
+Always squash-merge. Never force-push. Never delete other branches. Never merge a docs-only PR that touches specs without reading the diff. The assistant reports every merge to the owner (PR, squash commit, checks, preview).
+
 For each PR in order:
 1. Open the PR. Check the three CI checks are green and the Vercel preview is green (or the PR says why not).
 2. Read "Files outside my ownership list touched". It should say none. If it lists files, check 3.2.
 3. Read "Not done". If a "must" item from the prompt is missing, ask the session to finish it before merging.
-4. Squash merge. Delete the branch.
+4. Squash merge. Delete the PR's own head branch only (the "Automatically delete head branches" setting does this); never delete other branches.
 5. In the next waiting PR, if there is a conflict only in `PROJECT.md` or `package-lock.json`, apply the rules in 2.2 and 2.9 (a session can do it: comment "rebase on main and resolve per build-plan 2.2 and 2.9").
 6. Start the next session whose prerequisites are now merged.
 
@@ -595,7 +616,7 @@ Run 2 to 3 sessions in parallel per wave. Prompts for these are written by a pla
 |---|---|---|
 | 10 | P5-01 instructor console: module 18 M18-07, M18-08, M18-09, M18-16, M18-17 (stretch), module 03 T09 console part. P5-03 time controls: M18-10 | `app/sim/instructor/**`, disjoint |
 | 11 | P5-02 scenario engine and 10 starter exercises: M18-11 to M18-14 (needs modules 12 to 17 landed). P5-04 progress dashboard: M18-15 | needs P5-01 and Phase 4 |
-| 12 | Phase 6 per PROJECT.md: SOP-3 fidelity per module, Playwright core flows, load test (60 students), pilot class | planning sessions |
+| 12 | Phase 6 per PROJECT.md: SOP-3 fidelity per module, Playwright core flows, load test (25 students, 60 as stretch), pilot class | planning sessions |
 
 ---
 
@@ -631,7 +652,7 @@ BUILD EXACTLY THIS
 3. Create `tsconfig.json`, `eslint.config.mjs` (rules in 2.4), `.dependency-cruiser.cjs` (rules in 2.4, with a fixture test proving a violation fails), `.prettierrc`, `.nvmrc`, `.gitignore`, `.env.example` (all variables of build-plan 1.10).
 4. Create `prisma/schema/00-base.prisma` (generator, datasource with `url` and `directUrl`, model `AppMeta`) and set the Prisma schema folder in `package.json`. Create the first migration `0000_base`.
 5. Create `vitest.config.ts` with the three projects of 2.6, `vitest.setup.ts`, `playwright.config.ts`, and one test of each kind (`tests/unit/sanity.test.ts`, `tests/db/health.db.test.ts`, `tests/e2e/smoke.spec.ts`).
-6. Create `.github/workflows/ci.yml` (the YAML in 2.6) and `.github/pull_request_template.md` (sections listed in 2.9).
+6. Create `.github/workflows/ci.yml` (the YAML in 2.6, including the secret-scanning step with gitleaks or GitHub secret scanning, ADR-044) and `.github/pull_request_template.md` (sections listed in 2.9). Make sure `.gitignore` excludes every `.env*` file except `.env.example`. The repo is public: never commit secrets, keys, database URLs or student data.
 7. Create the stub contracts of 2.7 with the listed exports and behaviour. Add a 3-line `README.md` to each owned folder naming the owner session and the spec.
 8. Create `app/layout.tsx` (ThemeRegistry from `lib/theme/provider.tsx`, self-hosted Figtree and Roboto via @fontsource, no network fonts), `app/page.tsx` placeholder, `app/api/health/route.ts`, `lib/env.ts` (zod), `lib/money.ts` with unit tests (RC-019).
 9. Create `scripts/bootstrap.ts` (runs `prisma/bootstrap/*.bootstrap.ts` in name order, each idempotent) and `scripts/vercel-build.sh`.
@@ -660,6 +681,7 @@ ACCEPTANCE CRITERIA (copied from the specs; list each one in the PR as Done, Par
 - F8: Every stub of 2.7 exists with the exported names and types listed.
 - F9: The Vercel preview for the PR builds with `npm run vercel-build` and `/api/health` returns 200 (only if owner items P-03 and P-04 are done).
 - F10: Playwright smoke passes against `npm run start` and uses the preinstalled Chromium if `PLAYWRIGHT_CHROMIUM_PATH` is set.
+- F11: CI runs a secret scan (gitleaks or GitHub secret scanning) inside the `check` job and it passes; `.gitignore` excludes `.env*` except `.env.example` (ADR-044).
 
 TESTS TO WRITE
 - unit: `lib/money.ts` (minor/major conversion, rounding, INR and SGD formatting), `lib/env.ts` (missing variable fails with a clear message)
@@ -704,6 +726,7 @@ BUILD EXACTLY THIS
 5. Hooks used by the kit: `useUnsavedChanges`-compatible dirty prop API only (the hook itself is in lib/validation/client, P3-06a). Keyboard and focus rules of design-system 5.
 6. Gallery page `app/(dev)/components/page.tsx` showing every component with all variants. It returns 404 unless `NODE_ENV !== "production"` or `ENABLE_GALLERY === "1"`.
 7. Export everything from `components/dv/index.ts` (replace the stub barrel).
+8. `DvAppBar` renders the logo `public/brand/adsmentor-logo-horizontal.png` (28 px high; the login page uses 48 px, RC-058). Do not use a text wordmark. The square icon crop is derived in P3-03.
 
 OUT OF SCOPE (do not build, even if easy)
 - Tier C patterns: DvSankey, DvAudienceBuilder, DvDayTimeGrid, DvRuleRow, DvDayCard, report builder panels, DvTreeSelect, DvSellerCard (built by the module sessions that need them)
@@ -717,7 +740,7 @@ FILES YOU OWN (create or edit)
 - `app/(dev)/components/**`
 - `tests/components/**`
 - `tests/e2e/gallery.spec.ts`
-- `public/brand/**` (text wordmark placeholder only)
+- `public/brand/**` (copy `docs/brand/adsmentor-logo-horizontal.png` to `public/brand/` as the logo source; no other brand assets)
 EXCEPTIONS (you may also touch)
 - `package.json` and lockfile only to add a missing dependency (rebase rule in build-plan 2.2)
 - `PROJECT.md` (last commit only)
@@ -1080,7 +1103,7 @@ READ FIRST, in this order
 - docs/specs/conflicts.md rows RC-016, RC-028, RC-047, RC-048, RC-061, RC-063
 
 BUILD EXACTLY THIS
-1. Auth.js v5 credentials provider with argon2id hashing (`@node-rs/argon2`), JWT session with `sessionVersion`, email and password sign-in at `/sim/login` (plain Adsmetor header, text wordmark), sign-out at `/sim/logout`.
+1. Auth.js v5 credentials provider with argon2id hashing (`@node-rs/argon2`), JWT session with `sessionVersion`, email and password sign-in at `/sim/login` (plain Adsmetor header with the logo from `public/brand/adsmentor-logo-horizontal.png`, RC-058), sign-out at `/sim/logout`.
 2. Failed-login counter and lockout (5th failure locks for 15 minutes, same message for unknown email and wrong password; SIM-002), `mustChangePassword` flow at `/sim/me/password` that bumps `sessionVersion`.
 3. Pages: `/sim/closed` (next window and instructor contact), `/sim/session-expired`, `/sim/forbidden`, `/sim/me`.
 4. Replace the stubs in 2.7: `lib/auth/session.ts` (`getSessionUser`, `requireUser`, view-as resolver for `?sim_as=`, read-only unless "Act as student"), `lib/rbac/can.ts` (DV360 levels ADMIN, STANDARD, READ_ONLY, REPORTING_ONLY, PARTNER_CLIENT, CREATIVE per routes.md 2 and RC-047/048; `assertAccess`), `lib/access/windows.ts` (`isClassOpen`, `getWindowBanner` with the 5-minute warning, `assertWindowOpen` returning `ACCESS_WINDOW_CLOSED`, `tickAccessWindows(now)` which flips SCHEDULED/OPEN/CLOSED, freezes and unfreezes the sandbox and its clock state without advancing sim time).
@@ -1276,6 +1299,7 @@ READ FIRST, in this order
 - docs/specs/conflicts.md rows RC-047 to RC-049, RC-051, RC-052
 
 BUILD EXACTLY THIS
+0. Logo (RC-058, ADR-043): use `public/brand/adsmentor-logo-horizontal.png` (copy of `docs/brand/adsmentor-logo-horizontal.png`, 836 x 257, black "ADS", blue "MENTOR", tagline "LEARN. APPLY. SCALE.", arrow mark) in the app bar. **Task note:** derive a square icon crop from the arrow mark of that logo and save it as `public/brand/adsmentor-icon.png` (and use it as the favicon and where the compact mark is needed). P3-04 and the login page use the same logo.
 1. `lib/nav/trees.ts` typed data for the partner, advertiser and campaign trees exactly as routes.md 4.2 to 4.4, with `minLevel`, role filter and active matcher (01-T1).
 2. `app/(dv)/layout.tsx` guard, `(app)/layout.tsx` with DvAppBar (top bar items in routes.md 4.1 order; bell, search, help and user menu are present but their panels are stubs), BreadcrumbBar, BannerStack (paused advertiser banner text from validation 1.2, access window banner from `getWindowBanner`, view-as banner), RailHost with empty Ask Advisor, Quick help and Intelligence panels, `DialogHost`, `SnackbarHost` (01-T2).
 3. `(full)/layout.tsx`, `not-found.tsx`, `error.tsx`, `global-error.tsx`, `404/page.tsx`, `[...unmatched]` redirect to `/404?url=`, `/sim/closed` guard integration (01-T3).
@@ -1299,6 +1323,7 @@ FILES YOU OWN (create or edit)
 - `app/[...unmatched]/**`
 - `app/page.tsx`
 - `components/shell/**`
+- `public/brand/adsmentor-icon.png` (the square crop; the horizontal logo copy belongs to P3-01)
 - `lib/nav/**`
 - `lib/scope/**`
 - `lib/routes/**`
@@ -1640,7 +1665,7 @@ BUILD EXACTLY THIS
 4. Alert persistence for the rules available in the engine core, using the `Alert` table with `type` and `diagnosticCode` (RC-013) and the campaign alert groups feed; disabled alert preferences suppress creation.
 5. Structural engine edits (flight end status flip, creative review sync) go through `withChangeLog` with `source = ENGINE` and the system actor constants.
 6. Retention job: trim hourly rows older than 14 sim days nightly (RC-024).
-7. `.github/workflows/engine-tick.yml`: schedule every 5 minutes, runs only when the repository variable `ENGINE_TICK_URL` is set, sends the bearer secret `CRON_SECRET`, fails the job on non-2xx. Do NOT add a per-minute cron to `vercel.json` (a Hobby deploy fails with one). Add the cron entry only if the owner has chosen Vercel cron (`CRON_MODE=vercel`); otherwise put the JSON snippet in the PR body for the owner.
+7. `.github/workflows/engine-tick.yml` (optional fallback, ADR-041): schedule every 5 minutes, runs only when the repository variable `ENGINE_TICK_URL` is set, sends the bearer secret `CRON_SECRET`, fails the job on non-2xx. Vercel Cron is the default trigger on Pro: add the every-minute cron entry to `vercel.json` only when `CRON_MODE=vercel` is set and the owner confirms the project is on Pro (a Hobby deploy fails with a per-minute cron); otherwise put the JSON snippet in the PR body for the owner.
 
 OUT OF SCOPE (do not build, even if easy)
 - A/B tests, lift, YouTube, deals, faults and scenarios, reprocessing, report runs, audience and negotiation steps
@@ -1909,8 +1934,8 @@ Not cuttable: P3-01, P3-05a, P3-06a, P3-05b, P3-03, P3-06b, P3-06c, a minimal P3
 | R-02 | Credit expires while a session is mid-work | Medium, medium | Sessions still open on the morning of 5 Nov | Freeze 9:00 AM IST. Last start 8:00 PM on 4 Nov. Sessions push every 20 minutes |
 | R-03 | Fewer parallel cloud sessions allowed than the plan uses (5 at peak) | Medium, medium | P-12 shows a limit | Run waves with fewer sessions in merge order (3.5). Drop the cuts of 5.2 earlier |
 | R-04 | Owner prerequisites late (Vercel, Postgres, secrets) | Medium, medium | Items open on 1 Nov | Sessions use a local Postgres and need no cloud database. Only "preview green" waits. See F-3 |
-| R-05 | Vercel Hobby limits: cron once per day; a deploy with a faster cron fails; limited deployments per day; function time limits; non-commercial use only | High if Hobby, medium | Deploy error mentioning cron; deployment limit message | Use Pro for the classes (1.3). Until then keep cron out of `vercel.json` (P3-08b rule), use GitHub Actions every 5 minutes plus lazy catch-up. Sessions push at checkpoints only (2.9). Add the Ignored Build Step for docs-only commits. Long jobs (fast-forward) run in chunks that fit the function time limit |
-| R-06 | Neon free-tier limits: 0.5 GB storage, monthly compute hours, cold starts | Medium, medium | Slow first request; storage near the limit; compute hours used up early in the month | Lower sim speed and retention (RC-057). The tick workflow runs only inside class hours (edit the cron expression of `engine-tick.yml` to class hours). Upgrade the plan for the pilot with 60 students |
+| R-05 | Vercel Hobby limits: cron once per day; a deploy with a faster cron fails; limited deployments per day; function time limits; non-commercial use only | High if Hobby, medium | Deploy error mentioning cron; deployment limit message | Pro is required for the classes (1.3, ADR-041). Until the upgrade is done keep cron out of `vercel.json` (P3-08b rule) and use the GitHub Actions fallback every 5 minutes plus lazy catch-up. Sessions push at checkpoints only (2.9). Add the Ignored Build Step for docs-only commits. Long jobs (fast-forward) run in chunks that fit the function time limit |
+| R-06 | Supabase free-tier limits (Nano): 500 MB storage, project paused after 7 days of inactivity, about 60 pooled connections, cold starts | Medium, medium | Slow first request; storage near the limit; compute hours used up early in the month | Lower sim speed and hourly retention (RC-057, ADR-045); open the app before each class so a paused project is restored. The tick workflow runs only inside class hours (edit the cron expression of `engine-tick.yml` to class hours). Move to Supabase Pro if a class exceeds 25 students |
 | R-07 | Prisma with a transaction pooler: prepared statements, `SET LOCAL` and interactive transactions | Medium, high | Errors like "prepared statement already exists" or lost `app.sandbox_id` | Use `pgbouncer=true` on `DATABASE_URL`, `DIRECT_URL` for migrations, and run every request inside `withSandbox` (one interactive transaction). Fallback F-4 |
 | R-08 | RLS and composite foreign keys slow the schema work or break Prisma features | Medium, medium | P3-05a tests need long fixes | `RLS_ENABLED=false` switch keeps the service-layer sandbox filter (every query already carries `sandboxId`). Record the gap and move on |
 | R-09 | Merge conflicts between parallel sessions | Medium, low | PRs show conflicts | Ownership map 3.2, merge order 3.5, conflict rules for `package-lock.json`, `PROJECT.md`, `prisma/migrations` (2.2, 2.9, 2.5) |
@@ -1920,7 +1945,7 @@ Not cuttable: P3-01, P3-05a, P3-06a, P3-05b, P3-03, P3-06b, P3-06c, a minimal P3
 | R-13 | Engine too slow or too complex for the window | Medium, high | P3-08a past its planned share | Fallback F-1 (engine lite). Property tests are the quality bar; do not drop them |
 | R-14 | Playwright or Chromium not available in a session | Low, medium | Browser launch error | The image has Chromium at `/opt/pw-browsers/chromium`; set `PLAYWRIGHT_CHROMIUM_PATH`. Do not run `playwright install` |
 | R-15 | Secrets leak in a public repo | Low, high | Secret scanning alert | Secret scanning and push protection on (1.6). Sessions never receive production secrets. P3-INT runs a scan. Rotate any leaked value at once |
-| R-16 | Public repo exposes DV360-derived notes | Known, low | n/a | Owner decision RC-059 before P3-01 |
+| R-16 | Public repo exposes DV360-derived notes | Known, low | n/a | Decided: repo stays public (RC-059, ADR-044) |
 | R-17 | Student data privacy and uploads | Low now, medium at the pilot | n/a | RC-063 to RC-065 decided before the pilot; Phase 3 stores only demo users |
 | R-18 | Fidelity drift: the UI looks close but not equal | High, medium | n/a | Expected. The SOP-3 fidelity pass is Phase 6. P3-INT logs gaps. DS Q1 asks for reference screenshots (P-09) |
 | R-19 | Auth.js v5 is still a beta package and may change | Medium, low | Type or API break on install | Pin the exact beta version. Keep all Auth.js code behind `lib/auth/session.ts` |
@@ -1943,4 +1968,4 @@ Not cuttable: P3-01, P3-05a, P3-06a, P3-05b, P3-03, P3-06b, P3-06c, a minimal P3
 
 - The plan assumes a cloud session can run `npm ci`, a local Postgres (embedded) and Chromium. P3-01 proves it. If it cannot, the owner should know on 1 Nov in the first hour; the fallback is a smaller wave 2 that does not need a database (P3-04, P3-06a, P3-08a are pure TypeScript).
 - Sizes are estimates. The first measured cost (P3-01) and the first L session (any wave 2 session) calibrate the rest.
-- The owner is asked to decide several things (section 1). Only P-01, P-02 and RC-059 block the start.
+- The owner is asked to decide several things (section 1). Only P-02 still blocks the start (P-01 and RC-059 were decided on 2026-10-28).
