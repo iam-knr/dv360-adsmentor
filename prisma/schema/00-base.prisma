@@ -1,0 +1,15 @@
+// Base schema (P3-01). Frozen after merge. Domain models live in 10..99 files.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model AppMeta {
+  key   String @id
+  value String
+}
