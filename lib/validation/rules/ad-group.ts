@@ -72,7 +72,10 @@ export const AG_006 = def({
     const out: Violation[] = [];
     (g.dimensions ?? []).forEach((key, i) => {
       const dim = matrixDimensionOf(key);
-      if (dim && TARGETING_AVAILABILITY[dim].YTAG === 'N')
+      if (
+        dim &&
+        TARGETING_AVAILABILITY[dim][g.lineItemType === 'DEMAND_GEN' ? 'DG' : 'YTAG'] === 'N'
+      )
         out.push({ path: `dimensions[${i}]`, params: { Dimension: DIMENSION_LABEL[dim] } });
     });
     return out;

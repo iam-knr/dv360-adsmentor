@@ -263,7 +263,8 @@ model Ad {
   format           YtAdFormat     @default(RESPONSIVE)
   reviewStatus     AdReviewStatus @default(PENDING)
   reviewFeedback   String?
-  youtubeVideoId   String
+  youtubeVideoId   String? // Demand Gen image and carousel ads have no video (P4-06)
+  imageAssetIds    String[] // Demand Gen image and carousel ads (P4-06)
   logoAssetId      String?
   companionAssetId String?
   headline         String?

@@ -111,7 +111,7 @@ export function DgAdPanel({ adId, adGroupId, readOnly, onClose }: AdPanelProps) 
     });
   };
 
-  const upload = (files: FileList | null, role: 'LOGO' | 'COMPANION') => {
+  const upload = (files: FileList | null, role: 'LOGO' | 'IMAGE') => {
     for (const file of Array.from(files ?? [])) {
       const form = new FormData();
       form.set('file', file);
@@ -168,7 +168,9 @@ export function DgAdPanel({ adId, adGroupId, readOnly, onClose }: AdPanelProps) 
         onDelete={creating || ro ? undefined : () => setConfirmDelete(true)}
       >
         {value && detail ? (
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 340px' }, gap: 6 }}>
+          <Box
+            sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 340px' }, gap: 6 }}
+          >
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <DvTextField
                 label="Ad name"
@@ -218,7 +220,10 @@ export function DgAdPanel({ adId, adGroupId, readOnly, onClose }: AdPanelProps) 
                     <Typography variant="caption" color="text.secondary" display="block">
                       {DG_IMAGE_HELP}
                     </Typography>
-                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', my: 2 }} data-testid="dg-images">
+                    <Box
+                      sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', my: 2 }}
+                      data-testid="dg-images"
+                    >
                       {images.map((img) => (
                         <Box key={img.id} sx={{ position: 'relative' }}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -230,7 +235,9 @@ export function DgAdPanel({ adId, adGroupId, readOnly, onClose }: AdPanelProps) 
                               aria-label="Remove image"
                               onClick={() => {
                                 setImages((cur) => cur.filter((x) => x.id !== img.id));
-                                set({ imageAssetIds: value.imageAssetIds.filter((x) => x !== img.id) });
+                                set({
+                                  imageAssetIds: value.imageAssetIds.filter((x) => x !== img.id),
+                                });
                               }}
                             >
                               Remove
@@ -248,7 +255,7 @@ export function DgAdPanel({ adId, adGroupId, readOnly, onClose }: AdPanelProps) 
                           type="file"
                           accept="image/png,image/jpeg,image/gif"
                           aria-label="Upload images"
-                          onChange={(e) => upload(e.target.files, 'COMPANION')}
+                          onChange={(e) => upload(e.target.files, 'IMAGE')}
                         />
                       </Button>
                     ) : null}
@@ -344,7 +351,8 @@ export function DgAdPanel({ adId, adGroupId, readOnly, onClose }: AdPanelProps) 
               </DvSectionCard>
               {!creating && detail.reviewStatus !== 'APPROVED' ? (
                 <Typography variant="body2" data-testid="review-status">
-                  Review status: {detail.reviewStatus.charAt(0) + detail.reviewStatus.slice(1).toLowerCase()}
+                  Review status:{' '}
+                  {detail.reviewStatus.charAt(0) + detail.reviewStatus.slice(1).toLowerCase()}
                   {detail.reviewFeedback ? ` — ${detail.reviewFeedback}` : ''}
                 </Typography>
               ) : null}
@@ -367,7 +375,13 @@ export function DgAdPanel({ adId, adGroupId, readOnly, onClose }: AdPanelProps) 
               />
               <Box
                 data-testid="dg-card"
-                sx={{ border: 1, borderColor: 'divider', borderRadius: 2, overflow: 'hidden', maxWidth: 320 }}
+                sx={{
+                  border: 1,
+                  borderColor: 'divider',
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                  maxWidth: 320,
+                }}
               >
                 <Box
                   sx={{

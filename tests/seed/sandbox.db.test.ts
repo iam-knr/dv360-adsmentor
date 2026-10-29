@@ -19,8 +19,8 @@ interface Built {
   result: ProvisionResult;
 }
 
-// Module 09 (P4-06) adds seven YouTube line items and four ad group targeting rows after the plan is inserted.
-const YT_LINE_ITEMS = 7;
+// Module 09 (P4-06) adds seven YouTube line items and one Demand Gen line item and four ad group targeting rows after the plan is inserted.
+const YT_LINE_ITEMS = 8;
 const YT_TARGETING_ROWS = 4;
 
 describe('seeded sandboxes', () => {

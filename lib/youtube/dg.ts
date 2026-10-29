@@ -19,7 +19,8 @@ export const isDgFormat = (v: string | null | undefined): v is DgFormat =>
   (DG_FORMATS as readonly string[]).includes(v ?? '');
 
 /** Image ratios a Demand Gen image ad accepts, shown as help text. */
-export const DG_IMAGE_HELP = 'Landscape 1.91:1, square 1:1 or portrait 4:5. PNG, JPG or GIF up to 5 MB.';
+export const DG_IMAGE_HELP =
+  'Landscape 1.91:1, square 1:1 or portrait 4:5. PNG, JPG or GIF up to 5 MB.';
 export const DG_CAROUSEL_MIN = 2;
 export const DG_CAROUSEL_MAX = 10;
 
@@ -58,7 +59,9 @@ export function dgIssues(a: DgAdFields): Issue[] {
   const out: Issue[] = [];
   if (!a.dgFormat) out.push(error('AD-DG-001', 'dgFormat', MSG.SELECTION_REQUIRED));
   if (codePointLength(a.headline) > LIMITS.DG_HEADLINE_MAX)
-    out.push(error('LI-DG-007', 'headline', format(MSG.MAX_CHARS, { max: LIMITS.DG_HEADLINE_MAX })));
+    out.push(
+      error('LI-DG-007', 'headline', format(MSG.MAX_CHARS, { max: LIMITS.DG_HEADLINE_MAX })),
+    );
   if (codePointLength(a.description) > LIMITS.AD_DESCRIPTION_MAX)
     out.push(
       error('LI-DG-008', 'description', format(MSG.MAX_CHARS, { max: LIMITS.AD_DESCRIPTION_MAX })),
@@ -66,10 +69,15 @@ export function dgIssues(a: DgAdFields): Issue[] {
   if (isBlank(a.businessName)) out.push(error('LI-DG-009', 'businessName', MSG.ENTER_VALUE));
   else if (codePointLength(a.businessName) > LIMITS.AD_BUSINESS_NAME_MAX)
     out.push(
-      error('LI-DG-009', 'businessName', format(MSG.MAX_CHARS, { max: LIMITS.AD_BUSINESS_NAME_MAX })),
+      error(
+        'LI-DG-009',
+        'businessName',
+        format(MSG.MAX_CHARS, { max: LIMITS.AD_BUSINESS_NAME_MAX }),
+      ),
     );
   if (a.dgFormat === 'DEMAND_GEN_VIDEO') {
-    if (!a.videoId || !a.videoFound) out.push(error('AD-DG-002', 'videoRef', MSG.YT_VIDEO_NOT_FOUND));
+    if (!a.videoId || !a.videoFound)
+      out.push(error('AD-DG-002', 'videoRef', MSG.YT_VIDEO_NOT_FOUND));
   } else if (a.dgFormat === 'DEMAND_GEN_IMAGE') {
     if (a.imageAssetIds.length === 0)
       out.push(error('AD-DG-003', 'imageAssetIds', 'Upload an image.'));

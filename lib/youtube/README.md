@@ -5,15 +5,15 @@ Session P4-06 (YouTube line items, ad groups, ads). Spec: `docs/specs/modules/09
 
 ## Files
 
-| File | What |
-|---|---|
-| `service.ts` | Ad group and ad CRUD, status, delete, bulk status, video lookup, preview, asset upload (module 09 Y4 to Y18). Every write: access check, validation with the full context, optimistic version, `withChangeLog`, `Result<T>` |
-| `li.ts` | The YouTube section of the line item form (defaults from the step 1 choice, columns, read back). Used by `lib/line-items` |
-| `preview.ts` | `buildPreviewModel`, a pure function (module 09 2.6, Δ-09-10). The client and `POST /api/dv/ads/preview` share it |
-| `review.ts` | Simulated ad review plan: verdict and a 1 to 3 hour delay (Δ-09-8, Q-09-06) |
-| `review-sync.ts` | Settling of due reviews and the alerts `YT_AD_REJECTED` and `AD_GROUP_NOT_RUNNING`. Called by the ad group pages (lazy) and by the engine tick (`lib/engine/io/youtube.ts`) |
-| `seed.ts` | The 60 synthetic videos and the seven YouTube line items with ad groups and ads (module 09 3.4). Relative imports only (prisma/seed runs under tsx) |
-| `actions.ts`, `api.ts`, `types.ts` | Server actions, route plumbing, wire types |
+| File                               | What                                                                                                                                                                                                                        |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `service.ts`                       | Ad group and ad CRUD, status, delete, bulk status, video lookup, preview, asset upload (module 09 Y4 to Y18). Every write: access check, validation with the full context, optimistic version, `withChangeLog`, `Result<T>` |
+| `li.ts`                            | The YouTube section of the line item form (defaults from the step 1 choice, columns, read back). Used by `lib/line-items`                                                                                                   |
+| `preview.ts`                       | `buildPreviewModel`, a pure function (module 09 2.6, Δ-09-10). The client and `POST /api/dv/ads/preview` share it                                                                                                           |
+| `review.ts`                        | Simulated ad review plan: verdict and a 1 to 3 hour delay (Δ-09-8, Q-09-06)                                                                                                                                                 |
+| `review-sync.ts`                   | Settling of due reviews and the alerts `YT_AD_REJECTED` and `AD_GROUP_NOT_RUNNING`. Called by the ad group pages (lazy) and by the engine tick (`lib/engine/io/youtube.ts`)                                                 |
+| `seed.ts`                          | The 60 synthetic videos and the seven YouTube line items with ad groups and ads (module 09 3.4). Relative imports only (prisma/seed runs under tsx)                                                                         |
+| `actions.ts`, `api.ts`, `types.ts` | Server actions, route plumbing, wire types                                                                                                                                                                                  |
 
 ## Rules of the road
 

@@ -170,13 +170,20 @@ export async function persistTargeting(
 /** Ad group targeting (module 09 2.4): the ad group's own rows, no advertiser locks (P4-06). */
 export const AD_GROUP_TARGETING_TYPE = 'YT_AD_GROUP';
 
-export async function loadAdGroupTargeting(db: Db, adGroupId: string): Promise<TargetingState> {
+/** Demand Gen ad groups use the DG column of MX-10 (module 09 4.6). */
+export const DG_AD_GROUP_TARGETING_TYPE = 'DG_AD_GROUP';
+
+export async function loadAdGroupTargeting(
+  db: Db,
+  adGroupId: string,
+  type: string = AD_GROUP_TARGETING_TYPE,
+): Promise<TargetingState> {
   const own = await db.targetingAssignment.findMany({
     where: { adGroupId, ownerType: 'AD_GROUP' },
     select: SELECT,
     orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
   });
-  return rowsToState(await toRows(db, own), AD_GROUP_TARGETING_TYPE);
+  return rowsToState(await toRows(db, own), type);
 }
 
 export async function persistAdGroupTargeting(

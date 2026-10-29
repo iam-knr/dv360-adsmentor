@@ -161,7 +161,7 @@ export async function uploadAdAssetAction(
   const adGroupId = form.get('adGroupId');
   if (
     !(file instanceof File) ||
-    (role !== 'LOGO' && role !== 'COMPANION') ||
+    (role !== 'LOGO' && role !== 'COMPANION' && role !== 'IMAGE') ||
     typeof adGroupId !== 'string'
   )
     return { ok: false, issues: [] };

@@ -53,6 +53,7 @@ export const adRegistry: EntityRegistry = {
     scalar('reviewStatus', 'Review status', 'enum'),
     scalar('reviewFeedback', 'Review feedback', 'text'),
     scalar('youtubeVideoId', 'Video'),
+    { path: 'imageAssetIds', label: 'Images', kind: 'json' },
     scalar('logoAssetId', 'Logo'),
     scalar('companionAssetId', 'Companion banner'),
     scalar('headline', 'Headline', 'text'),

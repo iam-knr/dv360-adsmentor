@@ -15,6 +15,7 @@ let w: ShellWorld;
 let readOnly: ShellWorld;
 let liPublicId: string;
 let liRowId: string;
+let dgLiPublicId: string;
 
 const BUMPER = 'SIMbump0001'; // 6 s, horizontal: bumper only
 const SPOT = 'SIMh0300001'; // 30 s, horizontal: skippable and in-feed
@@ -96,6 +97,17 @@ test.beforeAll(async () => {
     if (world === w) {
       liPublicId = li.publicId.toString();
       liRowId = li.id;
+      const dg = await db.lineItem.create({
+        data: {
+          sandboxId: world.sandboxId,
+          ioId: io.id,
+          campaignId: io.campaignId,
+          advertiserId: io.advertiserId,
+          name: 'PW Demand Gen LI',
+          type: 'DEMAND_GEN',
+        },
+      });
+      dgLiPublicId = dg.publicId.toString();
     }
   }
 });
@@ -297,6 +309,53 @@ test('PW-09-04..10: ad group, ad with preview, status, delete', async ({ page })
     where: { group: { entityType: 'AD_GROUP', entityId: group.id } },
   });
   expect(entries.some((e) => e.kind === 'DELETE')).toBe(true);
+});
+
+test('PW-09-14: Demand Gen ad group without a bid, and an image ad with the 40 character headline', async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto(`${base()}/io/${w.ids.ioId}/li/${dgLiPublicId}/adgroups`);
+  await expect(page.getByRole('columnheader', { name: 'TrueView: Views' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'New ad group' }).first().click();
+  await expect(page.locator('#adgroup-bid')).toHaveCount(0);
+  await page.locator('#adgroup-name').fill('PW DG group');
+  await page.getByRole('button', { name: 'Create ad group' }).click();
+  await page.getByRole('button', { name: 'PW DG group' }).click();
+  await page.getByRole('button', { name: 'Create new ad' }).click();
+
+  await page.locator('#ad-name').fill('PW DG image ad');
+  await page.getByRole('radio', { name: 'Image' }).check();
+  await page.getByRole('button', { name: 'Create ad' }).click();
+  await expect(page.getByText('Upload an image.')).toBeVisible();
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAfbLI3wAAAABJRU5ErkJggg==',
+    'base64',
+  );
+  await page
+    .locator('input[aria-label="Upload images"]')
+    .setInputFiles({ name: 'hero.png', mimeType: 'image/png', buffer: png });
+  await expect(page.getByTestId('dg-images').locator('img')).toHaveCount(1);
+  await page.locator('#ad-headline').fill('h'.repeat(41));
+  await expect(page.locator('#ad-headline')).toHaveValue('h'.repeat(40));
+  await page.locator('#ad-headline').fill('New season, new look');
+  await page.locator('#ad-description').fill('Shop the collection');
+  await expect(page.locator('#ad-business')).toHaveValue('Monsoon Footwear');
+  await expect(page.getByTestId('preview-caption')).toHaveText(
+    'Example of your image ad in Discover feed',
+  );
+  await page.getByRole('tab', { name: 'Gmail promotion' }).click();
+  await expect(page.getByTestId('preview-caption')).toHaveText(
+    'Example of your image ad in Gmail promotion',
+  );
+  await page.locator('#ad-landing').fill('example.test/season');
+  await page.getByRole('button', { name: 'Create ad' }).click();
+  await expect(page.getByTestId('ad-card')).toContainText('PW DG image ad');
+  const row = await db.ad.findFirstOrThrow({
+    where: { name: 'PW DG image ad', sandboxId: w.sandboxId },
+  });
+  expect(row).toMatchObject({ format: 'DEMAND_GEN_IMAGE', youtubeVideoId: null });
+  expect(row.imageAssetIds).toHaveLength(1);
 });
 
 test('AC-09-14: the format dropdown limits the device buttons and surface tabs', async ({

@@ -143,12 +143,13 @@ export async function syncYoutubeAlerts(tx: Tx, ctx: SyncCtx, simNowMs: number):
   const lis = await tx.lineItem.findMany({
     where: {
       sandboxId: ctx.sandboxId,
-      type: { in: ['YT_VIDEO', 'YT_AUDIO', 'YT_ON_CTV'] },
+      type: { in: ['YT_VIDEO', 'YT_AUDIO', 'YT_ON_CTV', 'DEMAND_GEN'] },
       status: { in: ['ACTIVE', 'PAUSED'] },
     },
     select: {
       id: true,
       status: true,
+      type: true,
       advertiserId: true,
       campaignId: true,
       ioId: true,
@@ -158,6 +159,7 @@ export async function syncYoutubeAlerts(tx: Tx, ctx: SyncCtx, simNowMs: number):
   });
   const raised: string[] = [];
   for (const li of lis) {
+    const noun = li.type === 'DEMAND_GEN' ? 'Demand Gen' : 'YouTube';
     const rejected = li.adGroups.reduce(
       (n, g) =>
         n + g.ads.filter((a) => a.reviewStatus === 'REJECTED' && a.status === 'ACTIVE').length,
@@ -177,7 +179,7 @@ export async function syncYoutubeAlerts(tx: Tx, ctx: SyncCtx, simNowMs: number):
           type: 'YOUTUBE_AD_REJECTED',
           severity: 'CRITICAL',
           category: 'CREATIVES',
-          title: `${plural(rejected, 'YouTube ad', 'YouTube ads')} rejected`,
+          title: `${plural(rejected, `${noun} ad`, `${noun} ads`)} rejected`,
           count: rejected,
         },
         at,

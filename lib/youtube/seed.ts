@@ -399,7 +399,86 @@ export async function seedYoutube(db: Db, input: YoutubeSeedInput): Promise<numb
         }
       }
     }
+    await seedDemandGen(db, input, adv, io, business);
     seeded++;
   }
   return seeded;
+}
+
+/** One Demand Gen line item with an ad group and two ads, an image and a video ad (module 09 3.4). */
+async function seedDemandGen(
+  db: Db,
+  input: YoutubeSeedInput,
+  adv: { id: string },
+  io: { id: string; campaignId: string },
+  business: string,
+): Promise<void> {
+  await db.advertiser.update({
+    where: { id: adv.id },
+    data: { demandGenFloodlightOptimization: true },
+  });
+  const ns = `${input.sandboxId}:dg:${adv.id}`;
+  const liId = stableId(ns, 'li');
+  await db.lineItem.create({
+    data: {
+      id: liId,
+      sandboxId: input.sandboxId,
+      ioId: io.id,
+      campaignId: io.campaignId,
+      advertiserId: adv.id,
+      name: 'Demand Gen audiences',
+      status: 'PAUSED',
+      type: 'DEMAND_GEN',
+      pacingPeriod: 'DAILY',
+      pacingType: 'EVEN',
+      dailyMaxAmount: '4000',
+      budgetMode: 'FIXED',
+      budgetAmount: '60000',
+      bidKind: 'AUTOMATED',
+      bidGoal: 'MAX_CONVERSIONS',
+      euPoliticalAds: 'DOES_NOT_CONTAIN_EU_POLITICAL_ADS',
+    },
+  });
+  const agId = stableId(ns, 'ag');
+  await db.adGroup.create({
+    data: {
+      id: agId,
+      sandboxId: input.sandboxId,
+      lineItemId: liId,
+      advertiserId: adv.id,
+      name: 'Demand Gen ad group',
+      adSourceLabel: 'Display & Video 360',
+    },
+  });
+  const common = {
+    sandboxId: input.sandboxId,
+    adGroupId: agId,
+    advertiserId: adv.id,
+    businessName: business,
+    logoAssetId: 'default-logo',
+    landingPageUrl: 'https://example.test/offer',
+    reviewStatus: 'APPROVED' as const,
+  };
+  await db.ad.create({
+    data: {
+      ...common,
+      id: stableId(ns, 'ad-video'),
+      name: 'Demand Gen video ad',
+      format: 'DEMAND_GEN_VIDEO',
+      youtubeVideoId: 'SIMh0300003',
+      headline: 'See the range',
+      description: 'A short film about the new collection.',
+    },
+  });
+  await db.ad.create({
+    data: {
+      ...common,
+      id: stableId(ns, 'ad-image'),
+      name: 'Demand Gen image ad',
+      format: 'DEMAND_GEN_IMAGE',
+      imageAssetIds: ['sample-image'], // served as the stock placeholder by the assets route
+      headline: 'New season, new look',
+      description: 'Shop the collection today.',
+    },
+  });
 }

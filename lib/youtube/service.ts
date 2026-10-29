@@ -10,6 +10,7 @@ import { toMinor, type CurrencyCode } from '@/lib/money';
 import { getGridMetricsTx } from '@/lib/metrics/grid-metrics';
 import {
   AD_GROUP_TARGETING_TYPE,
+  DG_AD_GROUP_TARGETING_TYPE,
   emptyTargetingState,
   loadAdGroupTargeting,
   persistAdGroupTargeting,
@@ -44,6 +45,7 @@ import {
   type PreviewDraft,
   type PreviewModel,
 } from './preview';
+import { dgIssues, isDgFormat, type DgFormat } from './dg';
 import { planReview } from './review';
 import { settleDueAdReviews } from './review-sync';
 import type {
@@ -149,6 +151,14 @@ async function loadLi(tx: Tx, liId: string) {
 function bidKindOf(li: Pick<LiRow, 'ytSubtype'>): YtBidKind {
   return li.ytSubtype ? YT_SUBTYPE_INFO[li.ytSubtype as YtSubtype].adGroupBid : 'TARGET_CPM';
 }
+
+const isDg = (li: Pick<LiRow, 'type'>): boolean => li.type === 'DEMAND_GEN';
+const targetingTypeOf = (li: Pick<LiRow, 'type'>): string =>
+  isDg(li) ? DG_AD_GROUP_TARGETING_TYPE : AD_GROUP_TARGETING_TYPE;
+/** The bid rules do not apply to a Demand Gen ad group: its bid follows the line item strategy (module 09 4.6). */
+const BID_RULES = ['AG-003', 'AG-004'];
+/** Rules of the YouTube ad that also hold for a Demand Gen ad (name, URLs, status). */
+const DG_AD_RULES = ['AD-001', 'AD-002', 'AD-016', 'AD-017', 'AD-019'];
 
 function surfacesOf(li: Pick<LiRow, 'ytSurfaces'>): YtSurface[] | null {
   return li.ytSurfaces.length
@@ -287,12 +297,15 @@ async function classroomOf(user: SessionUser, tx: Tx): Promise<string> {
 type AdWithVideo = Prisma.AdGetPayload<Record<string, never>> & { video: YoutubeVideoHit | null };
 
 async function withVideos(tx: Tx, ads: Prisma.AdGetPayload<Record<string, never>>[]) {
-  const ids = [...new Set(ads.map((a) => a.youtubeVideoId))];
+  const ids = [...new Set(ads.flatMap((a) => (a.youtubeVideoId ? [a.youtubeVideoId] : [])))];
   const rows = ids.length
     ? await tx.youtubeVideo.findMany({ where: { videoId: { in: ids } } })
     : [];
   const byId = new Map(rows.map((v) => [v.videoId, hitOf(v)]));
-  return ads.map((a): AdWithVideo => ({ ...a, video: byId.get(a.youtubeVideoId) ?? null }));
+  return ads.map((a): AdWithVideo => ({
+    ...a,
+    video: a.youtubeVideoId ? (byId.get(a.youtubeVideoId) ?? null) : null,
+  }));
 }
 
 function formatsOf(
@@ -325,10 +338,14 @@ function adRow(ad: AdWithVideo, li: LiRow): AdRow {
     adGroupId: ad.adGroupId,
     name: ad.name,
     status: ad.status === 'PAUSED' ? 'PAUSED' : 'ACTIVE',
-    format: 'RESPONSIVE',
+    format: isDgFormat(ad.format) ? ad.format : 'RESPONSIVE',
     reviewStatus: ad.reviewStatus,
     reviewFeedback: ad.reviewFeedback,
-    thumbnailUrl: ad.video?.thumbnailUrl ?? PLACEHOLDER_THUMBNAIL,
+    thumbnailUrl:
+      ad.video?.thumbnailUrl ??
+      (ad.imageAssetIds[0]
+        ? `/api/dv/youtube/assets/${ad.imageAssetIds[0]}`
+        : PLACEHOLDER_THUMBNAIL),
     formats: formatsOf(ad.video, li),
     trackers,
   };
@@ -434,6 +451,7 @@ export async function getAdGroupDraft(
       select: { currencyCode: true },
     });
     return {
+      kind: isDg(li) ? ('DEMAND_GEN' as const) : ('YOUTUBE' as const),
       lineItemId: li.id,
       lineItemName: li.name,
       lineItemBidKind: bidKindOf(li),
@@ -442,7 +460,7 @@ export async function getAdGroupDraft(
         name: '',
         status: 'ACTIVE' as const,
         bid: '',
-        targetingState: emptyTargetingState(AD_GROUP_TARGETING_TYPE),
+        targetingState: emptyTargetingState(targetingTypeOf(li)),
       },
       readOnly: !canWrite(user),
     };
@@ -461,10 +479,11 @@ export async function getAdGroupDetail(
     await settleReviews(tx, g.sandboxId, await classroomOf(user, tx), [g.id]);
     const [ads, targeting, adv] = await Promise.all([
       tx.ad.findMany({ where: { adGroupId: g.id }, orderBy: [{ name: 'asc' }, { id: 'asc' }] }),
-      loadAdGroupTargeting(tx, g.id),
+      loadAdGroupTargeting(tx, g.id, targetingTypeOf(li)),
       tx.advertiser.findUnique({ where: { id: g.advertiserId }, select: { currencyCode: true } }),
     ]);
     return {
+      kind: isDg(li) ? ('DEMAND_GEN' as const) : ('YOUTUBE' as const),
       id: g.id,
       publicId: g.publicId.toString(),
       version: g.version,
@@ -484,8 +503,8 @@ export async function getAdGroupDetail(
 // ---------------------------------------------------------------------------------------------
 
 /** A wire value without targeting state (a forged or minimal body) means no targeting. */
-const withState = (v: AdGroupFormValue): AdGroupFormValue =>
-  v.targetingState ? v : { ...v, targetingState: emptyTargetingState(AD_GROUP_TARGETING_TYPE) };
+const withState = (v: AdGroupFormValue, type = AD_GROUP_TARGETING_TYPE): AdGroupFormValue =>
+  v.targetingState ? v : { ...v, targetingState: emptyTargetingState(type) };
 
 function groupInput(
   v: AdGroupFormValue,
@@ -504,6 +523,19 @@ function groupInput(
   };
 }
 
+/** AG rules for the ad group; a Demand Gen group has no bid of its own (module 09 4.6). */
+function groupIssues(
+  li: LiRow,
+  value: AdGroupFormValue,
+  currency: CurrencyCode,
+  adCount: number,
+  ctx: ValidationContext,
+): Issue[] {
+  return validate('adGroup', groupInput(value, li, currency, adCount), ctx, {
+    trigger: 'save',
+  }).filter((i) => !(isDg(li) && BID_RULES.includes(i.ruleId)));
+}
+
 export async function validateAdGroup(
   user: SessionUser,
   liId: string,
@@ -516,7 +548,7 @@ export async function validateAdGroup(
     if (!li) return [];
     const { ctx, currency } = await ytContext(tx, user, li, adGroupId ? 'edit' : 'create');
     const adCount = adGroupId ? await tx.ad.count({ where: { adGroupId } }) : 0;
-    return validate('adGroup', groupInput(value, li, currency, adCount), ctx, { trigger: 'save' });
+    return groupIssues(li, value, currency, adCount, ctx);
   });
   return out ?? [];
 }
@@ -533,9 +565,7 @@ export async function createAdGroup(
     const li = await loadLi(tx, liId);
     if (!li) return notFound('line item');
     const { ctx, currency } = await ytContext(tx, user, li, 'create');
-    const issues = validate('adGroup', groupInput(value, li, currency, 0), ctx, {
-      trigger: 'save',
-    });
+    const issues = groupIssues(li, value, currency, 0, ctx);
     if (issues.some((i) => i.blocking)) return { ok: false as const, issues };
     const change = await changeCtx(user, tx, meta.note);
     const row = await withChangeLog(
@@ -593,9 +623,7 @@ export async function updateAdGroup(
     const li = await loadLi(tx, stored.lineItemId);
     if (!li) return notFound('line item');
     const { ctx, currency } = await ytContext(tx, user, li, 'edit');
-    const issues = validate('adGroup', groupInput(value, li, currency, stored._count.ads), ctx, {
-      trigger: 'save',
-    });
+    const issues = groupIssues(li, value, currency, stored._count.ads, ctx);
     if (issues.some((i) => i.blocking)) return { ok: false as const, issues };
     const change = await changeCtx(user, tx, meta.note);
     const row = await withChangeLog(
@@ -729,7 +757,7 @@ function toAdForm(a: Prisma.AdGetPayload<Record<string, never>>): AdFormValue {
   return {
     name: a.name,
     status: a.status === 'PAUSED' ? 'PAUSED' : 'ACTIVE',
-    videoRef: a.youtubeVideoId,
+    videoRef: a.youtubeVideoId ?? '',
     videoId: a.youtubeVideoId,
     headline: a.headline ?? '',
     longHeadline: a.longHeadline ?? '',
@@ -748,6 +776,8 @@ function toAdForm(a: Prisma.AdGetPayload<Record<string, never>>): AdFormValue {
     urlSuffix: a.urlSuffix ?? '',
     companionMode: a.companionAssetId ? 'OWN' : 'NONE',
     companionAssetId: a.companionAssetId,
+    dgFormat: isDgFormat(a.format) ? a.format : null,
+    imageAssetIds: a.imageAssetIds,
   };
 }
 
@@ -796,6 +826,8 @@ async function adDetailOf(
     reviewFeedback: ad?.reviewFeedback ?? null,
     formats: withVideo ? formatsOf(withVideo.video, li) : [],
     logoUrl: await assetUrl(tx, value.logoAssetId),
+    imageUrls: value.imageAssetIds.map((id) => ({ id, url: `/api/dv/youtube/assets/${id}` })),
+    dg: isDg(li),
     defaults,
     allowedSurfaces: surfacesOf(li),
     nonSkippable,
@@ -854,6 +886,33 @@ function adInput(v: AdFormValue, videoId: string | null): AdInput {
   };
 }
 
+/**
+ * Rules of the ad. A Demand Gen ad keeps the name, URL and status rules of AD, and has its own limits and media checks
+ * (LI-DG-007..009, `dgIssues`); the video, long headline, logo and companion rules are YouTube only.
+ */
+function adIssues(
+  li: LiRow,
+  ctx: ValidationContext,
+  value: AdFormValue,
+  videoId: string | null,
+): Issue[] {
+  const base = validate('ad', adInput(value, videoId), ctx, { trigger: 'save' });
+  if (!isDg(li)) return base;
+  const video = videoId ? ctx.lookups.youtubeVideos?.get(videoId) : undefined;
+  return [
+    ...base.filter((i) => DG_AD_RULES.includes(i.ruleId)),
+    ...dgIssues({
+      dgFormat: value.dgFormat,
+      videoId,
+      videoFound: !!video?.isPublic,
+      imageAssetIds: value.imageAssetIds ?? [],
+      headline: value.headline,
+      description: value.description,
+      businessName: value.businessName,
+    }),
+  ];
+}
+
 export async function validateAd(
   user: SessionUser,
   adGroupId: string,
@@ -872,30 +931,32 @@ export async function validateAd(
       adId ? 'edit' : 'create',
       videoId ? [videoId] : [],
     );
-    return validate('ad', adInput(value, videoId), ctx, { trigger: 'save' });
+    return adIssues(li, ctx, value, videoId);
   });
   return out ?? [];
 }
 
-function adColumns(v: AdFormValue, videoId: string) {
+function adColumns(v: AdFormValue, videoId: string | null, dg: boolean) {
+  const video = !dg || v.dgFormat === 'DEMAND_GEN_VIDEO';
   return {
     name: v.name.trim(),
     status: v.status,
-    youtubeVideoId: videoId,
+    youtubeVideoId: video ? videoId : null,
+    imageAssetIds: video ? [] : [...new Set(v.imageAssetIds ?? [])],
     logoAssetId: v.logoAssetId,
-    companionAssetId: v.companionMode === 'OWN' ? v.companionAssetId : null,
+    companionAssetId: !dg && v.companionMode === 'OWN' ? v.companionAssetId : null,
     headline: orNull(v.headline),
-    longHeadline: orNull(v.longHeadline),
+    longHeadline: dg ? null : orNull(v.longHeadline),
     description: orNull(v.description),
     callToAction: orNull(v.callToAction),
     businessName: orNull(v.businessName),
-    displayUrl: orNull(v.displayUrl),
-    path1: orNull(v.path1),
-    path2: orNull(v.path2),
+    displayUrl: dg ? null : orNull(v.displayUrl),
+    path1: dg ? null : orNull(v.path1),
+    path2: dg ? null : orNull(v.path2),
     landingPageUrl: mergeUrl(v.landingProtocol, v.landingPage),
     clickTrackerUrl: orNull(mergeUrl(v.clickTrackerProtocol, v.clickTracker)),
-    impressionTrackerUrl: orNull(v.impressionTrackerUrl),
-    urlSuffix: orNull(v.urlSuffix),
+    impressionTrackerUrl: dg ? null : orNull(v.impressionTrackerUrl),
+    urlSuffix: dg ? null : orNull(v.urlSuffix),
   };
 }
 
@@ -907,7 +968,11 @@ const REVIEWED_FIELDS = [
   'callToAction',
   'businessName',
   'landingPageUrl',
+  'imageAssetIds',
 ] as const;
+
+const sameValue = (a: unknown, b: unknown): boolean =>
+  JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
 export async function createAd(
   user: SessionUser,
@@ -922,8 +987,9 @@ export async function createAd(
     if (!g || !li) return notFound('ad group');
     const videoId = resolveVideoId(value);
     const { ctx } = await ytContext(tx, user, li, 'create', videoId ? [videoId] : []);
-    const issues = validate('ad', adInput(value, videoId), ctx, { trigger: 'save' });
-    if (issues.some((i) => i.blocking) || !videoId) return { ok: false as const, issues };
+    const issues = adIssues(li, ctx, value, videoId);
+    if (issues.some((i) => i.blocking) || (!isDg(li) && !videoId))
+      return { ok: false as const, issues };
     const now = await simNow(tx, g.sandboxId);
     const plan = planReview(`${g.id}:${value.name}`, value);
     const change = await changeCtx(user, tx, meta.note);
@@ -944,11 +1010,11 @@ export async function createAd(
             sandboxId: g.sandboxId,
             adGroupId: g.id,
             advertiserId: g.advertiserId,
-            format: 'RESPONSIVE',
+            format: isDg(li) && isDgFormat(value.dgFormat) ? value.dgFormat : 'RESPONSIVE',
             reviewStatus: 'PENDING',
             reviewDecideAt: new Date(now.getTime() + plan.delayHours * 3_600_000),
             plannedVerdict: plan.verdict,
-            ...adColumns(value, videoId),
+            ...adColumns(value, videoId, isDg(li)),
           },
           select: { id: true, publicId: true },
         }),
@@ -978,11 +1044,16 @@ export async function updateAd(
     if (!g || !li) return notFound('ad group');
     const videoId = resolveVideoId(value);
     const { ctx } = await ytContext(tx, user, li, 'edit', videoId ? [videoId] : []);
-    const issues = validate('ad', adInput(value, videoId), ctx, { trigger: 'save' });
-    if (issues.some((i) => i.blocking) || !videoId) return { ok: false as const, issues };
-    const columns = adColumns(value, videoId);
+    // the format of a Demand Gen ad is fixed after create
+    const input: AdFormValue = isDg(li)
+      ? { ...value, dgFormat: isDgFormat(stored.format) ? stored.format : value.dgFormat }
+      : value;
+    const issues = adIssues(li, ctx, input, videoId);
+    if (issues.some((i) => i.blocking) || (!isDg(li) && !videoId))
+      return { ok: false as const, issues };
+    const columns = adColumns(input, videoId, isDg(li));
     // Q-09-06: editing the video or the reviewed text sends the ad back to review.
-    const reviewed = REVIEWED_FIELDS.some((k) => (stored[k] ?? null) !== (columns[k] ?? null));
+    const reviewed = REVIEWED_FIELDS.some((k) => !sameValue(stored[k], columns[k]));
     const now = await simNow(tx, g.sandboxId);
     const plan = reviewed ? planReview(`${g.id}:${value.name}`, value) : null;
     const change = await changeCtx(user, tx, meta.note);
@@ -1153,7 +1224,7 @@ export async function uploadAdAsset(
   user: SessionUser,
   input: {
     adGroupId: string;
-    role: 'LOGO' | 'COMPANION';
+    role: 'LOGO' | 'COMPANION' | 'IMAGE';
     fileName: string;
     mimeType: string;
     bytes: Uint8Array;
@@ -1171,7 +1242,7 @@ export async function uploadAdAsset(
       data: {
         sandboxId: g.sandboxId,
         advertiserId: g.advertiserId,
-        role: input.role,
+        role: input.role === 'IMAGE' ? 'EXTRA' : input.role,
         fileName: input.fileName.slice(0, 200),
         mimeType: input.mimeType,
         sizeBytes: input.bytes.byteLength,

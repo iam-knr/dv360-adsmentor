@@ -1,4 +1,4 @@
-// POST /api/dv/youtube/assets   multipart: file, role (LOGO | COMPANION), adGroupId (module 09 Y18)
+// POST /api/dv/youtube/assets   multipart: file, role (LOGO | COMPANION | IMAGE), adGroupId (module 09 Y18)
 import { getSessionUser } from '@/lib/auth/session';
 import { badRequest, respond, unauthenticated } from '@/lib/youtube/api';
 import { uploadAdAsset } from '@/lib/youtube/service';
@@ -14,10 +14,10 @@ export async function POST(req: Request) {
   const adGroupId = form?.get('adGroupId');
   if (
     !(file instanceof File) ||
-    (role !== 'LOGO' && role !== 'COMPANION') ||
+    (role !== 'LOGO' && role !== 'COMPANION' && role !== 'IMAGE') ||
     typeof adGroupId !== 'string'
   )
-    return badRequest('file, role (LOGO or COMPANION) and adGroupId are required.');
+    return badRequest('file, role (LOGO, COMPANION or IMAGE) and adGroupId are required.');
   return respond(
     await uploadAdAsset(user, {
       adGroupId,

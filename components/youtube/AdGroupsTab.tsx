@@ -24,6 +24,7 @@ import { bulkAdGroupStatusAction, setAdGroupStatusAction } from '@/lib/youtube/a
 import type { AdGroupList, AdGroupRow } from '@/lib/youtube/types';
 import { AdGroupPanel } from './AdGroupPanel';
 import { AdPanel } from './AdPanel';
+import { DgAdPanel } from './DgAdPanel';
 
 const DOT: Record<AdGroupRow['status'], EntityStatus> = { ACTIVE: 'active', PAUSED: 'paused' };
 const FILTERS = [
@@ -71,6 +72,8 @@ export function AdGroupsTab({ list }: { list: AdGroupList }) {
   const [adsVersion, setAdsVersion] = useState(0);
   const [, start] = useTransition();
   const { currency } = list;
+  const dg = list.lineItem.type === 'DEMAND_GEN';
+  const AdEditor = dg ? DgAdPanel : AdPanel;
 
   const shown = useMemo(
     () => (filter === '*' ? list.rows : list.rows.filter((r) => r.status === filter)),
@@ -92,7 +95,7 @@ export function AdGroupsTab({ list }: { list: AdGroupList }) {
   const adId = panel?.startsWith('ad:') ? panel.slice('ad:'.length) : null;
   const closeAll = () => url.replace({ sim_panel: null, adgroup: null });
 
-  const columns: DvColumn<AdGroupRow>[] = [
+  const allColumns: DvColumn<AdGroupRow>[] = [
     {
       id: 'name',
       header: list.rows[0]?.adFormatLabel ?? 'Responsive',
@@ -194,6 +197,11 @@ export function AdGroupsTab({ list }: { list: AdGroupList }) {
       total: () => (conversions > 0 ? formatCurrency(revenue / conversions, currency) : '-'),
     },
   ];
+
+  // Demand Gen has no TrueView or co-viewed columns
+  const columns = dg
+    ? allColumns.filter((c) => !['coViewed', 'views', 'viewRate', 'avgCpv'].includes(c.id))
+    : allColumns;
 
   const changeStatus = (r: AdGroupRow, next: 'active' | 'paused') =>
     start(async () => {
@@ -306,7 +314,7 @@ export function AdGroupsTab({ list }: { list: AdGroupList }) {
         />
       ) : null}
       {adId && adGroupId ? (
-        <AdPanel
+        <AdEditor
           key={adId}
           adId={adId}
           adGroupId={adGroupId}

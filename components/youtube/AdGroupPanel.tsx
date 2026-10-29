@@ -17,7 +17,7 @@ import {
 } from '@/components/dv';
 import { DvSectionCard } from '@/components/dv/DvSectionCard';
 import { TargetingCard } from '@/components/targeting';
-import { AD_GROUP_TARGETING_TYPE } from '@/lib/targeting';
+import { AD_GROUP_TARGETING_TYPE, DG_AD_GROUP_TARGETING_TYPE } from '@/lib/targeting';
 import { LIMITS } from '@/lib/validation/constants/limits';
 import { MSG } from '@/lib/validation/messages';
 import { AG_007 } from '@/lib/validation/rules/ad-group';
@@ -108,6 +108,7 @@ export function AdGroupPanel({
   const err = (p: string) => issues.find((i) => i.path === p && i.blocking)?.message;
   const set = (patch: Partial<AdGroupFormValue>) => setValue((v) => (v ? { ...v, ...patch } : v));
   const cpv = loaded?.lineItemBidKind === 'MAX_CPV';
+  const dg = loaded?.kind === 'DEMAND_GEN';
   const ads: AdRow[] = loaded?.ads ?? [];
   const unmatched = issues.filter(
     (i) => i.blocking && !['name', 'bid'].includes(i.path) && !i.path.startsWith('dimensions'),
@@ -181,7 +182,7 @@ export function AdGroupPanel({
             />
             <DvSectionCard title="Ad group targeting" layout="stacked">
               <TargetingCard
-                lineItemType={AD_GROUP_TARGETING_TYPE}
+                lineItemType={dg ? DG_AD_GROUP_TARGETING_TYPE : AD_GROUP_TARGETING_TYPE}
                 value={value.targetingState}
                 onChange={(targetingState) => set({ targetingState })}
                 readOnly={ro}
@@ -192,23 +193,27 @@ export function AdGroupPanel({
                 </Typography>
               ) : null}
             </DvSectionCard>
-            <DvSectionCard title="Settings" layout="stacked">
-              <DvTextField
-                label={cpv ? 'Max CPV' : 'Target CPM'}
-                required
-                id="adgroup-bid"
-                numeric
-                prefix={loaded.currency}
-                value={value.bid}
-                readOnly={ro}
-                error={err('bid')}
-                onChange={(bid) => set({ bid })}
-              />
-            </DvSectionCard>
+            {dg ? null : (
+              <DvSectionCard title="Settings" layout="stacked">
+                <DvTextField
+                  label={cpv ? 'Max CPV' : 'Target CPM'}
+                  required
+                  id="adgroup-bid"
+                  numeric
+                  prefix={loaded.currency}
+                  value={value.bid}
+                  readOnly={ro}
+                  error={err('bid')}
+                  onChange={(bid) => set({ bid })}
+                />
+              </DvSectionCard>
+            )}
             <DvSectionCard title="Ads" layout="stacked">
-              <Typography variant="body2" color="text.secondary" data-testid="ag-007">
-                {AG_007.message}
-              </Typography>
+              {dg ? null : (
+                <Typography variant="body2" color="text.secondary" data-testid="ag-007">
+                  {AG_007.message}
+                </Typography>
+              )}
               {showNoAds ? (
                 <Typography role="status" variant="body2" data-testid="ag-no-ads">
                   {MSG.AG_NO_ADS}

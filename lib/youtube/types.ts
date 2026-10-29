@@ -2,6 +2,7 @@
 import type { TargetingState } from '@/lib/targeting';
 import type { AdFormatKey, UrlProtocol, YtBidKind } from '@/lib/validation/constants/youtube';
 import type { Issue } from '@/lib/validation/types';
+import type { DgFormat } from './dg';
 
 export type Result<T> =
   | { ok: true; data: T; warnings?: Issue[] }
@@ -62,7 +63,7 @@ export interface AdRow {
   adGroupId: string;
   name: string;
   status: YtStatus;
-  format: 'RESPONSIVE';
+  format: 'RESPONSIVE' | DgFormat;
   reviewStatus: ReviewStatus;
   reviewFeedback: string | null;
   thumbnailUrl: string;
@@ -71,6 +72,8 @@ export interface AdRow {
 }
 
 export interface AdGroupDetail {
+  /** Demand Gen ad groups have no bid of their own and a smaller targeting menu (module 09 4.6). */
+  kind: 'YOUTUBE' | 'DEMAND_GEN';
   id: string;
   publicId: string;
   version: number;
@@ -105,6 +108,9 @@ export interface AdFormValue {
   urlSuffix: string;
   companionMode: 'NONE' | 'OWN';
   companionAssetId: string | null;
+  /** Demand Gen only (null for a YouTube ad). */
+  dgFormat: DgFormat | null;
+  imageAssetIds: string[];
 }
 
 export interface YoutubeVideoHit {
@@ -128,6 +134,9 @@ export interface AdDetail {
   reviewFeedback: string | null;
   formats: AdFormatKey[];
   logoUrl: string | null;
+  /** Demand Gen image and carousel ads. */
+  imageUrls: { id: string; url: string }[];
+  dg: boolean;
   /** Defaults of Advertiser settings > YouTube and Demand Gen (banner of 2.5). */
   defaults: { businessName: string; logoAssetId: string | null };
   /** Ticks of the parent line item, for the preview (LI-YT-005). */
@@ -158,4 +167,6 @@ export const EMPTY_AD_FORM: AdFormValue = {
   urlSuffix: '',
   companionMode: 'NONE',
   companionAssetId: null,
+  dgFormat: null,
+  imageAssetIds: [],
 };
