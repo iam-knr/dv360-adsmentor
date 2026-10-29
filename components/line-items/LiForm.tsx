@@ -6,11 +6,13 @@
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Typography from '@mui/material/Typography';
 import { DvRadioGroup } from '@/components/dv/DvChoice';
 import { DvFormFooter, focusFirstInvalid } from '@/components/dv/DvFormPage';
+import { DvPickerDialog } from '@/components/dv/DvPickerDialog';
 import { DvSectionCard } from '@/components/dv/DvSectionCard';
 import { DvSelect } from '@/components/dv/DvSelect';
 import { DvTextField } from '@/components/dv/DvTextField';
@@ -18,10 +20,12 @@ import { TargetingCard } from '@/components/targeting';
 import { useUnsavedGuard } from '@/lib/hooks/useUnsavedGuard';
 import {
   createLineItemAction,
+  getCopyCandidatesAction,
+  getCopySourceAction,
   updateLineItemAction,
   validateLineItemAction,
 } from '@/lib/line-items/actions';
-import type { FieldLock, FormIo, LiFormValue } from '@/lib/line-items/form';
+import { mergeCopySettings, type FieldLock, type FormIo, type LiFormValue } from '@/lib/line-items/form';
 import {
   BID_STRATEGY_LABEL,
   LI_TYPE_LABEL,
@@ -29,8 +33,9 @@ import {
   bidOptions,
   exchangesText,
 } from '@/lib/line-items/type-config';
-import type { CreativePickerRow } from '@/lib/line-items/types';
+import type { ConversionPickerRow, CopyCandidate, CreativePickerRow } from '@/lib/line-items/types';
 import { ioPath } from '@/lib/routes/paths';
+import { LI_COUNTING_MODES } from '@/lib/validation/constants/conversions';
 import { FREQ_PERIODS } from '@/lib/validation/constants/frequency';
 import type { Issue } from '@/lib/validation/types';
 
@@ -38,6 +43,8 @@ export interface LiFormProps {
   mode: 'create' | 'edit';
   partnerId: string;
   advertiserId: string;
+  /** Row id of the advertiser (the service key), for the copy settings dialog. */
+  advertiserRowId?: string;
   campaignId: string;
   ioPublicId: string;
   /** Row id of the parent IO (the service key). */
@@ -49,6 +56,7 @@ export interface LiFormProps {
   io: FormIo;
   locked: FieldLock[];
   creatives: CreativePickerRow[];
+  conversions?: ConversionPickerRow[];
   higherCapText: string | null;
   readOnly?: boolean;
 }
@@ -57,6 +65,7 @@ export function LiForm({
   mode,
   partnerId,
   advertiserId,
+  advertiserRowId,
   campaignId,
   ioPublicId,
   ioId,
@@ -67,6 +76,7 @@ export function LiForm({
   io,
   locked,
   creatives,
+  conversions = [],
   higherCapText,
   readOnly,
 }: LiFormProps) {
@@ -77,6 +87,9 @@ export function LiForm({
   const [note, setNote] = useState('');
   const [tab, setTab] = useState<'all' | 'eligible' | 'assigned'>('all');
   const [busy, startTransition] = useTransition();
+  const [picker, setPicker] = useState<'conversions' | 'copy' | null>(null);
+  const [copyCandidates, setCopyCandidates] = useState<CopyCandidate[]>([]);
+  const [copyError, setCopyError] = useState<string | null>(null);
   const dirty = useMemo(() => JSON.stringify(value) !== JSON.stringify(saved), [value, saved]);
   useUnsavedGuard(dirty);
 
@@ -121,7 +134,10 @@ export function LiForm({
   };
   const revalidate = (next: LiFormValue) =>
     void validateLineItemAction(ioId, next, liId).then((all) =>
-      setIssues((cur) => [...cur.filter((i) => i.blocking), ...all.filter((i) => !i.blocking)]),
+      setIssues((cur) => [
+        ...cur.filter((i) => i.blocking && i.path !== 'conversions.activities'),
+        ...all.filter((i) => !i.blocking || i.path === 'conversions.activities'),
+      ]),
     );
 
   const shownCreatives = creatives.filter((c) =>
@@ -134,6 +150,24 @@ export function LiForm({
         : [...value.creatives, id],
     });
 
+  const openCopy = () => {
+    setCopyError(null);
+    void getCopyCandidatesAction(advertiserRowId!, type, liId).then((rows) => {
+      setCopyCandidates(rows);
+      setPicker('copy');
+    });
+  };
+  const applyCopy = (ids: string[]) => {
+    setPicker(null);
+    const id = ids[0];
+    if (!id) return;
+    void getCopySourceAction(id).then((res) => {
+      if (!res.ok) return setCopyError(res.issues[0]?.message ?? "Couldn't copy these settings.");
+      setValue((v) => mergeCopySettings(v, res.data, io));
+    });
+  };
+  const counting = value.conversions.countingMode ?? 'ALL';
+  const chosenConversions = conversions.filter((c) => value.conversions.activities.includes(c.id));
   const cap = value.frequencyCap;
   const unmatched = issues.filter((i) => i.blocking && !known.has(i.path));
 
@@ -165,6 +199,18 @@ export function LiForm({
             ]}
             onChange={(status) => set({ status: status as LiFormValue['status'] })}
           />
+          {!ro && advertiserRowId ? (
+            <Box>
+              <Button variant="text" size="small" onClick={openCopy}>
+                Copy settings from an existing line item
+              </Button>
+              {copyError ? (
+                <Typography role="alert" color="error" variant="body2">
+                  {copyError}
+                </Typography>
+              ) : null}
+            </Box>
+          ) : null}
         </DvSectionCard>
 
         {config.exchanges ? (
@@ -405,6 +451,60 @@ export function LiForm({
           ) : null}
         </DvSectionCard>
 
+        {config.conversions ? (
+          <DvSectionCard title="Conversions" layout="settings">
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Typography variant="body2">
+                {chosenConversions.length === 0
+                  ? 'No conversions selected'
+                  : `${chosenConversions.length} selected: ${chosenConversions.map((c) => c.name).join(', ')}`}
+              </Typography>
+              {!ro ? (
+                <Box>
+                  <Button variant="outlined" size="small" onClick={() => setPicker('conversions')}>
+                    Select conversions
+                  </Button>
+                </Box>
+              ) : null}
+              {err('conversions.activities') ? (
+                <Typography role="alert" color="error" variant="body2">
+                  {err('conversions.activities')}
+                </Typography>
+              ) : null}
+            </Box>
+            <DvSelect
+              label="Conversion counting"
+              value={counting}
+              disabled={ro}
+              options={LI_COUNTING_MODES.map((m) => ({
+                value: m,
+                label:
+                  m === 'ALL'
+                    ? 'Count all conversions'
+                    : m === 'POST_CLICK_ONLY'
+                      ? 'Count only post-click conversions'
+                      : 'Count a percentage of conversions',
+              }))}
+              onChange={(m) =>
+                set({ conversions: { ...value.conversions, countingMode: m as typeof counting } })
+              }
+            />
+            {counting === 'PERCENTAGE' ? (
+              <DvTextField
+                label="Count % of post-views and all post-clicks"
+                numeric
+                value={String(value.conversions.postViewPct ?? '')}
+                readOnly={ro}
+                error={err('conversions.postViewPct')}
+                onChange={(postViewPct) =>
+                  set({ conversions: { ...value.conversions, postViewPct } })
+                }
+              />
+            ) : null}
+            <Typography variant="body2">Attribution model: Primary model</Typography>
+          </DvSectionCard>
+        ) : null}
+
         <DvSectionCard title="Political ads in the European Union" layout="settings">
           <DvRadioGroup
             value={value.euPoliticalAds ?? ''}
@@ -454,6 +554,37 @@ export function LiForm({
           </Box>
         ) : null}
       </Box>
+      <DvPickerDialog
+        open={picker === 'conversions'}
+        title="Add Floodlight activities or Google Analytics conversions"
+        items={conversions.map((c) => ({
+          id: c.id,
+          label: c.name,
+          secondLine: `ID ${c.publicId} · ${c.source} · ${c.type === 'SALE' ? 'Sale' : 'Counter'} · ${c.countingMethod}`,
+        }))}
+        value={value.conversions.activities}
+        onApply={(ids) => {
+          const next = { ...value, conversions: { ...value.conversions, activities: ids } };
+          setValue(next);
+          setPicker(null);
+          revalidate(next);
+        }}
+        onCancel={() => setPicker(null)}
+      />
+      <DvPickerDialog
+        open={picker === 'copy'}
+        title="Copy settings from an existing line item"
+        single
+        applyLabel="Copy settings"
+        items={copyCandidates.map((c) => ({
+          id: c.id,
+          label: c.name,
+          secondLine: `ID ${c.publicId} · ${c.ioName}`,
+        }))}
+        value={[]}
+        onApply={applyCopy}
+        onCancel={() => setPicker(null)}
+      />
       {!ro ? (
         <DvFormFooter
           mode={mode}

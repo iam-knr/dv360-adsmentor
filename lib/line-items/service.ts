@@ -379,8 +379,8 @@ export async function getLineItemDetail(
       advancedAdServingRate: 0,
       higherCapText: io.higherCapText,
       app: findApp(li.mobileAppId),
-      creatives: creatives.filter((c) => value.creatives.includes(c.id)),
-      conversions: conversions.filter((c) => value.conversions.activities.includes(c.id)),
+      creatives,
+      conversions,
       readOnly: !canWrite(user),
     };
   });

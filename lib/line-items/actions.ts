@@ -1,17 +1,19 @@
 'use server';
 
 // Server actions of the line item form and lists (module 08 4). Thin: session, then service.
-import type { Issue } from '@/lib/validation/types';
+import type { Issue, LiType } from '@/lib/validation/types';
 import { getSessionUser } from '@/lib/auth/session';
 import type { LiFormValue } from './form';
 import {
   assignCreatives,
   createLineItem,
+  getCopyCandidates,
+  getCopySource,
   setLineItemStatus,
   updateLineItem,
   validateLineItem,
 } from './service';
-import type { LiStatus, Result } from './types';
+import type { CopyCandidate, LiCopySource, LiStatus, Result } from './types';
 
 const NO_SESSION: Result<never> = {
   ok: false,
@@ -60,4 +62,18 @@ export async function assignCreativesAction(
 ): Promise<Result<{ assigned: string[] }>> {
   const user = await getSessionUser();
   return user ? assignCreatives(user, liId, change) : NO_SESSION;
+}
+
+export async function getCopyCandidatesAction(
+  advertiserId: string,
+  type: LiType,
+  excludeId?: string,
+): Promise<CopyCandidate[]> {
+  const user = await getSessionUser();
+  return user ? getCopyCandidates(user, advertiserId, type, excludeId) : [];
+}
+
+export async function getCopySourceAction(liId: string): Promise<Result<LiCopySource>> {
+  const user = await getSessionUser();
+  return user ? getCopySource(user, liId) : NO_SESSION;
 }

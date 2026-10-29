@@ -3,6 +3,7 @@ import { LiForm } from '@/components/line-items/LiForm';
 import { LiTypePicker } from '@/components/line-items/LiTypePicker';
 import { FormFrame } from '@/components/shell/Frames';
 import {
+  getConversionCandidates,
   getCreativeCandidates,
   getDraftInit,
   getIoChoices,
@@ -54,18 +55,23 @@ export default async function Page({
   }
   const draft = await getDraftInit(user, chain.io.id, type);
   if (!draft) notFound();
-  const creatives = await getCreativeCandidates(user, chain.io.id, { type });
+  const [creatives, conversions] = await Promise.all([
+    getCreativeCandidates(user, chain.io.id, { type }),
+    getConversionCandidates(user, chain.advertiser.id),
+  ]);
   return (
     <FormFrame title="New line item">
       <LiForm
         mode="create"
         {...ids}
         ioId={chain.io.id}
+        advertiserRowId={chain.advertiser.id}
         currency={draft.currency}
         initial={draft.value}
         io={draft.io}
         locked={draft.locked}
         creatives={creatives}
+        conversions={conversions}
         higherCapText={draft.higherCapText}
         readOnly={draft.readOnly}
       />

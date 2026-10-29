@@ -33,6 +33,7 @@ export default async function Page({
         campaignId={chain.campaign.publicId}
         ioPublicId={chain.io.publicId}
         ioId={chain.io.id}
+        advertiserRowId={chain.advertiser.id}
         liId={chain.li.id}
         version={detail.version}
         currency={detail.currency}
@@ -40,6 +41,7 @@ export default async function Page({
         io={detail.io}
         locked={detail.locked}
         creatives={detail.creatives}
+        conversions={detail.conversions}
         higherCapText={detail.higherCapText}
         readOnly={detail.readOnly}
       />

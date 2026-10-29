@@ -99,7 +99,8 @@ describe('assignCreatives', () => {
     expect(await assigned(displayLi)).toEqual([image]);
     expect(await prisma.changeGroup.count({ where: { entityId: displayLi } })).toBeGreaterThan(0);
     const detail = await getLineItemDetail(user(), displayLi);
-    expect(detail?.creatives.map((c) => c.id)).toEqual([image]);
+    expect(detail?.creatives.filter((c) => c.id === image)).toHaveLength(1);
+    expect(detail?.value.creatives).toEqual([image]);
   });
 
   it('removes a creative', async () => {
