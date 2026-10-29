@@ -3,9 +3,11 @@
 import type { EntityType } from '@prisma/client';
 import type { EntityRegistry } from '../registry-types';
 import { advertiserRegistry } from './advertiser';
+import { lineItemRegistry } from './line-item';
 
 export const REGISTRIES: Partial<Record<EntityType, EntityRegistry>> = {
   ADVERTISER: advertiserRegistry,
+  LINE_ITEM: lineItemRegistry,
 };
 
 export class MissingRegistryError extends Error {
