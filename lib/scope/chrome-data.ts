@@ -3,6 +3,7 @@ import 'server-only';
 // clock and the class window warning (P3-02 helpers). Nothing here writes.
 import { withSandbox } from '@/lib/db';
 import type { SessionUser } from '@/lib/auth/types';
+import { loadInbox, type InboxEntry } from '@/lib/reporting/inbox';
 import { bypassesWindow, getClassAccessState, getWindowBanner } from '@/lib/access/windows';
 
 export interface SimClockView {
@@ -19,6 +20,8 @@ export interface ChromeData {
   windowBanner: string | null;
   /** When the class window closes, for the "next navigation goes to /sim/closed" check (AC-01-30). */
   closesAt: string | null;
+  /** Bell entries: scheduled report runs (module 16). Absent in tests. */
+  inbox?: InboxEntry[];
 }
 
 const HOUR_MS = 3_600_000;
@@ -45,7 +48,7 @@ export async function getChromeData(
   now: Date = new Date(),
 ): Promise<ChromeData> {
   const timeZone = user.timeZone ?? 'Asia/Kolkata';
-  const [clockRow, windowBanner, access] = await Promise.all([
+  const [clockRow, windowBanner, access, inbox] = await Promise.all([
     user.sandboxId
       ? withSandbox(user.sandboxId, (tx) =>
           tx.simClock.findUnique({
@@ -56,10 +59,12 @@ export async function getChromeData(
       : null,
     getWindowBanner(user, now),
     !bypassesWindow(user) && user.classroomId ? getClassAccessState(user.classroomId, now) : null,
+    loadInbox(user).catch(() => [] as InboxEntry[]),
   ]);
   return {
     clock: clockRow ? simClockView(clockRow, timeZone) : null,
     windowBanner,
     closesAt: access?.closesAt?.toISOString() ?? null,
+    inbox,
   };
 }

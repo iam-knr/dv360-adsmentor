@@ -19,6 +19,7 @@ import {
   type ShareTarget,
 } from './service';
 import type { GenerateResult } from './generate';
+import { markInboxRead } from './inbox';
 import type {
   QueryResult,
   ReportDefinition,
@@ -96,4 +97,9 @@ export async function generateReportAction(
 ): Promise<GenerateResult | null> {
   const user = await getSessionUser();
   return user ? generate(user, pid, prompt).catch(() => null) : null;
+}
+
+export async function markInboxReadAction(): Promise<void> {
+  const user = await getSessionUser();
+  if (user) await markInboxRead(user).catch(() => undefined);
 }
