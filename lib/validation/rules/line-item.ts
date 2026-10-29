@@ -526,7 +526,11 @@ export const LI_047 = def({
     if (!id) return { path: 'bid.customBiddingAlgorithmId' };
     const known = ctx.lookups.customBidding;
     if (!known) return null; // lookup not loaded: the server run decides
-    return known.get(id)?.status === 'ACTIVE' ? null : { path: 'bid.customBiddingAlgorithmId' };
+    // A TRAINING algorithm may be attached: bids use a fallback and CB-010 warns until it is ready (module 15 6.1.14).
+    const status = known.get(id)?.status;
+    return status === 'ACTIVE' || status === 'TRAINING'
+      ? null
+      : { path: 'bid.customBiddingAlgorithmId' };
   },
 });
 
