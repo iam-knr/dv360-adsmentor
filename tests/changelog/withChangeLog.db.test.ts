@@ -7,7 +7,8 @@ import {
   type ChangeCtx,
 } from '@/lib/changelog';
 import { advertiserRegistry } from '@/lib/changelog/registries/advertiser';
-import { MissingRegistryError } from '@/lib/changelog/registries';
+import { MissingRegistryError, REGISTRIES } from '@/lib/changelog/registries';
+import { EntityType } from '@prisma/client';
 import { prisma, withSandbox } from '@/lib/db';
 import { createWorld, dropWorld, type World } from '../db/helpers';
 import {
@@ -446,8 +447,11 @@ describe('withChangeLog', () => {
   });
 
   it('throws when no registry exists for the entity type', async () => {
+    // whichever entity type has no registry yet (DEAL had none until P4-02 added one)
+    const unregistered = Object.values(EntityType).find((t) => !REGISTRIES[t]);
+    expect(unregistered).toBeDefined();
     await expect(
-      withChangeLog(ctx(), { type: 'DEAL', id: 'x', chain: {} }, () =>
+      withChangeLog(ctx(), { type: unregistered as EntityType, id: 'x', chain: {} }, () =>
         Promise.resolve('unreachable'),
       ),
     ).rejects.toBeInstanceOf(MissingRegistryError);

@@ -1,7 +1,11 @@
-import { StubPage } from '@/components/shell/StubPage';
+import { DealGroupsPage } from '@/components/inventory/pages/DealGroupsPage';
 
-export const metadata = { title: 'Deal groups' };
+export const metadata = { title: 'My inventory' };
 
-export default function Page() {
-  return <StubPage module="13" title="Deal groups" view="RO" />;
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ partnerId: string; advertiserId: string; campaignId?: string }>;
+}) {
+  return <DealGroupsPage params={await params} />;
 }
