@@ -23,6 +23,8 @@ import {
   parseYoutubeRef,
   YT_SUBTYPE_INFO,
   type AdFormatKey,
+  type PreviewDevice,
+  type PreviewSurface,
   type YtBidKind,
   type YtSubtype,
   type YtSurface,
@@ -34,7 +36,14 @@ import type {
   ValidationContext,
   YoutubeVideoInfo,
 } from '@/lib/validation/types';
-import { PLACEHOLDER_THUMBNAIL } from './preview';
+import { fileStore } from '@/lib/creatives/storage';
+import {
+  buildPreviewModel,
+  PLACEHOLDER_THUMBNAIL,
+  type FormatFilter,
+  type PreviewDraft,
+  type PreviewModel,
+} from './preview';
 import { feedbackFor, planReview } from './review';
 import type {
   AdDetail,
@@ -513,6 +522,10 @@ export async function getAdGroupDetail(
 // Ad groups: writes (Y6 to Y9)
 // ---------------------------------------------------------------------------------------------
 
+/** A wire value without targeting state (a forged or minimal body) means no targeting. */
+const withState = (v: AdGroupFormValue): AdGroupFormValue =>
+  v.targetingState ? v : { ...v, targetingState: emptyTargetingState(AD_GROUP_TARGETING_TYPE) };
+
 function groupInput(
   v: AdGroupFormValue,
   li: LiRow,
@@ -533,9 +546,10 @@ function groupInput(
 export async function validateAdGroup(
   user: SessionUser,
   liId: string,
-  value: AdGroupFormValue,
+  raw: AdGroupFormValue,
   adGroupId?: string,
 ): Promise<Issue[]> {
+  const value = withState(raw);
   const out = await inSandbox(user, async (tx) => {
     const li = await loadLi(tx, liId);
     if (!li) return [];
@@ -549,10 +563,11 @@ export async function validateAdGroup(
 export async function createAdGroup(
   user: SessionUser,
   liId: string,
-  value: AdGroupFormValue,
+  raw: AdGroupFormValue,
   meta: { note?: string } = {},
 ): Promise<Result<{ id: string; publicId: string }>> {
   if (!canWrite(user)) return forbidden();
+  const value = withState(raw);
   return withSandbox(user.sandboxId!, async (tx) => {
     const li = await loadLi(tx, liId);
     if (!li) return notFound('line item');
@@ -601,10 +616,11 @@ export async function createAdGroup(
 export async function updateAdGroup(
   user: SessionUser,
   id: string,
-  value: AdGroupFormValue,
+  raw: AdGroupFormValue,
   meta: { expectedVersion?: number; note?: string } = {},
 ): Promise<Result<{ version: number }>> {
   if (!canWrite(user)) return forbidden();
+  const value = withState(raw);
   return withSandbox(user.sandboxId!, async (tx) => {
     const stored = await tx.adGroup.findUnique({
       where: { id },
@@ -774,6 +790,15 @@ function toAdForm(a: Prisma.AdGetPayload<Record<string, never>>): AdFormValue {
   };
 }
 
+const LOGO_FALLBACK = '/youtube/logo.svg';
+
+/** Uploaded assets are served by the assets route; a default logo id without a file shows the stock logo. */
+async function assetUrl(tx: Tx, id: string | null): Promise<string | null> {
+  if (!id) return null;
+  const row = await tx.creativeAsset.findUnique({ where: { id }, select: { id: true } });
+  return row ? `/api/dv/youtube/assets/${row.id}` : LOGO_FALLBACK;
+}
+
 async function adDetailOf(
   tx: Tx,
   user: SessionUser,
@@ -809,7 +834,7 @@ async function adDetailOf(
     reviewStatus: ad?.reviewStatus ?? 'PENDING',
     reviewFeedback: ad?.reviewFeedback ?? null,
     formats: withVideo ? formatsOf(withVideo.video, li) : [],
-    logoUrl: value.logoAssetId ? `/api/dv/youtube/assets/${value.logoAssetId}` : null,
+    logoUrl: await assetUrl(tx, value.logoAssetId),
     defaults,
     allowedSurfaces: surfacesOf(li),
     nonSkippable,
@@ -1099,4 +1124,114 @@ export async function deleteAd(user: SessionUser, id: string): Promise<Result<nu
     );
     return { ok: true as const, data: null };
   });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Preview (Y17) and asset upload (Y18)
+// ---------------------------------------------------------------------------------------------
+
+export interface PreviewRequest {
+  adGroupId: string;
+  videoRef: string;
+  headline?: string | undefined;
+  longHeadline?: string | undefined;
+  description?: string | undefined;
+  callToAction?: string | undefined;
+  businessName?: string | undefined;
+  displayUrl?: string | undefined;
+  logoAssetId?: string | null | undefined;
+  companionAssetId?: string | null | undefined;
+  filter: FormatFilter;
+  format: AdFormatKey | null;
+  device: PreviewDevice;
+  surface: PreviewSurface;
+}
+
+/** `POST ads/preview`: the model of an unsaved draft. No writes. */
+export async function previewAd(
+  user: SessionUser,
+  req: PreviewRequest,
+): Promise<PreviewModel | null> {
+  return inSandbox(user, async (tx) => {
+    const g = await tx.adGroup.findUnique({ where: { id: req.adGroupId } });
+    const li = g ? await loadLi(tx, g.lineItemId) : null;
+    if (!g || !li) return null;
+    const id = parseYoutubeRef(req.videoRef);
+    const video = id ? await tx.youtubeVideo.findUnique({ where: { videoId: id } }) : null;
+    const [logoUrl, companionUrl] = await Promise.all([
+      assetUrl(tx, req.logoAssetId ?? null),
+      req.companionAssetId ? assetUrl(tx, req.companionAssetId) : Promise.resolve(null),
+    ]);
+    const draft: PreviewDraft = {
+      video: video && video.isPublic ? hitOf(video) : null,
+      headline: req.headline,
+      longHeadline: req.longHeadline,
+      description: req.description,
+      callToAction: req.callToAction,
+      businessName: req.businessName,
+      displayUrl: req.displayUrl,
+      logoUrl,
+      companionBannerUrl: companionUrl,
+      allowedSurfaces: surfacesOf(li),
+      nonSkippable: li.ytSubtype === 'NON_SKIPPABLE_REACH',
+    };
+    return buildPreviewModel(draft, {
+      filter: req.filter,
+      format: req.format,
+      device: req.device,
+      surface: req.surface,
+    });
+  });
+}
+
+export const ASSET_TYPES = ['image/png', 'image/jpeg', 'image/gif'] as const;
+export const ASSET_MAX_BYTES = 5 * 1024 * 1024;
+
+/** Logo and companion banner files: png, jpg or gif up to 5 MB (Q-09-07). The bytes go to the file store. */
+export async function uploadAdAsset(
+  user: SessionUser,
+  input: {
+    adGroupId: string;
+    role: 'LOGO' | 'COMPANION';
+    fileName: string;
+    mimeType: string;
+    bytes: Uint8Array;
+  },
+): Promise<Result<{ id: string; url: string }>> {
+  if (!canWrite(user)) return forbidden();
+  if (!(ASSET_TYPES as readonly string[]).includes(input.mimeType))
+    return { ok: false, issues: [issue('AD-ASSET', 'file', 'Upload a PNG, JPG or GIF image.')] };
+  if (input.bytes.byteLength > ASSET_MAX_BYTES)
+    return { ok: false, issues: [issue('AD-ASSET', 'file', 'The image must be 5 MB or smaller.')] };
+  return withSandbox(user.sandboxId!, async (tx) => {
+    const g = await tx.adGroup.findUnique({ where: { id: input.adGroupId } });
+    if (!g) return notFound('ad group');
+    const row = await tx.creativeAsset.create({
+      data: {
+        sandboxId: g.sandboxId,
+        advertiserId: g.advertiserId,
+        role: input.role,
+        fileName: input.fileName.slice(0, 200),
+        mimeType: input.mimeType,
+        sizeBytes: input.bytes.byteLength,
+        storageKey: '',
+      },
+      select: { id: true },
+    });
+    const key = `youtube/${g.sandboxId}/${row.id}`;
+    await tx.creativeAsset.update({ where: { id: row.id }, data: { storageKey: key } });
+    await fileStore().put(key, input.bytes, input.mimeType);
+    return { ok: true as const, data: { id: row.id, url: `/api/dv/youtube/assets/${row.id}` } };
+  });
+}
+
+/** Bytes of an uploaded asset for the assets route. Null for a missing file or a foreign sandbox. */
+export async function readAdAsset(
+  user: SessionUser,
+  id: string,
+): Promise<{ bytes: Uint8Array; contentType: string } | null> {
+  const row = await inSandbox(user, (tx) =>
+    tx.creativeAsset.findUnique({ where: { id }, select: { storageKey: true } }),
+  );
+  return row?.storageKey ? fileStore().get(row.storageKey) : null;
 }
