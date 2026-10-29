@@ -5,8 +5,8 @@ import type { Prisma } from '@prisma/client';
 import type { Tx } from '@/lib/db';
 import { fxRate, loadFxTable, type FxTable } from '@/lib/metrics/fx';
 import { FX_PER_USD } from '@/lib/seed/reference';
-import { effectiveDealStatus, type DealStatusKey } from './transitions';
-import type { Commitment, DealRow, Format } from './types';
+import { effectiveDealStatus } from './transitions';
+import type { Commitment, DealRow } from './types';
 
 export const DEAL_TYPE_LABEL: Record<string, string> = {
   PROGRAMMATIC_GUARANTEED: 'Programmatic Guaranteed',
@@ -129,7 +129,7 @@ export function toDealRow(
 ): DealRow {
   const delivered = o.delivery.get(d.id);
   const lis = o.liIds.get(d.id) ?? new Set<string>();
-  const commitment = d.commitment as Commitment;
+  const commitment = d.commitment;
   const status = effectiveDealStatus(
     {
       status: d.status,
@@ -158,7 +158,7 @@ export function toDealRow(
     dealId: d.dealId,
     name: d.name,
     orderId: d.orderId,
-    status: status as DealStatusKey,
+    status: status,
     dealType: d.dealType,
     dealTypeLabel: DEAL_TYPE_LABEL[d.dealType] ?? d.dealType,
     commitment,
@@ -175,7 +175,7 @@ export function toDealRow(
     impressions: delivered ? delivered.impressions : null,
     spend: delivered ? round2(o.convert(delivered.spend, DEAL_CURRENCY, o.currency)) : null,
     winRate: delivered && delivered.bids > 0 ? round2((delivered.impressions / delivered.bids) * 100) : null,
-    format: d.format as Format,
+    format: d.format,
     exchangeId: d.exchangeId,
     exchangeName: o.exchanges.names.get(d.exchangeId) ?? d.sellerName,
     sellerName: d.sellerName,
