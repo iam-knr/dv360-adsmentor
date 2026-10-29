@@ -44,6 +44,14 @@ async function persist(decisions: AlertDecision[], advIndex = 0) {
   });
 }
 
+/** The advertiser `persist` loads (worlds[0]). Entities picked for a decision must belong to it, or the scope ids are not resolved. */
+async function worldAdvertiserId(): Promise<string> {
+  return withBypass(async (tx) => {
+    const clock = (await loadClock(tx, a))!;
+    return (await loadWorlds(tx, clock, defaultParams())).worlds[0]!.advertiserId;
+  });
+}
+
 beforeAll(async () => {
   env = await createEnv(1, 'alerts');
   a = env.sandboxIds[0]!;
@@ -58,7 +66,7 @@ afterAll(async () => {
 describe('persistTick alerts', () => {
   it('opens an alert once, refreshes it on a repeat, and resolves it', async () => {
     const li = await prisma.lineItem.findFirstOrThrow({
-      where: { sandboxId: a },
+      where: { sandboxId: a, advertiserId: await worldAdvertiserId() },
       orderBy: { id: 'desc' },
     });
     await prisma.alert.deleteMany({ where: { sandboxId: a, lineItemId: li.id } });
@@ -86,7 +94,7 @@ describe('persistTick alerts', () => {
 
   it('resolves only after the condition has been clear for two consecutive ticks', async () => {
     const li = await prisma.lineItem.findFirstOrThrow({
-      where: { sandboxId: a },
+      where: { sandboxId: a, advertiserId: await worldAdvertiserId() },
       orderBy: { id: 'asc' },
     });
     await prisma.alert.deleteMany({ where: { sandboxId: a, lineItemId: li.id } });
@@ -117,7 +125,7 @@ describe('persistTick alerts', () => {
 
   it('never creates an alert whose preference is off', async () => {
     const io = await prisma.insertionOrder.findFirstOrThrow({
-      where: { sandboxId: a },
+      where: { sandboxId: a, advertiserId: await worldAdvertiserId() },
       orderBy: { id: 'asc' },
     });
     await prisma.alert.deleteMany({
