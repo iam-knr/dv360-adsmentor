@@ -396,7 +396,9 @@ export const LI_036 = def({
   triggers: ['blur'],
   reads: ['pacing.period', 'pacing.dailyAmount'],
   message: MSG.ENTER_POSITIVE,
-  appliesTo: (l) => l.pacing.period === 'DAILY',
+  // YouTube line items have LI-YT-006 and LI-YT-007 for the same field
+  appliesTo: (l) =>
+    l.pacing.period === 'DAILY' && !(l.type && YOUTUBE_LI_TYPES.includes(l.type)),
   check: (l) => (positive(l.pacing.dailyAmount) ? null : { path: 'pacing.dailyAmount' }),
 });
 

@@ -124,7 +124,7 @@ test('PW-09-01..03: step 1, step 2 with the subtype line, amount required, then 
   await expect(page).toHaveURL(/type=YT_VIDEO/);
 
   // step 1: Reach is the default, the ad format card follows MX-07, Ad sequence is behind Show more
-  const next = page.getByRole('button', { name: 'Next' });
+  const next = page.getByRole('main').getByRole('button', { name: 'Next', exact: true });
   await expect(next).toBeDisabled();
   await expect(page.getByRole('radio', { name: /^Reach/ })).toBeChecked();
   await expect(page.getByRole('radio', { name: /Efficient ad formats/ })).toBeChecked();
@@ -292,7 +292,7 @@ test('PW-09-04..10: ad group, ad with preview, status, delete', async ({ page })
   );
   await page.getByRole('button', { name: 'Delete', exact: true }).last().click();
   await expect(page.getByRole('button', { name: 'PW group' })).toHaveCount(0);
-  expect(await db.adGroup.count({ where: { id: group.id } })).toBe(0);
+  await expect.poll(() => db.adGroup.count({ where: { id: group.id } })).toBe(0);
   const entries = await db.changeEntry.findMany({
     where: { group: { entityType: 'AD_GROUP', entityId: group.id } },
   });

@@ -89,9 +89,12 @@ export function AdGroupPanel({
   useEffect(() => {
     if (reloadKey === 0 || creating) return;
     let alive = true;
-    void getAdGroupDetailAction(adGroupId).then((d) => {
-      if (alive && d) setLoaded(d);
-    });
+    // A plain GET: server actions queue behind the navigation that closed the ad panel.
+    void fetch(`/api/dv/ad-groups/${adGroupId}`, { cache: 'no-store' })
+      .then((r) => (r.ok ? (r.json() as Promise<AdGroupDetail>) : null))
+      .then((d) => {
+        if (alive && d) setLoaded(d);
+      });
     return () => {
       alive = false;
     };
