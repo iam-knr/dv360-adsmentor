@@ -432,8 +432,8 @@ test.describe('role guards (M18-AC4, RC-075)', () => {
     const sa = await createAccount(db, { tag: 'e2e-super', role: 'SUPER_ADMIN' });
     userIds.push(sa.user.id);
     await signedIn(page, sa.user.email, sa.password);
-    await expect(page).toHaveURL(/\/sim\/admin$/);
-    await expect(page.getByRole('heading', { name: 'Super admin' })).toBeVisible();
+    // module 19: a super admin lands on the account dashboard (P3-02b)
+    await expect(page).toHaveURL(/\/manage\/accounts$/);
     await page.goto('/sim/instructor');
     await expect(page).toHaveURL(/\/sim\/instructor$/);
     await page.goto('/manage/settings');
