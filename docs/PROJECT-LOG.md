@@ -277,3 +277,34 @@ If either session stopped without a PR, look at its branch on GitHub: `git log o
 3. Visual fidelity pass in the browser (Claude in Chrome, Edge): demo DV360 account next to the simulator; SOP-3, `docs/explore/`; screens: Campaigns list, New campaign, New insertion order, New line item, targeting card. Turn each difference into a task for a cloud session. This cannot be done from a cloud session.
 4. Phase 4 waves (build-plan 3.7), starting from `docs/gaps/p3.md` once P3-INT has written it.
 5. Deadlines: merge freeze 5 Nov 9:00 AM IST, credit expiry 5 Nov 1:29 PM IST (PROJECT.md section 8).
+
+### 9.9 Midway handover (2026-10-29, later the same day)
+
+Written because the owner's machine was about to die again. Read this before 9.7 and 9.8; it supersedes them where they differ.
+
+**State of the two "still running" sessions from 9.7:** they were not reachable from the new orchestrating session (session ids not found) and never pushed branches `p3-07b-targeting-advanced` or `p3-int-integration`. No PR was open. They were restarted.
+
+**Cloud sessions started 2026-10-29 by the orchestrating session `session_01U5x4qd6PdBx1h6JDoh6p6w` (all running at 10:56 UTC, none has a PR yet; they were told not to merge):**
+
+| Session | Branch | Scope | Session id |
+|---|---|---|---|
+| P3-07b | `p3-07b-targeting-advanced` | prompt = build-plan 4.15 | `session_01U5x4qbsbfEduWBEhD1yXVF` |
+| P4-01 | `p4-01-creatives` | module 12, M12-01..14, storage behind an interface (Blob not set up) | `session_01U5x4qgEFiy9vvVV3Rgqq96` |
+| P4-04 | `p4-04-resources` | module 15, M15-01..07 and 09 (not custom bidding M15-08) | `session_01U5x4qdxh3ujTsufSWCckkR` |
+| P4-09 | `p4-09-settings` | modules 02 T3..13 and 03 T1..10, no duplication of /manage | `session_01U5x4qdvsuNHU8hSti5Y44S` |
+
+P4 sessions had no ready prompts; each writes its own scope from its module file (build-plan 3.7).
+
+**Next steps for whoever continues, in order**
+1. Find the PRs of the four sessions above (`gh api repos/iam-knr/dv360-adsmentor/pulls?state=open`; GraphQL is blocked, use REST). If a session stopped without a PR, open one from its branch after merging `main` into it. Squash and merge once checks are green; `PROJECT.md` conflicts: keep both sides' rows.
+2. Start **P3-INT** (build-plan 4.16) only after P3-07b is merged. It was NOT restarted yet.
+3. After wave 6 merges, start wave 7 (build-plan 3.7): P4-03 audiences (module 14), P4-02 inventory (module 13), P4-06 YouTube (module 09), P4-05 custom bidding (M15-08). Then wave 8 and 9.
+4. Owner checklist (Claude Doc "DV360 Simulator: owner setup checklist", https://claude.ai/artifact/AGiitpnrLq1PpHWPtY7Na5): credits toggle off (do first), Vercel import, Supabase strings, `AUTH_SECRET`/`CRON_SECRET`, GitHub Actions secrets, Blob store, health check, fidelity check in Edge. None of it is confirmed done as of this entry.
+
+**Corrections to earlier notes**
+- `CRON_SECRET` is generated with `openssl rand -hex 24`; `AUTH_SECRET` with `openssl rand -base64 32`.
+- The tick endpoint is `/api/sim/engine/tick` (code and `.github/workflows/engine-tick.yml`); build-plan 1.5/1.6 still say `/api/engine/cron`, which is wrong.
+- `scripts/vercel-build.sh` runs `prisma migrate deploy` and the idempotent bootstrap on every Vercel build, so with `SEED_SUPER_ADMIN_EMAIL`/`SEED_SUPER_ADMIN_PASSWORD` set in Vercel a redeploy creates the first Super admin; `npm run db:bootstrap` by hand is only a fallback.
+- The engine timer switches on when the Actions secret `ENGINE_CRON_URL` exists (the workflow skips quietly without it). Add that secret last, after `/api/health` shows `db: true`.
+
+**Environment notes:** cloud sessions cannot merge via GraphQL; use REST. `add_repo` with `access: push` is needed to push from a new orchestrating session. Deadlines unchanged: merge freeze 5 Nov 9:00 AM IST, credit expiry 5 Nov 1:29 PM IST.
