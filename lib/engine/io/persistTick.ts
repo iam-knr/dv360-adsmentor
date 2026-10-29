@@ -9,6 +9,7 @@ import type { AlertDecision } from '../diagnostics';
 import type { AlertCode } from '../world';
 import { alertTypeOf } from './map';
 import type { AdvertiserWorld } from './types';
+import { advanceCustomBidding } from '@/lib/resources/custom-bidding-training';
 
 export interface PersistCtx {
   sandboxId: string;
@@ -332,5 +333,8 @@ export async function persistTick(
 
   // 6. alerts
   const alerts = await persistAlerts(tx, ctx, out.alerts, out.hourStartMs);
+
+  // 7. custom bidding training and readiness (module 15 5, M15-09)
+  rows += await advanceCustomBidding(tx, sandboxId, out.hourly);
   return { rows: rows + alerts.rows, raised: alerts.raised };
 }
