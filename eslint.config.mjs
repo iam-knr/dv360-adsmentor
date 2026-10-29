@@ -34,6 +34,17 @@ const engineBans = [
   },
 ];
 
+// Module 19 3.4: account and cohort rows are read and written only through lib/accounts (and lib/auth for sign in).
+// Files of earlier sessions that already read these tables are listed in the ignores of the rule below.
+const accountTableBans = [
+  {
+    selector:
+      'MemberExpression[property.name=/^(user|classroom)$/][object.name=/^(db|prisma|tx|client)$/]',
+    message:
+      'Query User and Classroom rows through lib/accounts (scopedUsers, scopedCohorts) or lib/auth (module 19 3.4).',
+  },
+];
+
 const purityBans = ['react', 'react-dom', 'next', 'next/*', '@prisma/client', 'node:*'];
 
 export default tseslint.config(
@@ -82,6 +93,19 @@ export default tseslint.config(
     files: ['lib/engine/**/*.{ts,tsx}'],
     ignores: ['lib/engine/io/**', 'lib/engine/testing/**'],
     rules: { 'no-restricted-syntax': ['error', ...engineBans] },
+  },
+  {
+    files: ['app/**/*.{ts,tsx}', 'components/**/*.{ts,tsx}', 'lib/**/*.{ts,tsx}'],
+    ignores: [
+      'lib/auth/**',
+      'lib/accounts/**',
+      'lib/access/**', // class windows (P3-02)
+      'lib/seed/**',
+      'lib/db/**',
+      'lib/engine/**',
+      'app/sim/me/actions.ts', // own name edit (P3-02)
+    ],
+    rules: { 'no-restricted-syntax': ['error', ...accountTableBans] },
   },
   {
     files: ['lib/validation/**/*.ts'],
