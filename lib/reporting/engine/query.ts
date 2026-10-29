@@ -4,7 +4,7 @@ import { parseDateRangeParam, simDateIn } from '@/lib/metrics/date-range';
 import type { Tx } from '@/lib/db';
 import { FIELD_BY_KEY } from '../catalogue';
 import type { QueryResult, ReportDefinition, RuleIssue } from '../types';
-import { compute } from './compute';
+import { compute, type KindRows } from './compute';
 import { loadDaily, loadHourly, loadReach } from './load';
 import { plan as makePlan, type StoredKind } from './plan';
 import { validateForRun } from './rules';
@@ -73,14 +73,14 @@ export async function runQuery(
   const fetchTo = def.timeZone === 'UTC' ? shift(range.to, 1) : range.to;
   const [daily, hourly, reach] = await Promise.all([
     plan.hourly
-      ? Promise.resolve(new Map())
+      ? Promise.resolve(new Map<string, KindRows>())
       : loadDaily(tx, sandboxId, lineItemIds, plan, fetchFrom, fetchTo),
     plan.hourly
       ? loadHourly(tx, sandboxId, lineItemIds, plan, fetchFrom, fetchTo)
       : Promise.resolve([]),
     plan.reach
       ? loadReach(tx, sandboxId, lineItemIds, range.to)
-      : Promise.resolve({ pools: new Map(), lifetime: new Map() }),
+      : Promise.resolve({ pools: new Map<string, number>(), lifetime: new Map<string, number>() }),
   ]);
   return compute({
     def,

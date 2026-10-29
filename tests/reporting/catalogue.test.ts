@@ -28,7 +28,7 @@ describe('report field catalogue', () => {
       expect(
         CATEGORY_COUNTS[category as keyof typeof CATEGORY_COUNTS],
         category,
-      ).toBeGreaterThanOrEqual(n as number);
+      ).toBeGreaterThanOrEqual(n);
     }
   });
 

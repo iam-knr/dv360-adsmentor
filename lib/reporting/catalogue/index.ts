@@ -211,7 +211,7 @@ export function assertCatalogue(): void {
       problems.push(`${c}: ${CATEGORY_COUNTS[c]} fields, planned ${PLANNED_COUNTS[c]}`);
   }
   for (const [c, n] of Object.entries(SEEN_COUNTS)) {
-    if (CATEGORY_COUNTS[c as ReportCategory] < (n as number))
+    if (CATEGORY_COUNTS[c as ReportCategory] < (n))
       problems.push(`${c}: fewer than the ${n} seen in the demo`);
   }
   if (problems.length) throw new Error(`Report catalogue problems:\n${problems.join('\n')}`);

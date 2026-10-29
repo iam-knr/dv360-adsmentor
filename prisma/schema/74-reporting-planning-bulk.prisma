@@ -27,6 +27,7 @@ model Report {
   nextRunSimAt          DateTime?
   lastScheduledRunSimAt DateTime?
   scheduleRunCount      Int            @default(0)
+  scheduleSkipped       Int            @default(0)
   version               Int            @default(1)
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
@@ -50,6 +51,7 @@ model ReportRun {
   createdById        String
   status             ReportRunStatus @default(QUEUED)
   scheduled          Boolean         @default(false)
+  occurrenceSimAt    DateTime?
   completedAt        DateTime?
   completedAtSim     DateTime?
   format             ReportFormat    @default(CSV)
@@ -63,6 +65,7 @@ model ReportRun {
 
   report Report @relation(fields: [reportId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
 
+  @@unique([reportId, occurrenceSimAt])
   @@index([sandboxId, reportId, status])
 }
 

@@ -579,7 +579,7 @@ export function compute(input: ComputeInput): QueryResult {
       emit(li, date, Number(get('hour')) % 24, {}, row.v, 1);
     }
   } else {
-    const totals = input.daily.get('total') ?? new Map();
+    const totals: KindRows = input.daily.get('total') ?? new Map<string, RawSlice[]>();
     for (const li of lis) {
       const adv = world.advertisers.get(li.advertiserId);
       for (let d = fetchFrom; d <= fetchTo; d = addDays(d, 1)) {
