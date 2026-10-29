@@ -1,6 +1,7 @@
 // The query engine against a seeded sandbox (module 16 6.1 items 3, 8, 9, 12, 13 and 6.3 aggregate / fx tests).
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { prisma } from '@/lib/db';
+import { fxRate, loadFxTable } from '@/lib/metrics/fx';
 import { runQuery } from '@/lib/reporting/engine/query';
 import { seedSandbox, TODAY, type Seeded } from './fixture';
 
@@ -87,13 +88,13 @@ describe('queryReport on a seeded sandbox', () => {
       metrics: ['revenue_adv', 'revenue_partner', 'revenue_usd'],
     });
     expect(r.rows.length).toBe(2);
-    // columns: advertiser, currency, revenue (advertiser), revenue (partner), revenue (USD); the partner is in INR
-    // and the fixed rates are 88 INR and 1.34 SGD per USD (data/reference/fx-rates.json)
-    const perUsd: Record<string, number> = { INR: 88, SGD: 1.34 };
+    // columns: advertiser, currency, revenue (advertiser), revenue (partner), revenue (USD); the partner is in INR.
+    // Rates come from the FxRate table as it is (other suites add pairs of their own).
+    const table = await s.inSandbox((tx) => loadFxTable(tx));
     for (const row of r.rows) {
       const [, cur, adv, partner, usd] = row as [string, string, number, number, number];
-      expect(usd).toBeCloseTo(adv / (perUsd[cur] as number), 1);
-      expect(partner).toBeCloseTo((adv / (perUsd[cur] as number)) * 88, 1);
+      expect(usd).toBeCloseTo(adv * fxRate(table, cur, 'USD'), 1);
+      expect(partner).toBeCloseTo(adv * fxRate(table, cur, 'INR'), 1);
     }
   });
 
