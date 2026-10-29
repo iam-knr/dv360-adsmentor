@@ -6,12 +6,14 @@ import { advertiserRegistry } from './advertiser';
 import { campaignRegistry } from './campaign';
 import { insertionOrderRegistry } from './insertion-order';
 import { lineItemRegistry } from './line-item';
+import { partnerRegistry } from './partner';
 
 export const REGISTRIES: Partial<Record<EntityType, EntityRegistry>> = {
   ADVERTISER: advertiserRegistry,
   CAMPAIGN: campaignRegistry,
   INSERTION_ORDER: insertionOrderRegistry,
   LINE_ITEM: lineItemRegistry,
+  PARTNER: partnerRegistry,
 };
 
 export class MissingRegistryError extends Error {
