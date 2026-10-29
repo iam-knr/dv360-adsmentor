@@ -66,7 +66,7 @@ export function DgAdPanel({ adId, adGroupId, readOnly, onClose }: AdPanelProps) 
     void (creating ? getAdDraftAction(adGroupId) : getAdDetailAction(adId)).then((d) => {
       if (!alive || !d) return;
       setDetail(d);
-      const v = { ...d.value, dgFormat: d.value.dgFormat ?? ('DEMAND_GEN_IMAGE' as DgFormat) };
+      const v = { ...d.value, dgFormat: d.value.dgFormat ?? ('DEMAND_GEN_IMAGE') };
       setValue(v);
       setSaved(v);
       setVideo(d.video);

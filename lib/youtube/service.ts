@@ -45,7 +45,7 @@ import {
   type PreviewDraft,
   type PreviewModel,
 } from './preview';
-import { dgIssues, isDgFormat, type DgFormat } from './dg';
+import { dgIssues, isDgFormat } from './dg';
 import { planReview } from './review';
 import { settleDueAdReviews } from './review-sync';
 import type {
