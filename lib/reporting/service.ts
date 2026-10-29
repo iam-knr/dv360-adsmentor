@@ -20,7 +20,7 @@ import { can } from '@/lib/rbac/can';
 import { parseIdRef, whereId } from '@/lib/routes/params';
 import { FIELDS, FIELD_BY_KEY } from './catalogue';
 import { incompatibleWith } from './engine/compat';
-import { ReportInvalid, runQuery } from './engine/query';
+import { ReportInvalid, runQuery, todayOf } from './engine/query';
 import { ruleShare, validateForSave } from './engine/rules';
 import { CONTENT_TYPE } from './files/names';
 import { getReportFile } from './files/store';
@@ -699,5 +699,42 @@ export async function listInbox(user: SessionUser): Promise<InboxItem[]> {
       createdAt: m.createdAtSim.toISOString(),
       read: !!m.readAt,
     }));
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Page context (hub, builder, runs)
+// ---------------------------------------------------------------------------------------------
+
+export interface PageContext {
+  partner: { id: string; publicId: string; name: string };
+  /** Sim "today" in the partner time zone, YYYY-MM-DD. */
+  today: string;
+  canWrite: boolean;
+  /** Entity names for the filter value pickers: dimension key to `{ value (public id), label }`. */
+  entityOptions: Record<string, { value: string; label: string }[]>;
+  hourlyDays: number;
+}
+
+export async function pageContext(user: SessionUser, pid: string): Promise<PageContext> {
+  return withCtx(user, false, async (tx, ctx) => {
+    const partner = await partnerOf(tx, pid);
+    const world = await loadWorld(tx, ctx.sandboxId, partner.id);
+    const pick = <T extends { publicId: string; name: string }>(m: Map<string, T>) =>
+      [...m.values()]
+        .slice(0, 500)
+        .map((x) => ({ value: x.publicId, label: `${x.name} (${x.publicId})` }));
+    return {
+      partner: { id: partner.id, publicId: partner.publicId.toString(), name: partner.name },
+      today: todayOf(world),
+      canWrite: canWrite(user),
+      entityOptions: {
+        advertiser: pick(world.advertisers),
+        campaign: pick(world.campaigns),
+        insertion_order: pick(world.ios),
+        line_item: pick(world.lineItems),
+      },
+      hourlyDays: world.hourlyDays,
+    };
   });
 }
