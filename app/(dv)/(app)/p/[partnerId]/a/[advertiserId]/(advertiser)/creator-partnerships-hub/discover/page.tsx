@@ -1,7 +1,9 @@
-import { StubPage } from '@/components/shell/StubPage';
+import { CreatorPartnerships } from '@/components/resources/YoutubeAssets';
+import { requireView } from '@/lib/scope/guard';
 
 export const metadata = { title: 'YouTube creator partnerships' };
 
-export default function Page() {
-  return <StubPage module="15" title="YouTube creator partnerships" view="RO" />;
+export default async function Page() {
+  await requireView('RO');
+  return <CreatorPartnerships />;
 }
