@@ -98,6 +98,8 @@ model Advertiser {
   iasClientId                     BigInt          @default(0)
   thirdPartyConfig                Json?
   scheduledDeletionAt             DateTime?
+  previousStatus                  EntityStatus? // DELTA-03-3, P4-09: status to restore when a deletion is cancelled
+  deletionCancelledAt             DateTime? // DELTA-03-3, P4-09
   version                         Int             @default(1)
   createdAt                       DateTime        @default(now())
   updatedAt                       DateTime        @updatedAt

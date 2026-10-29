@@ -51,6 +51,8 @@ export const advertiserRegistry: EntityRegistry = {
     { path: 'iasClientId', label: 'IAS client ID', kind: 'scalar' },
     { path: 'thirdPartyConfig', label: 'Third-party configuration', kind: 'json' },
     { path: 'scheduledDeletionAt', label: 'Scheduled deletion', kind: 'date' },
+    { path: 'previousStatus', label: 'Previous status', kind: 'enum', ignore: true },
+    { path: 'deletionCancelledAt', label: 'Deletion cancelled', kind: 'date', ignore: true },
     { path: 'version', label: 'Version', kind: 'scalar', ignore: true },
     { path: 'createdAt', label: 'Created', kind: 'date', ignore: true },
     { path: 'updatedAt', label: 'Updated', kind: 'date', ignore: true },

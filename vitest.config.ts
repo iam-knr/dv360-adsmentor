@@ -16,7 +16,7 @@ export default defineConfig({
           name: 'unit',
           environment: 'node',
           include: [
-            'tests/{unit,validation,engine,seed,metrics,changelog,auth,targeting,accounts,resources}/**/*.test.ts',
+            'tests/{unit,validation,engine,seed,metrics,changelog,auth,targeting,accounts,settings,resources}/**/*.test.ts',
           ],
           exclude: ['**/*.db.test.ts', '**/db/**'],
           setupFiles: ['./vitest.setup.ts'],
@@ -29,7 +29,7 @@ export default defineConfig({
         test: {
           name: 'components',
           environment: 'jsdom',
-          include: ['tests/{components,shell}/**/*.test.tsx'],
+          include: ['tests/{components,shell,settings}/**/*.test.tsx'],
           setupFiles: ['./vitest.setup.ts'],
         },
       },

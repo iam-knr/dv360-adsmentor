@@ -13,6 +13,7 @@ import {
   keywordListRegistry,
   locationListRegistry,
 } from './resources';
+import { partnerRegistry } from './partner';
 
 export const REGISTRIES: Partial<Record<EntityType, EntityRegistry>> = {
   ADVERTISER: advertiserRegistry,
@@ -24,6 +25,7 @@ export const REGISTRIES: Partial<Record<EntityType, EntityRegistry>> = {
   LOCATION_LIST: locationListRegistry,
   FLOODLIGHT_GROUP: floodlightGroupRegistry,
   FLOODLIGHT_ACTIVITY: floodlightActivityRegistry,
+  PARTNER: partnerRegistry,
 };
 
 export class MissingRegistryError extends Error {
