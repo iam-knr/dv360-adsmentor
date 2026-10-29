@@ -121,6 +121,8 @@ export interface DvFormFooterProps {
   note?: string;
   onNoteChange?: (v: string) => void;
   primaryLabel?: string;
+  /** Disables the primary button in any mode (a form whose Save needs every required field, AUD-044). */
+  primaryDisabled?: boolean;
   extraRight?: ReactNode;
   /** Render without the contentinfo landmark (previews). */
   embedded?: boolean;
@@ -136,6 +138,7 @@ export function DvFormFooter({
   note,
   onNoteChange,
   primaryLabel,
+  primaryDisabled,
   extraRight,
   embedded,
 }: DvFormFooterProps) {
@@ -158,7 +161,7 @@ export function DvFormFooter({
         zIndex: (t) => t.zIndex.stickyFooter,
       }}
     >
-      <Button variant="contained" onClick={onPrimary} disabled={mode === 'edit' && !dirty}>
+      <Button variant="contained" onClick={onPrimary} disabled={primaryDisabled || (mode === 'edit' && !dirty)}>
         {label}
       </Button>
       {mode === 'edit' ? (

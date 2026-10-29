@@ -189,6 +189,11 @@ model Audience {
   lookalikeReachPct    Decimal?       @db.Decimal(4, 1)
   lookalikeCountries   String[]
   config               Json?
+  dataSource           AudienceDataSource? // Δ14-4 customer match step 1
+  connectedProductKey  String?
+  consentAck           Boolean        @default(false) // Δ14-5, AUD-023
+  sourceExternalId     String? // Δ14-10 created outside Audience Manager
+  reachExpansion       Decimal?       @db.Decimal(6, 2) // Δ14-12 lookalike expansion factor
   availableAt          DateTime?
   version              Int            @default(1)
   createdAt            DateTime       @default(now())
