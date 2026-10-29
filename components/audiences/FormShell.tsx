@@ -40,7 +40,8 @@ export function AudienceFormShell({
       ))}
       <DvFormFooter
         mode="create"
-        dirty={dirty && !saveDisabled && !pending}
+        dirty={dirty}
+        primaryDisabled={saveDisabled || pending}
         primaryLabel={primaryLabel}
         onPrimary={onSave}
         onSecondary={onCancel}

@@ -129,9 +129,16 @@ export function AudiencesPage({ partnerId, advertiserId, tab, rows: initial, tot
     width: 260,
     group: 'lists',
     cell: (r) => (
-      <AppLink href={detailsPath(partnerId, advertiserId, r)} data-testid="audience-link">
-        {r.name}
-      </AppLink>
+      <>
+        <AppLink href={detailsPath(partnerId, advertiserId, r)} data-testid="audience-link">
+          {r.name}
+        </AppLink>
+        {r.status === 'PROCESSING' ? (
+          <Box component="span" sx={{ ml: 1 }}>
+            <AudienceStatus status={r.status} availableInHours={r.availableInHours} />
+          </Box>
+        ) : null}
+      </>
     ),
   };
   const idCol: DvColumn<AudienceRow> = { id: 'id', header: 'ID', width: 110, group: 'lists' };

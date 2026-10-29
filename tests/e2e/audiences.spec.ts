@@ -100,7 +100,7 @@ test('E2E-AUD-01: four tabs, the AUD_DELAY banner, first-party columns and no cr
   await expect(page.getByRole('button', { name: /^New/ })).toHaveCount(0);
 
   await page.getByRole('tab', { name: 'Custom lists' }).click();
-  await page.getByRole('button', { name: 'New Custom List' }).click();
+  await page.getByRole('button', { name: 'New Custom List' }).first().click();
   await expect(page.getByRole('menuitem', { name: 'Custom affinity' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Custom Intent (YouTube)' })).toBeVisible();
 
