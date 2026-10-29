@@ -201,6 +201,16 @@ export function ReportsHub(props: ReportsHubProps) {
         ) : null}
       </Box>
 
+      <Box>
+        <Link
+          href={partnerPath(partnerId, 'cross-media-reach')}
+          data-testid="cross-media-link"
+          underline="hover"
+        >
+          Cross-media reach reports
+        </Link>
+      </Box>
+
       {tab === 'instant' ? (
         <Box>
           <Typography variant="cardTitle" component="h2" sx={{ mb: 2 }}>

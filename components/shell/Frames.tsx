@@ -62,7 +62,16 @@ function FrameHeader({
 }
 
 /** F frame: X closes back to where the person came from (routes.md 6.3 "Cancel or X"), asking first when dirty. */
-export function FormFrame({ title, children }: { title: string; children: ReactNode }) {
+export function FormFrame({
+  title,
+  children,
+  wide,
+}: {
+  title: string;
+  children: ReactNode;
+  /** No width cap: pages with a wide table (plan page). */
+  wide?: boolean;
+}) {
   const router = useRouter();
   const ids = idsOf(useScope());
   const fallback = ids.partnerId ? partnerPath(ids.partnerId, 'home_v3') : '/';
@@ -72,7 +81,7 @@ export function FormFrame({ title, children }: { title: string; children: ReactN
     <>
       <FrameHeader icon="close" label="Close" title={title} onClick={close} />
       <BannerStack />
-      <Box sx={{ p: 6, maxWidth: 960 }}>{children}</Box>
+      <Box sx={{ p: 6, ...(wide ? {} : { maxWidth: 960 }) }}>{children}</Box>
     </>
   );
 }

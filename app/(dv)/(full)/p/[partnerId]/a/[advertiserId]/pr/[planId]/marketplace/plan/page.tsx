@@ -1,7 +1,11 @@
-import { StubPage } from '@/components/shell/StubPage';
+import { PlanRoute } from '@/components/planning/pages/PlanRoute';
 
 export const metadata = { title: 'Adjust your plan and view forecast' };
 
-export default function Page() {
-  return <StubPage module="04" title="Adjust your plan and view forecast" view="RO" frame="form" />;
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ partnerId: string; advertiserId: string; planId: string }>;
+}) {
+  return <PlanRoute params={await params} />;
 }

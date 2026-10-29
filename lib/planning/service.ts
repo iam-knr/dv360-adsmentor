@@ -847,3 +847,26 @@ export async function listPlanDeals(user: SessionUser, aid: string): Promise<Pla
     return deals.map((d) => ({ id: d.id, name: d.name, dealType: String(d.dealType) }));
   });
 }
+
+export interface PlanCampaignChoice {
+  id: string;
+  publicId: string;
+  name: string;
+}
+
+/** Campaigns of the advertiser for the "existing campaign" option of the Convert dialog (spec 2.6). */
+export async function listPlanCampaigns(
+  user: SessionUser,
+  aid: string,
+): Promise<PlanCampaignChoice[]> {
+  return readCtx(user, async (tx) => {
+    const adv = await loadAdvertiser(tx, aid);
+    const rows = await tx.campaign.findMany({
+      where: { advertiserId: adv.id, status: { not: 'ARCHIVED' } },
+      select: { id: true, publicId: true, name: true },
+      orderBy: { name: 'asc' },
+      take: 200,
+    });
+    return rows.map((c) => ({ id: c.id, publicId: c.publicId.toString(), name: c.name }));
+  });
+}

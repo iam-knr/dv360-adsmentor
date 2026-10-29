@@ -18,6 +18,7 @@ import {
   copyPlan,
   createPlan,
   downloadPlanCsv,
+  listPlanCampaigns,
   listPlanDeals,
   listPlans,
   removePlan,
@@ -25,6 +26,7 @@ import {
   updatePlan,
   type ConvertResult,
   type CreatePlanInput,
+  type PlanCampaignChoice,
   type PlanDealChoice,
   type PlanList,
   type UpdatePlanInput,
@@ -142,4 +144,9 @@ export async function deleteCrossMediaReportAction(
 ): Promise<Result<null>> {
   const user = await getSessionUser();
   return user ? deleteCrossMediaReport(user, scope, id) : NO_SESSION;
+}
+
+export async function listPlanCampaignsAction(aid: string): Promise<PlanCampaignChoice[]> {
+  const user = await getSessionUser();
+  return user ? soft(() => listPlanCampaigns(user, aid), []) : [];
 }
