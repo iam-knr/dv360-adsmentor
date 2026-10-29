@@ -81,7 +81,7 @@ test.beforeAll(async () => {
       name: 'PW Automated IO',
       objective: 'CLICKS',
       bidBudgetControl: 'IO_AUTOMATED',
-      optimizeTarget: 'MAX_CLICKS',
+      optimizeTarget: 'MAX_VIEWABLE_IMPRESSIONS',
     },
   });
   automatedIoPublicId = automated.publicId.toString();
