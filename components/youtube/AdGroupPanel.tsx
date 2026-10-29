@@ -42,6 +42,8 @@ export interface AdGroupPanelProps {
   readOnly: boolean;
   onClose: () => void;
   onOpenAd: (adId: string) => void;
+  /** Bumped by the page when an ad was saved, deleted or reviewed, so the ads list reloads. */
+  reloadKey?: number;
 }
 
 const STATUS_OPTIONS = [
@@ -55,6 +57,7 @@ export function AdGroupPanel({
   readOnly,
   onClose,
   onOpenAd,
+  reloadKey = 0,
 }: AdGroupPanelProps) {
   const router = useRouter();
   const creating = adGroupId === 'new';
@@ -81,6 +84,18 @@ export function AdGroupPanel({
       alive = false;
     };
   }, [adGroupId, lineItemId, creating]);
+
+  // Only the ads list reloads; unsaved edits of the group itself stay.
+  useEffect(() => {
+    if (reloadKey === 0 || creating) return;
+    let alive = true;
+    void getAdGroupDetailAction(adGroupId).then((d) => {
+      if (alive && d) setLoaded(d);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [reloadKey, adGroupId, creating]);
 
   const dirty = useMemo(
     () => !!value && !!saved && JSON.stringify(value) !== JSON.stringify(saved),

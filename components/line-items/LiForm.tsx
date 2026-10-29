@@ -213,6 +213,19 @@ export function LiForm({
   const counting = value.conversions.countingMode ?? 'ALL';
   const chosenConversions = conversions.filter((c) => value.conversions.activities.includes(c.id));
   const cap = value.frequencyCap;
+  // The YouTube sections are child components, so their paths are known up front.
+  if (yt)
+    for (const p of [
+      'youtube.adFormats',
+      'youtube.viewCap.maxImpressions',
+      'youtube.targetFrequency.maxImpressions',
+      'youtube.productFeed',
+      'youtube.inventorySources',
+      'frequencyCap.maxImpressions',
+      'pacing.dailyAmount',
+      'budget.amount',
+    ])
+      known.add(p);
   const unmatched = issues.filter((i) => i.blocking && !known.has(i.path));
 
   return (

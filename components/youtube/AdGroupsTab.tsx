@@ -68,6 +68,7 @@ export function AdGroupsTab({ list }: { list: AdGroupList }) {
   const [page, setPage] = useState({ page: 1, size: 100 });
   const [selection, setSelection] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const [adsVersion, setAdsVersion] = useState(0);
   const [, start] = useTransition();
   const { currency } = list;
 
@@ -300,6 +301,7 @@ export function AdGroupsTab({ list }: { list: AdGroupList }) {
           lineItemId={list.lineItem.id}
           readOnly={viewer.readOnly}
           onClose={closeAll}
+          reloadKey={adsVersion}
           onOpenAd={(id) => url.replace({ sim_panel: `ad:${id}`, adgroup: adGroupId })}
         />
       ) : null}
@@ -309,7 +311,10 @@ export function AdGroupsTab({ list }: { list: AdGroupList }) {
           adId={adId}
           adGroupId={adGroupId}
           readOnly={viewer.readOnly}
-          onClose={() => url.replace({ sim_panel: `adgroup:${adGroupId}`, adgroup: null })}
+          onClose={() => {
+            setAdsVersion((v) => v + 1);
+            url.replace({ sim_panel: `adgroup:${adGroupId}`, adgroup: null });
+          }}
         />
       ) : null}
     </>
