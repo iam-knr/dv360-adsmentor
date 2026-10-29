@@ -2,6 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "buildCommand": "npm run vercel-build",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ':!docs' ':!*.md'",
+  "ignoreCommand": "bash scripts/vercel-ignore.sh",
   "regions": ["dub1"]
 }
