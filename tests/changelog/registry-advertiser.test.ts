@@ -50,13 +50,11 @@ describe('registry directory', () => {
   });
 
   it('a missing registry is an error, never a silent skip', () => {
-    expect(() => getRegistry('CAMPAIGN')).toThrow(MissingRegistryError);
+    expect(() => getRegistry('AD')).toThrow(MissingRegistryError);
   });
 
   // AC-05-29 asks for a registry per EntityType. The entity sessions add them (campaign, IO, LI: P3-06b/c; the rest: Phase 4).
   // Remove each todo when its registry lands.
-  it.todo('CAMPAIGN registry (P3-06b)');
-  it.todo('INSERTION_ORDER registry (P3-06b)');
   it.todo('LINE_ITEM registry (P3-06c)');
   it.todo('the other 17 EntityTypes (Phase 4)');
 });
