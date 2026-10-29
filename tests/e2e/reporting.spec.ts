@@ -179,6 +179,7 @@ test('E2E-RPT-02: build from scratch, undo and redo, bulk edit, save, rename, sa
   await expect(page.getByText('Enter a value').first()).toBeVisible();
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByText('Report saved')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Rename report' }).click();
   await page.getByLabel('Report name').fill('PW scratch report');
   await page.getByLabel('Report name').blur();
   await page.getByRole('button', { name: 'Save', exact: true }).click();
@@ -297,7 +298,7 @@ test('E2E-RPT-07: role matrix', async ({ browser }) => {
   const p1 = await ctxRo.newPage();
   await signIn(p1, ro);
   await p1.goto(hub(ro));
-  await expect(p1.getByRole('button', { name: 'New instant report' })).toBeDisabled();
+  await expect(p1.getByRole('button', { name: 'New instant report' }).first()).toBeDisabled();
   await p1.goto(`${hub(ro)}/instant/new`);
   await expect(p1.getByRole('button', { name: 'Run report' })).toBeDisabled();
   await expect(p1.getByRole('button', { name: 'Save', exact: true })).toBeDisabled();
@@ -307,7 +308,7 @@ test('E2E-RPT-07: role matrix', async ({ browser }) => {
   const p2 = await ctxRep.newPage();
   await signIn(p2, reportingOnly);
   await p2.goto(hub(reportingOnly));
-  await expect(p2.getByRole('button', { name: 'New instant report' })).toBeEnabled();
+  await expect(p2.getByRole('button', { name: 'New instant report' }).first()).toBeEnabled();
   const other404 = await p2.goto(`/p/${reportingOnly.ids.pid}/a/${reportingOnly.ids.aid}/campaigns`);
   expect(other404?.status()).toBe(404);
   await ctxRep.close();

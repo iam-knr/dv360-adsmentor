@@ -209,7 +209,7 @@ export function OfflineBuilder(props: OfflineBuilderProps) {
     }
     setBusy(false);
     toast.show({ kind: 'neutral', message: 'Report saved' });
-    if (!props.reportId) router.replace(`${base}/offline/${res.data.id}`);
+    if (!props.reportId) window.history.replaceState(null, '', `${base}/offline/${res.data.id}`);
   };
 
   const openInInstant = () => {

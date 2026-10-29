@@ -288,7 +288,7 @@ export function ReportBuilder(props: ReportBuilderProps) {
     if (!id) {
       setId(res.data.reportId);
       setSaved(model);
-      router.replace(`${base}/instant/${res.data.reportId}`);
+      window.history.replaceState(null, '', `${base}/instant/${res.data.reportId}`);
     }
     toast.show({ kind: 'neutral', message: 'Report ready. Open Files to download it.' });
   };
@@ -323,7 +323,7 @@ export function ReportBuilder(props: ReportBuilderProps) {
     setVersion(res.data.version);
     if (!id) {
       setId(res.data.id);
-      router.replace(`${base}/instant/${res.data.id}`);
+      window.history.replaceState(null, '', `${base}/instant/${res.data.id}`);
     }
     toast.show({ kind: 'neutral', message: 'Report saved' });
   };
