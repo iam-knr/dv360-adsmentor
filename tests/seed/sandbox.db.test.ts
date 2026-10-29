@@ -19,6 +19,10 @@ interface Built {
   result: ProvisionResult;
 }
 
+// Module 09 (P4-06) adds seven YouTube line items and four ad group targeting rows after the plan is inserted.
+const YT_LINE_ITEMS = 7;
+const YT_TARGETING_ROWS = 4;
+
 describe('seeded sandboxes', () => {
   let classroomId: string;
   let ownerId: string;
@@ -120,14 +124,14 @@ describe('seeded sandboxes', () => {
       ['InsertionOrder', plan.insertionOrders.length],
       ['BudgetSegment', plan.budgetSegments.length],
       ['PartnerCost', plan.partnerCosts.length],
-      ['LineItem', plan.lineItems.length],
+      ['LineItem', plan.lineItems.length + YT_LINE_ITEMS],
       ['Creative', plan.creatives.length],
       ['CreativeAsset', plan.creativeAssets.length],
       ['CreativeReview', plan.creativeReviews.length],
       ['CreativeAssignment', plan.creativeAssignments.length],
       ['Audience', plan.audiences.length],
       ['TargetingTemplate', plan.targetingTemplates.length],
-      ['TargetingAssignment', plan.targetingAssignments.length],
+      ['TargetingAssignment', plan.targetingAssignments.length + YT_TARGETING_ROWS],
       ['Alert', plan.alerts.length],
       ['ChangeGroup', plan.changeGroups.length],
       ['ChangeEntry', plan.changeEntries.length],
@@ -157,6 +161,8 @@ describe('seeded sandboxes', () => {
           'DEMAND_GEN',
           'DOOH_DISPLAY',
           'DOOH_VIDEO',
+          'YT_VIDEO',
+          'YT_AUDIO',
         ]),
       );
       const statuses = await prisma.lineItem.groupBy({ by: ['status'], where: { sandboxId: id } });
