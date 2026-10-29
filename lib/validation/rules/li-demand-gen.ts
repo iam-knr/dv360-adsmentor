@@ -28,7 +28,7 @@ export const LI_DG_004 = def({
   severity: 'error',
   triggers: ['save'],
   reads: ['type'],
-  message: "YouTube & partners and Demand Gen line items aren't enabled for this advertiser.",
+  message: MSG.YT_NOT_ENABLED,
   appliesTo: (_l, ctx) => !ctx.advertiser.googleInventoryEnabled,
   check: () => ({ path: 'type' }),
 });

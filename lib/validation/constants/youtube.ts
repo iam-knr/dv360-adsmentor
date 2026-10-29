@@ -182,11 +182,7 @@ export const YT_SURFACE_LABEL: Record<YtSurface, string> = {
 // ---------------------------------------------------------------------------------------------
 
 export type AdFormatKey =
-  | 'IN_STREAM_SKIPPABLE'
-  | 'BUMPER'
-  | 'NON_SKIPPABLE_IN_STREAM'
-  | 'IN_FEED'
-  | 'SHORTS';
+  'IN_STREAM_SKIPPABLE' | 'BUMPER' | 'NON_SKIPPABLE_IN_STREAM' | 'IN_FEED' | 'SHORTS';
 
 /** Lower case words for the caption `... example of your {format} ad on ...`. */
 export const AD_FORMAT_LABEL: Record<AdFormatKey, string> = {
@@ -220,7 +216,9 @@ export function deriveAdFormats(
 ): AdFormatKey[] {
   const d = video.durationSec;
   if (opts.nonSkippable)
-    return video.orientation === 'HORIZONTAL' && d >= 5 && d <= 30 ? ['NON_SKIPPABLE_IN_STREAM'] : [];
+    return video.orientation === 'HORIZONTAL' && d >= 5 && d <= 30
+      ? ['NON_SKIPPABLE_IN_STREAM']
+      : [];
   if (video.orientation === 'VERTICAL') return d >= 5 && d <= 60 ? ['SHORTS'] : [];
   const out: AdFormatKey[] = [];
   if (d <= 6) out.push('BUMPER');
@@ -295,7 +293,9 @@ export function parseYoutubeRef(input: string | null | undefined): string | null
       const parts = url.pathname.split('/').filter(Boolean);
       candidate =
         url.searchParams.get('v') ??
-        (parts[0] === 'shorts' || parts[0] === 'embed' || parts[0] === 'live' ? (parts[1] ?? '') : '');
+        (parts[0] === 'shorts' || parts[0] === 'embed' || parts[0] === 'live'
+          ? (parts[1] ?? '')
+          : '');
     }
     return ID11.test(candidate) ? candidate : null;
   } catch {

@@ -8,10 +8,15 @@ import type { AnyRule, LineItemInput, Rule, Violation } from '../types';
 import { def as baseDef } from './line-item';
 import { capMaxEmpty, capMaxInvalid } from './shared';
 
-function def(rule: Omit<Rule<LineItemInput>, 'kind'>): Rule<LineItemInput> {
+const isYoutube = (l: LineItemInput) =>
+  l.type === 'YT_VIDEO' || l.type === 'YT_AUDIO' || l.type === 'YT_ON_CTV';
+
+/** The YouTube rules read the `youtube` part of the input; a line item without it (older callers) is not judged. */
+function def(rule: Omit<Rule<LineItemInput>, 'kind'>, needsSection = true): Rule<LineItemInput> {
   return baseDef({
     ...rule,
-    appliesTo: (l, ctx) => (l.type === 'YT_VIDEO' || l.type === 'YT_AUDIO' || l.type === 'YT_ON_CTV') && (rule.appliesTo?.(l, ctx) ?? true),
+    appliesTo: (l, ctx) =>
+      isYoutube(l) && (!needsSection || !!l.youtube) && (rule.appliesTo?.(l, ctx) ?? true),
   });
 }
 
@@ -36,7 +41,8 @@ export const LI_YT_003 = def({
   triggers: ['save'],
   reads: ['youtube.adFormatChoice', 'youtube.optimization'],
   message: MSG.SELECTION_REQUIRED,
-  appliesTo: (l, ctx) => ctx.mode === 'create' && l.type !== 'YT_AUDIO' && !!l.youtube?.optimization,
+  appliesTo: (l, ctx) =>
+    ctx.mode === 'create' && l.type !== 'YT_AUDIO' && !!l.youtube?.optimization,
   check: (l) => {
     const yt = l.youtube!;
     const choice = yt.adFormatChoice ?? null;
@@ -170,7 +176,8 @@ export const LI_YT_012 = def({
   appliesTo: (l) => !!l.youtube?.subtype && YT_SUBTYPE_INFO[l.youtube.subtype].targetFrequency,
   check: (l) => {
     const tf = l.youtube!.targetFrequency;
-    if (!tf || isEmptyNum(tf.maxImpressions)) return { path: 'youtube.targetFrequency.maxImpressions' };
+    if (!tf || isEmptyNum(tf.maxImpressions))
+      return { path: 'youtube.targetFrequency.maxImpressions' };
     return positive(tf.maxImpressions)
       ? null
       : { path: 'youtube.targetFrequency.maxImpressions', message: MSG.ENTER_POSITIVE };
@@ -220,15 +227,18 @@ export const LI_YT_020 = def({
   check: (l) => ((l.youtube!.sequenceSteps ?? 0) < 2 ? { path: 'youtube.sequenceSteps' } : null),
 });
 
-export const LI_YT_021 = def({
-  id: 'LI-YT-021',
-  severity: 'error',
-  triggers: ['save'],
-  reads: ['type'],
-  message: MSG.YT_NOT_ENABLED,
-  appliesTo: (_l, ctx) => !ctx.advertiser.googleInventoryEnabled,
-  check: () => ({ path: 'type' }),
-});
+export const LI_YT_021 = def(
+  {
+    id: 'LI-YT-021',
+    severity: 'error',
+    triggers: ['save'],
+    reads: ['type'],
+    message: MSG.YT_NOT_ENABLED,
+    appliesTo: (_l, ctx) => !ctx.advertiser.googleInventoryEnabled,
+    check: () => ({ path: 'type' }),
+  },
+  false,
+);
 
 export const liYoutubeRules: readonly AnyRule[] = [
   LI_YT_002,

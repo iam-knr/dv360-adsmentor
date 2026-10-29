@@ -28,7 +28,8 @@ describe('V-09-01 subtypeFrom', () => {
   ] as const)('%s + %s = %s', (o, c, expected) => {
     expect(subtypeFrom(o, c)).toBe(expected);
   });
-  it('audio is always AUDIO_REACH', () => expect(subtypeFrom(null, null, true)).toBe('AUDIO_REACH'));
+  it('audio is always AUDIO_REACH', () =>
+    expect(subtypeFrom(null, null, true)).toBe('AUDIO_REACH'));
   it('round trips through step1Of', () => {
     for (const s of YT_SUBTYPES.filter((x) => x !== 'AUDIO_REACH')) {
       const { optimization, choice } = step1Of(s);
@@ -83,7 +84,10 @@ describe('V-09-03 parseYoutubeRef', () => {
 });
 
 describe('V-09-04 and V-09-05 preview', () => {
-  const video = (durationSec: number, orientation: 'HORIZONTAL' | 'VERTICAL' = 'HORIZONTAL'): PreviewVideo => ({
+  const video = (
+    durationSec: number,
+    orientation: 'HORIZONTAL' | 'VERTICAL' = 'HORIZONTAL',
+  ): PreviewVideo => ({
     videoId: 'AAAAAAAAAAA',
     title: 't',
     channelName: 'c',
@@ -98,7 +102,9 @@ describe('V-09-04 and V-09-05 preview', () => {
         for (const s of SURFACES) {
           if (!previewComboValid(f, d, s)) continue;
           n++;
-          expect(previewCaption(f, d, s)).toMatch(/^(Mobile phone|Computer|TV) example of your .+ ad on (YouTube|Google video partners|Google TV)$/);
+          expect(previewCaption(f, d, s)).toMatch(
+            /^(Mobile phone|Computer|TV) example of your .+ ad on (YouTube|Google video partners|Google TV)$/,
+          );
         }
     // 3 formats everywhere (9 each) + in-feed (2 devices x 1) + Shorts (1)
     expect(n).toBe(27 + 2 + 1);
@@ -142,8 +148,18 @@ describe('V-09-04 and V-09-05 preview', () => {
   });
   it('companion banner shows only for computer in-stream', () => {
     const draft = { video: video(30), companionBannerUrl: '/c.png' };
-    const pc = buildPreviewModel(draft, { filter: 'ALL', format: 'IN_STREAM_SKIPPABLE', device: 'COMPUTER', surface: 'YOUTUBE' });
-    const phone = buildPreviewModel(draft, { filter: 'ALL', format: 'IN_STREAM_SKIPPABLE', device: 'PHONE', surface: 'YOUTUBE' });
+    const pc = buildPreviewModel(draft, {
+      filter: 'ALL',
+      format: 'IN_STREAM_SKIPPABLE',
+      device: 'COMPUTER',
+      surface: 'YOUTUBE',
+    });
+    const phone = buildPreviewModel(draft, {
+      filter: 'ALL',
+      format: 'IN_STREAM_SKIPPABLE',
+      device: 'PHONE',
+      surface: 'YOUTUBE',
+    });
     expect(pc.frame.companionBannerUrl).toBe('/c.png');
     expect(phone.frame.companionBannerUrl).toBeUndefined();
   });

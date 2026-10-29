@@ -89,4 +89,12 @@ export const AG_007 = def({
   check: () => ({ path: 'ads' }),
 });
 
-export const adGroupRules: readonly AnyRule[] = [AG_001, AG_002, AG_003, AG_004, AG_005, AG_006, AG_007];
+export const adGroupRules: readonly AnyRule[] = [
+  AG_001,
+  AG_002,
+  AG_003,
+  AG_004,
+  AG_005,
+  AG_006,
+  AG_007,
+];

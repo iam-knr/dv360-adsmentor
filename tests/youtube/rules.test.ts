@@ -13,12 +13,16 @@ describe('LI-YT (V-09-06)', () => {
   it('a valid Efficient reach line item has no errors', () => {
     expect(errors(validate('lineItem', ytLineItem(), ytCtx()))).toEqual([]);
   });
-  it.each(['NON_SKIPPABLE_REACH', 'TARGET_FREQUENCY', 'TARGET_FREQUENCY_IN_STREAM', 'TRUEVIEW_VIEWS', 'AD_SEQUENCE', 'AUDIO_REACH'] as const)(
-    'a valid %s line item has no errors',
-    (s) => {
-      expect(errors(validate('lineItem', ytLineItem(s), ytCtx()))).toEqual([]);
-    },
-  );
+  it.each([
+    'NON_SKIPPABLE_REACH',
+    'TARGET_FREQUENCY',
+    'TARGET_FREQUENCY_IN_STREAM',
+    'TRUEVIEW_VIEWS',
+    'AD_SEQUENCE',
+    'AUDIO_REACH',
+  ] as const)('a valid %s line item has no errors', (s) => {
+    expect(errors(validate('lineItem', ytLineItem(s), ytCtx()))).toEqual([]);
+  });
 
   it('LI-YT-005: all ad formats unticked', () => {
     const li = applyPatch(ytLineItem(), {
@@ -53,7 +57,9 @@ describe('LI-YT (V-09-06)', () => {
     expect(out).not.toContain('LI-042');
   });
   it('LI-YT-011: view cap limited without a value', () => {
-    const li = applyPatch(ytLineItem(), { youtube: { viewCap: { mode: 'LIMITED', maxImpressions: null } } });
+    const li = applyPatch(ytLineItem(), {
+      youtube: { viewCap: { mode: 'LIMITED', maxImpressions: null } },
+    });
     expect(errors(validate('lineItem', li, ytCtx()))).toContain('LI-YT-011');
   });
   it('LI-YT-012: target frequency needs an exposure target', () => {
@@ -72,14 +78,25 @@ describe('LI-YT (V-09-06)', () => {
     expect(errors(validate('lineItem', li, ytCtx()))).toContain('LI-YT-017');
   });
   it('LI-YT-020: ad sequence with fewer than two ads blocks activation only', () => {
-    const li = applyPatch(ytLineItem('AD_SEQUENCE'), { status: 'ACTIVE', youtube: { sequenceSteps: 1 } });
+    const li = applyPatch(ytLineItem('AD_SEQUENCE'), {
+      status: 'ACTIVE',
+      youtube: { sequenceSteps: 1 },
+    });
     const ctx = ytCtx({ mode: 'edit', original: ytLineItem('AD_SEQUENCE') });
-    expect(errors(validate('lineItem', li, ctx, { targetStatus: 'ACTIVE' }))).toContain('LI-YT-020');
+    expect(errors(validate('lineItem', li, ctx, { targetStatus: 'ACTIVE' }))).toContain(
+      'LI-YT-020',
+    );
     expect(errors(validate('lineItem', li, ctx))).not.toContain('LI-YT-020');
   });
   it('LI-YT-021: Google inventory not enabled', () => {
     expect(
-      errors(validate('lineItem', ytLineItem(), ytCtx({ advertiser: { googleInventoryEnabled: false } }))),
+      errors(
+        validate(
+          'lineItem',
+          ytLineItem(),
+          ytCtx({ advertiser: { googleInventoryEnabled: false } }),
+        ),
+      ),
     ).toContain('LI-YT-021');
   });
   it('LI-YT-018: activation without an active ad group warns', () => {
@@ -99,7 +116,9 @@ describe('LI-YT (V-09-06)', () => {
     expect(errors(validate('lineItem', li, ctx))).toContain('LI-YT-004');
   });
   it('LI-YT-002 and 003: step 1 choices', () => {
-    const li = applyPatch(ytLineItem(), { youtube: { optimization: 'REACH', adFormatChoice: 'ALL_FORMATS' } });
+    const li = applyPatch(ytLineItem(), {
+      youtube: { optimization: 'REACH', adFormatChoice: 'ALL_FORMATS' },
+    });
     expect(errors(validate('lineItem', li, ytCtx()))).toContain('LI-YT-003');
     const none = applyPatch(ytLineItem(), { youtube: { optimization: null } });
     expect(errors(validate('lineItem', none, ytCtx()))).toContain('LI-YT-002');
@@ -121,7 +140,9 @@ describe('AG (V-09-07)', () => {
   it('AG-005: an active ad group without ads warns with the catalogue text', () => {
     const w = run({ adCount: 0 }).find((i) => i.ruleId === 'AG-005');
     expect(w?.blocking).toBe(false);
-    expect(w?.message).toBe("This active ad group doesn't have any ads. It won't run until you create ads.");
+    expect(w?.message).toBe(
+      "This active ad group doesn't have any ads. It won't run until you create ads.",
+    );
     expect(ids(run({ adCount: 0, status: 'PAUSED' }))).not.toContain('AG-005');
   });
   it('AG-006: only placements, demographics and audience lists belong to ad groups', () => {
@@ -176,7 +197,10 @@ describe('AD (V-09-08, V-09-09, V-09-15)', () => {
     expect(out).not.toContain('AD-011');
   });
   it('AD-011 and AD-014 apply from 12 Oct 2026', () => {
-    const before = ytCtx({ now: new Date('2026-10-11T06:00:00Z'), advertiser: { businessName: null } });
+    const before = ytCtx({
+      now: new Date('2026-10-11T06:00:00Z'),
+      advertiser: { businessName: null },
+    });
     expect(errors(run({ businessName: '', logoAssetId: null }, before))).toEqual([]);
   });
   it('AD-020 is info', () => {
