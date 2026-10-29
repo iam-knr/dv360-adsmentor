@@ -151,6 +151,7 @@ export function ReportBuilder(props: ReportBuilderProps) {
   const [genText, setGenText] = useState('');
   const [genOpen, setGenOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | undefined>();
   const runToken = useRef(0);
 
   const dirty = JSON.stringify(model) !== JSON.stringify(saved);
@@ -169,6 +170,11 @@ export function ReportBuilder(props: ReportBuilderProps) {
       if (raw) {
         sessionStorage.removeItem('dv.report.generated');
         apply(toModel(JSON.parse(raw) as ReportDefinition));
+      }
+      const notice = sessionStorage.getItem('dv.report.notice');
+      if (notice) {
+        sessionStorage.removeItem('dv.report.notice');
+        setNotice(notice);
       }
     } catch {
       /* ignore */
@@ -672,6 +678,11 @@ export function ReportBuilder(props: ReportBuilderProps) {
         </Box>
       ) : null}
 
+      {notice ? (
+        <DvBanner kind="warning" onDismiss={() => setNotice(undefined)}>
+          {notice}
+        </DvBanner>
+      ) : null}
       {error ? (
         <DvBanner
           kind="error"

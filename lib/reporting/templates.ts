@@ -140,3 +140,48 @@ export function definitionFromTemplate(
     template: t.key,
   };
 }
+
+export interface OfflineTemplate {
+  key: string;
+  type: 'FLOODLIGHT' | 'INVENTORY_AVAILABILITY';
+  title: string;
+  dimensions: string[];
+  metrics: string[];
+  dateRange: string;
+}
+
+/** Offline report templates (module 16 S4 card 2): commonly prefilled settings. */
+export const OFFLINE_TEMPLATES: readonly OfflineTemplate[] = [
+  {
+    key: 'floodlight-impressions',
+    type: 'FLOODLIGHT',
+    title: 'Floodlight Impressions',
+    dimensions: ['date', 'advertiser', 'floodlight_activity'],
+    metrics: ['impressions', 'clicks', 'floodlight_impressions'],
+    dateRange: 'LAST_7_DAYS',
+  },
+  {
+    key: 'floodlight-order-id',
+    type: 'FLOODLIGHT',
+    title: 'Order ID',
+    dimensions: ['date', 'order_id', 'floodlight_activity'],
+    metrics: ['total_conversions', 'post_click_conversions', 'post_view_conversions'],
+    dateRange: 'LAST_7_DAYS',
+  },
+  {
+    key: 'availability-exchange',
+    type: 'INVENTORY_AVAILABILITY',
+    title: 'Availability by exchange',
+    dimensions: ['date', 'availability_exchange'],
+    metrics: ['available_impressions', 'bid_able_impressions'],
+    dateRange: 'LAST_7_DAYS',
+  },
+  {
+    key: 'availability-device',
+    type: 'INVENTORY_AVAILABILITY',
+    title: 'Availability by device',
+    dimensions: ['date', 'availability_device_type'],
+    metrics: ['available_impressions', 'bid_able_impressions'],
+    dateRange: 'LAST_7_DAYS',
+  },
+];
