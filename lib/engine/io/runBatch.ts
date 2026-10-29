@@ -11,6 +11,7 @@ import { persistTick } from './persistTick';
 import { trimHourly } from './retention';
 import { loadStates, saveStates } from './state';
 import { syncCreativeReviews } from './structural';
+import { syncYoutube } from './youtube';
 import type { ClockRow } from './types';
 
 export type TickPlan =
@@ -124,6 +125,9 @@ export async function runBatch(
       { sandboxId, classroomId: clock.classroomId },
       simHourMs,
     );
+    const yt = await syncYoutube(tx, { sandboxId, classroomId: clock.classroomId }, simHourMs);
+    tickRows += yt.decided + yt.raised.length;
+    tickRaised.push(...yt.raised);
     await finishTickLog(tx, sandboxId, tick, {
       durationMs: Date.now() - startedMs,
       lineItemsProcessed: world.worlds.reduce((s, w) => s + w.world.lineItems.length, 0),

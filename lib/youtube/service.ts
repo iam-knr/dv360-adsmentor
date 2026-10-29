@@ -44,7 +44,8 @@ import {
   type PreviewDraft,
   type PreviewModel,
 } from './preview';
-import { feedbackFor, planReview } from './review';
+import { planReview } from './review';
+import { settleDueAdReviews } from './review-sync';
 import type {
   AdDetail,
   AdFormValue,
@@ -262,51 +263,12 @@ export async function lookupVideos(user: SessionUser, q: string): Promise<Youtub
 /** Close every due review of the ads of these ad groups. Idempotent; written by the SIM_ENGINE actor. */
 async function settleReviews(tx: Tx, sandboxId: string, classroomId: string, adGroupIds: string[]) {
   if (!adGroupIds.length) return;
-  const now = await simNow(tx, sandboxId);
-  const due = await tx.ad.findMany({
-    where: {
-      adGroupId: { in: adGroupIds },
-      reviewStatus: 'PENDING',
-      reviewDecideAt: { not: null, lte: now },
-    },
-    include: {
-      adGroup: { include: { lineItem: { select: { id: true, ioId: true, campaignId: true } } } },
-    },
-    orderBy: [{ reviewDecideAt: 'asc' }, { id: 'asc' }],
-  });
-  for (const ad of due) {
-    const verdict = ad.plannedVerdict ?? 'APPROVED';
-    await withChangeLog(
-      {
-        sandboxId,
-        classroomId,
-        actor: { type: 'SYSTEM', systemActor: 'SIM_ENGINE' },
-        tx,
-        now: ad.reviewDecideAt ?? now,
-      },
-      {
-        type: 'AD',
-        id: ad.id,
-        chain: {
-          advertiserId: ad.advertiserId,
-          campaignId: ad.adGroup.lineItem.campaignId,
-          ioId: ad.adGroup.lineItem.ioId,
-          lineItemId: ad.adGroup.lineItemId,
-        },
-      },
-      (t) =>
-        t.ad.update({
-          where: { id: ad.id },
-          data: {
-            reviewStatus: verdict,
-            reviewFeedback: feedbackFor(verdict),
-            reviewDecideAt: null,
-            plannedVerdict: null,
-          },
-          select: { id: true },
-        }),
-    );
-  }
+  await settleDueAdReviews(
+    tx,
+    { sandboxId, classroomId },
+    (await simNow(tx, sandboxId)).getTime(),
+    adGroupIds,
+  );
 }
 
 async function classroomOf(user: SessionUser, tx: Tx): Promise<string> {
