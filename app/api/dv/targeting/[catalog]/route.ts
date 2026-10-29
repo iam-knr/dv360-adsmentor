@@ -5,7 +5,9 @@ import { resolveSession } from '@/lib/auth/session';
 import {
   BROWSERS,
   CARRIER_ISP_EXAMPLES,
-  CATEGORIES_TOP,
+  CATEGORY_OPTIONS,
+  DEVICE_MAKE_MODELS,
+  OPERATING_SYSTEMS,
   DEVICE_TYPES,
   LANGUAGES,
   type OptionDef,
@@ -14,7 +16,9 @@ import {
 export const dynamic = 'force-dynamic';
 
 const CATALOGUES: Record<string, readonly OptionDef[]> = {
-  categories: CATEGORIES_TOP,
+  categories: CATEGORY_OPTIONS,
+  'operating-systems': OPERATING_SYSTEMS,
+  'device-models': DEVICE_MAKE_MODELS,
   languages: LANGUAGES,
   devices: DEVICE_TYPES,
   browsers: BROWSERS,

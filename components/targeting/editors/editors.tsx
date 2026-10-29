@@ -12,12 +12,13 @@ import {
   AGE_STOPS,
   BROWSERS,
   CARRIER_ISP_EXAMPLES,
-  CATEGORIES_TOP,
   CONNECTION_SPEEDS,
   DAYS,
   DAY_LABEL,
   DAY_PRESETS,
+  DEVICE_MAKE_MODELS,
   DEVICE_TYPES,
+  OPERATING_SYSTEMS,
   ENVIRONMENTS,
   ENVIRONMENT_HINT,
   GENDERS,
@@ -36,6 +37,7 @@ import {
 import { isTargeted, mergeSegments, parseKeywords, presetSegments } from '@/lib/targeting/merge';
 import type { DaySegment, TargetingCriteria } from '@/lib/targeting/types';
 import { availability, toLiType } from '@/lib/targeting/dimensions';
+import { CategoryTree } from './CategoryTree';
 import { ListEditor } from './ListEditor';
 
 export interface EditorProps {
@@ -419,6 +421,22 @@ function DeviceEditor({ criteria, onChange, readOnly }: EditorProps) {
         onChange={(types) => onChange({ device: { ...d, types } })}
         error={editorError('DEVICE', criteria) ?? undefined}
       />
+      <Typography variant="subtitle2">Operating system</Typography>
+      <ListEditor
+        options={OPERATING_SYSTEMS}
+        value={d.os}
+        readOnly={readOnly}
+        searchLabel="Search operating systems"
+        onChange={(os) => onChange({ device: { ...d, os } })}
+      />
+      <Typography variant="subtitle2">Make and model</Typography>
+      <ListEditor
+        options={DEVICE_MAKE_MODELS}
+        value={d.makeModel}
+        readOnly={readOnly}
+        searchLabel="Search makes and models"
+        onChange={(makeModel) => onChange({ device: { ...d, makeModel } })}
+      />
     </Box>
   );
 }
@@ -445,11 +463,9 @@ export function EditorBody(props: EditorProps & { dim: MatrixDimension }) {
       return <DeviceEditor {...props} />;
     case 'CATEGORIES':
       return (
-        <ListEditor
-          options={CATEGORIES_TOP}
+        <CategoryTree
           value={criteria.categories ?? []}
           readOnly={readOnly}
-          searchLabel="Search categories"
           onChange={(categories) => onChange({ categories })}
         />
       );

@@ -22,6 +22,7 @@ import {
   typeLocked,
   type TargetingState,
 } from '@/lib/targeting';
+import { MSG } from '@/lib/validation/messages';
 import type { MatrixDimension } from '@/lib/validation/constants/targeting-availability';
 import { EditorBody, editorError } from './editors/editors';
 import type { TargetingCriteria } from '@/lib/targeting/types';
@@ -186,8 +187,8 @@ export function TargetingCard({
                 </IconButton>
               ) : null}
               {isLocked ? (
-                <DvTooltip title="This targeting is required and can't be removed">
-                  <span aria-label="Locked">
+                <DvTooltip title={MSG.TARGETING_LOCKED_ADV}>
+                  <span aria-label="Locked" tabIndex={0} data-testid={`locked-${dim}`}>
                     <DvIcon name="lock" />
                   </span>
                 </DvTooltip>

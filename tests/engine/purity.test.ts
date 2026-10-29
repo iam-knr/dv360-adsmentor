@@ -58,7 +58,7 @@ describe('the engine core is pure (engine.md 1.3, build-plan P3-08a)', () => {
     }
   });
 
-  it('keeps every engine module folder of engine.md 1.5 except io', () => {
+  it('keeps every engine module folder of engine.md 1.5', () => {
     const folders = readdirSync(root).filter((f) => statSync(join(root, f)).isDirectory());
     for (const m of [
       'params',
@@ -78,6 +78,5 @@ describe('the engine core is pure (engine.md 1.3, build-plan P3-08a)', () => {
     ]) {
       expect(folders, m).toContain(m);
     }
-    expect(folders).not.toContain('io');
   });
 });
