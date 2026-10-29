@@ -5,6 +5,7 @@ import type { EntityRegistry } from '../registry-types';
 import { advertiserRegistry } from './advertiser';
 import { campaignRegistry } from './campaign';
 import { creativeRegistry } from './creative';
+import { dealRegistry } from './deal';
 import { insertionOrderRegistry } from './insertion-order';
 import { lineItemRegistry } from './line-item';
 import { partnerRegistry } from './partner';
@@ -15,6 +16,7 @@ export const REGISTRIES: Partial<Record<EntityType, EntityRegistry>> = {
   INSERTION_ORDER: insertionOrderRegistry,
   LINE_ITEM: lineItemRegistry,
   CREATIVE: creativeRegistry,
+  DEAL: dealRegistry,
   PARTNER: partnerRegistry,
 };
 
