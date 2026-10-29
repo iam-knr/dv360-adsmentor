@@ -189,6 +189,7 @@ export async function ensureSandboxInventory(tx: Tx, input: SeedInput): Promise<
       volume: 1_500_000n,
       averagePrice: 180,
       sellerPolicy: policy,
+      expiresAt: addDays(today, 45),
       terms: {
         rate: 180,
         sellerRate: 180,
