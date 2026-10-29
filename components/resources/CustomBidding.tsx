@@ -354,7 +354,7 @@ export function CustomBiddingWizard({
   const dirty = !saved && (id === null ? name !== '' || rules.length > 0 : false);
   useUnsavedGuard(dirty);
 
-  const objectiveKey = (objective || null) as CbObjectiveKey | null;
+  const objectiveKey = (objective || null);
   const err = (p: string) => issues.find((i) => i.severity === 'error' && i.path === p)?.message;
 
   const signalOptions = useMemo(() => {

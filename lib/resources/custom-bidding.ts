@@ -101,7 +101,7 @@ export function modelOf(
   return {
     rules,
     multipliers: multipliers.flatMap((m) =>
-      isMultiplierKind(m.kind) ? [{ kind: m.kind as CbMultiplierKindKey, values: m.values }] : [],
+      isMultiplierKind(m.kind) ? [{ kind: m.kind, values: m.values }] : [],
     ),
   };
 }
@@ -316,7 +316,7 @@ export async function listCustomBidding(user: SessionUser, scope: ResourceScope)
       isDraft: false,
       ...(parent.advertiserId
         ? { OR: [{ advertiserId: parent.advertiserId }, { partnerId: parent.adv.partnerId }] }
-        : { partnerId: parent.partnerId as string }),
+        : { partnerId: parent.partnerId }),
     };
     const rows = await tx.customBiddingAlgorithm.findMany({
       where,
@@ -486,13 +486,13 @@ function normalise(input: CbDraftInput): CbDraftInput {
     ...input,
     rules: input.rules.map((r) => ({
       ...r,
-      score: r.score === ('' as never) ? (NaN as number) : Number(r.score),
+      score: r.score === ('' as never) ? (NaN) : Number(r.score),
     })),
     multipliers: input.multipliers.map((m) => ({
       ...m,
       values: m.values.map((v) => ({
         ...v,
-        multiplier: v.multiplier === ('' as never) ? (NaN as number) : Number(v.multiplier),
+        multiplier: v.multiplier === ('' as never) ? (NaN) : Number(v.multiplier),
       })),
     })),
   };
