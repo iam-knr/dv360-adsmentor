@@ -74,7 +74,10 @@ describe('createPlan / updatePlan', () => {
       await updatePlan(user(), aid(), {
         id: created.id,
         expectedVersion: plan0.version,
-        rows: [row('A', '2026-01-02', '2026-02-01', 20000), row('B', '2026-01-05', '2026-01-20', 12000)],
+        rows: [
+          row('A', '2026-01-02', '2026-02-01', 20000),
+          row('B', '2026-01-05', '2026-01-20', 12000),
+        ],
       }),
     );
     expect(res.plan.version).toBe(plan0.version + 1);
@@ -111,7 +114,12 @@ describe('createPlan / updatePlan', () => {
 
   it('a save with no change is a no-op (PLN-003)', async () => {
     const created = must(await createPlan(user(), aid()));
-    const first = must(await updatePlan(user(), aid(), { id: created.id, rows: [row('A', '2026-01-02', '2026-02-01')] }));
+    const first = must(
+      await updatePlan(user(), aid(), {
+        id: created.id,
+        rows: [row('A', '2026-01-02', '2026-02-01')],
+      }),
+    );
     const again = must(
       await updatePlan(user(), aid(), {
         id: created.id,
@@ -167,7 +175,11 @@ describe('seed, lock and copy', () => {
       expect(r.startDate >= '2026-01-10').toBe(true);
       expect(r.endDate <= '2026-02-20').toBe(true);
     }
-    const past = await copyPlan(user(), aid(), { id: pastId, startDate: '2025-12-01', endDate: '2025-12-31' });
+    const past = await copyPlan(user(), aid(), {
+      id: pastId,
+      startDate: '2025-12-01',
+      endDate: '2025-12-31',
+    });
     expect(issues(past)[0]?.code).toBe('PLN-021');
   });
 });
@@ -223,7 +235,12 @@ describe('convert, remove, columns, csv', () => {
     expect(saved.order).toEqual(order);
     expect(await getPlanColumns(user(), aid())).toEqual(order);
     const created = must(await createPlan(user(), aid(), { name: 'Csv plan' }));
-    must(await updatePlan(user(), aid(), { id: created.id, rows: [row('Only row', '2026-01-02', '2026-02-01')] }));
+    must(
+      await updatePlan(user(), aid(), {
+        id: created.id,
+        rows: [row('Only row', '2026-01-02', '2026-02-01')],
+      }),
+    );
     const file = await downloadPlanCsv(user(), aid(), created.id);
     const lines = file.body.trim().split('\r\n');
     expect(lines[0]).toBe('Plan,Csv plan');
@@ -234,7 +251,9 @@ describe('convert, remove, columns, csv', () => {
   it('a read only role cannot write (AC-04-20)', async () => {
     const ro = userFor(w, 'READ_ONLY');
     const res = await createPlan(ro, aid()).catch((e: { code?: string }) => e);
-    expect((res as { code?: string }).code ?? (res as { ok: boolean; code: string }).code).toBe('FORBIDDEN');
+    expect((res as { code?: string }).code ?? (res as { ok: boolean; code: string }).code).toBe(
+      'FORBIDDEN',
+    );
     const list = await listPlans(ro, aid());
     expect(list.canWrite).toBe(false);
   });
@@ -280,9 +299,16 @@ describe('cross-media reach', () => {
         tvCampaignIds: tv,
       }),
     );
-    const list = await listCrossMediaReports(user(), { partnerId: w.partnerId, advertiserId: w.advertiserId });
+    const list = await listCrossMediaReports(user(), {
+      partnerId: w.partnerId,
+      advertiserId: w.advertiserId,
+    });
     expect(list.rows.find((r) => r.id === created.id)?.status).toBe('DONE');
-    const detail = await getCrossMediaReport(user(), { partnerId: w.partnerId, advertiserId: w.advertiserId }, created.id);
+    const detail = await getCrossMediaReport(
+      user(),
+      { partnerId: w.partnerId, advertiserId: w.advertiserId },
+      created.id,
+    );
     const r = detail.result;
     expect(r).not.toBeNull();
     const d = r?.digital.reachPct ?? 0;

@@ -21,6 +21,7 @@ export async function PlanRoute({
   return (
     <FormFrame title="Adjust your plan and view forecast" wide>
       <PlanPage
+        key={plan.id}
         partnerId={scope.partnerId}
         advertiserId={scope.advertiserId}
         initial={plan}
