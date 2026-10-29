@@ -129,7 +129,9 @@ type LiRow = NonNullable<Awaited<ReturnType<typeof loadLi>>>;
 async function loadLi(tx: Tx, liId: string) {
   const li = await tx.lineItem.findUnique({
     where: { id: liId },
-    include: { adGroups: { select: { id: true, status: true, _count: { select: { ads: true } } } } },
+    include: {
+      adGroups: { select: { id: true, status: true, _count: { select: { ads: true } } } },
+    },
   });
   if (!li || !['YT_VIDEO', 'YT_AUDIO', 'YT_ON_CTV', 'DEMAND_GEN'].includes(li.type)) return null;
   return li;
@@ -259,7 +261,9 @@ async function settleReviews(tx: Tx, sandboxId: string, classroomId: string, adG
       reviewStatus: 'PENDING',
       reviewDecideAt: { not: null, lte: now },
     },
-    include: { adGroup: { include: { lineItem: { select: { id: true, ioId: true, campaignId: true } } } } },
+    include: {
+      adGroup: { include: { lineItem: { select: { id: true, ioId: true, campaignId: true } } } },
+    },
     orderBy: [{ reviewDecideAt: 'asc' }, { id: 'asc' }],
   });
   for (const ad of due) {
@@ -314,7 +318,9 @@ type AdWithVideo = Prisma.AdGetPayload<Record<string, never>> & { video: Youtube
 
 async function withVideos(tx: Tx, ads: Prisma.AdGetPayload<Record<string, never>>[]) {
   const ids = [...new Set(ads.map((a) => a.youtubeVideoId))];
-  const rows = ids.length ? await tx.youtubeVideo.findMany({ where: { videoId: { in: ids } } }) : [];
+  const rows = ids.length
+    ? await tx.youtubeVideo.findMany({ where: { videoId: { in: ids } } })
+    : [];
   const byId = new Map(rows.map((v) => [v.videoId, hitOf(v)]));
   return ads.map((a): AdWithVideo => ({ ...a, video: byId.get(a.youtubeVideoId) ?? null }));
 }
@@ -534,9 +540,7 @@ export async function validateAdGroup(
     const li = await loadLi(tx, liId);
     if (!li) return [];
     const { ctx, currency } = await ytContext(tx, user, li, adGroupId ? 'edit' : 'create');
-    const adCount = adGroupId
-      ? await tx.ad.count({ where: { adGroupId } })
-      : 0;
+    const adCount = adGroupId ? await tx.ad.count({ where: { adGroupId } }) : 0;
     return validate('adGroup', groupInput(value, li, currency, adCount), ctx, { trigger: 'save' });
   });
   return out ?? [];
@@ -562,7 +566,12 @@ export async function createAdGroup(
       change,
       {
         type: 'AD_GROUP',
-        chain: { advertiserId: li.advertiserId, campaignId: li.campaignId, ioId: li.ioId, lineItemId: li.id },
+        chain: {
+          advertiserId: li.advertiserId,
+          campaignId: li.campaignId,
+          ioId: li.ioId,
+          lineItemId: li.id,
+        },
       },
       async (t) => {
         const created = await t.adGroup.create({
@@ -617,7 +626,12 @@ export async function updateAdGroup(
       {
         type: 'AD_GROUP',
         id: stored.id,
-        chain: { advertiserId: li.advertiserId, campaignId: li.campaignId, ioId: li.ioId, lineItemId: li.id },
+        chain: {
+          advertiserId: li.advertiserId,
+          campaignId: li.campaignId,
+          ioId: li.ioId,
+          lineItemId: li.id,
+        },
       },
       async (t) => {
         const updated = await t.adGroup.update({
@@ -771,7 +785,10 @@ async function adDetailOf(
     where: { id: g.advertiserId },
     select: { ytBusinessName: true, ytLogoAssetId: true },
   });
-  const defaults = { businessName: adv?.ytBusinessName ?? '', logoAssetId: adv?.ytLogoAssetId ?? null };
+  const defaults = {
+    businessName: adv?.ytBusinessName ?? '',
+    logoAssetId: adv?.ytLogoAssetId ?? null,
+  };
   const withVideo = ad ? (await withVideos(tx, [ad]))[0]! : null;
   const value: AdFormValue = ad
     ? toAdForm(ad)
@@ -862,7 +879,13 @@ export async function validateAd(
     const li = g ? await loadLi(tx, g.lineItemId) : null;
     if (!g || !li) return [];
     const videoId = resolveVideoId(value);
-    const { ctx } = await ytContext(tx, user, li, adId ? 'edit' : 'create', videoId ? [videoId] : []);
+    const { ctx } = await ytContext(
+      tx,
+      user,
+      li,
+      adId ? 'edit' : 'create',
+      videoId ? [videoId] : [],
+    );
     return validate('ad', adInput(value, videoId), ctx, { trigger: 'save' });
   });
   return out ?? [];
@@ -922,7 +945,12 @@ export async function createAd(
       change,
       {
         type: 'AD',
-        chain: { advertiserId: li.advertiserId, campaignId: li.campaignId, ioId: li.ioId, lineItemId: li.id },
+        chain: {
+          advertiserId: li.advertiserId,
+          campaignId: li.campaignId,
+          ioId: li.ioId,
+          lineItemId: li.id,
+        },
       },
       (t) =>
         t.ad.create({
@@ -977,7 +1005,12 @@ export async function updateAd(
       {
         type: 'AD',
         id: stored.id,
-        chain: { advertiserId: li.advertiserId, campaignId: li.campaignId, ioId: li.ioId, lineItemId: li.id },
+        chain: {
+          advertiserId: li.advertiserId,
+          campaignId: li.campaignId,
+          ioId: li.ioId,
+          lineItemId: li.id,
+        },
       },
       (t) =>
         t.ad.update({

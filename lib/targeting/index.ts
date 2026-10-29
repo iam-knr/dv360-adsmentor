@@ -125,8 +125,7 @@ async function persistRows(
       })
     : [];
   const optionId = new Map(options.map((o) => [`${o.dimension}:${o.code}`, o.id]));
-  const ownerKey =
-    owner.kind === 'LINE_ITEM' ? { lineItemId: owner.id } : { adGroupId: owner.id };
+  const ownerKey = owner.kind === 'LINE_ITEM' ? { lineItemId: owner.id } : { adGroupId: owner.id };
 
   await tx.targetingAssignment.deleteMany({
     where: { ...ownerKey, ownerType: owner.kind, dimension: { notIn: [...NOT_CARD] } },

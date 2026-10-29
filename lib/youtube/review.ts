@@ -40,7 +40,8 @@ export function planReview(seed: string, text: ReviewText): ReviewPlan {
     .join(' ');
   const delayHours = ((hash(seed) % 3) + 1) as 1 | 2 | 3;
   if (REJECT.test(body)) return { verdict: 'REJECTED', delayHours, feedback: REJECT_FEEDBACK };
-  if (RESTRICT.test(body)) return { verdict: 'RESTRICTED', delayHours, feedback: RESTRICT_FEEDBACK };
+  if (RESTRICT.test(body))
+    return { verdict: 'RESTRICTED', delayHours, feedback: RESTRICT_FEEDBACK };
   return { verdict: 'APPROVED', delayHours, feedback: null };
 }
 
