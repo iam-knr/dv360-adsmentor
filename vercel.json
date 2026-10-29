@@ -3,5 +3,13 @@
   "framework": "nextjs",
   "buildCommand": "npm run vercel-build",
   "ignoreCommand": "bash scripts/vercel-ignore.sh",
-  "regions": ["dub1"]
+  "regions": ["dub1"],
+  "git": {
+    "deploymentEnabled": {
+      "p4-*": false,
+      "p5-*": false,
+      "p6-*": false,
+      "docs/*": false
+    }
+  }
 }
