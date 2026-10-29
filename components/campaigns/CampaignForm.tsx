@@ -21,7 +21,15 @@ import {
   validateCampaignAction,
 } from '@/lib/campaigns/actions';
 import { KPI_LABEL } from '@/lib/campaigns/kpi';
-import { addBudgetRows, isMoneyKpi, type CampaignWire, type WireIssue } from '@/lib/campaigns/wire';
+import {
+  addBudgetRows,
+  applyCopySource,
+  isMoneyKpi,
+  type CampaignWire,
+  type WireIssue,
+} from '@/lib/campaigns/wire';
+import { CopySettingsDialog } from './CopySettingsDialog';
+import { StaleSaveDialog } from './StaleSaveDialog';
 import {
   CAMPAIGN_GOALS,
   CAMPAIGN_GOAL_LABEL,
@@ -68,6 +76,8 @@ export function CampaignForm({
   const [issues, setIssues] = useState<WireIssue[]>([]);
   const [note, setNote] = useState('');
   const [busy, startTransition] = useTransition();
+  const [copyOpen, setCopyOpen] = useState(false);
+  const [stale, setStale] = useState(false);
   const dirty = useMemo(() => JSON.stringify(value) !== JSON.stringify(saved), [value, saved]);
   useUnsavedGuard(dirty);
 
@@ -91,7 +101,7 @@ export function CampaignForm({
     : [];
   const kpiSuffix = value.kpi.type && !isMoneyKpi(value.kpi.type) ? '%' : undefined;
 
-  const submit = () => {
+  const submit = (overwrite = false) => {
     if (readOnly) return;
     startTransition(async () => {
       const res =
@@ -99,9 +109,13 @@ export function CampaignForm({
           ? await createCampaignAction(advertiserId, value, { changeNote: note })
           : await updateCampaignAction(campaignId!, value, {
               changeNote: note,
-              ...(version !== undefined ? { expectedVersion: version } : {}),
+              ...(version !== undefined && !overwrite ? { expectedVersion: version } : {}),
             });
       if (!res.ok) {
+        if (res.code === 'CONFLICT') {
+          setStale(true);
+          return;
+        }
         setIssues(res.issues);
         setTimeout(() => focusFirstInvalid(), 0);
         return;
@@ -137,6 +151,11 @@ export function CampaignForm({
             onChange={(name) => set({ name })}
             id="name"
           />
+          {mode === 'create' && !readOnly ? (
+            <Button sx={{ alignSelf: 'flex-start' }} onClick={() => setCopyOpen(true)}>
+              Copy settings from an existing campaign
+            </Button>
+          ) : null}
         </DvSectionCard>
 
         <DvSectionCard title="Campaign goal" layout="settings">
@@ -338,7 +357,7 @@ export function CampaignForm({
           mode={mode}
           dirty={dirty || mode === 'create'}
           primaryLabel={busy ? 'Saving…' : undefined}
-          onPrimary={submit}
+          onPrimary={() => submit()}
           onSecondary={() => router.back()}
           onReset={() => {
             setValue(saved);
@@ -347,6 +366,28 @@ export function CampaignForm({
           {...(mode === 'edit' ? { note, onNoteChange: setNote } : {})}
         />
       ) : null}
+      {mode === 'create' ? (
+        <CopySettingsDialog
+          open={copyOpen}
+          advertiserId={advertiserId}
+          onCancel={() => setCopyOpen(false)}
+          onCopy={(source, settings) => {
+            setValue((v) => applyCopySource(v, source, settings));
+            setCopyOpen(false);
+          }}
+        />
+      ) : null}
+      <StaleSaveDialog
+        open={stale}
+        onReload={() => {
+          setStale(false);
+          window.location.reload();
+        }}
+        onKeep={() => {
+          setStale(false);
+          submit(true);
+        }}
+      />
     </Box>
   );
 }

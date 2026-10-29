@@ -5,6 +5,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import {
   createCampaign,
   getCopySource,
+  listCampaigns,
   setCampaignStatus,
   updateCampaign,
   validateCampaign,
@@ -67,4 +68,14 @@ export async function copySourceAction(
 ): Promise<CampaignCopySource | null> {
   const user = await getSessionUser();
   return user ? getCopySource(user, fromCid, settings) : null;
+}
+
+/** DLG-10 left pane: every campaign of the advertiser, any status (module 06 2.3). */
+export async function copyCandidatesAction(
+  aid: string,
+): Promise<{ publicId: string; name: string }[]> {
+  const user = await getSessionUser();
+  if (!user) return [];
+  const res = await listCampaigns(user, aid, { status: ['*'], pageSize: 200 });
+  return res.rows.map((r) => ({ publicId: r.publicId, name: r.name }));
 }
