@@ -43,6 +43,7 @@ export function LiGrid({
   newLink,
   result,
   embedded = false,
+  archived = false,
 }: {
   partnerId: string;
   advertiserId: string;
@@ -50,10 +51,12 @@ export function LiGrid({
   newLink?: string;
   result: LiListResult;
   embedded?: boolean;
+  /** Archived list (`f.status=ARCHIVED`, module 08 AC-08-26): only archived rows, row action Unarchive. */
+  archived?: boolean;
 }) {
   const { viewer } = useViewer();
   const router = useRouter();
-  const [filter, setFilter] = useState('ACTIVE');
+  const [filter, setFilter] = useState(archived ? 'ARCHIVED' : 'ACTIVE');
   const [page, setPage] = useState({ page: 1, size: 50 });
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -65,6 +68,16 @@ export function LiGrid({
   const start = (page.page - 1) * page.size;
   const sum = (key: 'impressions' | 'revenue' | 'clicks' | 'conversions') =>
     shown.reduce((acc, r) => acc + r[key], 0);
+
+  const unarchive = (r: LineItemRow) =>
+    startTransition(async () => {
+      const res = await setLineItemStatusAction(r.id, 'PAUSED');
+      if (!res.ok) setError(res.issues[0]?.message ?? 'Could not unarchive this line item.');
+      else {
+        setError(null);
+        router.refresh();
+      }
+    });
 
   const columns: DvColumn<LineItemRow>[] = [
     {
@@ -126,6 +139,25 @@ export function LiGrid({
       accessor: (r) => r.revenue,
       total: () => formatCurrency(sum('revenue'), currency),
     },
+    ...(archived
+      ? [
+          {
+            id: 'actions',
+            header: 'Actions',
+            group: 'li',
+            cell: (r: LineItemRow) => (
+              <Button
+                variant="text"
+                size="small"
+                disabled={viewer.readOnly}
+                onClick={() => unarchive(r)}
+              >
+                Unarchive
+              </Button>
+            ),
+          } satisfies DvColumn<LineItemRow>,
+        ]
+      : []),
   ];
 
   return (
@@ -140,10 +172,10 @@ export function LiGrid({
         ) : null
       ) : (
         <DvPageHeader
-          title="Line items"
+          title={archived ? 'Archived line items' : 'Line items'}
           limitedAccess={viewer.limitedAccess}
           actions={
-            newLink ? (
+            newLink && !archived ? (
               <Button variant="contained" disabled={viewer.readOnly} href={newLink}>
                 New line item
               </Button>
@@ -151,17 +183,19 @@ export function LiGrid({
           }
         />
       )}
-      <Box sx={{ mb: 2, maxWidth: 240 }}>
-        <DvSelect
-          ariaLabel="Status filter"
-          value={filter}
-          options={FILTERS}
-          onChange={(v) => {
-            setFilter(v);
-            setPage({ page: 1, size: page.size });
-          }}
-        />
-      </Box>
+      {archived ? null : (
+        <Box sx={{ mb: 2, maxWidth: 240 }}>
+          <DvSelect
+            ariaLabel="Status filter"
+            value={filter}
+            options={FILTERS}
+            onChange={(v) => {
+              setFilter(v);
+              setPage({ page: 1, size: page.size });
+            }}
+          />
+        </Box>
+      )}
       {error ? (
         <Typography role="alert" color="error">
           {error}
@@ -186,7 +220,7 @@ export function LiGrid({
         isArchived={(r) => r.status === 'ARCHIVED'}
         getAlert={(r) => (r.alertCount > 0 ? 'warning' : null)}
         onStatusChange={
-          viewer.readOnly
+          viewer.readOnly || archived
             ? undefined
             : (r, next) =>
                 startTransition(async () => {
@@ -201,7 +235,11 @@ export function LiGrid({
                   }
                 })
         }
-        emptyState={<Typography sx={{ p: 4 }}>No line items</Typography>}
+        emptyState={
+          <Typography sx={{ p: 4 }}>
+            {archived ? 'No archived line items' : 'No line items'}
+          </Typography>
+        }
       />
     </>
   );

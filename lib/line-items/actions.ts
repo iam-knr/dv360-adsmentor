@@ -3,6 +3,7 @@
 // Server actions of the line item form and lists (module 08 4). Thin: session, then service.
 import type { Issue, LiType } from '@/lib/validation/types';
 import { getSessionUser } from '@/lib/auth/session';
+import { searchApps } from './apps';
 import type { LiFormValue } from './form';
 import {
   assignCreatives,
@@ -13,7 +14,7 @@ import {
   updateLineItem,
   validateLineItem,
 } from './service';
-import type { CopyCandidate, LiCopySource, LiStatus, Result } from './types';
+import type { AppSearchRow, CopyCandidate, LiCopySource, LiStatus, Result } from './types';
 
 const NO_SESSION: Result<never> = {
   ok: false,
@@ -76,4 +77,13 @@ export async function getCopyCandidatesAction(
 export async function getCopySourceAction(liId: string): Promise<Result<LiCopySource>> {
   const user = await getSessionUser();
   return user ? getCopySource(user, liId) : NO_SESSION;
+}
+
+/** App search of the Mobile app install pre-step (L19). */
+export async function searchAppsAction(
+  platform: 'ALL' | 'IOS' | 'ANDROID',
+  q: string,
+): Promise<AppSearchRow[]> {
+  const user = await getSessionUser();
+  return user ? searchApps(platform, q) : [];
 }

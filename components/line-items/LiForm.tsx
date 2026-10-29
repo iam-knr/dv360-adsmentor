@@ -25,7 +25,12 @@ import {
   updateLineItemAction,
   validateLineItemAction,
 } from '@/lib/line-items/actions';
-import { mergeCopySettings, type FieldLock, type FormIo, type LiFormValue } from '@/lib/line-items/form';
+import {
+  mergeCopySettings,
+  type FieldLock,
+  type FormIo,
+  type LiFormValue,
+} from '@/lib/line-items/form';
 import {
   BID_STRATEGY_LABEL,
   LI_TYPE_LABEL,
@@ -33,8 +38,13 @@ import {
   bidOptions,
   exchangesText,
 } from '@/lib/line-items/type-config';
-import type { ConversionPickerRow, CopyCandidate, CreativePickerRow } from '@/lib/line-items/types';
-import { ioPath } from '@/lib/routes/paths';
+import type {
+  AppSearchRow,
+  ConversionPickerRow,
+  CopyCandidate,
+  CreativePickerRow,
+} from '@/lib/line-items/types';
+import { lineItemLanding, liPath } from '@/lib/routes/paths';
 import { LI_COUNTING_MODES } from '@/lib/validation/constants/conversions';
 import { FREQ_PERIODS } from '@/lib/validation/constants/frequency';
 import type { Issue } from '@/lib/validation/types';
@@ -57,6 +67,8 @@ export interface LiFormProps {
   locked: FieldLock[];
   creatives: CreativePickerRow[];
   conversions?: ConversionPickerRow[];
+  /** The chosen app of a Mobile app install line item (read-only, LI-APP-008). */
+  app?: AppSearchRow | null;
   higherCapText: string | null;
   readOnly?: boolean;
 }
@@ -77,6 +89,7 @@ export function LiForm({
   locked,
   creatives,
   conversions = [],
+  app = null,
   higherCapText,
   readOnly,
 }: LiFormProps) {
@@ -127,8 +140,17 @@ export function LiForm({
       setIssues(res.warnings ?? []);
       setSaved(value);
       setNote('');
-      if (mode === 'create')
-        router.push(ioPath(partnerId, advertiserId, campaignId, ioPublicId, 'explorerlis'));
+      if (mode === 'create' && 'publicId' in res.data)
+        router.push(
+          liPath(
+            partnerId,
+            advertiserId,
+            campaignId,
+            ioPublicId,
+            res.data.publicId,
+            lineItemLanding(type),
+          ),
+        );
       else router.refresh();
     });
   };
@@ -179,6 +201,22 @@ export function LiForm({
         </Typography>
 
         <DvSectionCard title="Basic details" layout="settings">
+          {app ? (
+            <Box data-testid="li-app">
+              <Typography variant="subtitle2">Mobile app</Typography>
+              <Typography variant="body2">
+                {app.name} · {app.publisher}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {app.storeLine}
+              </Typography>
+            </Box>
+          ) : null}
+          {value.adType ? (
+            <Typography variant="body2">
+              Ad type: {value.adType === 'VIDEO' ? 'Video' : 'Display'}
+            </Typography>
+          ) : null}
           <DvTextField
             label="Line item name"
             required
@@ -213,12 +251,24 @@ export function LiForm({
           ) : null}
         </DvSectionCard>
 
+        {type === 'DEMAND_GEN' ? (
+          <Typography variant="body2" role="note">
+            Demand Gen line items use Google inventory. Create ad groups and ads on the Ad groups
+            tab after you create the line item.
+          </Typography>
+        ) : null}
+
         {config.exchanges ? (
           <DvSectionCard title="Inventory" layout="settings">
             <Typography variant="body2">
               {value.inventory.quality ? 'Authorized Direct Sellers And Resellers · ' : ''}
               {exchangesText(value.inventory.exchanges.length)}
             </Typography>
+            {config.inventoryNote ? (
+              <Typography variant="body2" color="text.secondary">
+                {config.inventoryNote}
+              </Typography>
+            ) : null}
           </DvSectionCard>
         ) : null}
 
@@ -375,81 +425,85 @@ export function LiForm({
           )}
         </DvSectionCard>
 
-        <DvSectionCard title="Frequency cap" layout="settings">
-          {higherCapText ? <Typography variant="body2">{higherCapText}</Typography> : null}
-          <DvRadioGroup
-            value={cap.mode}
-            readOnly={ro}
-            onChange={(m) => set({ frequencyCap: { ...cap, mode: m as typeof cap.mode } })}
-            options={[
-              { value: 'INHERIT', label: 'Unlimited' },
-              {
-                value: 'LIMITED',
-                label: 'Limit frequency to',
-                inline: (selected) => (
-                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                    <DvTextField
-                      ariaLabel="Exposures"
-                      numeric
-                      disabled={!selected}
-                      value={String(cap.maxImpressions ?? '')}
-                      error={err('frequencyCap.maxImpressions')}
-                      onChange={(maxImpressions) =>
-                        set({ frequencyCap: { ...cap, maxImpressions } })
-                      }
-                    />
-                    <span>exposures per</span>
-                    <DvSelect
-                      value={cap.period ?? 'MONTH'}
-                      disabled={!selected}
-                      options={FREQ_PERIODS.map((p) => ({ value: p, label: p.toLowerCase() }))}
-                      onChange={(p) => set({ frequencyCap: { ...cap, period: p as 'MONTH' } })}
-                    />
-                  </Box>
-                ),
-              },
-            ]}
-          />
-        </DvSectionCard>
-
-        <DvSectionCard title="Creatives" layout="stacked">
-          <Box sx={{ display: 'flex', gap: 2 }} role="tablist" aria-label="Creative filter">
-            {(['all', 'eligible', 'assigned'] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                role="tab"
-                aria-selected={tab === t}
-                onClick={() => setTab(t)}
-              >
-                {t === 'all' ? 'All' : t === 'eligible' ? 'Eligible' : 'Assigned'}
-              </button>
-            ))}
-          </Box>
-          {shownCreatives.length === 0 ? (
-            <Typography variant="body2" color="text.secondary">
-              No creatives
-            </Typography>
-          ) : null}
-          {shownCreatives.map((c) => (
-            <FormControlLabel
-              key={c.id}
-              disabled={ro || (!c.eligible && !value.creatives.includes(c.id))}
-              control={
-                <Checkbox
-                  checked={value.creatives.includes(c.id)}
-                  onChange={() => toggleCreative(c.id)}
-                />
-              }
-              label={`${c.name} (${c.format}${c.dimensions ? `, ${c.dimensions}` : ''})${c.eligible ? '' : ` — ${c.reason ?? 'not eligible'}`}`}
+        {config.frequency ? (
+          <DvSectionCard title="Frequency cap" layout="settings">
+            {higherCapText ? <Typography variant="body2">{higherCapText}</Typography> : null}
+            <DvRadioGroup
+              value={cap.mode}
+              readOnly={ro}
+              onChange={(m) => set({ frequencyCap: { ...cap, mode: m as typeof cap.mode } })}
+              options={[
+                { value: 'INHERIT', label: 'Unlimited' },
+                {
+                  value: 'LIMITED',
+                  label: 'Limit frequency to',
+                  inline: (selected) => (
+                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                      <DvTextField
+                        ariaLabel="Exposures"
+                        numeric
+                        disabled={!selected}
+                        value={String(cap.maxImpressions ?? '')}
+                        error={err('frequencyCap.maxImpressions')}
+                        onChange={(maxImpressions) =>
+                          set({ frequencyCap: { ...cap, maxImpressions } })
+                        }
+                      />
+                      <span>exposures per</span>
+                      <DvSelect
+                        value={cap.period ?? 'MONTH'}
+                        disabled={!selected}
+                        options={FREQ_PERIODS.map((p) => ({ value: p, label: p.toLowerCase() }))}
+                        onChange={(p) => set({ frequencyCap: { ...cap, period: p as 'MONTH' } })}
+                      />
+                    </Box>
+                  ),
+                },
+              ]}
             />
-          ))}
-          {err('creatives') ? (
-            <Typography role="alert" color="error" variant="body2">
-              {err('creatives')}
-            </Typography>
-          ) : null}
-        </DvSectionCard>
+          </DvSectionCard>
+        ) : null}
+
+        {config.creatives ? (
+          <DvSectionCard title="Creatives" layout="stacked">
+            <Box sx={{ display: 'flex', gap: 2 }} role="tablist" aria-label="Creative filter">
+              {(['all', 'eligible', 'assigned'] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === t}
+                  onClick={() => setTab(t)}
+                >
+                  {t === 'all' ? 'All' : t === 'eligible' ? 'Eligible' : 'Assigned'}
+                </button>
+              ))}
+            </Box>
+            {shownCreatives.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                No creatives
+              </Typography>
+            ) : null}
+            {shownCreatives.map((c) => (
+              <FormControlLabel
+                key={c.id}
+                disabled={ro || (!c.eligible && !value.creatives.includes(c.id))}
+                control={
+                  <Checkbox
+                    checked={value.creatives.includes(c.id)}
+                    onChange={() => toggleCreative(c.id)}
+                  />
+                }
+                label={`${c.name} (${c.format}${c.dimensions ? `, ${c.dimensions}` : ''})${c.eligible ? '' : ` — ${c.reason ?? 'not eligible'}`}`}
+              />
+            ))}
+            {err('creatives') ? (
+              <Typography role="alert" color="error" variant="body2">
+                {err('creatives')}
+              </Typography>
+            ) : null}
+          </DvSectionCard>
+        ) : null}
 
         {config.conversions ? (
           <DvSectionCard title="Conversions" layout="settings">
@@ -526,6 +580,11 @@ export function LiForm({
         </DvSectionCard>
 
         <DvSectionCard title="Targeting" layout="stacked">
+          {config.targetingNote ? (
+            <Typography variant="body2" color="text.secondary">
+              {config.targetingNote}
+            </Typography>
+          ) : null}
           <TargetingCard
             lineItemType={type}
             value={value.targetingState}

@@ -40,6 +40,7 @@ export default async function Page({
         initial={detail.value}
         io={detail.io}
         locked={detail.locked}
+        app={detail.app}
         creatives={detail.creatives}
         conversions={detail.conversions}
         higherCapText={detail.higherCapText}
