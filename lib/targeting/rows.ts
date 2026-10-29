@@ -272,7 +272,7 @@ export function rowsToState(rows: readonly TargetingRow[], lineItemType: string)
   const of = (dim: string) => rows.filter((r) => r.dimension === dim);
   const codes = (list: TargetingRow[]) => list.map((r) => r.code ?? r.valueText ?? '');
   const sels = (dim: string) => of(dim).map((r) => toSel(r));
-  const cfg = (r: TargetingRow | undefined) => (r?.config ?? {}) as Record<string, unknown>;
+  const cfg = (r: TargetingRow | undefined) => r?.config ?? {};
 
   for (const r of rows) {
     if (!r.isLocked) continue;

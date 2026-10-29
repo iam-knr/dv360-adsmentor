@@ -164,7 +164,7 @@ export const targetingRules: readonly AnyRule[] = [
     reads: ['targeting'],
     message: null,
     check: () => null,
-  } as AnyRule,
+  },
   def({
     id: 'TGT-010',
     severity: 'error',
@@ -309,7 +309,7 @@ export const targetingRules: readonly AnyRule[] = [
     reads: ['targeting.keywords'],
     message: null,
     check: () => null,
-  } as AnyRule,
+  },
   def({
     id: 'TGT-032',
     severity: 'error',
@@ -627,5 +627,5 @@ export const targetingRules: readonly AnyRule[] = [
     reads: ['targeting'],
     message: null,
     check: () => null,
-  } as AnyRule,
+  },
 ];
