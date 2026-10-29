@@ -22,6 +22,7 @@ export default async function Page({
     (o) => o.key === detail.value.objective,
   );
   if (!entry) notFound();
+  const noneEntry = ioObjectiveMatrix(detail.value.type!).objectives.find((o) => o.key === 'NONE');
   return (
     <Box sx={{ p: 4, maxWidth: 960 }}>
       <IoForm
@@ -34,6 +35,7 @@ export default async function Page({
         currency={detail.currency}
         initial={detail.value}
         matrix={entry}
+        {...(noneEntry ? { noneMatrix: noneEntry } : {})}
         campaignFrequencyCap={detail.campaignFrequencyCap}
         readOnly={toViewerInfo(user).readOnly}
       />

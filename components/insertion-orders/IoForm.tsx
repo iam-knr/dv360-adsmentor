@@ -6,12 +6,17 @@ import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
 import { DvCheckboxGroup, DvRadioGroup, type DvChoiceOption } from '@/components/dv/DvChoice';
 import { DvFormFooter, focusFirstInvalid } from '@/components/dv/DvFormPage';
 import { DvSectionCard } from '@/components/dv/DvSectionCard';
 import { DvSelect } from '@/components/dv/DvSelect';
 import { DvTextField } from '@/components/dv/DvTextField';
+import { StaleSaveDialog } from '@/components/campaigns/StaleSaveDialog';
+import { DvIcon } from '@/components/icons';
 import { KPI_LABEL } from '@/lib/campaigns/kpi';
 import { isMoneyKpi, type FrequencyCapWire, type WireIssue } from '@/lib/campaigns/wire';
 import { useUnsavedGuard } from '@/lib/hooks/useUnsavedGuard';
@@ -40,6 +45,8 @@ export interface IoFormProps {
   currency: string;
   initial: IoWire;
   matrix: ObjectiveEntry;
+  /** Matrix entry of "Insertion order without objective", used once the draft switches to it (AC-07-10). */
+  noneMatrix?: ObjectiveEntry;
   campaignFrequencyCap: FrequencyCapWire;
   readOnly?: boolean;
 }
@@ -64,7 +71,8 @@ export function IoForm({
   version,
   currency,
   initial,
-  matrix,
+  matrix: storedMatrix,
+  noneMatrix,
   campaignFrequencyCap,
   readOnly,
 }: IoFormProps) {
@@ -74,6 +82,8 @@ export function IoForm({
   const [issues, setIssues] = useState<WireIssue[]>([]);
   const [note, setNote] = useState('');
   const [busy, startTransition] = useTransition();
+  const [stale, setStale] = useState(false);
+  const [feeMenu, setFeeMenu] = useState<HTMLElement | null>(null);
   const dirty = useMemo(() => JSON.stringify(value) !== JSON.stringify(saved), [value, saved]);
   useUnsavedGuard(dirty);
 
@@ -85,6 +95,7 @@ export function IoForm({
     known.add(path);
     return err(path);
   };
+  const matrix = value.objective === 'NONE' && noneMatrix ? noneMatrix : storedMatrix;
   const impressionsBudget = value.budget.type === 'IMPRESSIONS';
   const sym = impressionsBudget ? undefined : currency;
   const automate = canAutomate(value.type!, value.objective!);
@@ -99,7 +110,14 @@ export function IoForm({
   const setFees = (kind: 'cpmFees' | 'mediaFees', fees: FeeWire[]) =>
     set({ partnerCosts: { ...value.partnerCosts, [kind]: fees } });
 
-  const submit = () => {
+  /** "Add fee" menu (MX-17, AC-07-08): up to FEES_MAX_PER_KIND of each kind. */
+  const addFee = (kind: 'cpmFees' | 'mediaFees') => {
+    setFeeMenu(null);
+    if (value.partnerCosts[kind].length < FEES_MAX_PER_KIND)
+      setFees(kind, [...value.partnerCosts[kind], emptyFee()]);
+  };
+
+  const submit = (overwrite = false) => {
     if (readOnly) return;
     startTransition(async () => {
       const res =
@@ -107,9 +125,13 @@ export function IoForm({
           ? await createIoAction(campaignId, value, { changeNote: note })
           : await updateIoAction(ioId!, value, {
               changeNote: note,
-              ...(version !== undefined ? { expectedVersion: version } : {}),
+              ...(version !== undefined && !overwrite ? { expectedVersion: version } : {}),
             });
       if (!res.ok) {
+        if (res.code === 'CONFLICT') {
+          setStale(true);
+          return;
+        }
         setIssues(res.issues);
         setTimeout(() => focusFirstInvalid(), 0);
         return;
@@ -188,16 +210,24 @@ export function IoForm({
               }
               options={[{ value: 'INV', label: 'Invoiced' }]}
             />
+            {!readOnly && !f.system ? (
+              <IconButton
+                size="small"
+                aria-label={`Remove ${label} ${i + 1}`}
+                onClick={() =>
+                  setFees(
+                    kind,
+                    fees.filter((_, j) => j !== i),
+                  )
+                }
+              >
+                <DvIcon name="close" size={18} />
+              </IconButton>
+            ) : (
+              <span />
+            )}
           </Box>
         ))}
-        {!readOnly && fees.length < FEES_MAX_PER_KIND ? (
-          <Button
-            sx={{ alignSelf: 'flex-start' }}
-            onClick={() => setFees(kind, [...fees, emptyFee()])}
-          >
-            {kind === 'cpmFees' ? 'Add CPM fee' : 'Add media fee'}
-          </Button>
-        ) : null}
       </Box>
     );
   };
@@ -253,6 +283,27 @@ export function IoForm({
             error={e('name')}
             onChange={(name) => set({ name })}
           />
+          {mode === 'edit' ? (
+            <>
+              <DvSelect
+                label="Objective"
+                value={value.objective ?? ''}
+                disabled={readOnly || initial.objective === 'NONE'}
+                options={[
+                  { value: initial.objective!, label: IO_OBJECTIVE_LABEL[initial.objective!] },
+                  ...(initial.objective !== 'NONE'
+                    ? [{ value: 'NONE', label: IO_OBJECTIVE_LABEL.NONE }]
+                    : []),
+                ]}
+                onChange={(objective) => set({ objective: objective as IoWire['objective'] })}
+              />
+              {value.objective === 'NONE' && initial.objective !== 'NONE' ? (
+                <Typography variant="caption" color="text.secondary">
+                  Saving this change unlocks every KPI and cannot be undone.
+                </Typography>
+              ) : null}
+            </>
+          ) : null}
           <DvSelect
             label="Status"
             value={value.status ?? 'DRAFT'}
@@ -455,6 +506,33 @@ export function IoForm({
         <DvSectionCard title="Partner costs" layout="stacked">
           {value.type !== 'DOOH' ? feeRows('cpmFees', 'CPM fees') : null}
           {feeRows('mediaFees', 'Media fees')}
+          {!readOnly ? (
+            <>
+              <Button
+                sx={{ alignSelf: 'flex-start' }}
+                aria-haspopup="menu"
+                onClick={(ev) => setFeeMenu(ev.currentTarget)}
+              >
+                Add fee
+              </Button>
+              <Menu anchorEl={feeMenu} open={Boolean(feeMenu)} onClose={() => setFeeMenu(null)}>
+                {value.type !== 'DOOH' ? (
+                  <MenuItem
+                    disabled={value.partnerCosts.cpmFees.length >= FEES_MAX_PER_KIND}
+                    onClick={() => addFee('cpmFees')}
+                  >
+                    CPM fee
+                  </MenuItem>
+                ) : null}
+                <MenuItem
+                  disabled={value.partnerCosts.mediaFees.length >= FEES_MAX_PER_KIND}
+                  onClick={() => addFee('mediaFees')}
+                >
+                  Media fee
+                </MenuItem>
+              </Menu>
+            </>
+          ) : null}
         </DvSectionCard>
 
         <DvSectionCard title="Integration details" layout="settings">
@@ -484,7 +562,7 @@ export function IoForm({
           mode={mode}
           dirty={dirty || mode === 'create'}
           primaryLabel={busy ? 'Saving…' : undefined}
-          onPrimary={submit}
+          onPrimary={() => submit()}
           onSecondary={() => router.back()}
           onReset={() => {
             setValue(saved);
@@ -493,6 +571,17 @@ export function IoForm({
           {...(mode === 'edit' ? { note, onNoteChange: setNote } : {})}
         />
       ) : null}
+      <StaleSaveDialog
+        open={stale}
+        onReload={() => {
+          setStale(false);
+          window.location.reload();
+        }}
+        onKeep={() => {
+          setStale(false);
+          submit(true);
+        }}
+      />
     </Box>
   );
 }

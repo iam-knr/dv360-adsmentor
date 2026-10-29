@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { IoFrame } from '@/components/shell/Frames';
+import { IoHeader } from '@/components/insertion-orders/IoHeader';
 
-// Frame IO: "Overview ›", IO name, tabs
+// Frame IO: "Overview ›", IO name with status, tabs (module 07 2.6)
 export default function Layout({ children }: { children: ReactNode }) {
-  return <IoFrame>{children}</IoFrame>;
+  return <IoHeader>{children}</IoHeader>;
 }
