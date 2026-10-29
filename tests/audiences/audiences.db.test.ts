@@ -30,7 +30,6 @@ let activityId: string;
 let plainActivityId: string;
 let channelId: string;
 const user = () => userOf(w);
-const HOUR = 3_600_000;
 
 beforeAll(async () => {
   w = await createWorld('aud');
