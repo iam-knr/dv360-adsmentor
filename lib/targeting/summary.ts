@@ -2,7 +2,7 @@
 import type { MatrixDimension } from '@/lib/validation/constants/targeting-availability';
 import {
   BROWSERS,
-  CATEGORIES_TOP,
+  CATEGORY_OPTIONS,
   CONNECTION_SPEEDS,
   DAYS,
   DEVICE_TYPES,
@@ -111,7 +111,7 @@ export function summarizeTargeting(dim: MatrixDimension, c: TargetingCriteria): 
       return `Include: ${plural(k.include.length, 'keyword')}. Exclude: ${plural(k.exclude.length, 'keyword')}`;
     }
     case 'CATEGORIES':
-      return c.categories ? selText(c.categories, CATEGORIES_TOP) : null;
+      return c.categories ? selText(c.categories, CATEGORY_OPTIONS) : null;
     case 'ENVIRONMENT': {
       const e = c.environment;
       if (!e) return null;
