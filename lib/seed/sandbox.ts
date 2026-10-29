@@ -1,5 +1,6 @@
 // Provisioning of one seeded sandbox: plan, history stub and insert in a single transaction (data-model 3.1 step 2).
 import type { Prisma, PrismaClient } from '@prisma/client';
+import { seedAudiences } from '../audiences/seed';
 import { seedAppCatalog, seedResources } from '../resources/seed';
 import { seedReports } from '../reporting/seed';
 import { seedYoutube, seedYoutubeVideos } from '../youtube/seed';
@@ -115,6 +116,12 @@ export async function provisionSandbox(db: Db, input: ProvisionInput): Promise<P
         // Module 15 resources (P4-04): Floodlight group, channels, lists, custom bidding rows, YouTube assets.
         await seedAppCatalog(tx);
         await seedResources(tx, {
+          sandboxId: sandbox.id,
+          template: input.template,
+          seedValue: input.seedValue,
+        });
+        // Module 14 (P4-03): tag rules, uploads, combined and partner lists on top of the plan's audiences.
+        await seedAudiences(tx, {
           sandboxId: sandbox.id,
           template: input.template,
           seedValue: input.seedValue,

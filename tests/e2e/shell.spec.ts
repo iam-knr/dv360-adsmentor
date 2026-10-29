@@ -271,6 +271,9 @@ test.describe('RT 9 smoke over routes.md section 3', () => {
   const LOOKUP_PAGES = [
     '/custom-bidding/{x}',
     '/fl/events/{x}',
+    '/audience/tagbased/{x}/details',
+    '/audience/{x}/explorerlis',
+    '/audience/{kind}/{x}/details',
     '/ll/{x}',
     '/reporting/instant/{x}',
     '/reporting/instant/{x}/runs',
