@@ -135,7 +135,7 @@ test('E2E-AUD-02: a tag-based list saves as Processing and is Active with a size
   await expect(row).toContainText('Available in about 4 hours');
   await expect(row).toContainText('< 1K');
 
-  await db.simClock.update({ where: { sandboxId: w.sandboxId }, data: { tickIndex: 4n } });
+  await db.simClock.update({ where: { sandboxId: w.sandboxId }, data: { tickIndex: { increment: 4 } } });
   await page.reload();
   const active = page.getByRole('row', { name: /PW cart visitors/ });
   await expect(active).not.toContainText('Available in about');
