@@ -1235,3 +1235,14 @@ export async function readAdAsset(
   );
   return row?.storageKey ? fileStore().get(row.storageKey) : null;
 }
+
+/** LI-YT-021: the advertiser needs Google & partner inventory. Step 1 shows the error and keeps Next disabled. */
+export async function isYoutubeEnabled(user: SessionUser, advertiserId: string): Promise<boolean> {
+  const row = await inSandbox(user, (tx) =>
+    tx.advertiser.findUnique({
+      where: { id: advertiserId },
+      select: { googleInventoryEnabled: true },
+    }),
+  );
+  return row?.googleInventoryEnabled ?? false;
+}

@@ -999,7 +999,10 @@ export function DvGrid<T>(props: DvGridProps<T>) {
               <Box component="tr" role="row" sx={{ height: sizes.rowHeight }}>
                 {renderCols.map((c, ci, all) => {
                   const firstStickyData = all.findIndex((x) => x.kind === 'data' && x.sticky);
-                  const nameCol = c.kind === 'data' && c.sticky && (c.col.type === 'link' || ci === firstStickyData);
+                  const nameCol =
+                    c.kind === 'data' &&
+                    c.sticky &&
+                    (c.col.type === 'link' || ci === firstStickyData);
                   const content = nameCol
                     ? totalLabel
                     : c.kind === 'data' && c.col.total
