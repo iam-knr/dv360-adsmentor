@@ -66,6 +66,7 @@ export function IoList({
     [rows, filter],
   );
   const start = (page.page - 1) * page.size;
+  const sum = (key: 'impressions' | 'revenue') => shown.reduce((acc, r) => acc + r[key], 0);
 
   const columns: DvColumn<IoRow>[] = [
     {
@@ -115,6 +116,7 @@ export function IoList({
       type: 'number',
       align: 'right',
       accessor: (r) => r.impressions,
+      total: () => sum('impressions').toLocaleString('en-US'),
     },
     {
       id: 'revenue',
@@ -124,6 +126,7 @@ export function IoList({
       align: 'right',
       currencySymbol: currency,
       accessor: (r) => r.revenue,
+      total: () => formatCurrency(sum('revenue'), currency),
     },
   ];
 
@@ -186,6 +189,7 @@ export function IoList({
         page={page.page}
         pageSize={page.size}
         total={shown.length}
+        totalRow
         onPageChange={(p, size) => setPage({ page: p, size })}
         getStatus={(r) => DOT[r.status]}
         isArchived={(r) => r.status === 'ARCHIVED'}
