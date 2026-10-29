@@ -124,7 +124,8 @@ export function addBudgetRows(rows: CampaignBudgetWire[]): CampaignBudgetWire[] 
   return [...rows, ...Array.from({ length: BUDGET_ROWS_PER_ADD }, emptyBudgetRow)];
 }
 
-const blank = (v: unknown) => v === null || v === undefined || String(v).trim() === '';
+const blank = (v: unknown) =>
+  v === null || v === undefined || (typeof v === 'string' ? v.trim() === '' : false);
 
 export function isEmptyBudgetRow(row: CampaignBudgetWire): boolean {
   return (

@@ -101,7 +101,7 @@ function liSnapshot(li: LineItem, currency: CurrencyCode): LineItemSnapshot {
     },
     pacingType: li.pacingType,
     bidMode: li.bidKind,
-    optimizedTowards: (li.bidGoal as BidStrategy | null) ?? null,
+    optimizedTowards: li.bidGoal ?? null,
   };
 }
 

@@ -11,7 +11,7 @@ import {
   type IoType,
 } from '@/lib/validation/constants/io-matrix';
 import { FEE_TYPES } from '@/lib/validation/constants/fees';
-import type { FreqPeriod, IoInput, Kpi, Num, PacingPeriod, PacingType } from '@/lib/validation';
+import type { IoInput, Kpi, Num, PacingPeriod, PacingType } from '@/lib/validation';
 import { isMoneyKpi, moneyToMinor, type FrequencyCapWire } from '@/lib/campaigns/wire';
 
 export type { FrequencyCapWire } from '@/lib/campaigns/wire';
@@ -175,7 +175,8 @@ export function newIoValue(type: IoType, objective: IoObjective, today: string):
   };
 }
 
-const blank = (v: unknown) => v === null || v === undefined || String(v).trim() === '';
+const blank = (v: unknown) =>
+  v === null || v === undefined || (typeof v === 'string' ? v.trim() === '' : false);
 
 /** A fee row the user left untouched (no amount, default type): not stored. */
 export function isEmptyFee(f: FeeWire): boolean {
@@ -250,7 +251,7 @@ export function toIoValidationInput(
       mode: io.frequencyCap.mode,
       maxImpressions: blank(io.frequencyCap.maxImpressions) ? null : io.frequencyCap.maxImpressions,
       periodCount: blank(io.frequencyCap.periodCount) ? null : io.frequencyCap.periodCount,
-      period: (io.frequencyCap.period ?? null) as FreqPeriod | null,
+      period: io.frequencyCap.period ?? null,
     },
     partnerCosts: {
       cpmFees: io.partnerCosts.cpmFees.filter((f) => !isEmptyFee(f)).map((f) => fee(f, true)),

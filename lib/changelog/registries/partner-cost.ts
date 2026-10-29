@@ -17,7 +17,7 @@ export const partnerCostFields: FieldDef[] = [
 ];
 
 const feeName = (el: Image) =>
-  `${el.kind === 'MEDIA_FEE' ? 'Media fee' : 'CPM fee'} ${String(el.slot ?? '')}`.trim();
+  `${el.kind === 'MEDIA_FEE' ? 'Media fee' : 'CPM fee'} ${typeof el.slot === 'number' || typeof el.slot === 'string' ? el.slot : ''}`.trim();
 
 export const partnerCostList: FieldDef = {
   path: 'fees',

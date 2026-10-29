@@ -504,9 +504,9 @@ export async function archiveCampaigns(
 }
 
 /** Whether the person may create and edit here (New campaign button, inline menus). */
-export async function campaignAccess(user: SessionUser): Promise<{ canWrite: boolean }> {
-  if (!user.sandboxId) return { canWrite: false };
-  return { canWrite: canWrite(user, user.sandboxId) };
+export function campaignAccess(user: SessionUser): Promise<{ canWrite: boolean }> {
+  if (!user.sandboxId) return Promise.resolve({ canWrite: false });
+  return Promise.resolve({ canWrite: canWrite(user, user.sandboxId) });
 }
 
 export { campaignSnapshotOf };

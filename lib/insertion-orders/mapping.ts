@@ -76,7 +76,8 @@ export function storableTarget(s: BidStrategy | null | undefined): IoOptimizeTar
   return s && (STORABLE_TARGETS as readonly string[]).includes(s) ? (s as IoOptimizeTarget) : null;
 }
 
-const blank = (v: unknown) => v === null || v === undefined || String(v).trim() === '';
+const blank = (v: unknown) =>
+  v === null || v === undefined || (typeof v === 'string' ? v.trim() === '' : false);
 const dec = (v: unknown): Prisma.Decimal | null =>
   blank(v) ? null : new Prisma.Decimal(String(v).trim());
 const text = (v: string | null | undefined): string | null => (blank(v) ? null : String(v).trim());
@@ -137,8 +138,7 @@ export function ioToWire(io: IoFull): IoWire {
     optimization: {
       mode: io.bidBudgetControl,
       optimizedTowards: automated
-        ? ((io.optimizeTarget as BidStrategy | null) ??
-          defaultOptimizedTowards(io.type, io.objective))
+        ? (io.optimizeTarget ?? defaultOptimizedTowards(io.type, io.objective))
         : null,
       prioritizeFullBudget: io.prioritizeFullBudget,
       autoBudgetAllocation: io.autoBudgetAllocation,

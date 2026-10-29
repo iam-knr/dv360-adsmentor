@@ -7,7 +7,8 @@ import { isEmptyBudgetRow, type CampaignWire, type FrequencyCapWire } from './wi
 
 type CampaignWithBudgets = Campaign & { budgets: CampaignBudget[] };
 
-const blank = (v: unknown) => v === null || v === undefined || String(v).trim() === '';
+const blank = (v: unknown) =>
+  v === null || v === undefined || (typeof v === 'string' ? v.trim() === '' : false);
 const dec = (v: unknown): Prisma.Decimal | null =>
   blank(v) ? null : new Prisma.Decimal(String(v).trim());
 const int = (v: unknown): number | null => (blank(v) ? null : Number(v));
