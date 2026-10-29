@@ -39,6 +39,7 @@ import type { DaySegment, TargetingCriteria } from '@/lib/targeting/types';
 import { availability, toLiType } from '@/lib/targeting/dimensions';
 import { CategoryTree } from './CategoryTree';
 import { ListEditor } from './ListEditor';
+import { ADVANCED_EDITORS } from './registry';
 
 export interface EditorProps {
   criteria: TargetingCriteria;
@@ -502,11 +503,15 @@ export function EditorBody(props: EditorProps & { dim: MatrixDimension }) {
           onChange={(carrierIsp) => onChange({ carrierIsp })}
         />
       );
-    default:
-      return (
+    default: {
+      const Advanced = ADVANCED_EDITORS[dim];
+      return Advanced ? (
+        <Advanced {...props} />
+      ) : (
         <Typography variant="body2" color="text.secondary">
           This editor arrives with the advanced targeting session.
         </Typography>
       );
+    }
   }
 }
