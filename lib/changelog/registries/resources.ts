@@ -1,7 +1,7 @@
 // Registries of the resource entities (module 15 4.7): channel, negative keyword list, location list, Floodlight group
 // and Floodlight activity. Entry tables (up to 10,000 rows) are logged as a count, not row by row, so a save of a big
 // list leaves one readable line ("Number of sites changed from 200 to 210").
-import type { EntityRegistry, FieldDef, Image } from '../registry-types';
+import type { EntityRegistry, FieldDef } from '../registry-types';
 
 const ignore = (path: string, label: string): FieldDef => ({
   path,
@@ -31,7 +31,7 @@ export const channelRegistry: EntityRegistry = {
     });
     if (!row) return null;
     const { _count, ...rest } = row;
-    return { ...rest, entryCount: _count.entries } as Image;
+    return { ...rest, entryCount: _count.entries };
   },
   fields: [
     ...common('Channel ID'),
@@ -55,7 +55,7 @@ export const keywordListRegistry: EntityRegistry = {
     });
     if (!row) return null;
     const { _count, ...rest } = row;
-    return { ...rest, entryCount: _count.entries } as Image;
+    return { ...rest, entryCount: _count.entries };
   },
   fields: [
     ...common('Keyword list ID'),
@@ -78,7 +78,7 @@ export const locationListRegistry: EntityRegistry = {
     });
     if (!row) return null;
     const { _count, ...rest } = row;
-    return { ...rest, entryCount: _count.entries } as Image;
+    return { ...rest, entryCount: _count.entries };
   },
   fields: [
     ...common('Location list ID'),
@@ -112,7 +112,7 @@ export const floodlightGroupRegistry: EntityRegistry = {
         name: g.name,
         activityCount: g.activities.length,
       })),
-    } as Image;
+    };
   },
   fields: [
     ...common('Floodlight group ID'),

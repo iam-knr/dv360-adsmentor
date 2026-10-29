@@ -78,7 +78,7 @@ export interface FloodlightConversionInput {
 // ---------------------------------------------------------------------------------------------
 
 function def<T>(kind: Rule<T>['kind'], rule: Omit<Rule<T>, 'kind'>): AnyRule {
-  return { kind, ...rule } as unknown as AnyRule;
+  return { kind, ...rule };
 }
 
 const channel = (rule: Omit<Rule<ChannelInput>, 'kind'>) => def<ChannelInput>('channel', rule);
@@ -168,8 +168,9 @@ export const channelRules: readonly AnyRule[] = [
     id: 'CH-006',
     severity: 'info',
     triggers: [],
-    reads: [],
-    message: MSG.CHANNEL_UNSAVED,
+    reads: ['name', 'sites'],
+    // The unsaved-changes dialog (MSG.CHANNEL_UNSAVED) is a UI behaviour, so the rule documents it only.
+    message: null,
     check: () => null,
   }),
   channel({
@@ -335,6 +336,55 @@ export const floodlightRules: readonly AnyRule[] = [
     message: MSG.ENTER_VALUE,
     check: (g) => (isBlank(g.name) ? { path: 'name' } : null),
   }),
+  group({
+    id: 'FL-020',
+    severity: 'error',
+    triggers: ['blur', 'save'],
+    reads: ['clickDays', 'impressionDays'],
+    message: 'Enter a number between 1 and 90.',
+    check: (g) => {
+      const out = [];
+      if (badWindow(g.clickDays)) out.push({ path: 'attribution.clickDays' });
+      if (badWindow(g.impressionDays)) out.push({ path: 'attribution.impressionDays' });
+      return out.length ? out : null;
+    },
+  }),
+  group({
+    id: 'FL-021',
+    severity: 'error',
+    triggers: ['blur', 'save'],
+    reads: ['viewableImpressionPct'],
+    message: MSG.PCT_RANGE,
+    check: (g) => {
+      if (g.viewableImpressionPct === undefined) return null;
+      const n = toNum(g.viewableImpressionPct);
+      return n === null || n < 0 || n > 100 ? { path: 'viewableImpressionPct' } : null;
+    },
+  }),
+  group({
+    id: 'FL-022',
+    severity: 'error',
+    triggers: ['save'],
+    reads: ['variableKeys'],
+    message: 'Variable names run from u1 to u100.',
+    check: (g) => {
+      const bad = (g.variableKeys ?? [])
+        .map((key, i) => ({ key, i }))
+        .filter(({ key }) => !VARIABLE_KEY.test(key));
+      return bad.length ? bad.map(({ i }) => ({ path: `customVariables[${i}]` })) : null;
+    },
+  }),
+  group({
+    id: 'FL-023',
+    severity: 'info',
+    triggers: [],
+    reads: ['name'],
+    message: null,
+    check: () => null,
+  }),
+];
+
+export const floodlightConversionRules: readonly AnyRule[] = [
   conversion({
     id: 'FL-010',
     severity: 'error',
@@ -406,52 +456,6 @@ export const floodlightRules: readonly AnyRule[] = [
     reads: ['status'],
     message: MSG.CHOOSE_STATUS,
     check: (c) => (c.status === 'ACTIVE' || c.status === 'ARCHIVED' ? null : { path: 'status' }),
-  }),
-  group({
-    id: 'FL-020',
-    severity: 'error',
-    triggers: ['blur', 'save'],
-    reads: ['clickDays', 'impressionDays'],
-    message: 'Enter a number between 1 and 90.',
-    check: (g) => {
-      const out = [];
-      if (badWindow(g.clickDays)) out.push({ path: 'attribution.clickDays' });
-      if (badWindow(g.impressionDays)) out.push({ path: 'attribution.impressionDays' });
-      return out.length ? out : null;
-    },
-  }),
-  group({
-    id: 'FL-021',
-    severity: 'error',
-    triggers: ['blur', 'save'],
-    reads: ['viewableImpressionPct'],
-    message: MSG.PCT_RANGE,
-    check: (g) => {
-      if (g.viewableImpressionPct === undefined) return null;
-      const n = toNum(g.viewableImpressionPct);
-      return n === null || n < 0 || n > 100 ? { path: 'viewableImpressionPct' } : null;
-    },
-  }),
-  group({
-    id: 'FL-022',
-    severity: 'error',
-    triggers: ['save'],
-    reads: ['variableKeys'],
-    message: 'Variable names run from u1 to u100.',
-    check: (g) => {
-      const bad = (g.variableKeys ?? [])
-        .map((key, i) => ({ key, i }))
-        .filter(({ key }) => !VARIABLE_KEY.test(key));
-      return bad.length ? bad.map(({ i }) => ({ path: `customVariables[${i}]` })) : null;
-    },
-  }),
-  group({
-    id: 'FL-023',
-    severity: 'info',
-    triggers: [],
-    reads: [],
-    message: null,
-    check: () => null,
   }),
   conversion({
     id: 'FL-030',

@@ -29,7 +29,6 @@ import {
 } from './kit';
 import { RESOURCE_LIMITS } from './limits';
 import type {
-  CountingMethodKey,
   FloodlightConversionInput,
   FloodlightConversionView,
   FloodlightGroupInput,
@@ -364,7 +363,7 @@ export async function listFloodlightConversions(
       status: r.status === 'ARCHIVED' ? 'ARCHIVED' : 'ACTIVE',
       source: SOURCE_OF[r.format] ?? 'Google tag',
       type: r.type,
-      countingMethod: r.countingMethod as CountingMethodKey,
+      countingMethod: r.countingMethod,
       category: r.category,
       remarketing: r.remarketingEnabled,
       youtubeTracking: r.youtubeEnabled,
@@ -386,7 +385,7 @@ function toConversionView(
     name: r.name,
     format: r.format,
     type: r.type,
-    countingMethod: r.countingMethod as CountingMethodKey,
+    countingMethod: r.countingMethod,
     category: r.category,
     status: r.status === 'ARCHIVED' ? 'ARCHIVED' : 'ACTIVE',
     remarketing: r.remarketingEnabled,

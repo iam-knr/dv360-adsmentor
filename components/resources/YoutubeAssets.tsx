@@ -50,9 +50,6 @@ export function YoutubeAssets({
   const { viewer } = useViewer();
   const [expanded, setExpanded] = useState(true);
   const [page, setPage] = useState({ page: 1, size: 20 });
-  const children = rows.filter(
-    (r) => r.parentId !== null || !rows.some((o) => o.parentId === r.id),
-  );
   const shown = expanded ? rows : [];
   const columns: DvColumn<YoutubeAssetRow>[] = useMemo(
     () => [
