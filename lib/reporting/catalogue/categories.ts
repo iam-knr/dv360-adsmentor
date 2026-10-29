@@ -1,0 +1,57 @@
+// Planned field count per category (module 16 4.2). The catalogue test asserts the real count equals this table and
+// that the counts seen in the demo (docs/explore/12-reporting.md) are met or exceeded.
+import type { ReportCategory } from './types';
+
+export const PLANNED_COUNTS: Record<ReportCategory, number> = {
+  General: 137,
+  Performance: 22,
+  Location: 9,
+  'Computer System': 9,
+  Date: 9,
+  Cost: 54,
+  Fees: 148,
+  Profit: 10,
+  Conversions: 84,
+  'Active View': 60,
+  Audience: 40,
+  'Brand Controls': 15,
+  'Win Loss': 14,
+  'Impression Loss': 8,
+  'Invalid Traffic': 6,
+  'Custom Bidding': 4,
+  'Custom Impression Value': 6,
+  'In-Stream Video': 30,
+  'In-Stream Audio': 10,
+  YouTube: 60,
+  'Unique Reach': 26,
+  'Unique Reach Audience': 4,
+  'Unique Household Reach': 10,
+  'Unique Reach Overlap': 6,
+  'Unique Reach Overlap (pivoted)': 4,
+  'Unique Reach by Frequency (pivoted)': 4,
+  'Programmatic Guaranteed Savings': 4,
+  Savings: 4,
+  Refund: 4,
+  'Digital Out Of Home': 8,
+  'Rich Media': 14,
+  TV: 8,
+  CM360: 6,
+  'Inventory Availability': 9,
+};
+
+/** Counts seen in the demo picker (explore 12). The catalogue must have at least these. */
+export const SEEN_COUNTS: Partial<Record<ReportCategory, number>> = {
+  'Active View': 60,
+  Audience: 40,
+  'Brand Controls': 15,
+  'Computer System': 9,
+  Conversions: 84,
+  Cost: 54,
+  Fees: 148,
+  General: 135,
+  Location: 9,
+  Performance: 22,
+  Profit: 10,
+  'Unique Reach': 26,
+  YouTube: 60,
+};
