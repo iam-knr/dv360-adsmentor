@@ -2,6 +2,7 @@
 import type { ValidationContext } from '@/lib/validation';
 import type {
   ChannelInput,
+  CustomBiddingInput,
   FloodlightConversionInput,
   FloodlightGroupInput,
   KeywordListInput,
@@ -64,4 +65,15 @@ export const validConversion = (
   remarketing: false,
   valueBasedBidding: false,
   ...over,
+});
+
+export const validCustomBidding = (): CustomBiddingInput => ({
+  name: 'Click value',
+  objective: 'CLICKS',
+  source: 'RULES',
+  rules: [{ groupKey: 'Click rules', signalKey: 'CLICKED', score: 1 }],
+  multipliers: [
+    { kind: 'DEVICE_TYPE', values: [{ valueKey: 'SMARTPHONE', multiplier: 1.5 }] },
+    { kind: 'DAY_AND_TIME', values: [{ valueKey: 'WEEKEND_EVENING', multiplier: 2 }] },
+  ],
 });

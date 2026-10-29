@@ -79,6 +79,7 @@ const PAGES: Row[] = [
   [`${P}/channels`, `${AP}/(partner)/channels`, 'P', '15', 'Channels', 'RO'],
   [`${P}/custom-bidding`, `${AP}/(partner)/custom-bidding`, 'P', '15', 'Custom bidding', 'RO'],
   [`${P}/custom-bidding/new`, `${FP}/custom-bidding/new`, 'F', '15', 'New algorithm', 'STD'],
+  [`${P}/custom-bidding/{x}`, `${FP}/custom-bidding/[algorithmId]`, 'F', '15', 'Algorithm', 'RO'],
   [`${P}/floodlights`, `${AP}/(partner)/floodlights`, 'P', '15', 'Floodlight groups', 'RO'],
   [
     `${P}/cross-media-reach`,

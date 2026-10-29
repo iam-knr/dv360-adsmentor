@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { LiAppPreStep } from '@/components/line-items/LiAppPreStep';
+import { listCustomBiddingOptions } from '@/lib/resources/custom-bidding';
 import { LiForm } from '@/components/line-items/LiForm';
 import { LiTypePicker } from '@/components/line-items/LiTypePicker';
 import { YtStep1 } from '@/components/youtube/YtStep1';
@@ -130,9 +131,10 @@ export default async function Page({
     ...(youtube ? { youtube } : {}),
   });
   if (!draft) notFound();
-  const [creatives, conversions] = await Promise.all([
+  const [creatives, conversions, algorithms] = await Promise.all([
     getCreativeCandidates(user, chain.io.id, { type }),
     getConversionCandidates(user, chain.advertiser.id),
+    listCustomBiddingOptions(user, chain.advertiser.id),
   ]);
   return (
     <FormFrame title="New line item">
@@ -148,6 +150,7 @@ export default async function Page({
         app={draft.app}
         creatives={creatives}
         conversions={conversions}
+        algorithms={algorithms}
         higherCapText={draft.higherCapText}
         readOnly={draft.readOnly}
       />

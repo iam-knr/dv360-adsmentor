@@ -56,6 +56,8 @@ import type {
 import { lineItemLanding, liPath } from '@/lib/routes/paths';
 import { LI_COUNTING_MODES } from '@/lib/validation/constants/conversions';
 import { FREQ_PERIODS } from '@/lib/validation/constants/frequency';
+import { CUSTOM_VALUE_STRATEGIES } from '@/lib/validation/constants/bids';
+import type { CbOption } from '@/lib/resources/wire';
 import type { Issue } from '@/lib/validation/types';
 
 export interface LiFormProps {
@@ -76,6 +78,8 @@ export interface LiFormProps {
   locked: FieldLock[];
   creatives: CreativePickerRow[];
   conversions?: ConversionPickerRow[];
+  /** Custom bidding algorithms for the Maximize / Target custom value strategies (module 15). */
+  algorithms?: CbOption[];
   /** The chosen app of a Mobile app install line item (read-only, LI-APP-008). */
   app?: AppSearchRow | null;
   higherCapText: string | null;
@@ -98,6 +102,7 @@ export function LiForm({
   locked,
   creatives,
   conversions = [],
+  algorithms = [],
   app = null,
   higherCapText,
   readOnly,
@@ -452,14 +457,50 @@ export function LiForm({
                   />
                 ) : null}
                 {automated ? (
-                  <DvSelect
-                    label="Optimized towards"
-                    value={value.bid.optimizedTowards ?? ''}
-                    disabled={ro}
-                    error={err('bid.optimizedTowards')}
-                    options={strategies.map((s) => ({ value: s, label: BID_STRATEGY_LABEL[s] }))}
-                    onChange={(s) => set({ bid: { ...value.bid, optimizedTowards: s as never } })}
-                  />
+                  <>
+                    <DvSelect
+                      label="Optimized towards"
+                      value={value.bid.optimizedTowards ?? ''}
+                      disabled={ro}
+                      error={err('bid.optimizedTowards')}
+                      options={strategies.map((s) => ({ value: s, label: BID_STRATEGY_LABEL[s] }))}
+                      onChange={(s) =>
+                        set({
+                          bid: {
+                            ...value.bid,
+                            optimizedTowards: s as never,
+                            ...(CUSTOM_VALUE_STRATEGIES.includes(s as never)
+                              ? {}
+                              : { customBiddingAlgorithmId: null }),
+                          },
+                        })
+                      }
+                    />
+                    {value.bid.optimizedTowards &&
+                    CUSTOM_VALUE_STRATEGIES.includes(value.bid.optimizedTowards) ? (
+                      <DvSelect
+                        label="Custom bidding algorithm"
+                        required
+                        value={value.bid.customBiddingAlgorithmId ?? ''}
+                        disabled={ro}
+                        placeholder="Select an algorithm"
+                        error={err('bid.customBiddingAlgorithmId')}
+                        warning={
+                          algorithms.find((a) => a.id === value.bid.customBiddingAlgorithmId)
+                            ?.status === 'TRAINING'
+                            ? 'This algorithm is still training, so bids use a fallback until it is ready.'
+                            : undefined
+                        }
+                        options={algorithms.map((a) => ({
+                          value: a.id,
+                          label: `${a.name} (${a.status === 'ACTIVE' ? 'Active' : a.status === 'TRAINING' ? `Training ${a.readinessPct}%` : 'Suspended'})`,
+                        }))}
+                        onChange={(id) =>
+                          set({ bid: { ...value.bid, customBiddingAlgorithmId: id || null } })
+                        }
+                      />
+                    ) : null}
+                  </>
                 ) : (
                   <DvTextField
                     label="Fixed bid (CPM)"

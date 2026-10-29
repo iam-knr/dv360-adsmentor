@@ -352,7 +352,10 @@ export async function buildLiContext(
       select: { id: true, status: true },
     }),
     tx.customBiddingAlgorithm.findMany({
-      where: { OR: [{ advertiserId: advertiser.id }, { partnerId: advertiser.partnerId }] },
+      where: {
+        isDraft: false,
+        OR: [{ advertiserId: advertiser.id }, { partnerId: advertiser.partnerId }],
+      },
       select: { id: true, status: true },
     }),
     tx.targetingTemplate.findMany({

@@ -204,3 +204,49 @@ export const floodlightActivityRegistry: EntityRegistry = {
     { path: 'conversionEventName', label: 'Conversion event name', kind: 'text' },
   ],
 };
+
+export const customBiddingRegistry: EntityRegistry = {
+  entityType: 'CUSTOM_BIDDING_ALGORITHM',
+  model: 'CustomBiddingAlgorithm',
+  noun: 'custom bidding algorithm',
+  version: 1,
+  load: async (tx, id) => {
+    const row = await tx.customBiddingAlgorithm.findUnique({
+      where: { id },
+      include: {
+        rules: { orderBy: { ordinal: 'asc' } },
+        multipliers: { orderBy: { ordinal: 'asc' } },
+      },
+    });
+    if (!row || row.isDraft) return null; // wizard drafts leave no History until step 3 saves them
+    const { rules, multipliers, ...rest } = row;
+    return {
+      ...rest,
+      ruleCount: rules.length,
+      rules: rules.map(
+        (r) => `${r.signalKey ?? r.signal} = ${r.value} (score ${r.score.toString()})`,
+      ),
+      multipliers: multipliers.map((m) => m.kind),
+    };
+  },
+  fields: [
+    ...common('Algorithm ID'),
+    ignore('advertiserId', 'Advertiser'),
+    ignore('partnerId', 'Partner'),
+    ignore('source', 'Source'),
+    ignore('modelReadiness', 'Model readiness'),
+    ignore('readinessPct', 'Readiness'),
+    ignore('trainingImpressions', 'Training impressions'),
+    ignore('errorPct', 'Errors'),
+    ignore('activeLineItems', 'Active line items'),
+    ignore('lastTestRunId', 'Last test run'),
+    ignore('isDraft', 'Draft'),
+    { path: 'name', label: 'Algorithm name', kind: 'text' },
+    { path: 'objective', label: 'Objective', kind: 'enum' },
+    { path: 'status', label: 'Status', kind: 'enum' },
+    { path: 'ownerScope', label: 'Owner', kind: 'enum' },
+    { path: 'ruleCount', label: 'Number of rules', kind: 'scalar' },
+    { path: 'rules', label: 'Rules', kind: 'json' },
+    { path: 'multipliers', label: 'Multipliers', kind: 'json' },
+  ],
+};

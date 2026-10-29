@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import Box from '@mui/material/Box';
+import { listCustomBiddingOptions } from '@/lib/resources/custom-bidding';
 import { LiForm } from '@/components/line-items/LiForm';
 import { getLineItemDetail } from '@/lib/line-items/service';
 import { requireView } from '@/lib/scope/guard';
@@ -24,6 +25,7 @@ export default async function Page({
   if (!chain) notFound();
   const detail = await getLineItemDetail(user, chain.li.id);
   if (!detail) notFound();
+  const algorithms = await listCustomBiddingOptions(user, chain.advertiser.id);
   return (
     <Box sx={{ p: 4, maxWidth: 960 }}>
       <LiForm
@@ -43,6 +45,7 @@ export default async function Page({
         app={detail.app}
         creatives={detail.creatives}
         conversions={detail.conversions}
+        algorithms={algorithms}
         higherCapText={detail.higherCapText}
         readOnly={detail.readOnly}
       />
