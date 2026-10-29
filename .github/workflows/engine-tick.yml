@@ -1,16 +1,20 @@
-# Engine timer stub (P3-08b finishes it; ADR-048). Vercel Hobby has no sub-daily cron, so GitHub
-# Actions calls the tick endpoint every 5 minutes. The job does nothing until the owner sets the
-# repository variable ENGINE_TICK_ENABLED to true.
-# Needs Actions secrets: ENGINE_CRON_URL (the tick endpoint URL) and CRON_SECRET.
+# Default engine trigger (ADR-048, RC-056). Vercel Hobby has no sub-daily cron, so GitHub Actions calls the tick
+# endpoint every 5 minutes. Each call advances at most 25 sandboxes and returns how many are still due; the next run
+# continues. Needs Actions secrets ENGINE_CRON_URL (the full endpoint URL) and CRON_SECRET. Without ENGINE_CRON_URL the
+# job exits quietly. A non-2xx answer fails the job.
 name: engine-tick
 on:
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
+concurrency:
+  group: engine-tick
+  cancel-in-progress: false
+permissions: {}
 jobs:
   tick:
-    if: ${{ vars.ENGINE_TICK_ENABLED == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 3
     steps:
       - name: Call the engine tick endpoint
         env:
@@ -21,6 +25,13 @@ jobs:
             echo "ENGINE_CRON_URL is not set; skipping."
             exit 0
           fi
-          curl --fail --silent --show-error --max-time 55 -X POST \
+          status=$(curl --silent --show-error --max-time 65 -X POST \
             -H "Authorization: Bearer ${CRON_SECRET}" \
-            "${ENGINE_CRON_URL}"
+            --output response.json --write-out '%{http_code}' \
+            "${ENGINE_CRON_URL}")
+          cat response.json
+          echo
+          case "${status}" in
+            2??) ;;
+            *) echo "Tick endpoint answered ${status}"; exit 1 ;;
+          esac

@@ -47,3 +47,79 @@ describe('TargetingCard', () => {
     expect(screen.queryByTestId('target-row-DEVICE')).toBeNull();
   });
 });
+
+describe('TargetingCard locks, tree and device editors', () => {
+  it('Display Viewability is locked: Open Measurement text, lock icon, no trash (AC-10-09, AC-10-16)', async () => {
+    const user = userEvent.setup();
+    renderDv(<Harness type="DISPLAY" />);
+    expect(screen.getByTestId('target-row-VIEWABILITY')).toHaveTextContent('Open Measurement');
+    expect(screen.queryByRole('button', { name: 'Remove Viewability' })).toBeNull();
+    expect(screen.getByTestId('locked-VIEWABILITY')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Edit Viewability' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Open Measurement enabled')).toBeInTheDocument();
+    expect(dialog).toHaveTextContent('(locked)');
+    expect(within(dialog).queryByRole('button', { name: /delete|remove/i })).toBeNull();
+    expect(
+      within(dialog).getByRole('combobox', { name: /Predicted viewability/ }),
+    ).toHaveTextContent('All impressions');
+  });
+
+  it('a locked row shows the LI-100 tooltip text on focus (AC-10-16)', async () => {
+    const user = userEvent.setup();
+    renderDv(<Harness type="DISPLAY" />);
+    await user.tab();
+    screen.getByTestId('locked-VIEWABILITY').focus();
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      "This targeting is set in the advertiser's targeting rules.",
+    );
+  });
+
+  it('Categories tree expands and ✓/⊘ works on a child (AC-10-02, AC-10-07)', async () => {
+    const user = userEvent.setup();
+    renderDv(<Harness type="DISPLAY" />);
+    await user.click(screen.getByRole('button', { name: 'Add targeting' }));
+    await user.click(await screen.findByRole('menuitem', { name: /Categories/ }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).queryByRole('button', { name: 'Include Team Sports' })).toBeNull();
+    await user.click(within(dialog).getByRole('button', { name: 'Expand Sports' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Include Team Sports' }));
+    expect(within(dialog).getByRole('button', { name: 'Include Team Sports' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await user.click(within(dialog).getByRole('button', { name: 'Exclude Team Sports' }));
+    expect(within(dialog).getByRole('button', { name: 'Include Team Sports' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    await user.click(within(dialog).getByRole('button', { name: 'Include Sports' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Apply' }));
+    expect(screen.getByTestId('target-row-CATEGORIES')).toHaveTextContent('Include: Sports');
+  });
+
+  it('Categories search reveals matching sub-categories', async () => {
+    const user = userEvent.setup();
+    renderDv(<Harness type="DISPLAY" />);
+    await user.click(screen.getByRole('button', { name: 'Add targeting' }));
+    await user.click(await screen.findByRole('menuitem', { name: /Categories/ }));
+    const dialog = await screen.findByRole('dialog');
+    await user.type(within(dialog).getByRole('textbox', { name: 'Search categories' }), 'poetry');
+    expect(within(dialog).getByRole('button', { name: 'Include Poetry' })).toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: 'Include Finance' })).toBeNull();
+  });
+
+  it('Device editor has operating system and make and model lists', async () => {
+    const user = userEvent.setup();
+    renderDv(<Harness type="CTV" />);
+    await user.click(screen.getByRole('button', { name: 'Edit Device' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Operating system')).toBeInTheDocument();
+    expect(within(dialog).getByText('Make and model')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Apple iPhone' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Apply' }));
+    expect(screen.getByTestId('target-row-DEVICE')).toHaveTextContent(
+      '1 operating system or model',
+    );
+  });
+});

@@ -6,6 +6,7 @@ import { emptyTargetingState, LI_TYPES_FOR_DEV } from '@/lib/targeting/dev';
 
 export function TargetingDevClient() {
   const [type, setType] = useState('DISPLAY');
+  const [readOnly, setReadOnly] = useState(false);
   const [state, setState] = useState(() => emptyTargetingState('DISPLAY'));
   return (
     <main style={{ padding: 24, maxWidth: 900 }}>
@@ -23,7 +24,11 @@ export function TargetingDevClient() {
           ))}
         </select>
       </label>
-      <TargetingCard lineItemType={type} value={state} onChange={setState} />
+      <label style={{ marginLeft: 16 }}>
+        <input type="checkbox" checked={readOnly} onChange={(e) => setReadOnly(e.target.checked)} />{' '}
+        Read-only role
+      </label>
+      <TargetingCard lineItemType={type} value={state} onChange={setState} readOnly={readOnly} />
     </main>
   );
 }
