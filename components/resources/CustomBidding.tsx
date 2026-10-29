@@ -354,7 +354,7 @@ export function CustomBiddingWizard({
   const dirty = !saved && (id === null ? name !== '' || rules.length > 0 : false);
   useUnsavedGuard(dirty);
 
-  const objectiveKey = (objective || null);
+  const objectiveKey = objective || null;
   const err = (p: string) => issues.find((i) => i.severity === 'error' && i.path === p)?.message;
 
   const signalOptions = useMemo(() => {
@@ -559,7 +559,6 @@ export function CustomBiddingWizard({
               >
                 <Box sx={{ minWidth: 300 }}>
                   <DvSelect
-                    label={i === 0 ? 'Signal' : undefined}
                     ariaLabel={`Rule ${i + 1} signal`}
                     value={r.signalKey}
                     options={signalOptions}
@@ -577,7 +576,6 @@ export function CustomBiddingWizard({
                 </Box>
                 <Box sx={{ width: 120 }}>
                   <DvSelect
-                    label={i === 0 ? 'Is' : undefined}
                     ariaLabel={`Rule ${i + 1} value`}
                     value={r.value}
                     options={[
@@ -594,7 +592,6 @@ export function CustomBiddingWizard({
                 </Box>
                 <Box sx={{ width: 100 }}>
                   <DvTextField
-                    label={i === 0 ? 'Score' : undefined}
                     ariaLabel={`Rule ${i + 1} score`}
                     numeric
                     value={r.score}
@@ -652,7 +649,6 @@ export function CustomBiddingWizard({
                   <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}>
                     <Box sx={{ minWidth: 260 }}>
                       <DvSelect
-                        label="Multiplier"
                         ariaLabel={`Multiplier ${i + 1} type`}
                         value={m.kind}
                         error={err(`multipliers[${i}].kind`)}
