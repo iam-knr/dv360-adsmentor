@@ -23,6 +23,8 @@ export interface DvSlideOverProps {
   onApply?: () => void;
   onCancel: () => void;
   applyLabel?: string;
+  /** Apply stays visible but disabled (CH-005: Save is disabled until the form is changed and valid). */
+  applyDisabled?: boolean;
   onDelete?: () => void;
   /** Nesting level: a slide-over opened from a slide-over adds 1 (z-index +10 per level). */
   level?: number;
@@ -43,6 +45,7 @@ export function DvSlideOver({
   onApply,
   onCancel,
   applyLabel = 'Apply',
+  applyDisabled,
   onDelete,
   level = 0,
   aiHelper,
@@ -119,7 +122,7 @@ export function DvSlideOver({
         }}
       >
         {onApply ? (
-          <Button variant="contained" onClick={onApply}>
+          <Button variant="contained" onClick={onApply} disabled={applyDisabled}>
             {applyLabel}
           </Button>
         ) : null}

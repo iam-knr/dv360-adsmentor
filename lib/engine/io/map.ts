@@ -198,22 +198,27 @@ const FL_COUNTING: Record<string, FloodlightActivity['countingMethod']> = {
   ITEMS_SOLD: 'itemsSold',
 };
 
-export function mapActivity(r: {
-  id: string;
-  name: string;
-  status: string;
-  type: string;
-  countingMethod: string;
-  category: string | null;
-  remarketingEnabled: boolean;
-}): FloodlightActivity {
+export function mapActivity(
+  r: {
+    id: string;
+    name: string;
+    status: string;
+    type: string;
+    countingMethod: string;
+    category: string | null;
+    remarketingEnabled: boolean;
+  },
+  /** `FloodlightGroup.tagStatus`: 'broken' is the engine fault of module 15 (no conversions are counted). */
+  groupTagStatus?: string | null,
+): FloodlightActivity {
   return {
     id: r.id,
     name: r.name,
     type: r.type === 'SALE' ? 'sale' : 'counter',
     countingMethod: FL_COUNTING[r.countingMethod] ?? 'standard',
     category: (r.category ? FL_CATEGORY[r.category] : undefined) ?? 'page_view',
-    tagStatus: r.status === 'ACTIVE' ? 'active' : 'inactive',
+    tagStatus:
+      r.status !== 'ACTIVE' ? 'inactive' : groupTagStatus === 'broken' ? 'broken' : 'active',
     remarketing: r.remarketingEnabled,
   };
 }

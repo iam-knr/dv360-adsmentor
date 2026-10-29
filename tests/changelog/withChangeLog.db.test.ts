@@ -447,7 +447,7 @@ describe('withChangeLog', () => {
 
   it('throws when no registry exists for the entity type', async () => {
     await expect(
-      withChangeLog(ctx(), { type: 'CHANNEL', id: 'x', chain: {} }, () =>
+      withChangeLog(ctx(), { type: 'DEAL', id: 'x', chain: {} }, () =>
         Promise.resolve('unreachable'),
       ),
     ).rejects.toBeInstanceOf(MissingRegistryError);
