@@ -68,12 +68,13 @@ function SearchOverlay({ open, onClose }: { open: boolean; onClose: () => void }
     <Dialog
       open={open}
       onClose={onClose}
-      aria-label="Search"
       sx={{
         zIndex: (t) => t.zIndex.searchOverlay,
         '& .MuiDialog-container': { alignItems: 'flex-start' },
       }}
-      slotProps={{ paper: { sx: { width: 640, maxWidth: '95vw', mt: 16, p: 4 } } }}
+      slotProps={{
+        paper: { 'aria-label': 'Search', sx: { width: 640, maxWidth: '95vw', mt: 16, p: 4 } },
+      }}
     >
       <InputBase
         autoFocus
