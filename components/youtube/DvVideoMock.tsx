@@ -3,6 +3,7 @@
 // Static mock player of the ad preview (module 09 2.6, Δ-09-4): thumbnail, play bar, skip button, ad badge, text per
 // format, companion banner slot, Shorts vertical frame and TV frame. No video plays.
 import Box from '@mui/material/Box';
+import { alpha } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import { DvIcon } from '@/components/icons';
 import type { PreviewModel } from '@/lib/youtube/preview';
@@ -49,8 +50,8 @@ export function DvVideoMock({ model }: { model: PreviewModel }) {
             position: 'absolute',
             left: 8,
             top: 8,
-            bgcolor: 'rgba(0,0,0,.6)',
-            color: '#fff',
+            bgcolor: (t) => alpha(t.palette.common.black, 0.6),
+            color: 'common.white',
             px: 1,
             borderRadius: 1,
           }}
@@ -65,8 +66,8 @@ export function DvVideoMock({ model }: { model: PreviewModel }) {
               position: 'absolute',
               right: 8,
               bottom: 16,
-              bgcolor: 'rgba(0,0,0,.7)',
-              color: '#fff',
+              bgcolor: (t) => alpha(t.palette.common.black, 0.7),
+              color: 'common.white',
               px: 1,
             }}
           >
@@ -80,7 +81,7 @@ export function DvVideoMock({ model }: { model: PreviewModel }) {
             right: 0,
             bottom: 0,
             height: 4,
-            bgcolor: 'rgba(0,0,0,.3)',
+            bgcolor: (t) => alpha(t.palette.common.black, 0.3),
           }}
         >
           <Box sx={{ width: '30%', height: '100%', bgcolor: 'error.main' }} />
