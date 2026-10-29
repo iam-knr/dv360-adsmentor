@@ -137,6 +137,7 @@ interface AdSeed {
   video: string;
   headline: string;
   longHeadline: string;
+  description: string;
   review: 'APPROVED' | 'REJECTED' | 'RESTRICTED' | 'PENDING';
   status?: 'ACTIVE' | 'PAUSED';
 }

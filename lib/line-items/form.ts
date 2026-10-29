@@ -16,6 +16,8 @@ import type {
   Num,
   OptimizationMode,
 } from '@/lib/validation/types';
+import { YT_SUBTYPE_INFO } from '@/lib/validation/constants/youtube';
+import { defaultYoutubeInput, isYoutubeType, NO_CAP, type YtStep1 } from '@/lib/youtube/li';
 import { defaultBid, defaultStrategy, TYPE_CONFIG } from './type-config';
 
 /** What the form edits: the validation input (money in major units) plus the columns the rules do not read. */
@@ -47,6 +49,8 @@ export interface DefaultsInput {
   app?: { platform: 'ALL' | 'IOS' | 'ANDROID'; storeId: string } | null;
   adType?: 'DISPLAY' | 'VIDEO' | null;
   name?: string;
+  /** YouTube step 1 choice (module 09 2.1). */
+  youtube?: YtStep1 | null;
 }
 
 /** Media fee 1, the locked DV360 fee (explore 19 2.2, IO form). */
@@ -124,6 +128,17 @@ export function defaultLineItemForm(input: DefaultsInput): LiFormValue {
     creativeOptimization: true,
     targetingState: input.targetingState,
   };
+  if (isYoutubeType(type)) {
+    const youtube = defaultYoutubeInput(type, input.youtube);
+    const info = YT_SUBTYPE_INFO[youtube.subtype!];
+    value.youtube = youtube;
+    value.bid = { ...value.bid, mode: 'AUTOMATED', optimizedTowards: info.liBid, fixedCpm: null };
+    value.frequencyCap = { ...NO_CAP };
+    // Daily is the YouTube default; the amount is required (LI-YT-006)
+    value.budget = { mode: 'UNLIMITED', amount: null };
+    value.pacing = { period: 'DAILY', type: 'EVEN', dailyAmount: null };
+    value.targeting = { dimensions: ['GEOGRAPHY', 'BRAND_SUITABILITY', 'INVENTORY_SOURCE'] };
+  }
   return applyIoLocks(value, io);
 }
 

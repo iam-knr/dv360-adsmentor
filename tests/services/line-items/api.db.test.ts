@@ -179,7 +179,7 @@ describe('handlers', () => {
     expect(rows.find((r) => r.id === image)?.eligible).toBe(true);
     expect(rows.find((r) => r.id === video)?.eligible).toBe(false);
     expect(
-      (await candidates(new Request(url('/creative-candidates?ioId=x&type=YT_VIDEO')))).status,
+      (await candidates(new Request(url('/creative-candidates?ioId=x&type=YT_ON_CTV')))).status,
     ).toBe(400);
   });
 });

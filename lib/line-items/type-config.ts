@@ -51,7 +51,7 @@ export const LI_TYPE_DESCRIPTION: Record<LiType, string> = {
   YT_ON_CTV: 'YouTube and partners video ads on Connected TVs',
 };
 
-/** Types this module builds a form for. YouTube forms belong to module 09 (Phase 4). */
+/** Types this module builds a form for. YouTube video and audio forms are module 09 (P4-06). */
 export const FORM_TYPES: readonly LiType[] = [
   'DISPLAY',
   'VIDEO',
@@ -59,6 +59,8 @@ export const FORM_TYPES: readonly LiType[] = [
   'AUDIO',
   'MOBILE_APP_INSTALL',
   'ADS_IN_MOBILE_APPS',
+  'YT_VIDEO',
+  'YT_AUDIO',
   'DEMAND_GEN',
   'DOOH_DISPLAY',
   'DOOH_VIDEO',
@@ -239,9 +241,26 @@ export const TYPE_CONFIG: Record<LiType, TypeConfig> = {
     preAdded: [],
     targetingNote: 'Select your targeting criteria to control where your ads will be displayed.',
   },
-  // YouTube forms are module 09; these entries only keep the record complete.
-  YT_VIDEO: { ...STANDARD, exchanges: null, quality: false, deals: false, bidModes: ['AUTOMATED'] },
-  YT_AUDIO: { ...STANDARD, exchanges: null, quality: false, deals: false, bidModes: ['AUTOMATED'] },
+  // YouTube forms (module 09 2.2): no exchanges, deals, library creatives (MX-09 A) or optimized targeting; the bid
+  // strategy is locked by the subtype; the amount is required (LI-YT-006). YT_ON_CTV keeps the plain entry.
+  YT_VIDEO: {
+    ...STANDARD,
+    exchanges: null,
+    quality: false,
+    deals: false,
+    optimizedTargeting: false,
+    creatives: false,
+    bidModes: ['AUTOMATED'],
+  },
+  YT_AUDIO: {
+    ...STANDARD,
+    exchanges: null,
+    quality: false,
+    deals: false,
+    optimizedTargeting: false,
+    creatives: false,
+    bidModes: ['AUTOMATED'],
+  },
   YT_ON_CTV: {
     ...STANDARD,
     exchanges: null,

@@ -14,6 +14,13 @@ import { canTransition } from '@/lib/validation/state/transitions';
 import { creativeFormatAllowed } from '@/lib/validation/constants/creatives';
 import { MSG, format } from '@/lib/validation/messages';
 import type { Issue, LiType } from '@/lib/validation/types';
+import { isYoutubeType, youtubeColumns } from '@/lib/youtube/li';
+import {
+  YT_INVENTORY_SOURCES,
+  type YtAdFormatChoice,
+  type YtOptimization,
+  type YtSubtype,
+} from '@/lib/validation/constants/youtube';
 import { findApp } from './apps';
 import {
   applyIoLocks,
@@ -165,7 +172,9 @@ function columnsOf(v: LiFormValue, io: LoadedIo) {
     freqMode: config.frequency
       ? value.frequencyCap.mode === 'LIMITED'
         ? ('LIMITED' as const)
-        : ('INHERIT' as const)
+        : value.frequencyCap.mode === 'UNLIMITED' && isYoutubeType(type)
+          ? ('UNLIMITED' as const)
+          : ('INHERIT' as const)
       : ('INHERIT' as const),
     freqMaxExposures:
       value.frequencyCap.mode === 'LIMITED' ? numOrNull(value.frequencyCap.maxImpressions) : null,
@@ -186,6 +195,9 @@ function columnsOf(v: LiFormValue, io: LoadedIo) {
     revenueCpm: markup ? null : money(value.revenueModel?.value),
     integrationCode: value.integrationCode?.trim() || null,
     integrationDetail: value.integrationDetail?.trim() || null,
+    ...(isYoutubeType(type) && value.youtube
+      ? youtubeColumns(value.youtube, (value.youtube.subtype ?? 'EFFICIENT_REACH') as YtSubtype)
+      : {}),
   };
 }
 
@@ -259,6 +271,25 @@ async function writeChildren(
     });
 
   await persistTargeting(tx, lineItemId, value.targetingState);
+
+  if (isYoutubeType(type) && value.youtube) {
+    // YouTube inventory sources (LI-YT-017) are rows of their own; the targeting card never touches them.
+    await tx.targetingAssignment.deleteMany({
+      where: { lineItemId, ownerType: 'LINE_ITEM', dimension: 'INVENTORY_SOURCE' },
+    });
+    const picked = YT_INVENTORY_SOURCES.filter((s) => value.youtube!.inventorySources.includes(s));
+    if (picked.length)
+      await tx.targetingAssignment.createMany({
+        data: picked.map((valueText) => ({
+          sandboxId,
+          ownerType: 'LINE_ITEM' as const,
+          lineItemId,
+          dimension: 'INVENTORY_SOURCE' as const,
+          mode: 'INCLUDE' as const,
+          valueText,
+        })),
+      });
+  }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -299,6 +330,7 @@ export interface DraftOptions {
   appId?: string | null;
   adType?: 'DISPLAY' | 'VIDEO' | null;
   name?: string | null;
+  youtube?: { optimization: YtOptimization; choice: YtAdFormatChoice | null } | null;
 }
 
 /** Defaults of a new line item (AC-08-04 to AC-08-07). Null when the IO is missing or the type has no form here. */
@@ -325,6 +357,7 @@ export async function getDraftInit(
       app,
       adType,
       ...(opts.name ? { name: opts.name } : {}),
+      ...(opts.youtube ? { youtube: opts.youtube } : {}),
     });
     return {
       value,
@@ -415,7 +448,7 @@ export async function validateLineItem(
     if (!io) return [];
     const stored = liId ? await loadLi(tx, liId) : null;
     const original = stored ? await rowToForm(tx, stored, io.row.advertiser.partnerId) : undefined;
-    return runRules(value, io, await buildLiContext(tx, user, io, original));
+    return runRules(value, io, await buildLiContext(tx, user, io, original, liId));
   });
   return out ?? [];
 }
@@ -499,8 +532,22 @@ export async function updateLineItem(
     const io = await loadIo(tx, stored.ioId);
     if (!io) return notFound();
     const original = await rowToForm(tx, stored, io.row.advertiser.partnerId);
-    const input: LiFormValue = { ...value, ioId: stored.ioId };
-    const issues = runRules(input, io, await buildLiContext(tx, user, io, original));
+    const input: LiFormValue = {
+      ...value,
+      ioId: stored.ioId,
+      // the subtype never changes after create (LI-YT-004); a forged one is reported by the rule
+      ...(value.youtube && isYoutubeType(stored.type)
+        ? {
+            youtube: {
+              ...value.youtube,
+              ...(original.youtube?.sequenceSteps !== undefined
+                ? { sequenceSteps: original.youtube.sequenceSteps }
+                : {}),
+            },
+          }
+        : {}),
+    };
+    const issues = runRules(input, io, await buildLiContext(tx, user, io, original, liId));
     if (issues.some((i) => i.blocking)) return { ok: false as const, issues };
     const status = input.status ?? original.status;
     if (status !== original.status) {
@@ -592,7 +639,7 @@ export async function setLineItemStatus(
     let warnings: Issue[] = [];
     if (input.status === 'ACTIVE') {
       const value = await rowToForm(tx, stored, io.row.advertiser.partnerId);
-      const ctx = await buildLiContext(tx, user, io, value);
+      const ctx = await buildLiContext(tx, user, io, value, stored.id);
       const issues = validate('lineItem', toValidationInput(value, io.currency), ctx, {
         trigger: 'save',
         targetStatus: 'ACTIVE',
@@ -978,7 +1025,7 @@ export async function listLineItems(
       cpa: m && m.conversions > 0 ? m.cpa : null,
       customValueCost:
         m && m.customImpressionCost > 0 ? m.customImpressionValue / m.customImpressionCost : null,
-      ...(youtube ? { trueViewViews: 0 } : {}),
+      ...(youtube ? { trueViewViews: m?.counters.videoViews ?? 0 } : {}),
     };
   });
   const sum = (k: 'impressions' | 'revenue' | 'clicks' | 'conversions') =>

@@ -185,6 +185,7 @@ export const LI_010 = def({
   triggers: ['save'],
   reads: ['inventory.quality'],
   message: 'Choose an inventory quality option.',
+  appliesTo: (l) => !isYoutubeOrDemandGen(l), // YouTube and Demand Gen use Google inventory (no quality dropdown)
   check: (l) =>
     l.inventory.quality && QUALITIES.includes(l.inventory.quality)
       ? null

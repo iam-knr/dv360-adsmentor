@@ -13,6 +13,9 @@ export function peopleByIds(ids: string[]): Promise<DirectoryPerson[]> {
 
 export async function loginIdByEmail(ids: string[], email: string): Promise<string | null> {
   if (ids.length === 0) return null;
-  const row = await prisma.user.findFirst({ where: { id: { in: ids }, email }, select: { id: true } });
+  const row = await prisma.user.findFirst({
+    where: { id: { in: ids }, email },
+    select: { id: true },
+  });
   return row?.id ?? null;
 }
