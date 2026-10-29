@@ -269,7 +269,8 @@ export const CRE_022 = def({
       (VIDEO_MIME as readonly string[]).includes(a.mimeType) &&
       a.sizeBytes <= CREATIVE_LIMITS.VIDEO_MAX_BYTES &&
       (a.durationSeconds == null ||
-        (a.durationSeconds >= CREATIVE_LIMITS.VIDEO_MIN_SEC && a.durationSeconds <= CREATIVE_LIMITS.VIDEO_MAX_SEC));
+        (a.durationSeconds >= CREATIVE_LIMITS.VIDEO_MIN_SEC &&
+          a.durationSeconds <= CREATIVE_LIMITS.VIDEO_MAX_SEC));
     return ok ? null : { path: 'mainAsset' };
   },
 });
@@ -321,7 +322,8 @@ export const CRE_026 = def({
   severity: 'warning',
   triggers: ['save'],
   reads: ['width', 'height'],
-  message: MSG.CRE_STD_SIZE,
+  // same wording as LI-DSP-032 (li-display.ts), which keeps it out of the shared catalogue
+  message: "This creative size can't serve on most exchanges.",
   appliesTo: (c) => is(c, ...DISPLAY_SIZED),
   check: (c) => {
     const w = toNum(c.width) ?? c.mainAsset?.width ?? null;
@@ -383,7 +385,8 @@ const CM360_LOCKED: (keyof CreativeInput)[] = [
   'skipOffsetSec',
 ];
 
-const same = (a: unknown, b: unknown): boolean =>
+type Scalar = string | number | boolean | null | undefined;
+const same = (a: Scalar, b: Scalar): boolean =>
   (a ?? null) === (b ?? null) || String(a ?? '') === String(b ?? '');
 
 export const CRE_060 = def({
@@ -396,7 +399,9 @@ export const CRE_060 = def({
   check: (c, ctx) => {
     const original = originalOf<CreativeInput>(ctx);
     if (!original || original.source !== 'CM360') return null;
-    return CM360_LOCKED.some((k) => !same(c[k], original[k])) ? { path: 'source' } : null;
+    return CM360_LOCKED.some((k) => !same(c[k] as Scalar, original[k] as Scalar))
+      ? { path: 'source' }
+      : null;
   },
 });
 
@@ -424,22 +429,50 @@ export const CRE_100 = def({
   id: 'CRE-100',
   severity: 'error',
   triggers: ['blur', 'save'],
-  reads: ['native.headline', 'native.body', 'native.callToAction', 'native.advertiserName'],
+  reads: [
+    'native.headline',
+    'native.body',
+    'native.callToAction',
+    'native.advertiserName',
+    'optimized.headlines',
+    'optimized.descriptions',
+    'optimized.businessName',
+  ],
   message: MSG.MAX_CHARS,
   appliesTo: (c) => is(c, ...NATIVE),
   check: (c): Violation[] => {
-    const n = c.native ?? {};
-    const fields: [string, string | null | undefined, number][] = [
-      ['native.headline', n.headline, CREATIVE_LIMITS.NATIVE_HEADLINE_MAX],
-      ['native.body', n.body, CREATIVE_LIMITS.NATIVE_BODY_MAX],
-      ['native.callToAction', n.callToAction, CREATIVE_LIMITS.NATIVE_CTA_MAX],
-      ['native.advertiserName', n.advertiserName, CREATIVE_LIMITS.NATIVE_ADVERTISER_MAX],
-    ];
     const out: Violation[] = [];
-    for (const [path, value, max] of fields) {
-      if (isBlank(value)) out.push({ path, message: MSG.ENTER_VALUE });
-      else if (codePointLength(value ?? '') > max) out.push({ path, params: { max } });
+    const text = (
+      path: string,
+      value: string | null | undefined,
+      max: number,
+      required: boolean,
+    ) => {
+      if (isBlank(value)) {
+        if (required) out.push({ path, message: MSG.ENTER_VALUE });
+      } else if (codePointLength(value ?? '') > max) out.push({ path, params: { max } });
+    };
+    const o = c.optimized;
+    if (o) {
+      o.headlines.forEach((h, i) =>
+        text(`optimized.headlines[${i}]`, h, CREATIVE_LIMITS.OPTIMIZED_HEADLINE_CHARS, i === 0),
+      );
+      o.descriptions.forEach((d, i) =>
+        text(
+          `optimized.descriptions[${i}]`,
+          d,
+          CREATIVE_LIMITS.OPTIMIZED_DESCRIPTION_CHARS,
+          i === 0,
+        ),
+      );
+      text('optimized.businessName', o.businessName, CREATIVE_LIMITS.NATIVE_ADVERTISER_MAX, true);
+      return out;
     }
+    const n = c.native ?? {};
+    text('native.headline', n.headline, CREATIVE_LIMITS.NATIVE_HEADLINE_MAX, true);
+    text('native.body', n.body, CREATIVE_LIMITS.NATIVE_BODY_MAX, true);
+    text('native.callToAction', n.callToAction, CREATIVE_LIMITS.NATIVE_CTA_MAX, true);
+    text('native.advertiserName', n.advertiserName, CREATIVE_LIMITS.NATIVE_ADVERTISER_MAX, true);
     return out;
   },
 });
@@ -448,11 +481,16 @@ export const CRE_101 = def({
   id: 'CRE-101',
   severity: 'error',
   triggers: ['save'],
-  reads: ['mainAsset', 'logoAsset'],
+  reads: ['mainAsset', 'logoAsset', 'optimized.imageCount', 'optimized.logoCount'],
   message: MSG.CRE_NATIVE_ASSETS,
-  appliesTo: (c) => is(c, ...NATIVE) && !c.optimized,
-  check: (c) =>
-    c.mainAsset && c.logoAsset ? null : { path: c.mainAsset ? 'logoAsset' : 'mainAsset' },
+  appliesTo: (c) => is(c, ...NATIVE),
+  check: (c) => {
+    if (c.optimized) {
+      if (c.optimized.imageCount < 1) return { path: 'mainAsset' };
+      return c.optimized.logoCount < 1 ? { path: 'logoAsset' } : null;
+    }
+    return c.mainAsset && c.logoAsset ? null : { path: c.mainAsset ? 'logoAsset' : 'mainAsset' };
+  },
 });
 
 export const CRE_102 = def({

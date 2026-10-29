@@ -131,7 +131,12 @@ export interface CreativeStatusView {
     status: Dv360Status;
     feedback: string;
     canAppeal: boolean;
-    restrictions: { id: string; message: string; countryCode: string | null }[];
+    restrictions: {
+      id: string;
+      message: string;
+      countryCode: string | null;
+      blocksText: string | null;
+    }[];
     destinationUrls: string[];
   };
   exchanges: ExchangeReviewRow[];

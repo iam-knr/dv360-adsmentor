@@ -10,7 +10,6 @@ import {
   asResult,
   changeCtx,
   conflict,
-  forbidden,
   invalid,
   notFound,
   type Result,
@@ -18,7 +17,6 @@ import {
 } from '@/lib/campaigns/service-kit';
 import { toWireIssues, type WireIssue } from '@/lib/campaigns/wire';
 import { validate } from '@/lib/validation/engine';
-import { youtubeIdOf } from '@/lib/validation/rules/creative';
 import type { CreativeAssetInput, CreativeInput } from '@/lib/validation/types';
 import { feedbackFor } from './feedback';
 import {
@@ -37,7 +35,6 @@ import {
   CREATIVE_INCLUDE,
   exchangeNames,
   exchangeRequiresSsl,
-  intOrNull,
   isSslCompliant,
   needsReReview,
   reviewingExchanges,
@@ -58,7 +55,6 @@ import type {
   CreativeDetail,
   CreativeListQuery,
   CreativeListResult,
-  CreativeRow,
   WriteMeta,
 } from './types';
 
@@ -453,12 +449,18 @@ async function planReview(
   input: CreativeInput,
 ): Promise<ReviewPlanRows> {
   const exchangeIds = await reviewingExchanges(tx, adv.partnerId, input.kind);
+  // RC-033: partner feature flag `creativeRandomDisapprovalRate` (whole percent); scenarios set 0, free play keeps 3
+  const flag = await tx.partnerFeatureFlag.findFirst({
+    where: { partnerId: adv.partnerId, key: 'CREATIVE_RANDOM_DISAPPROVAL_RATE' },
+    select: { numericValue: true },
+  });
   const plan = reviewSchedule({
     sandboxSeed: await sandboxSeed(tx, ctx.sandboxId),
     creativeId,
     simNow: ctx.simNow,
     exchangeIds,
     thirdParty: isThirdPartyKind(input.kind),
+    ...(flag?.numericValue != null ? { disapproveRate: flag.numericValue / 100 } : {}),
   });
   const ssl = isSslCompliant(input);
   const bad = plan.verdict === 'NOT_SERVABLE';
@@ -901,5 +903,30 @@ export async function getCreativePreview(
       return { kind, srcDoc: previewDocument(panel(color)), width: w, height: h };
     }
     return { kind: 'IFRAME', srcDoc: previewDocument(panel('#455a64')), width: w, height: h };
+  });
+}
+
+export interface LineItemChoice {
+  id: string;
+  publicId: string;
+  name: string;
+  type: string;
+  status: string;
+}
+
+/** Line items of the advertiser the "Assign to line items…" dialog offers (not archived). */
+export async function listAssignableLineItems(
+  user: SessionUser,
+  aid: string,
+): Promise<LineItemChoice[]> {
+  return readCtx(user, async (tx) => {
+    const adv = await loadAdvertiser(tx, aid);
+    const rows = await tx.lineItem.findMany({
+      where: { advertiserId: adv.id, status: { not: 'ARCHIVED' } },
+      orderBy: [{ name: 'asc' }, { publicId: 'asc' }],
+      take: 500,
+      select: { id: true, publicId: true, name: true, type: true, status: true },
+    });
+    return rows.map((r) => ({ ...r, publicId: r.publicId.toString() }));
   });
 }

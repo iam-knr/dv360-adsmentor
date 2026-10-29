@@ -5,7 +5,7 @@ import type { SessionUser } from '@/lib/auth/types';
 import { asResult, invalid, notFound, type Result } from '@/lib/campaigns/service-kit';
 import { assignCreatives } from '@/lib/line-items/service';
 import { creativeFormatAllowed } from '@/lib/validation/constants/creatives';
-import { LI_TYPE_LABEL, type LiType } from '@/lib/validation/constants/li-compat';
+import { LI_TYPE_LABEL } from '@/lib/validation/constants/li-compat';
 import { loadAdvertiser, parseIdRef, readCtx, whereId, writeCtx } from './guard';
 import { CREATIVE_INCLUDE, exchangeNames, toRow } from './load';
 import { mx09FormatOf } from './kinds';
@@ -119,7 +119,7 @@ export async function getEligibleCreatives(
     });
     const extBy = new Map(exts.map((e) => [e.creativeId, e]));
     const assigned = new Set(li.assignments.map((a) => a.creativeId));
-    const type = li.type as LiType;
+    const type = li.type;
     const adType =
       li.appAdFormat === 'VIDEO' ? 'VIDEO' : li.appAdFormat === 'DISPLAY' ? 'DISPLAY' : null;
     const all = stored.map((c) => {

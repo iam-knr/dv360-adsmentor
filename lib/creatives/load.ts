@@ -8,7 +8,7 @@ import { youtubeIdOf } from '@/lib/validation/rules/creative';
 import { formatLabel, KIND_META } from './kinds';
 import { countExchanges, exchangeStatusText, hash01, shownDv360Review } from './review';
 import { parseVast } from './vast';
-import type { CreativeAssetView, CreativeRow, ExchangeStatus } from './types';
+import type { CreativeAssetView, CreativeRow } from './types';
 
 export const CREATIVE_INCLUDE = {
   reviews: true,
@@ -110,7 +110,7 @@ export function toRow(
       exchanges: c.reviews
         .map((r) => ({
           name: names.get(r.exchangeId)?.name ?? r.exchangeId,
-          status: r.status as ExchangeStatus,
+          status: r.status,
         }))
         .sort((a, b) => a.name.localeCompare(b.name)),
     },
@@ -275,7 +275,8 @@ export function toExtData(
 
 /** Fields whose change sends the creative back to review (module 12 4.3 updateCreative, AC 6). */
 export function needsReReview(before: CreativeInput, after: CreativeInput): boolean {
-  const same = (a: unknown, b: unknown) => String(a ?? '').trim() === String(b ?? '').trim();
+  const same = (a: string | number | null | undefined, b: string | number | null | undefined) =>
+    String(a ?? '').trim() === String(b ?? '').trim();
   const asset = (a: CreativeAssetInput | null | undefined) =>
     a ? `${a.fileName}:${a.sizeBytes}` : '';
   return (

@@ -15,7 +15,6 @@ import {
 } from '@/lib/campaigns/service-kit';
 import { exchangeIdsFor } from '@/lib/line-items/load';
 import { validate } from '@/lib/validation/engine';
-import type { LiType } from '@/lib/validation/constants/li-compat';
 import { servingEligibility } from './eligibility';
 import { feedbackFor } from './feedback';
 import {
@@ -128,9 +127,9 @@ async function eligibilityRows(
         height: c.height,
       },
       {
-        type: li.type as LiType,
+        type: li.type,
         adType,
-        exchangeIds: await exchangeIdsFor(tx, partnerId, li.type as LiType, adType),
+        exchangeIds: await exchangeIdsFor(tx, partnerId, li.type, adType),
         targetedCountries: geo
           .filter((g) => g.lineItemId === li.id)
           .flatMap((g) => (codeOf.get(g.optionId!) ? [codeOf.get(g.optionId!)!] : [])),
@@ -140,7 +139,7 @@ async function eligibilityRows(
       lineItemId: li.id,
       lineItemPublicId: li.publicId.toString(),
       name: li.name,
-      type: li.type as LiType,
+      type: li.type,
       canServe: result.canServe,
       why: result.why ?? null,
       code: result.code ?? null,
@@ -186,16 +185,27 @@ export async function getCreativeStatus(
       }),
     ]);
     const write = canWriteCreatives(user);
+    const countryNames = new Map(
+      (
+        await tx.targetingOption.findMany({
+          where: {
+            dimension: 'GEOGRAPHY',
+            code: {
+              in: c.creativeRestrictions.flatMap((r) => (r.countryCode ? [r.countryCode] : [])),
+            },
+          },
+          select: { code: true, name: true },
+        })
+      ).map((o) => [o.code, o.name]),
+    );
     const openFor = new Set(appeals.map((a) => a.exchangeId ?? 'dv360'));
     const shown = shownDv360Review(c.dv360Review, ext?.dv360DecideAt ?? null, ctx.simNow);
     const rows: ExchangeReviewRow[] = c.reviews
       .map((r): ExchangeReviewRow => {
         const ex = exchanges.get(r.exchangeId);
-        const status = r.status as ExchangeStatus;
+        const status = r.status;
         const ssl: ExchangeStatus =
-          r.sslStatus === 'PENDING' && status === 'APPROVED'
-            ? 'APPROVED'
-            : (r.sslStatus as ExchangeStatus);
+          r.sslStatus === 'PENDING' && status === 'APPROVED' ? 'APPROVED' : r.sslStatus;
         return {
           exchangeId: r.exchangeId,
           name: ex?.name ?? r.exchangeId,
@@ -218,7 +228,7 @@ export async function getCreativeStatus(
       created: c.createdAt.toISOString(),
       modified: c.updatedAt.toISOString(),
       reviewCompleted:
-        (c.reviewCompletedAt ?? (dvDone ? ext!.dv360DecideAt : null))?.toISOString() ?? null,
+        (c.reviewCompletedAt ?? (dvDone ? ext.dv360DecideAt : null))?.toISOString() ?? null,
       dv360: {
         status: shown,
         feedback:
@@ -232,6 +242,9 @@ export async function getCreativeStatus(
           id: r.id,
           message: r.message,
           countryCode: r.countryCode,
+          blocksText: r.countryCode
+            ? `This creative is restricted from serving in line items that target ${countryNames.get(r.countryCode) ?? r.countryCode}.`
+            : null,
         })),
         destinationUrls: [
           ...new Set([...urls.map((u) => u.url), ...(c.landingPageUrl ? [c.landingPageUrl] : [])]),

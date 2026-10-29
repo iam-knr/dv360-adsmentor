@@ -37,6 +37,16 @@ export async function createCreativeWorld(tag: string): Promise<World & { exchan
   await prisma.partnerExchange.create({
     data: { sandboxId: w.sandboxId, partnerId: w.partnerId, exchangeId: second.id },
   });
+  // RC-033: the random 3 percent disapproval is off in tests; review-schedule.test.ts covers the rate itself
+  await prisma.partnerFeatureFlag.create({
+    data: {
+      sandboxId: w.sandboxId,
+      partnerId: w.partnerId,
+      key: 'CREATIVE_RANDOM_DISAPPROVAL_RATE',
+      enabled: true,
+      numericValue: 0,
+    },
+  });
   return { ...w, exchange2: second.id };
 }
 

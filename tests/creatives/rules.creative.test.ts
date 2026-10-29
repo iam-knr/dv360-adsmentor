@@ -5,8 +5,10 @@ import { youtubeIdOf } from '@/lib/validation/rules/creative';
 import type { CreativeInput } from '@/lib/validation/types';
 import { ids, png, run, TAG, valid } from './fixtures';
 
-const v = (kind: string, patch: Partial<CreativeInput> = {}): CreativeInput =>
-  ({ ...valid[kind]!, ...patch }) as CreativeInput;
+const v = (kind: string, patch: Partial<CreativeInput> = {}): CreativeInput => ({
+  ...valid[kind]!,
+  ...patch,
+});
 
 describe('valid creatives', () => {
   it.each(Object.keys(valid))('%s has no blocking issue', (kind) => {
@@ -265,6 +267,33 @@ describe('CRE rules', () => {
       run(v('NATIVE_SITE', { logoAsset: null })).find((i) => i.ruleId === 'CRE-101')?.message,
     ).toBe('Add a main image and a logo.');
     expect(ids(run(v('NATIVE_SITE')))).not.toContain('CRE-101');
+  });
+  it('CRE-100 and CRE-101 on the Optimized asset group', () => {
+    const optimized = (o: object) =>
+      v('NATIVE_SITE', {
+        formatKey: 'OPTIMIZED',
+        native: undefined,
+        optimized: {
+          headlines: ['Buy now'],
+          descriptions: ['A short text'],
+          imageCount: 1,
+          logoCount: 1,
+          businessName: 'Brand',
+          callToAction: 'Shop',
+          ...o,
+        },
+      });
+    expect(ids(run(optimized({})), 'error')).toEqual([]);
+    expect(run(optimized({ headlines: [''] })).find((i) => i.ruleId === 'CRE-100')?.path).toBe(
+      'optimized.headlines[0]',
+    );
+    expect(
+      run(optimized({ headlines: ['Buy now', 'x'.repeat(31)] })).find((i) => i.ruleId === 'CRE-100')
+        ?.message,
+    ).toBe('Use 30 characters or fewer.');
+    expect(ids(run(optimized({ businessName: '' })))).toContain('CRE-100');
+    expect(ids(run(optimized({ imageCount: 0 })))).toContain('CRE-101');
+    expect(ids(run(optimized({ logoCount: 0 })))).toContain('CRE-101');
   });
   it('CRE-102 skip offset', () => {
     expect(ids(run(v('VIDEO_FILE', { skippable: true, skipOffsetSec: 15 })))).toContain('CRE-102');

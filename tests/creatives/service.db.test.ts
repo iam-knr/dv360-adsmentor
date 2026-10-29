@@ -282,6 +282,47 @@ describe('appeals (AC 7, 8)', () => {
   });
 });
 
+describe('not servable (the random disapproval forced on by the partner flag, RC-033)', () => {
+  it('shows Pending, then Not servable on every exchange, and the DV360 appeal runs its course', async () => {
+    const setRate = (n: number) =>
+      prisma.partnerFeatureFlag.updateMany({
+        where: { partnerId: w.partnerId, key: 'CREATIVE_RANDOM_DISAPPROVAL_RATE' },
+        data: { numericValue: n },
+      });
+    await setSimHours(w, 200);
+    await setRate(100);
+    const id = must(await createCreative(user(), aid(), tpDisplay('Rejected tag'))).id;
+    await setRate(0);
+    expect((await getCreativeDetail(user(), aid(), id)).row.dv360Status).toBe('PENDING');
+    await engineSync(230);
+    const s = await getCreativeStatus(user(), aid(), id);
+    expect(s.dv360).toMatchObject({ status: 'NOT_SERVABLE', canAppeal: true });
+    expect(s.exchanges.every((e) => e.status === 'DISAPPROVED' && e.canAppeal)).toBe(true);
+    expect(s.exchangeSummary).toBe('Approved by 0 of 2 exchanges');
+    // appeal at the DV360 level
+    const appeal = must(await appealCreative(user(), aid(), id, {}));
+    expect(appeal.appealIds).toHaveLength(1);
+    expect((await prisma.creative.findUniqueOrThrow({ where: { id } })).dv360Review).toBe(
+      'PENDING',
+    );
+    const mid = await getCreativeStatus(user(), aid(), id);
+    expect(mid.dv360).toMatchObject({ status: 'PENDING', canAppeal: false });
+    expect(mid.exchanges.every((e) => e.status === 'PENDING')).toBe(true);
+    await setSimHours(w, 230 + 40);
+    const done = await getCreativeStatus(user(), aid(), id);
+    expect(['SERVABLE', 'NOT_SERVABLE']).toContain(done.dv360.status);
+    const accepted = done.dv360.status === 'SERVABLE';
+    expect(done.exchanges.every((e) => e.status === (accepted ? 'APPROVED' : 'DISAPPROVED'))).toBe(
+      true,
+    );
+    const row = (await listAppeals(user(), aid())).rows.find((a) => a.creativeId === id)!;
+    expect(row).toMatchObject({
+      appealType: 'DV360 review',
+      status: accepted ? 'Approved' : 'Rejected',
+    });
+  });
+});
+
 describe('bulk status (AC 9)', () => {
   it('warns with the count when pausing a creative on an active line item and logs one group per creative', async () => {
     const id = must(await createCreative(user(), aid(), tpDisplay('In use'))).id;

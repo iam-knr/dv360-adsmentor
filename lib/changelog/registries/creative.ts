@@ -139,7 +139,7 @@ export async function loadCreativeImage(tx: Tx, id: string): Promise<Image | nul
   void _c;
   void _i;
   void _s;
-  return { ...row, archived: row.status === 'ARCHIVED', ...extColumns } as unknown as Image;
+  return { ...row, archived: row.status === 'ARCHIVED', ...extColumns };
 }
 
 export const creativeRegistry: EntityRegistry = {

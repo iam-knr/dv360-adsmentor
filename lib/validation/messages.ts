@@ -86,7 +86,6 @@ export const MSG = {
   CRE_AUDIO_FILE: 'Upload a supported audio file.',
   CRE_VAST: 'Enter a valid VAST tag.',
   CRE_YOUTUBE: "We couldn't find that video. Check the URL or ID.",
-  CRE_STD_SIZE: "This creative size can't serve on most exchanges.",
   CRE_AI_LABEL: 'Laws in some regions may require labelling AI-made ads.',
   CRE_APPEAL_ONLY_DISAPPROVED: 'Only creatives that were disapproved can be appealed.',
   CRE_CM360_READONLY: "This creative is synced from Campaign Manager 360 and can't be edited here.",
@@ -94,8 +93,7 @@ export const MSG = {
   CRE_NATIVE_ASSETS: 'Add a main image and a logo.',
   CRE_SKIP_OFFSET: 'The skip offset must be shorter than the video.',
   CRE_FILE_TOO_LARGE: 'That file is too large.',
-  CRE_GWD_ONLY:
-    'This format can only be built in a design tool outside this simulator.',
+  CRE_GWD_ONLY: 'This format can only be built in a design tool outside this simulator.',
 } as const;
 
 export type MsgKey = keyof typeof MSG;

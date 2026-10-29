@@ -14,12 +14,21 @@ import {
   bulkCreativeAction,
   createCreative,
   getCreativePreview,
+  listAssignableLineItems,
+  listCreatives,
   testTag,
   updateCreative,
   validateCreative,
   type CreativePreview,
+  type LineItemChoice,
 } from './service';
-import type { BulkResponse, CreativeRow, WriteMeta } from './types';
+import type {
+  BulkResponse,
+  CreativeListQuery,
+  CreativeListResult,
+  CreativeRow,
+  WriteMeta,
+} from './types';
 
 const NO_SESSION: Result<never> = {
   ok: false,
@@ -121,4 +130,17 @@ export async function eligibleCreativesAction(
 ): Promise<(CreativeRow & { eligible: boolean; why?: string })[]> {
   const user = await getSessionUser();
   return user ? soft(() => getEligibleCreatives(user, liId, q), []) : [];
+}
+
+export async function listCreativesAction(
+  aid: string,
+  q: CreativeListQuery,
+): Promise<CreativeListResult | null> {
+  const user = await getSessionUser();
+  return user ? soft(() => listCreatives(user, aid, q), null) : null;
+}
+
+export async function lineItemChoicesAction(aid: string): Promise<LineItemChoice[]> {
+  const user = await getSessionUser();
+  return user ? soft(() => listAssignableLineItems(user, aid), []) : [];
 }
