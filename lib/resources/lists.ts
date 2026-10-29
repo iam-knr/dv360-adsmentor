@@ -276,7 +276,7 @@ export async function listChannels(user: SessionUser, scope: ResourceScope): Pro
         urls,
         includedByLis: u?.included.size ?? 0,
         excludedByLis: u?.excluded.size ?? 0,
-        ownerScope: (c.partnerId ? 'PARTNER' : 'ADVERTISER'),
+        ownerScope: c.partnerId ? 'PARTNER' : 'ADVERTISER',
       };
     });
   });

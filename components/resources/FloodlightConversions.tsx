@@ -32,6 +32,7 @@ import {
   validateConversionAction,
 } from '@/lib/resources/actions';
 import { RESOURCE_LIMITS } from '@/lib/resources/limits';
+import { newConversionValue } from '@/lib/resources/wire';
 import { COUNTING_METHODS_BY_ACTIVITY } from '@/lib/validation/constants/conversions';
 import type {
   FloodlightConversionInput,
@@ -248,27 +249,6 @@ const METHOD_LABEL: Record<string, string> = {
   TRANSACTIONS: 'Transactions',
   ITEMS_SOLD: 'Items sold',
 };
-
-export function newConversionValue(platform: PlatformKey): FloodlightConversionInput {
-  return {
-    platform,
-    name: '',
-    format: 'GOOGLE_TAG',
-    type: null,
-    countingMethod: null,
-    category: null,
-    status: 'ACTIVE',
-    remarketing: false,
-    youtubeEnabled: false,
-    valueBasedBidding: false,
-    commercePartner: false,
-    personalizedAdExclusion: 'DONT_EXCLUDE',
-    customVariableKeys: [],
-    appId: null,
-    ctvAppId: null,
-    conversionEventName: null,
-  };
-}
 
 export function ConversionForm({
   partnerId,

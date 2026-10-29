@@ -47,7 +47,7 @@ const SOURCE_OF: Record<string, FloodlightRow['source']> = {
 
 const DEFAULT_MODELS: {
   name: string;
-  kind: Prisma.FloodlightAttributionModelCreateWithoutGroupInput['kind'];
+  kind: 'LAST_CLICK' | 'LINEAR';
   isPrimary: boolean;
 }[] = [
   { name: 'Last click', kind: 'LAST_CLICK', isPrimary: true },
@@ -181,9 +181,11 @@ async function ensureGroup(tx: Tx, ctx: ServiceCtx, adv: AdvertiserRow): Promise
           sandboxId: ctx.sandboxId,
           advertiserId: adv.id,
           name: `${adv.name} Floodlight`,
-          models: { create: DEFAULT_MODELS.map((m) => ({ ...m, sandboxId: ctx.sandboxId })) },
         },
         select: { id: true, publicId: true },
+      });
+      await t.floodlightAttributionModel.createMany({
+        data: DEFAULT_MODELS.map((m) => ({ ...m, sandboxId: ctx.sandboxId, groupId: g.id })),
       });
       await t.advertiser.update({ where: { id: adv.id }, data: { floodlightGroupId: g.id } });
       return g;

@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation';
-import { ConversionForm, newConversionValue } from '@/components/resources/FloodlightConversions';
+import { ConversionForm } from '@/components/resources/FloodlightConversions';
 import { FormFrame } from '@/components/shell/Frames';
 import { listAppOptions } from '@/lib/resources/apps';
+import { newConversionValue } from '@/lib/resources/wire';
 import { requireView } from '@/lib/scope/guard';
 import { resolveAdvertiser } from '@/lib/scope/resolve';
 

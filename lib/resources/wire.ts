@@ -152,6 +152,27 @@ export interface FloodlightConversionInput {
   conversionEventName: string | null;
 }
 
+export function newConversionValue(platform: PlatformKey): FloodlightConversionInput {
+  return {
+    platform,
+    name: '',
+    format: 'GOOGLE_TAG',
+    type: null,
+    countingMethod: null,
+    category: null,
+    status: 'ACTIVE',
+    remarketing: false,
+    youtubeEnabled: false,
+    valueBasedBidding: false,
+    commercePartner: false,
+    personalizedAdExclusion: 'DONT_EXCLUDE',
+    customVariableKeys: [],
+    appId: null,
+    ctvAppId: null,
+    conversionEventName: null,
+  };
+}
+
 export interface FloodlightConversionView extends FloodlightConversionInput {
   id: string;
   version: number;
