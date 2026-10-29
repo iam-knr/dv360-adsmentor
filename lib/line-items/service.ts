@@ -528,7 +528,7 @@ export async function updateLineItem(
         const updated = await t.lineItem.update({
           where: { id: stored.id },
           data: {
-            ...columnsOf({ ...input, type: stored.type as LiType }, io),
+            ...columnsOf({ ...input, type: stored.type }, io),
             status: status === 'ARCHIVED' ? 'ARCHIVED' : (status ?? stored.status),
             version: { increment: 1 },
           },
@@ -538,7 +538,7 @@ export async function updateLineItem(
           t,
           stored.sandboxId,
           stored.id,
-          { ...input, type: stored.type as LiType },
+          { ...input, type: stored.type },
           user.actor?.id ?? user.id,
         );
         return updated;
@@ -673,7 +673,7 @@ export async function getCopySource(
     const value = await rowToForm(tx, li, io.row.advertiser.partnerId);
     return {
       ok: true as const,
-      data: { id: li.id, type: li.type as LiType, settings: copySettingsOf(value) },
+      data: { id: li.id, type: li.type, settings: copySettingsOf(value) },
     };
   });
   return out ?? notFound();
@@ -966,9 +966,9 @@ export async function listLineItems(
       ioPublicId: r.io.publicId.toString(),
       campaignPublicId: r.campaign.publicId.toString(),
       name: r.name,
-      status: (r.status === 'SCHEDULED_FOR_DELETION' ? 'ARCHIVED' : r.status) as LiStatus,
+      status: r.status === 'SCHEDULED_FOR_DELETION' ? 'ARCHIVED' : r.status,
       alertCount: alertCount.get(r.id) ?? 0,
-      type: r.type as LiType,
+      type: r.type,
       budget: r.budgetMode === 'FIXED' && r.budgetAmount ? Number(r.budgetAmount) : null,
       goal: r.io.kpi ?? GOAL_LABEL[r.io.objective] ?? '-',
       impressions: m?.impressions ?? 0,

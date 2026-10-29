@@ -1,7 +1,34 @@
-import { StubPage } from '@/components/shell/StubPage';
+import { notFound } from 'next/navigation';
+import { LiGrid } from '@/components/line-items/LiGrid';
+import { listLineItems } from '@/lib/line-items/service';
+import { requireView } from '@/lib/scope/guard';
+import { resolveAdvertiser } from '@/lib/scope/resolve';
 
 export const metadata = { title: 'Line items' };
 
-export default function Page() {
-  return <StubPage module="08" title="Line items" view="RO" />;
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ partnerId: string; advertiserId: string; campaignId?: string; ioId?: string }>;
+}) {
+  const user = await requireView('RO');
+  const p = await params;
+  const chain = await resolveAdvertiser(p.partnerId, p.advertiserId);
+  if (!chain) notFound();
+  const result = await listLineItems(
+    user,
+    { kind: 'advertiser', id: chain.advertiser.id },
+    {
+      status: ['DRAFT', 'ACTIVE', 'PAUSED', 'ARCHIVED'],
+      pageSize: 1000,
+    },
+  );
+  if (!result) notFound();
+  return (
+    <LiGrid
+      partnerId={chain.partner.publicId}
+      advertiserId={chain.advertiser.publicId}
+      result={result}
+    />
+  );
 }

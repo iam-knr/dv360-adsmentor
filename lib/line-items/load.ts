@@ -171,7 +171,7 @@ const EU: Record<string, 'YES' | 'NO'> = {
 
 /** Stored line item to the form value. Exchanges are the partner list for the format (no stored subset). */
 export async function rowToForm(tx: Tx, li: StoredLi, partnerId: string): Promise<LiFormValue> {
-  const type = li.type as LiType;
+  const type = li.type;
   const adType = li.appAdFormat ?? null;
   const app =
     type === 'MOBILE_APP_INSTALL'
@@ -203,7 +203,7 @@ export async function rowToForm(tx: Tx, li: StoredLi, partnerId: string): Promis
     bid: {
       mode: li.bidKind,
       fixedCpm: dec(li.fixedBidCpm),
-      optimizedTowards: (li.bidGoal as BidStrategy | null) ?? null,
+      optimizedTowards: li.bidGoal ?? null,
       priority: li.bidPriority === 'TARGET_VALUE' ? 'TARGET' : 'FULL_BUDGET',
       targetValue: dec(li.bidTargetValue),
       customBiddingAlgorithmId: li.customBiddingAlgorithmId,
@@ -374,9 +374,7 @@ export async function buildLiContext(
           },
         ]),
       ),
-      templates: new Map(
-        templates.map((t) => [t.id, { id: t.id, liType: t.lineItemType as LiType }]),
-      ),
+      templates: new Map(templates.map((t) => [t.id, { id: t.id, liType: t.lineItemType }])),
     },
   };
 }
