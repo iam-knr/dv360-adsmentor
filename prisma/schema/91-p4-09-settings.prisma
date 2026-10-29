@@ -1,0 +1,31 @@
+// Sandbox-local colleagues of the DV360 Users page (RC-016, module 02 DELTA-02-2). Added by P4-09 in migration
+// 0004_settings_contacts. They are not login users: no password, they cannot sign in, and the same email may exist
+// in many sandboxes. The foreign keys to Sandbox and the row level security are in the migration, not in this file
+// (Prisma would need back-relations on Sandbox, which belongs to P3-05a).
+
+model SandboxContact {
+  id        String   @id @default(cuid())
+  sandboxId String
+  email     String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  grants SandboxContactGrant[]
+
+  @@unique([sandboxId, email])
+}
+
+model SandboxContactGrant {
+  id           String @id @default(cuid())
+  sandboxId    String
+  contactId    String
+  partnerId    String?
+  advertiserId String?
+  role         DvRole
+
+  contact SandboxContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([contactId, partnerId, advertiserId])
+  @@index([sandboxId])
+}
