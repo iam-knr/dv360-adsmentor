@@ -614,6 +614,8 @@ Run 2 to 3 sessions in parallel per wave. Prompts for these are written by a pla
 | 8 | P4-07 reporting: module 16 M16-01 to M16-12. P4-08 planning: module 04 T1 to T12. P4-10 bulk, SDF, experiments: module 11 T11-01 to T11-13, module 17 M17-01 to M17-11 | reporting needs Floodlight and creatives; planning needs inventory | wave 7 merged |
 | 9 | P4-11 optimisation, alerts, Troubleshooter: module 11 T11-14 to T11-16, module 08 T08-11, T08-12, module 06 T06-08, T06-09, module 01 T07 to T14, T16, module 03 T06. P4-12 history and notifications UI: module 05 T3 to T10 | both read finished entities | wave 8 merged |
 
+Added by P3-INT (`docs/gaps/p3.md` A3): before wave 10 add one engine session for a coarse fast-forward (daily-only mode or a cached template history), because `engine.fastForward` runs at about 0.27 s per tick and 14 days hourly plus 90 days daily would take about 11 minutes per sandbox. Sandbox provisioning keeps the closed-form history stub until then.
+
 ### 3.8 Phase 5 outline
 
 | Wave | Sessions | Notes |
