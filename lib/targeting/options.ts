@@ -215,3 +215,96 @@ export const VIDEO_PLAYER_SIZES = list(['Small', 'Medium', 'Large', 'HD', 'Unkno
 export function labelOf(options: readonly OptionDef[], code: string): string {
   return options.find((o) => o.code === code)?.label ?? code;
 }
+
+/** Sub-categories of the Categories tree (explore 07: "each expandable to sub-categories"; depth 3 on a few). Synthetic below the 26 verbatim top level names. */
+export interface CategoryNode extends OptionDef {
+  children?: CategoryNode[];
+}
+const SUBS: Record<string, readonly (string | [string, readonly string[]])[]> = {
+  'Arts & Entertainment': [
+    ['Movies', ['Action Movies', 'Comedy Movies']],
+    'Music & Audio',
+    'TV & Video',
+    'Celebrities & Entertainment News',
+  ],
+  'Autos & Vehicles': ['Motor Vehicles', 'Vehicle Parts & Services', 'Vehicle Shopping'],
+  'Beauty & Fitness': ['Cosmetics', 'Fitness', 'Hair Care'],
+  'Books & Literature': ['E-Books', 'Fiction', 'Poetry'],
+  'Business & Industrial': ['Advertising & Marketing', 'Agriculture & Forestry', 'Manufacturing'],
+  'Computers & Electronics': [
+    ['Consumer Electronics', ['Mobile Phones', 'Audio Equipment']],
+    'Software',
+    'Computer Hardware',
+  ],
+  Finance: ['Banking', 'Insurance', 'Investing'],
+  'Food & Drink': ['Cooking & Recipes', 'Restaurants', 'Beverages'],
+  Games: ['Computer & Video Games', 'Board Games', 'Puzzles'],
+  Health: ['Fitness Nutrition', 'Medical Facilities', 'Mental Health'],
+  'Hobbies & Leisure': ['Crafts', 'Outdoors', 'Photography'],
+  'Home & Garden': ['Furniture', 'Gardening', 'Home Improvement'],
+  'Internet & Telecom': ['Mobile & Wireless', 'Web Services', 'Email & Messaging'],
+  'Jobs & Education': ['Education', 'Jobs', 'Training'],
+  'Law & Government': ['Government', 'Legal', 'Public Safety'],
+  News: ['Business News', 'Sports News', 'Weather'],
+  'Online Communities': ['Social Networks', 'Forums', 'Blogging Resources'],
+  'People & Society': ['Family & Relationships', 'Religion & Belief', 'Social Issues'],
+  'Pets & Animals': ['Pets', 'Wildlife', 'Animal Products'],
+  'Real Estate': ['Property Listings', 'Property Management', 'Rentals'],
+  Reference: ['Dictionaries', 'Maps', 'Libraries & Museums'],
+  Science: ['Astronomy', 'Biology', 'Physics'],
+  Shopping: [['Apparel', ['Shoes', 'Accessories']], 'Consumer Resources', 'Auctions'],
+  Sports: ['Team Sports', 'Individual Sports', 'Fan Gear'],
+  'Travel & Transportation': ['Air Travel', 'Hotels & Accommodations', 'Tourist Destinations'],
+  'World Localities': ['Africa', 'Asia', 'Europe'],
+};
+const leaf = (label: string, parent: string): CategoryNode => ({
+  code: `${slug(parent)}__${slug(label)}`,
+  label,
+});
+export const CATEGORY_TREE: CategoryNode[] = CATEGORIES_TOP.map((top) => ({
+  ...top,
+  children: (SUBS[top.label] ?? []).map((s) => {
+    if (typeof s === 'string') return leaf(s, top.label);
+    const node = leaf(s[0], top.label);
+    return { ...node, children: s[1].map((g) => leaf(g, node.code)) };
+  }),
+}));
+
+/** Every node of the tree with its path (for lookups and search). */
+export function flattenCategories(
+  nodes: readonly CategoryNode[] = CATEGORY_TREE,
+  path: string[] = [],
+): (OptionDef & { path: string[] })[] {
+  return nodes.flatMap((n) => [
+    { code: n.code, label: n.label, path },
+    ...flattenCategories(n.children ?? [], [...path, n.label]),
+  ]);
+}
+export const CATEGORY_OPTIONS: OptionDef[] = flattenCategories().map(({ code, label }) => ({
+  code,
+  label,
+}));
+
+export const OPERATING_SYSTEMS = list([
+  'Android',
+  'iOS',
+  'Windows',
+  'macOS',
+  'Linux',
+  'ChromeOS',
+  'Roku OS',
+  'Tizen',
+  'webOS',
+]);
+/** Device make and model (explore 07: "All items included"); synthetic catalogue. */
+const MAKES: readonly (readonly [string, readonly string[]])[] = [
+  ['Apple', ['iPhone', 'iPad', 'Mac']],
+  ['Samsung', ['Galaxy S', 'Galaxy Tab', 'Smart TV']],
+  ['Google', ['Pixel', 'Chromecast']],
+  ['Xiaomi', ['Redmi', 'Mi Pad']],
+  ['Roku', ['Streaming Stick', 'Roku TV']],
+];
+export const DEVICE_MAKE_MODELS: OptionDef[] = MAKES.flatMap(([make, models]) => [
+  { code: slug(make), label: make },
+  ...models.map((m) => ({ code: `${slug(make)}__${slug(m)}`, label: `${make} ${m}` })),
+]);
