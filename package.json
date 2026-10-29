@@ -46,6 +46,7 @@
     "@tanstack/react-virtual": "3.14.23",
     "@vercel/blob": "1.1.1",
     "date-fns": "4.4.0",
+    "exceljs": "4.4.0",
     "fflate": "0.8.3",
     "material-symbols": "0.48.2",
     "next": "15.5.28",
