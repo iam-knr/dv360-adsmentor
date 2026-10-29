@@ -44,7 +44,7 @@ test('E2E-RES-05: build an algorithm with a rule and two multipliers, test it, s
 
   // Step 1: Set up.
   await page.locator('#custom-bidding-name').fill('PW viewable value');
-  await page.getByRole('radio', { name: /Brand awareness/ }).check();
+  await page.getByText('Brand awareness', { exact: true }).click();
   await page.getByRole('button', { name: 'Add rule' }).click();
   await expect(page.getByLabel('Rule 1 signal')).toBeVisible();
   await page.getByRole('button', { name: 'Add multiplier' }).click();
@@ -109,7 +109,7 @@ test('E2E-RES-06: each step blocks with the module 15 messages', async ({ page }
 
   // A fifth multiplier and a duplicate type.
   await page.locator('#custom-bidding-name').fill('PW errors');
-  await page.getByRole('radio', { name: /Clicks/ }).check();
+  await page.getByText('Clicks', { exact: true }).click();
   await page.getByRole('button', { name: 'Add rule' }).click();
   for (let i = 0; i < 5; i += 1) await page.getByRole('button', { name: 'Add multiplier' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
