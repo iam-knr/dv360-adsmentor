@@ -1,7 +1,7 @@
 // Instant deal forecast (module 13 4.1 `InstantDealForecast`, engine 5.5, RC-026). Pure and deterministic: the same
 // payload and seed give the same numbers, and narrower targeting gives a lower p50. The engine does not expose
 // `instantDealForecast` yet, so this is the simulator's stand-in with the same output shape.
-import { hashString } from '@/lib/seed/prng';
+import { hashString } from '../seed/prng';
 
 export interface ForecastInput {
   sellerId: string;
