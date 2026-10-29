@@ -25,6 +25,8 @@ import {
 import { MSG } from '@/lib/validation/messages';
 import type { MatrixDimension } from '@/lib/validation/constants/targeting-availability';
 import { EditorBody, editorError } from './editors/editors';
+import { ADVANCED_WIDTH, advancedEditorError } from './editors/registry';
+import { useTargetingEditorContext } from './editors/apps-urls/context';
 import type { TargetingCriteria } from '@/lib/targeting/types';
 
 export interface TargetingCardProps {
@@ -50,6 +52,10 @@ const EDITABLE: MatrixDimension[] = [
   'KEYWORDS',
   'KEYWORD_EXCLUSIONS',
   'DAY_TIME',
+  'GEOGRAPHY',
+  'APPS_URLS',
+  'BRAND_SUITABILITY',
+  'AUDIENCE_LISTS',
 ];
 
 /** Add targeting menu, row summaries and right slide-over editors (module 10 2.1 to 2.3). Editors do not touch the URL (RC-044). */
@@ -64,6 +70,7 @@ export function TargetingCard({
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [open, setOpen] = useState<MatrixDimension | null>(null);
   const [draft, setDraft] = useState<TargetingCriteria>({});
+  const editorContext = useTargetingEditorContext();
 
   const state = value.lineItemType === lineItemType ? value : { ...value, lineItemType };
   const rows = rowsOf(state);
@@ -93,11 +100,13 @@ export function TargetingCard({
     setAnchor(null);
   };
   const close = () => setOpen(null);
+  const err = open
+    ? (editorError(open, draft) ?? advancedEditorError(open, draft, editorContext))
+    : null;
   const apply = () => {
-    if (open && !editorError(open, draft)) onChange({ ...state, criteria: draft });
+    if (open && !err) onChange({ ...state, criteria: draft });
     close();
   };
-  const err = open ? editorError(open, draft) : null;
 
   return (
     <Box data-testid="targeting-card" sx={{ border: 1, borderColor: 'divider', borderRadius: 1 }}>
@@ -214,6 +223,7 @@ export function TargetingCard({
         <DvSlideOver
           open
           title={CARD_LABEL[open] ?? open}
+          width={ADVANCED_WIDTH[open] ?? 'default'}
           dirty={JSON.stringify(draft) !== JSON.stringify(state.criteria)}
           onCancel={close}
           onApply={readOnly || err ? undefined : apply}
