@@ -263,9 +263,17 @@ Notes: e2e specs create synthetic students with `createShellWorld` (`tests/shell
 ### 9.6 Cloud sessions run on 2026-10-29 (for reference)
 P3-08b `session_015aSPDgTzqhaFz9Hw7J7hJm`, P3-02b `session_015aSPDiDmdiB1GXwZ7Yumyf`, P3-06c leftovers `session_015aSPDjpp4jtMW9oDYffHqf`, P3-06b leftovers `session_015aSPDk42JgrUnio2uaw3LY`, P3-07a leftovers `session_015aSPDhhdQYGo8MF8842gx5`. Each follows the prompt of its id in `docs/specs/build-plan.md` section 4.
 
-### 9.7 Next steps in order
-1. Merge the PRs in 9.2.
-2. Run P3-07b (build-plan 4.15) as a cloud session; then P3-INT (4.16): demo path, swap the seed history stub for `engine.fastForward`, gap list in `docs/gaps/p3.md`.
-3. Visual fidelity pass: open the demo DV360 account and https://dv360-adsmentor.vercel.app side by side in the browser with Claude in Chrome (it cannot be driven from a cloud session). Compare Campaigns list, New campaign, New insertion order, New line item and the targeting card using SOP-3 and `docs/explore/`. Turn each difference into a fix task for a cloud session.
-4. Owner items in 9.3, then Phase 4 waves (build-plan 3.7).
-5. Credit and deadline: $100 cloud credit expires 5 Nov 2026 1:29 PM IST; merge freeze 5 Nov 9:00 AM IST (PROJECT.md section 8).
+### 9.7 State at the end of the 2026-10-29 shift (read this first)
+Merged on `main`: everything in the section 4 merge table through P3-06c, plus P3-02b (#14, reduced scope), P3-07a follow-up (#16), P3-06b follow-up (#18), P3-08b engine runtime (#15), P3-09 metrics (#10), the flaky-test fix (#19) and this log (#17). No PR from the cloud sessions of this shift is waiting for merge except the two below, which are still running and have not opened PRs yet.
+
+Cloud sessions still running when the shift ended (check them at claude.ai/code, they open their own PR when done; they were told not to merge anything):
+- **P3-07b** `session_015aSPDm2QM2GFY9PtGmWxE2`, branch `p3-07b-targeting-advanced`: geography, apps and URLs, brand suitability, audience builder editors.
+- **P3-INT** `session_015aSPDiYiutbKwmJ1j3Nii1`, branch `p3-int-integration`: demo path, `docs/demo-script.md`, `docs/gaps/p3.md`, `tests/e2e/demo-path.spec.ts`, `/sim/admin/seed`, engine fast-forward in provisioning, cross-session fixes. It was started before 07b merged and was told to merge `main` again before finishing.
+If either session stopped without a PR, look at its branch on GitHub: `git log origin/<branch>` shows what it pushed; open a PR from it after merging `main` into it (resolve `PROJECT.md` by keeping both sides' rows).
+
+### 9.8 Next steps in order
+1. Check the two sessions above; review and merge their PRs (Squash and merge after green checks; if `main` moved, merge it into the PR branch first). If `db-tests` fail intermittently see 9.3b.
+2. Owner items (Kailas): P-02, P-12 (usage credits off, $100 balance, expires 5 Nov 2026 1:29 PM IST), P-03 Vercel import, P-04 Supabase URLs into Vercel, P-06 GitHub Actions secrets, P-07 `AUTH_SECRET` and `CRON_SECRET`. Then check https://dv360-adsmentor.vercel.app/api/health and create the first Super admin (`npm run db:bootstrap`, with the owner). Do not enable the engine timer before the secrets exist (9.5).
+3. Visual fidelity pass in the browser (Claude in Chrome, Edge): demo DV360 account next to the simulator; SOP-3, `docs/explore/`; screens: Campaigns list, New campaign, New insertion order, New line item, targeting card. Turn each difference into a task for a cloud session. This cannot be done from a cloud session.
+4. Phase 4 waves (build-plan 3.7), starting from `docs/gaps/p3.md` once P3-INT has written it.
+5. Deadlines: merge freeze 5 Nov 9:00 AM IST, credit expiry 5 Nov 1:29 PM IST (PROJECT.md section 8).
