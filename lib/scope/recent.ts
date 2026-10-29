@@ -3,7 +3,6 @@ import 'server-only';
 // One row per (user, entity), upserted; the 20 newest per (user, entity type) are kept.
 import type { SessionUser } from '@/lib/auth/types';
 import { withSandbox } from '@/lib/db';
-import { recentlyViewed } from './ui-state-db';
 
 export type RecentEntityType = 'ADVERTISER' | 'CAMPAIGN' | 'INSERTION_ORDER' | 'LINE_ITEM';
 export const RECENT_KEEP = 20;
@@ -17,23 +16,22 @@ export async function logRecentlyOpened(
   if (!user.sandboxId || user.viewAs) return;
   const { entityType, entityId, partnerId } = input;
   await withSandbox(user.sandboxId, async (tx) => {
-    const table = recentlyViewed(tx);
-    if (!table) return; // P3-05c schema not merged yet
     const sandboxId = user.sandboxId ?? '';
-    await table.upsert({
+    await tx.recentlyViewed.upsert({
       where: {
         sandboxId_userId_entityType_entityId: { sandboxId, userId: user.id, entityType, entityId },
       },
       create: { sandboxId, userId: user.id, partnerId, entityType, entityId, viewedAt: now },
       update: { viewedAt: now, partnerId },
     });
-    const old = await table.findMany({
+    const old = await tx.recentlyViewed.findMany({
       where: { sandboxId, userId: user.id, entityType },
       orderBy: { viewedAt: 'desc' },
       skip: RECENT_KEEP,
       select: { id: true },
     });
-    if (old.length) await table.deleteMany({ where: { id: { in: old.map((o) => o.id) } } });
+    if (old.length)
+      await tx.recentlyViewed.deleteMany({ where: { id: { in: old.map((o) => o.id) } } });
   });
 }
 

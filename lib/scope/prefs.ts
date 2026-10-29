@@ -5,7 +5,6 @@ import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import type { SessionUser } from '@/lib/auth/types';
 import { withSandbox } from '@/lib/db';
-import { userPreferences } from './ui-state-db';
 
 export const PREF_MAX_BYTES = 4096;
 /** SHL-010 (proposed in module 01 4.1, RC-053). */
@@ -68,13 +67,11 @@ export function cleanPrefsPatch(
 
 export async function getPrefs(user: Pick<SessionUser, 'id' | 'sandboxId'>): Promise<UserPrefs> {
   if (!user.sandboxId) return {};
-  const rows = await withSandbox(
-    user.sandboxId,
-    async (tx) =>
-      (await userPreferences(tx)?.findMany({
-        where: { userId: user.id },
-        select: { key: true, value: true },
-      })) ?? [],
+  const rows = await withSandbox(user.sandboxId, (tx) =>
+    tx.userPreference.findMany({
+      where: { userId: user.id },
+      select: { key: true, value: true },
+    }),
   );
   const prefs: Record<string, unknown> = {};
   for (const r of rows) {
@@ -99,12 +96,10 @@ export async function savePrefs(
   if (!user.viewAs) {
     const sandboxId = user.sandboxId;
     await withSandbox(sandboxId, async (tx) => {
-      const table = userPreferences(tx);
-      if (!table) return; // P3-05c schema not merged yet: the browser copy is all there is
       for (const [key, value] of Object.entries(clean.patch)) {
         // a pref set to null means "no choice"; Prisma stores it as JSON null
         const json = value === null || value === undefined ? Prisma.JsonNull : value;
-        await table.upsert({
+        await tx.userPreference.upsert({
           where: { userId_sandboxId_key: { userId: user.id, sandboxId, key } },
           create: { userId: user.id, sandboxId, key, value: json },
           update: { value: json },
