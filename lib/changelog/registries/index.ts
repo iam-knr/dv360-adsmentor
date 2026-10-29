@@ -17,6 +17,7 @@ import {
   locationListRegistry,
 } from './resources';
 import { partnerRegistry } from './partner';
+import { planRegistry } from './plan';
 import { adGroupRegistry, adRegistry } from './youtube';
 
 export const REGISTRIES: Partial<Record<EntityType, EntityRegistry>> = {
@@ -33,6 +34,7 @@ export const REGISTRIES: Partial<Record<EntityType, EntityRegistry>> = {
   CREATIVE: creativeRegistry,
   DEAL: dealRegistry,
   PARTNER: partnerRegistry,
+  PLAN: planRegistry,
   AD_GROUP: adGroupRegistry,
   AD: adRegistry,
 };
