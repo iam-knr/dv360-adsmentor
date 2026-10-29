@@ -30,6 +30,7 @@ export default async function Page({
       campaignId={chain.campaign.publicId}
       currency={chain.advertiser.currencyCode}
       rows={result.rows}
+      embedded
     />
   );
 }

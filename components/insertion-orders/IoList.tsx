@@ -9,6 +9,7 @@ import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import {
   DvGrid,
+  DvInlineEdit,
   DvPageHeader,
   DvSelect,
   formatCurrency,
@@ -87,12 +88,24 @@ export function IoList({
       header: 'Budget',
       group: 'delivery',
       align: 'right',
-      cell: (r) =>
-        r.budget === null
-          ? 'Unknown'
-          : r.budgetUnit === 'CURRENCY'
-            ? formatCurrency(r.budget, currency)
-            : r.budget.toLocaleString('en-US'),
+      cell: (r) => {
+        const shownBudget =
+          r.budget === null
+            ? 'Unknown'
+            : r.budgetUnit === 'CURRENCY'
+              ? formatCurrency(r.budget, currency)
+              : r.budget.toLocaleString('en-US');
+        if (!r.editableSegment || viewer.readOnly) return shownBudget;
+        return (
+          <DvInlineEdit
+            label={`Budget of ${r.name}`}
+            value={String(r.editableSegment.amount)}
+            display={shownBudget}
+            validate={validateBudget}
+            onCommit={(v) => saveBudget(r, v)}
+          />
+        );
+      },
     },
     { id: 'goal', header: 'Goal', group: 'delivery', accessor: (r) => r.goal },
     {
@@ -114,10 +127,14 @@ export function IoList({
     },
   ];
 
-  const editBudget = (r: IoRow) => {
-    if (!r.editableSegment || viewer.readOnly) return;
-    const raw = window.prompt('Budget', String(r.editableSegment.amount));
-    if (raw === null) return;
+  /** IO-021 and IO-022 on the typed value; IO-023 to IO-026 come back from the service. */
+  const validateBudget = (raw: string) => {
+    if (raw.trim() === '') return 'Enter a value';
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n <= 0) return 'Enter a number greater than 0';
+    return undefined;
+  };
+  const saveBudget = (r: IoRow, raw: string) =>
     startTransition(async () => {
       const res = await patchIoBudgetAction(r.id, r.editableSegment!.id, Number(raw));
       if (!res.ok) setError(res.issues[0]?.message ?? 'Could not save the budget.');
@@ -126,37 +143,31 @@ export function IoList({
         router.refresh();
       }
     });
-  };
 
   return (
     <>
-      {embedded ? null : (
-        <DvPageHeader
-          title={title}
-          limitedAccess={viewer.limitedAccess}
-          actions={
-            campaignId ? (
-              <Button
-                variant="contained"
-                disabled={viewer.readOnly}
-                href={campaignPath(partnerId, advertiserId, campaignId, 'ios', 'new')}
-              >
-                New Insertion Order
-              </Button>
-            ) : undefined
-          }
-        />
-      )}
-      <Box sx={{ mb: 2, maxWidth: 240 }}>
-        <DvSelect
-          ariaLabel="Status filter"
-          value={filter}
-          options={FILTERS}
-          onChange={(v) => {
-            setFilter(v);
-            setPage({ page: 1, size: page.size });
-          }}
-        />
+      {embedded ? null : <DvPageHeader title={title} limitedAccess={viewer.limitedAccess} />}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+        <Box sx={{ flex: 1, maxWidth: 240 }}>
+          <DvSelect
+            ariaLabel="Status filter"
+            value={filter}
+            options={FILTERS}
+            onChange={(v) => {
+              setFilter(v);
+              setPage({ page: 1, size: page.size });
+            }}
+          />
+        </Box>
+        {campaignId ? (
+          <Button
+            variant="contained"
+            disabled={viewer.readOnly}
+            href={campaignPath(partnerId, advertiserId, campaignId, 'ios', 'new')}
+          >
+            New Insertion Order
+          </Button>
+        ) : null}
       </Box>
       {error ? (
         <Typography role="alert" color="error">
@@ -178,17 +189,6 @@ export function IoList({
         onPageChange={(p, size) => setPage({ page: p, size })}
         getStatus={(r) => DOT[r.status]}
         isArchived={(r) => r.status === 'ARCHIVED'}
-        rowActions={(r) =>
-          r.editableSegment && !viewer.readOnly ? (
-            <Button
-              size="small"
-              aria-label={`Edit budget of ${r.name}`}
-              onClick={() => editBudget(r)}
-            >
-              Edit budget
-            </Button>
-          ) : null
-        }
         onStatusChange={
           viewer.readOnly
             ? undefined
