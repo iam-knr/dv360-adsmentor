@@ -32,7 +32,7 @@ export function PreviewFrame({
         width: Math.min(width, 640),
         height: Math.min(height, 480),
         maxWidth: '100%',
-        bgcolor: '#fff',
+        bgcolor: 'background.paper',
       }}
     />
   );
