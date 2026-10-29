@@ -1,0 +1,22 @@
+// Creative extension columns (module 12 3.2: Δ12-2 skip button, Δ12-3 native text assets, Δ12-4 YouTube video id and
+// thumbnail, Δ12-5 review round, plus the review plan the creative service keeps for lazy settling). Added by P4-01 in
+// migration 0004_creatives_ext as a 1:1 table because 10..89 are frozen. The foreign key to Creative and the row level
+// security are in the migration, not here: Prisma would need a back-relation on Creative (P3-05a's model).
+
+model CreativeExt {
+  id               String    @id @default(cuid())
+  sandboxId        String
+  creativeId       String    @unique
+  skippable        Boolean   @default(false)
+  skipOffsetSec    Int?
+  /// { headline, body, callToAction, advertiserName, displayUrl, ... } for native creatives
+  nativeFields     Json?
+  youtubeVideoId   String?
+  thumbnailAssetId String?
+  reviewRequestedAt DateTime?
+  /// When DV360's own review decides, and what it will decide (SERVABLE or NOT_SERVABLE). Set by the service on submit.
+  dv360DecideAt    DateTime?
+  plannedVerdict   String?
+  /// Reason code of the planned disapproval (feedback.ts), null when the plan is to approve.
+  plannedReason    String?
+}
