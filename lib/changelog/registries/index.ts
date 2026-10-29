@@ -7,6 +7,13 @@ import { campaignRegistry } from './campaign';
 import { creativeRegistry } from './creative';
 import { insertionOrderRegistry } from './insertion-order';
 import { lineItemRegistry } from './line-item';
+import {
+  channelRegistry,
+  floodlightActivityRegistry,
+  floodlightGroupRegistry,
+  keywordListRegistry,
+  locationListRegistry,
+} from './resources';
 import { partnerRegistry } from './partner';
 
 export const REGISTRIES: Partial<Record<EntityType, EntityRegistry>> = {
@@ -14,6 +21,11 @@ export const REGISTRIES: Partial<Record<EntityType, EntityRegistry>> = {
   CAMPAIGN: campaignRegistry,
   INSERTION_ORDER: insertionOrderRegistry,
   LINE_ITEM: lineItemRegistry,
+  CHANNEL: channelRegistry,
+  KEYWORD_LIST: keywordListRegistry,
+  LOCATION_LIST: locationListRegistry,
+  FLOODLIGHT_GROUP: floodlightGroupRegistry,
+  FLOODLIGHT_ACTIVITY: floodlightActivityRegistry,
   CREATIVE: creativeRegistry,
   PARTNER: partnerRegistry,
 };

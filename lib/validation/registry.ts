@@ -24,6 +24,7 @@ import { partnerRules } from './rules/partner';
 import {
   channelRules,
   customBiddingRules,
+  floodlightConversionRules,
   floodlightRules,
   keywordListRules,
   locationListRules,
@@ -66,7 +67,7 @@ export const RULES: Record<EntityKind, readonly AnyRule[]> = {
   keywordList: keywordListRules,
   locationList: locationListRules,
   floodlightGroup: floodlightRules,
-  floodlightConversion: [],
+  floodlightConversion: floodlightConversionRules,
   customBidding: customBiddingRules,
   abTest: abTestRules,
   liftStudy: liftStudyRules,
