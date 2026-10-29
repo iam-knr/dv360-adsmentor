@@ -8,7 +8,7 @@ import { addDaysIso, simDateIn } from '@/lib/metrics/date-range';
 import { cleanup } from '../auth/fixtures';
 import { createShellWorld, type ShellWorld } from '../shell/e2e-world';
 
-const LIST_PAGES_MERGED = false; // flip when P3-06b and P3-06c are on main
+const LIST_PAGES_MERGED = true; // P3-06b and P3-06c are on main (P3-INT)
 const LIST_PAGES_REASON = 'Needs the P3-06b and P3-06c list pages (not merged yet)';
 
 const db = new PrismaClient({
@@ -32,6 +32,9 @@ test.beforeAll(async () => {
     select: { id: true, ioId: true, campaignId: true },
   });
   await db.lineItem.update({ where: { id: li.id }, data: { status: 'ACTIVE' } });
+  // the list pages default to Status: Active
+  await db.insertionOrder.update({ where: { id: li.ioId }, data: { status: 'ACTIVE' } });
+  await db.campaign.update({ where: { id: li.campaignId }, data: { status: 'ACTIVE' } });
   const clock = await db.simClock.findUniqueOrThrow({ where: { sandboxId: shell.sandboxId } });
   const simNow = new Date(clock.simStart.getTime() + Number(clock.tickIndex) * 3_600_000);
   const yesterday = addDaysIso(simDateIn(simNow, 'Asia/Kolkata'), -1);
@@ -115,11 +118,13 @@ test.describe('metrics API', () => {
 
 /** Cell text of `column` in the row whose name cell contains `name`, and of the footer row. */
 async function cellOf(page: Page, rowName: string | RegExp, column: string) {
-  const headers = await page.getByRole('columnheader').allInnerTexts();
+  // the grid has a group header row first (DvGrid), the column names are in the second row
+  await page.getByRole('row').nth(1).getByRole('columnheader').first().waitFor();
+  const headers = await page.getByRole('row').nth(1).getByRole('columnheader').allInnerTexts();
   const idx = headers.findIndex((h) => h.trim() === column);
   expect(idx, `column ${column}`).toBeGreaterThanOrEqual(0);
   const row = page.getByRole('row').filter({ hasText: rowName }).first();
-  return (await row.getByRole('cell').nth(idx).innerText()).trim();
+  return (await row.getByRole('gridcell').nth(idx).innerText()).trim();
 }
 
 const num = (text: string) => Number(text.replace(/[^0-9.-]/g, ''));

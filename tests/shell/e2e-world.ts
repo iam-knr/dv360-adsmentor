@@ -11,7 +11,16 @@ export interface ShellWorld {
   sandboxId: string;
   rows: { advertiserId: string };
   /** Public ids for the URL placeholders of lib/routes/route-table.ts. */
-  ids: { pid: string; aid: string; cid: string; ioId: string; liId: string; x: string };
+  ids: {
+    pid: string;
+    aid: string;
+    cid: string;
+    ioId: string;
+    liId: string;
+    x: string;
+    /** Public id of a creative, for `/creatives/{x}` rows. */
+    crId: string;
+  };
   names: { partner: string; advertiser: string; campaign: string };
 }
 
@@ -79,6 +88,16 @@ export async function createShellWorld(
   const audience = await db.audience.create({
     data: { sandboxId, advertiserId: advertiser.id, name: 'Lookalike buyers', type: 'LOOKALIKE' },
   });
+  const creative = await db.creative.create({
+    data: {
+      sandboxId,
+      advertiserId: advertiser.id,
+      name: 'Festive banner',
+      kind: 'STANDARD_IMAGE',
+      width: 300,
+      height: 250,
+    },
+  });
   if (opts.role && opts.role !== 'STANDARD') {
     await db.userAccessGrant.create({
       data: { userId: student.user.id, sandboxId, partnerId: partner.id, role: opts.role },
@@ -98,6 +117,7 @@ export async function createShellWorld(
       ioId: io.publicId.toString(),
       liId: li.publicId.toString(),
       x: audience.publicId.toString(),
+      crId: creative.publicId.toString(),
     },
     names,
   };
@@ -113,5 +133,5 @@ export function fillPath(path: string, ids: ShellWorld['ids']): string {
     .replace('{ioId}', ids.ioId)
     .replace('{liId}', ids.liId)
     .replace('{kind}', kind)
-    .replace('{x}', ids.x);
+    .replace('{x}', path.includes('/creatives/') ? ids.crId : ids.x);
 }

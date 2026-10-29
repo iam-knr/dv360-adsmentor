@@ -71,6 +71,29 @@ export const MSG = {
   TARGETING_LOCKED_ADV: "This targeting is set in the advertiser's targeting rules.",
   TARGETING_LOCKED_TYPE: "This targeting can't be changed for {Type} line items.",
   EXCHANGES_SELECTED: '{n} exchanges and 0 subexchanges are selected',
+
+  // Creative domain (module 12, validation.md 2.18). Wordings marked [SIM] in the document.
+  CRE_SIZE: "Enter the creative's width and height.",
+  CRE_NO_CLICK_MACRO: "The tag doesn't contain a click macro. Clicks may not be counted.",
+  CRE_DIRECTION: 'Choose an expanding direction.',
+  CRE_MRAID_APP_ONLY: 'MRAID creatives only serve in app inventory.',
+  CRE_NOT_SSL: "This creative isn't SSL compliant, so some exchanges will reject it.",
+  CRE_CONSENT:
+    'You are responsible for complying with user-data collection and consent requirements, including the EU User Consent Policy.',
+  CRE_IMAGE_FILE: 'Upload a GIF, PNG or JPEG file of 150 KB or less.',
+  CRE_HTML5_FILE: 'Upload a ZIP file that contains an HTML file.',
+  CRE_VIDEO_FILE: 'Upload a supported video file.',
+  CRE_AUDIO_FILE: 'Upload a supported audio file.',
+  CRE_VAST: 'Enter a valid VAST tag.',
+  CRE_YOUTUBE: "We couldn't find that video. Check the URL or ID.",
+  CRE_AI_LABEL: 'Laws in some regions may require labelling AI-made ads.',
+  CRE_APPEAL_ONLY_DISAPPROVED: 'Only creatives that were disapproved can be appealed.',
+  CRE_CM360_READONLY: "This creative is synced from Campaign Manager 360 and can't be edited here.",
+  CRE_ASSIGNED_ACTIVE: 'This creative is assigned to {n} active line items.',
+  CRE_NATIVE_ASSETS: 'Add a main image and a logo.',
+  CRE_SKIP_OFFSET: 'The skip offset must be shorter than the video.',
+  CRE_FILE_TOO_LARGE: 'That file is too large.',
+  CRE_GWD_ONLY: 'This format can only be built in a design tool outside this simulator.',
 } as const;
 
 export type MsgKey = keyof typeof MSG;

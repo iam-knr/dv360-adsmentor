@@ -4,6 +4,7 @@ import type { EntityType } from '@prisma/client';
 import type { EntityRegistry } from '../registry-types';
 import { advertiserRegistry } from './advertiser';
 import { campaignRegistry } from './campaign';
+import { creativeRegistry } from './creative';
 import { insertionOrderRegistry } from './insertion-order';
 import { lineItemRegistry } from './line-item';
 import {
@@ -25,6 +26,7 @@ export const REGISTRIES: Partial<Record<EntityType, EntityRegistry>> = {
   LOCATION_LIST: locationListRegistry,
   FLOODLIGHT_GROUP: floodlightGroupRegistry,
   FLOODLIGHT_ACTIVITY: floodlightActivityRegistry,
+  CREATIVE: creativeRegistry,
   PARTNER: partnerRegistry,
 };
 
