@@ -1,5 +1,5 @@
 # DV360 Simulator by Adsmetor — Project Log (tasks, discussions, build details)
-Last updated: 2026-10-29 (Phase 1 gap finish, Phase 3 status) · Master plan: `PROJECT.md` · Findings: `docs/explore/` · Specs: `docs/specs/` · Decisions: `docs/decisions.md` · Build plan: `docs/specs/build-plan.md`
+Last updated: 2026-10-29 (wave 4 built, handover to colleague) · Master plan: `PROJECT.md` · Findings: `docs/explore/` · Specs: `docs/specs/` · Decisions: `docs/decisions.md` · Build plan: `docs/specs/build-plan.md`
 
 ---
 
@@ -99,9 +99,17 @@ Production `https://dv360-adsmentor.vercel.app` (`/api/health` → ok, db true, 
 | 6 | P3-02 | ✅ | #7 | Auth, roles, access windows, `/sim` pages |
 | 7 | P3-05b | ✅ | #6 | Seed generator |
 | 8 | P3-05c | ✅ | #5 | Remaining 112 tables |
-| 9 | P3-03 | 🟨 | — | App shell: code pushed to branch `p3-03-shell` (197 files; typecheck, lint, 2,023 unit tests pass) but the session stopped when the colleague's machine crashed: no shell tests, no `docs: status P3-03`, no PR |
-| 10 to 14 | P3-07a, P3-06b, P3-06c, P3-08b, P3-09 | ⬜ | | Wave 4 (P3-08b and P3-09 prerequisites already merged) |
-| 15, 15b, 16 | P3-07b, P3-02b, P3-INT | ⬜ | | Wave 5 |
+| 9 | P3-03 | ✅ | #9 | App shell |
+| 10 | P3-07a | ✅ | #11 | Targeting card, state, 13 editors (flat category list), catalogue API, dev page `/targeting` |
+| 10b | P3-07a follow-up | 🟨 | #16 (open) | Category tree, device OS and make/model, locked-row tooltip, targeting tests, `tests/e2e/targeting.spec.ts` |
+| 11 | P3-06b | ✅ | #12 | Campaign and IO services, forms, lists, step 1 matrix, details pages, list and matrix API, `campaigns.spec.ts` |
+| 11b | P3-06b leftovers | 🟨 | none yet | Campaign page tabs/pin/chart strip, DLG-10 copy settings, DLG-11 stale save, inline budget editor, fee menu, more e2e: a cloud session built these on branch `p3-06b-campaigns-io` AFTER #12 merged. Open a new PR from that branch (merge `main` into it first) |
+| 12 | P3-06c | ✅ | #13 | Line item picker, form, grids, details page, API, service tests, archived list, e2e |
+| 13 | P3-08b | 🟨 | #15 (open) | Engine runtime, tick endpoint, fast-forward, 5-minute timer |
+| 14 | P3-09 | 🟨 | #10 (open) | Metrics layer behind the performance columns. Merge after #15 (build-plan 3.5 order) |
+| 15 | P3-07b | ⬜ | | Geography, apps and URLs, brand suitability, audience builder editors |
+| 15b | P3-02b | 🟨 | #14 (open) | `/manage` dashboard, REDUCED scope (cut 11): accounts, cohorts, audit |
+| 16 | P3-INT | ⬜ | | Integration, demo path, gap list (last) |
 
 ### Known gaps to revisit
 Filled by `19-gap-finish.md`: DOOH, app-install step 2, CTV and Video LI forms, YouTube ad group and ad, all creative forms, New plan and editable plan, A/B create. Still open (build from public docs):
@@ -193,8 +201,64 @@ Full list with defaults: `PROJECT.md` section 11 and `docs/specs/conflicts.md` s
 6. Access to an IO without objective and a Floodlight-optimised advertiser to finish the LI gaps (still open from Phase 1).
 
 ## 8. Next steps
-0. 2026-10-29: finish P3-03 (shell tests, status commit, PR, merge 9), then run wave 4. Build sessions follow `docs/explore/19-gap-finish.md` where it differs from the specs.
-1. Phase 1 and Phase 2 are done (Phase 1 gaps are listed in "Known gaps"; they are filled from public docs in the specs). Owner approvals of 2026-10-28 are recorded (ADR-039 to ADR-046).
-2. Owner: complete P-02 (cloud environment `dv360-build`) and P-12 (usage credits off, $100 balance) by Sat 31 Oct; P-03 (Vercel import into Hobby), P-04 (Supabase URLs into Vercel), P-06 (GitHub Actions secrets) and P-07 (`AUTH_SECRET`, `CRON_SECRET` into Vercel) by Sun 1 Nov morning. Values go only into Vercel, never chat or the repo.
-3. Sun 1 Nov: run wave 1 (P3-01, including the secret-scan CI step), then waves 2 to 5 as in build-plan section 3. The Cowork assistant merges build PRs under the conditions in build-plan 3.6. Merge freeze Thu 5 Nov 9:00 AM IST; credit expires 1:29 PM IST.
-4. After Phase 3: planning sessions update the specs from the gap list (`docs/gaps/p3.md`) and write Phase 4 prompts from build-plan 3.7.
+See section 9 (handover). Short version: merge the open PRs in order, run P3-07b, P3-INT, then the visual fidelity pass in the browser (SOP-3), then Phase 4.
+
+## 9. Handover (2026-10-29)
+
+Written when the previous colleague's machine crashed and the work was picked up in a Claude Code cloud session (session `session_015aSPDgNBbTZ9vGkZzju7g3`). Owner is Kailas (Adsmetor). Whoever continues: read this section first, then `PROJECT.md` section 6 and 10.
+
+### 9.1 Where the code stands
+- `main` holds Phases 0 to 2 (all exploration and specs) and Phase 3 through P3-06c: scaffold, auth and roles, app shell, UI kit, full schema and seed, validation library, engine core, targeting card (basic editors), campaigns, insertion orders and line items (UI plus services).
+- A user can sign in, open an advertiser, create a campaign, then an insertion order, then a Display line item, see them in the lists and change status. This path is covered by Playwright (`tests/e2e/campaigns.spec.ts`, `tests/e2e/line-items.spec.ts`) and passes locally.
+- Performance columns show zeros until PR #10 (P3-09) merges. Campaigns do not "run" until PR #15 (engine runtime) merges and a timer or the fast-forward calls the tick endpoint.
+
+### 9.2 Open pull requests and merge order
+Merge each with Squash and merge after green checks and a ready Vercel preview. After each merge the next PR usually conflicts in `PROJECT.md` (the status table); resolve by keeping both sides' rows (merge `main` into the branch, keep every row, push).
+1. #15 P3-08b engine runtime (check with owner that the timer secrets exist before enabling it; see 9.5)
+2. #10 P3-09 metrics layer
+3. #14 P3-02b `/manage` (reduced scope)
+4. #16 P3-07a follow-up
+5. A new PR for the P3-06b leftovers (9.3, row 11b)
+Note: the assistant's attempt to merge by API was blocked by the permission classifier; merges were done by the owner in the browser. ADR-046 allows an assistant to merge, but only if the session is allowed to.
+
+### 9.3 What is done and what is not, by area
+Done and merged: see the merge table in section 4. Not done (each is also in the relevant PR body under "Not done"):
+- **Targeting (P3-07):** editors for geography (map, radius, location lists), apps and URLs, brand suitability and third-party verification, audience builder are P3-07b. Video-only, audio, DOOH and YouTube ad group editors are Phase 4. The targeting card exists, but `toLiTargetingInput` is not yet wired into every validation call.
+- **Campaigns and IOs (P3-06b):** leftovers in row 11b. Still missing after that: bulk bar, duplicate, SDF, Alerts page, History tab content, Combined tab content, saved column views, chart card data (all Phase 4 / modules 05, 06, 11).
+- **Line items (P3-06c):** Demand Gen is a shell. Conversions panel and copy-settings UI exist but are untested. YouTube line items, ad groups, Troubleshooter, forecast, bulk are Phase 4. Inventory shows a count only (no exchange picker).
+- **Account management (P3-02b):** reduced scope only. CSV import, access-period page, settings page and the audit viewer are not built.
+- **Engine (P3-08b):** runtime exists in PR #15. The history stub in the seed (closed-form 90 days) is still what the lists show until `engine.fastForward` replaces it in P3-INT.
+- **Phase 4 (P4-01 to P4-12), Phase 5, Phase 6:** not started.
+- **Owner prerequisites still open:** P-02 cloud environment `dv360-build`, P-12 usage-credits toggle off and $100 balance, P-03 Vercel import, P-04 Supabase URLs in Vercel, P-06 GitHub Actions secrets, P-07 `AUTH_SECRET` and `CRON_SECRET` in Vercel. Check https://dv360-adsmentor.vercel.app/api/health: `db: true` means P-03/P-04 are done. Nobody can sign in on production until the first Super admin is bootstrapped (`npm run db:bootstrap`, needs the production URLs; run it only with the owner).
+- **Reference screenshots** are still not in `docs/screenshots/`.
+
+### 9.4 Run it locally (verified in the cloud container)
+```bash
+npm ci
+npm run db:local          # embedded Postgres on 54329, creates dv360_dev and dv360_test; leave it running
+export DATABASE_URL_TEST="postgresql://postgres:postgres@127.0.0.1:54329/dv360_test"
+export NODE_OPTIONS=--max-old-space-size=8192   # eslint runs out of memory otherwise
+npm run check             # lint, typecheck, depcruise, unit and component tests
+npm run test:db           # needs DATABASE_URL_TEST
+export AUTH_TRUST_HOST=true AUTH_SECRET=anylongrandomstring PLAYWRIGHT_CHROMIUM_PATH=<path to chrome>
+npx playwright test tests/e2e/campaigns.spec.ts   # builds and starts the app on 3100
+```
+Notes: e2e specs create synthetic students with `createShellWorld` (`tests/shell/e2e-world.ts`); a bare sandbox has no exchanges (line item create needs one, see `line-items.spec.ts`). The repo is cloned single-branch in cloud sessions; fetch other branches with an explicit refspec.
+
+### 9.5 Gotchas learned
+- Lint errors "unnecessary type assertion" appear in some earlier files in a fresh install; `eslint --fix` is safe.
+- PROJECT.md conflicts on every merge (see 9.2).
+- Squash merge makes `git rev-list main..branch` look ahead even when the content is merged; compare with `git diff --shortstat main branch`.
+- Cloud sessions that keep pushing to a branch after its PR is merged create orphan work; always open a new PR for it.
+- Do not enable the engine timer (`.github/workflows` tick) before `CRON_SECRET` and the production URL secret exist (ADR-048).
+- Auth.js needs `AUTH_TRUST_HOST=true` on any non-Vercel host.
+
+### 9.6 Cloud sessions run on 2026-10-29 (for reference)
+P3-08b `session_015aSPDgTzqhaFz9Hw7J7hJm`, P3-02b `session_015aSPDiDmdiB1GXwZ7Yumyf`, P3-06c leftovers `session_015aSPDjpp4jtMW9oDYffHqf`, P3-06b leftovers `session_015aSPDk42JgrUnio2uaw3LY`, P3-07a leftovers `session_015aSPDhhdQYGo8MF8842gx5`. Each follows the prompt of its id in `docs/specs/build-plan.md` section 4.
+
+### 9.7 Next steps in order
+1. Merge the PRs in 9.2.
+2. Run P3-07b (build-plan 4.15) as a cloud session; then P3-INT (4.16): demo path, swap the seed history stub for `engine.fastForward`, gap list in `docs/gaps/p3.md`.
+3. Visual fidelity pass: open the demo DV360 account and https://dv360-adsmentor.vercel.app side by side in the browser with Claude in Chrome (it cannot be driven from a cloud session). Compare Campaigns list, New campaign, New insertion order, New line item and the targeting card using SOP-3 and `docs/explore/`. Turn each difference into a fix task for a cloud session.
+4. Owner items in 9.3, then Phase 4 waves (build-plan 3.7).
+5. Credit and deadline: $100 cloud credit expires 5 Nov 2026 1:29 PM IST; merge freeze 5 Nov 9:00 AM IST (PROJECT.md section 8).
