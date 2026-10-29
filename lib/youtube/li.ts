@@ -125,7 +125,7 @@ export function youtubeFromRow(
   };
 }
 
-const int = (v: unknown): number | null => {
+const int = (v: string | number | null | undefined): number | null => {
   if (v === null || v === undefined || v === '') return null;
   const n = Number(String(v).trim());
   return Number.isFinite(n) ? n : null;

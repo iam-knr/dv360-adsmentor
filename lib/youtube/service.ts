@@ -54,7 +54,6 @@ import type {
   AdGroupRow,
   AdRow,
   Result,
-  ReviewStatus,
   YoutubeVideoHit,
   YtStatus,
 } from './types';
@@ -276,7 +275,7 @@ async function settleReviews(tx: Tx, sandboxId: string, classroomId: string, adG
     orderBy: [{ reviewDecideAt: 'asc' }, { id: 'asc' }],
   });
   for (const ad of due) {
-    const verdict = (ad.plannedVerdict ?? 'APPROVED') as ReviewStatus;
+    const verdict = ad.plannedVerdict ?? 'APPROVED';
     await withChangeLog(
       {
         sandboxId,
@@ -299,7 +298,7 @@ async function settleReviews(tx: Tx, sandboxId: string, classroomId: string, adG
         t.ad.update({
           where: { id: ad.id },
           data: {
-            reviewStatus: verdict as Exclude<ReviewStatus, never>,
+            reviewStatus: verdict,
             reviewFeedback: feedbackFor(verdict),
             reviewDecideAt: null,
             plannedVerdict: null,

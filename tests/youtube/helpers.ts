@@ -39,7 +39,7 @@ export function ytLineItem(subtype: YtSubtype = 'EFFICIENT_REACH'): LineItemInpu
     },
     budget: { mode: 'UNLIMITED' },
     pacing: { period: 'DAILY', type: 'EVEN', dailyAmount: inr(1000) },
-    bid: { mode: 'AUTOMATED', optimizedTowards: info.liBid as never, priority: 'FULL_BUDGET' },
+    bid: { mode: 'AUTOMATED', optimizedTowards: info.liBid, priority: 'FULL_BUDGET' },
     creatives: [],
     targeting: { dimensions: ['GEOGRAPHY', 'BRAND_SUITABILITY', 'INVENTORY_SOURCE'] },
     youtube: {

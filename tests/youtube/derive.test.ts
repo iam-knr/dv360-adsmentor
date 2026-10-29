@@ -79,7 +79,7 @@ describe('V-09-03 parseYoutubeRef', () => {
     ['https://www.youtube.com/watch?v=short', null],
     [null, null],
   ])('%s', (input, expected) => {
-    expect(parseYoutubeRef(input as string | null)).toBe(expected);
+    expect(parseYoutubeRef(input)).toBe(expected);
   });
 });
 

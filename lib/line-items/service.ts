@@ -19,7 +19,6 @@ import {
   YT_INVENTORY_SOURCES,
   type YtAdFormatChoice,
   type YtOptimization,
-  type YtSubtype,
 } from '@/lib/validation/constants/youtube';
 import { findApp } from './apps';
 import {
@@ -196,7 +195,7 @@ function columnsOf(v: LiFormValue, io: LoadedIo) {
     integrationCode: value.integrationCode?.trim() || null,
     integrationDetail: value.integrationDetail?.trim() || null,
     ...(isYoutubeType(type) && value.youtube
-      ? youtubeColumns(value.youtube, (value.youtube.subtype ?? 'EFFICIENT_REACH') as YtSubtype)
+      ? youtubeColumns(value.youtube, value.youtube.subtype ?? 'EFFICIENT_REACH')
       : {}),
   };
 }
