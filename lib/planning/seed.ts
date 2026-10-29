@@ -116,7 +116,10 @@ export async function seedPlans(tx: Db, input: SeedPlansInput): Promise<number> 
             feePct: fee,
             budgetNet: net,
             budgetTotal: gross,
-            maxCpm: method === 'OPEN_AUCTION' && r === 0 ? Math.round(country.cpmUsd * 2.4 * 100) / 100 : null,
+            maxCpm:
+              method === 'OPEN_AUCTION' && r === 0
+                ? Math.round(country.cpmUsd * 2.4 * 100) / 100
+                : null,
             isCpmLocked: method !== 'OPEN_AUCTION',
           },
         });
@@ -127,7 +130,12 @@ export async function seedPlans(tx: Db, input: SeedPlansInput): Promise<number> 
         include: { rows: { orderBy: { ordinal: 'asc' } } },
       });
       const f = forecastPlan(
-        forecastInputOf(String(input.seedValue), full, full.rows, `${addDays(start, -3)}T10:00:00.000Z`),
+        forecastInputOf(
+          String(input.seedValue),
+          full,
+          full.rows,
+          `${addDays(start, -3)}T10:00:00.000Z`,
+        ),
       );
       await tx.planForecast.create({ data: forecastRowData(input.sandboxId, plan.id, f) });
       made++;

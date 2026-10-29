@@ -41,7 +41,9 @@ export const PLAN_COLUMNS: PlanColumnDef[] = [
 ];
 
 /** Default column order: the "defaults on" list in the order of the table (spec 2.2). */
-export const DEFAULT_PLAN_COLUMNS: string[] = PLAN_COLUMNS.filter((c) => c.defaultOn).map((c) => c.id);
+export const DEFAULT_PLAN_COLUMNS: string[] = PLAN_COLUMNS.filter((c) => c.defaultOn).map(
+  (c) => c.id,
+);
 
 const KNOWN = new Set(PLAN_COLUMNS.map((c) => c.id));
 

@@ -179,7 +179,10 @@ export function reachByFrequency(mean: number, reachPct: number, k: number = P.k
 }
 
 function weeksOf(startDate: string, endDate: string): number {
-  const days = Math.max(1, Math.round((Date.parse(endDate) - Date.parse(startDate)) / 86_400_000) + 1);
+  const days = Math.max(
+    1,
+    Math.round((Date.parse(endDate) - Date.parse(startDate)) / 86_400_000) + 1,
+  );
   return Math.max(1, Math.min(12, Math.ceil(days / 7)));
 }
 
@@ -211,7 +214,7 @@ export function forecastPlan(input: ForecastInput): PlanForecast {
       avgCost: round(r.cpm * (1 + r.fee), 2),
       avgCostLabel: 'CPM',
       maxCpm: locked ? null : r.maxCpm,
-      viewableCpm: view > 0 ? round(gross / view * 1000, 2) : 0,
+      viewableCpm: view > 0 ? round((gross / view) * 1000, 2) : 0,
       viewabilityRate: meas > 0 ? round((view / meas) * 100, 1) : null,
       budgetSharePct: budgetShareBase > 0 ? round((r.net / (budgetShareBase || 1)) * 100, 1) : 0,
     };
@@ -239,7 +242,10 @@ export function forecastPlan(input: ForecastInput): PlanForecast {
   const ytImpr = input.includeYoutube ? agg.impressions * P.youtubeShare : 0;
   const ytViews = ytImpr * P.viewThroughRate;
   const ytBudget = input.includeYoutube ? agg.budget * P.youtubeShare : 0;
-  const weights = Array.from({ length: weeks }, (_, w) => 1 + 0.25 * Math.sin(((w + 0.5) / weeks) * Math.PI));
+  const weights = Array.from(
+    { length: weeks },
+    (_, w) => 1 + 0.25 * Math.sin(((w + 0.5) / weeks) * Math.PI),
+  );
   const weightSum = weights.reduce((s, x) => s + x, 0);
   for (let w = 0; w < weeks; w++) {
     const wShare = (weights[w] as number) / weightSum;
@@ -306,7 +312,9 @@ export function forecastPlan(input: ForecastInput): PlanForecast {
     actionCpa: agg.clickConversions >= 1 ? round(agg.budget / agg.clickConversions, 2) : null,
     viewableCpm: agg.viewable > 0 ? round((agg.budget / agg.viewable) * 1000, 4) : 0,
     viewabilityRate: agg.measurable > 0 ? round((agg.viewable / agg.measurable) * 100, 1) : null,
-    reachByFrequency: hasRows ? reachByFrequency(meanPerPerson, agg.reachPct) : reachByFrequency(0, 0),
+    reachByFrequency: hasRows
+      ? reachByFrequency(meanPerPerson, agg.reachPct)
+      : reachByFrequency(0, 0),
     budget: round(agg.budget, 2),
     impressions: Math.round(agg.impressions),
     perRow,

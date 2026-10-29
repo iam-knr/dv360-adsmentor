@@ -2,13 +2,7 @@
 import type { Plan, PlanForecast as PlanForecastRow, PlanRow, Prisma } from '@prisma/client';
 import { DEFAULT_DEMOGRAPHICS, type PlanDemographics } from './countries';
 import type { ForecastInput } from './forecast';
-import type {
-  PlanAdditional,
-  PlanBuyingMethodKey,
-  PlanForecast,
-  PlanRowDto,
-  ReachBasisKey,
-} from './types';
+import type { PlanAdditional, PlanBuyingMethodKey, PlanForecast, PlanRowDto } from './types';
 import { LOCKED_CPM_METHODS } from './types';
 
 export const iso = (d: Date): string => d.toISOString().slice(0, 10);
@@ -27,7 +21,7 @@ export function demographicsOf(plan: Pick<Plan, 'demographics'>): PlanDemographi
 
 export const additionalOf = (plan: Plan): PlanAdditional => ({
   frequencyGoal: plan.frequencyGoal,
-  reachBasis: plan.reachBasis as ReachBasisKey,
+  reachBasis: plan.reachBasis,
   includeYoutube: plan.includeYoutube,
 });
 
@@ -36,7 +30,7 @@ export function rowDto(r: PlanRow): PlanRowDto {
     id: r.id,
     ordinal: r.ordinal,
     name: r.name,
-    buyingMethod: r.buyingMethod as PlanBuyingMethodKey,
+    buyingMethod: r.buyingMethod,
     dealId: r.dealId,
     locations: r.locations,
     startDate: iso(r.startDate),
@@ -66,7 +60,7 @@ export function forecastInputOf(
     country: plan.locationCountry,
     currency: plan.currencyCode,
     demographics: demographicsOf(plan),
-    reachBasis: plan.reachBasis as ReachBasisKey,
+    reachBasis: plan.reachBasis,
     includeYoutube: plan.includeYoutube,
     startDate: iso(plan.startDate),
     endDate: iso(plan.endDate),
@@ -74,7 +68,7 @@ export function forecastInputOf(
     rows: rows.map((r) => ({
       key: r.id,
       name: r.name,
-      buyingMethod: r.buyingMethod as PlanBuyingMethodKey,
+      buyingMethod: r.buyingMethod,
       budgetNet: num(r.budgetNet),
       feePct: num(r.feePct),
       maxCpm: r.maxCpm == null ? null : num(r.maxCpm),
@@ -107,9 +101,9 @@ export function forecastRowData(
     viewableCpm: f.viewableCpm,
     viewabilityRate: f.viewabilityRate,
     perRow: f.perRow as unknown as Prisma.InputJsonValue,
-    curves: { reach: f.reach, budget: f.budget, impressions: f.impressions } as Prisma.InputJsonValue,
-    reachByFrequency: f.reachByFrequency as unknown as Prisma.InputJsonValue,
-    tabs: f.tabs as unknown as Prisma.InputJsonValue,
+    curves: { reach: f.reach, budget: f.budget, impressions: f.impressions },
+    reachByFrequency: f.reachByFrequency,
+    tabs: f.tabs,
     inputsHash: f.inputsHash,
   };
 }

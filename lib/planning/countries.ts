@@ -48,13 +48,30 @@ const C = (
 export const PLAN_COUNTRIES: readonly PlanCountryDef[] = [
   C('IN', 'India', 'INR', 1_050_000_000, 0.55, 0.62, 0.5, 0.75, 1.4, { engineMarket: 'IN' }),
   C('ID', 'Indonesia', 'IDR', 220_000_000, 0.7, 0.8, 0.62, 0.55, 1.2, { engineMarket: 'ID' }),
-  C('AE', 'United Arab Emirates', 'AED', 8_800_000, 0.97, 0.9, 0.9, 2.6, 5.5, { engineMarket: 'AE' }),
-  C('SG', 'Singapore', 'SGD', 3_680_000, 0.96, 0.85, 0.9620, 1.5, 4.2, { engineMarket: 'SG' }),
-  C('AU', 'Australia', 'AUD', 21_000_000, 0.95, 0.88, 0.85, 3.2, 8.4, { engineMarket: 'AU', crossMedia: 'AUSTRALIA' }),
-  C('UK', 'United Kingdom', 'GBP', 55_000_000, 0.96, 0.9, 0.83, 3.6, 9.2, { engineMarket: 'UK', crossMedia: 'UNITED_KINGDOM' }),
-  C('DE', 'Germany', 'EUR', 71_000_000, 0.94, 0.9, 0.8, 3.1, 8.0, { engineMarket: 'DE', crossMedia: 'GERMANY' }),
-  C('US', 'United States', 'USD', 270_000_000, 0.94, 0.88, 0.82, 4.2, 11.5, { engineMarket: 'US', crossMedia: 'UNITED_STATES' }),
-  C('BR', 'Brazil', 'BRL', 175_000_000, 0.8, 0.9, 0.78, 1.1, 2.6, { engineMarket: 'BR', crossMedia: 'BRAZIL' }),
+  C('AE', 'United Arab Emirates', 'AED', 8_800_000, 0.97, 0.9, 0.9, 2.6, 5.5, {
+    engineMarket: 'AE',
+  }),
+  C('SG', 'Singapore', 'SGD', 3_680_000, 0.96, 0.85, 0.962, 1.5, 4.2, { engineMarket: 'SG' }),
+  C('AU', 'Australia', 'AUD', 21_000_000, 0.95, 0.88, 0.85, 3.2, 8.4, {
+    engineMarket: 'AU',
+    crossMedia: 'AUSTRALIA',
+  }),
+  C('UK', 'United Kingdom', 'GBP', 55_000_000, 0.96, 0.9, 0.83, 3.6, 9.2, {
+    engineMarket: 'UK',
+    crossMedia: 'UNITED_KINGDOM',
+  }),
+  C('DE', 'Germany', 'EUR', 71_000_000, 0.94, 0.9, 0.8, 3.1, 8.0, {
+    engineMarket: 'DE',
+    crossMedia: 'GERMANY',
+  }),
+  C('US', 'United States', 'USD', 270_000_000, 0.94, 0.88, 0.82, 4.2, 11.5, {
+    engineMarket: 'US',
+    crossMedia: 'UNITED_STATES',
+  }),
+  C('BR', 'Brazil', 'BRL', 175_000_000, 0.8, 0.9, 0.78, 1.1, 2.6, {
+    engineMarket: 'BR',
+    crossMedia: 'BRAZIL',
+  }),
   C('AR', 'Argentina', 'ARS', 38_000_000, 0.87, 0.9, 0.8, 1.0, 2.2, { crossMedia: 'ARGENTINA' }),
   C('CA', 'Canada', 'CAD', 30_000_000, 0.95, 0.9, 0.82, 3.3, 8.8, { crossMedia: 'CANADA' }),
   C('CL', 'Chile', 'CLP', 16_000_000, 0.9, 0.92, 0.8, 1.3, 2.9, { crossMedia: 'CHILE' }),

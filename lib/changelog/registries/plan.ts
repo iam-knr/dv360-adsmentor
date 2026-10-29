@@ -69,7 +69,7 @@ export async function loadPlanImage(tx: Tx, id: string): Promise<Image | null> {
     include: { rows: { orderBy: { ordinal: 'asc' } } },
   });
   if (!row) return null;
-  return row as unknown as Image;
+  return row;
 }
 
 export const planRegistry: EntityRegistry = {

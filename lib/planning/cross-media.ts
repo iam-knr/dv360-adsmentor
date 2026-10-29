@@ -57,7 +57,7 @@ export function crossMediaMath(i: CrossMediaInput): CrossMediaMath {
     digital: {
       reachPct: round(rD * 100),
       impressions: Math.round(dImpr * scale),
-      avgFrequency: rD > 0 ? round((dImpr / (rD * pop)) , 2) : 0,
+      avgFrequency: rD > 0 ? round(dImpr / (rD * pop), 2) : 0,
       reach: people(rD),
     },
     tv: {

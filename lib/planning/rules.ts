@@ -52,7 +52,8 @@ export function planHeaderIssues(v: PlanHeaderValues): Issue[] {
   if (v.end < v.start) out.push(issue('GEN-008', 'dates.end', PLN_MSG.END_BEFORE_START));
   else if (days(v.start, v.end) > PLAN_PARAMS.maxDays)
     out.push(issue('PLN-022', 'dates.end', PLN_MSG.TOO_LONG));
-  if (v.checkStart && v.start < v.today) out.push(issue('PLN-021', 'dates.start', PLN_MSG.START_PASSED));
+  if (v.checkStart && v.start < v.today)
+    out.push(issue('PLN-021', 'dates.start', PLN_MSG.START_PASSED));
   if (v.ageMin > v.ageMax) out.push(issue('PLN-023', 'demographics', PLN_MSG.BAD_AGE));
   if (v.frequencyGoal !== undefined && (v.frequencyGoal < 1 || v.frequencyGoal > 20))
     out.push(issue('PLN-023', 'additional.frequencyGoal', 'Enter a number from 1 to 20'));

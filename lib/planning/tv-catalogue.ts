@@ -34,7 +34,11 @@ const SUB_NAMES = ['North', 'South', 'East', 'West'];
 const SUB_SHARES = [0.31, 0.27, 0.24, 0.18];
 
 /** Seed period of the catalogue: sandboxes start in early 2026, so the windows cover Jan 2025 to the end of 2026. */
-export const TV_WINDOW = { from: '2025-01-01', to: '2026-12-31', nextUpdate: '2027-01-15' } as const;
+export const TV_WINDOW = {
+  from: '2025-01-01',
+  to: '2026-12-31',
+  nextUpdate: '2027-01-15',
+} as const;
 /** First day with sub-location data (PLN-013). */
 export const SUB_LOCATION_FROM = '2025-01-01';
 
