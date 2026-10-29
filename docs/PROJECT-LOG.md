@@ -214,9 +214,11 @@ Written when the previous colleague's machine crashed and the work was picked up
 
 ### 9.2 Open pull requests and merge order
 Merge each with Squash and merge after green checks and a ready Vercel preview. After each merge the next PR usually conflicts in `PROJECT.md` (the status table); resolve by keeping both sides' rows (merge `main` into the branch, keep every row, push).
-1. #14 P3-02b `/manage` (reduced scope)
-2. #18 P3-06b follow-up
-3. #17 this log
+1. #19 fix for a flaky db test (see 9.3b); `main` db-tests have been red since #15 without it
+2. #14 P3-02b `/manage` (reduced scope)
+3. #18 P3-06b follow-up
+4. #17 this log
+After #19 is merged, the `db-tests` check on #14, #18 and #17 fails or passes on stale code: click "Re-run all jobs" (Actions tab) or push an empty commit to re-trigger.
 (Already merged: #10 P3-09, #15 P3-08b, #16 P3-07a follow-up. After #15 the engine code is on `main` but the 5-minute timer needs the owner secrets, see 9.5.)
 Note: the assistant's attempt to merge by API was blocked by the permission classifier; merges were done by the owner in the browser. ADR-046 allows an assistant to merge, but only if the session is allowed to.
 
@@ -234,6 +236,7 @@ Done and merged: see the merge table in section 4. Not done (each is also in the
 ### 9.3b Test failures reported but not confirmed
 - Two cloud sessions (P3-08b, P3-07a leftovers) reported "two pre-existing component gallery axe failures" in `npm run check`. They did NOT reproduce: on `main` after #10 (commit `26cfe31`) a clean `npm ci` and `npm test` gave 79 files, 2,575 tests passed, all component gallery axe checks green. Likely causes: a flaky timeout under load (the slowest gallery entries take 2 to 4 seconds) or a stale generated Prisma client in that container. If they show up in CI, run `npx vitest run --project components tests/components/gallery.test.tsx` and read the first failing entry.
 - PR #14 (P3-02b) e2e failure: RESOLVED. Cause: `tests/e2e/auth.spec.ts` "a super admin opens everything" still expected the Super admin landing at `/sim/admin`; module 19 sends Super admins to `/manage/accounts`. The test was updated in #14 (commit `test(p3-02b): super admin now lands on /manage/accounts`). The full Playwright suite (72 tests) passed locally apart from that one.
+- `db-tests` red on `main` after #15 (and so on #14, #18): `tests/engine-io/alerts.db.test.ts` was flaky (about 1 run in 3). It picked a random line item or IO (cuid order) from any advertiser of the sandbox, but `persist()` loads only the first advertiser world, so for the other advertiser the alert got null campaign and IO ids. Fixed in #19 (test only, 8 of 8 local runs pass). If other engine-io tests fail intermittently, look for the same pattern: entities not taken from `worlds[0]`.
 - ESLint reports "unnecessary type assertion" in several earlier files only in some installs; `eslint --fix` is safe (it removes casts that do not change the type).
 
 ### 9.4 Run it locally (verified in the cloud container)
