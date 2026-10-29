@@ -42,7 +42,7 @@ const STOP = new Set([
   'week', 'daily', 'date', 'device', 'type', 'creative', 'creatives', 'exchange', 'region', 'state',
   'line', 'item', 'items', 'insertion', 'order', 'io', 'campaign', 'advertiser', 'environment',
   'country', 'size', 'rate', 'click', 'cost', 'spend', 'revenue', 'cpm', 'pacing', 'frequency',
-  'reach', 'video', 'chart', 'line', 'time', 'series', 'column', 'pie', 'table',
+  'reach', 'video', 'trend', 'over', 'chart', 'line', 'time', 'series', 'column', 'pie', 'table',
 ]);
 
 function rangeFrom(p: string): { range: string; label: string } | null {

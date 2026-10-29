@@ -587,15 +587,34 @@ export async function downloadRun(
   runId: string,
   fmt: ReportFormatWire,
 ): Promise<DownloadFile> {
-  return withCtx(user, false, async (tx) => {
+  return withCtx(user, false, async (tx, ctx) => {
     const run = await tx.reportRun.findFirst({
       where: { OR: [{ id: runId }, { publicId: /^\d+$/.test(runId) ? BigInt(runId) : -1n }] },
     });
-    if (!run || run.status !== 'DONE' || !run.storageKey) throw notFound();
-    await load(tx, user, run.reportId);
-    const bytes = await getReportFile(run.storageKey, fmt);
-    if (!bytes) throw notFound();
+    if (!run || run.status !== 'DONE') throw notFound();
+    const report = await load(tx, user, run.reportId);
     const stem = (run.fileName ?? 'report').replace(/\.(csv|xlsx)$/i, '');
+    let bytes = run.storageKey ? await getReportFile(run.storageKey, fmt) : null;
+    if (!bytes) {
+      // The store keeps files per server process unless Blob is configured, and seeded runs have none: rebuild the
+      // file from the definition and the fixed range the run was made with.
+      const snap = run.definitionSnapshot as unknown as ReportDefinition | null;
+      if (!snap) throw notFound();
+      const from = run.dateRangeStart.toISOString().slice(0, 10).replace(/-/g, '');
+      const to = run.dateRangeEnd.toISOString().slice(0, 10).replace(/-/g, '');
+      const world = await loadWorld(tx, ctx.sandboxId, report.partnerId);
+      const def = { ...snap, dateRange: `${from}:${to}` };
+      const result = await runQuery(tx, ctx.sandboxId, report.partnerId, def, {
+        limit: ROW_CAP,
+        allowPartnerCost: allowPartnerCost(user),
+        world,
+      });
+      bytes = await filesFor(
+        result,
+        fileMetaFor(world, def, run.completedAtSim ?? ctx.simNow),
+        fmt,
+      );
+    }
     return {
       bytes,
       fileName: `${stem}.${fmt === 'XLSX' ? 'xlsx' : 'csv'}`,

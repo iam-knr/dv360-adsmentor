@@ -1,5 +1,6 @@
 // Writes the global reference rows (data-model 3.1 step 1). Idempotent: rows are keyed by code, only changed rows are written.
 import type { Prisma, PrismaClient } from '@prisma/client';
+import { seedReportReference } from '../reporting/seed';
 import { stableStringify } from './hash';
 import {
   EXCHANGES,
@@ -134,5 +135,10 @@ export async function seedTargetingOptions(
  * The rows live in data/reference/fx-rates.json and data/reference/google-audiences.json and are exposed by lib/seed/reference.ts.
  */
 export async function seedReferenceData(db: Db): Promise<ReferenceSeedResult> {
-  return { exchanges: await seedExchanges(db), targetingOptions: await seedTargetingOptions(db) };
+  const result = {
+    exchanges: await seedExchanges(db),
+    targetingOptions: await seedTargetingOptions(db),
+  };
+  await seedReportReference(db);
+  return result;
 }
