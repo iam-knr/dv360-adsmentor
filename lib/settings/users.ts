@@ -2,7 +2,8 @@ import 'server-only';
 // DV360 Users page (module 02 4.9; S8 to S11). These are the roles *inside a sandbox* and a different system from the
 // account levels of /manage (module 19). Colleagues added here are sandbox-local contacts: no password, no sign in.
 import { withChangeLog } from '@/lib/changelog';
-import { prisma, withSandbox, type Tx } from '@/lib/db';
+import { loginIdByEmail, peopleByIds } from '@/lib/accounts/directory';
+import { withSandbox, type Tx } from '@/lib/db';
 import type { DvRole, SessionUser } from '@/lib/auth/types';
 import { DV_ROLE_LABEL, DV_ROLE_ORDER } from './constants';
 import {
@@ -113,10 +114,7 @@ export async function listUsers(
         tx.userAccessGrant.findMany({ where: { sandboxId: ctx.sandboxId } }),
       ]);
       // The tenant role cannot read the global User table: names come from the plain client (reads only).
-      const people = await prisma.user.findMany({
-        where: { id: { in: [...new Set(grants.map((g) => g.userId))] } },
-        select: { id: true, name: true, email: true },
-      });
+      const people = await peopleByIds(grants.map((g) => g.userId));
       const byUser = new Map<
         string,
         { user: { id: string; name: string; email: string }; grants: typeof grants }
@@ -313,12 +311,7 @@ export async function createUser(
             select: { userId: true },
           })
         ).map((g) => g.userId);
-        const login = grantIds.length
-          ? await prisma.user.findFirst({
-              where: { id: { in: grantIds }, email },
-              select: { id: true },
-            })
-          : null;
+        const login = await loginIdByEmail(grantIds, email);
         if (contact || login) issues.push(userExists());
       }
       failIf(issues);

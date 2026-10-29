@@ -1,7 +1,8 @@
 // Partner settings registry (module 02 4.4 to 4.7, P4-09). Every Partner column is registered or ignored; the lists are
 // the enabled exchanges, the data protection contacts and the feature flags, so one save logs "1 ad exchange added".
 import type { Prisma } from '@prisma/client';
-import { prisma, type Tx } from '@/lib/db';
+import { peopleByIds } from '@/lib/accounts/directory';
+import type { Tx } from '@/lib/db';
 import type { EntityRegistry, FieldDef, Image } from '../registry-types';
 
 const scalar = (path: string, label: string): FieldDef => ({
@@ -78,10 +79,7 @@ async function loadUsers(
     tx.userAccessGrant.findMany({ where: { sandboxId } }),
   ]);
   // The tenant role cannot read the global User table, so names come from the plain client (reads only).
-  const people = await prisma.user.findMany({
-    where: { id: { in: [...new Set(grants.map((g) => g.userId))] } },
-    select: { id: true, name: true, email: true },
-  });
+  const people = await peopleByIds(grants.map((g) => g.userId));
   const real = new Map<
     string,
     { id: string; name: string; email: string; grants: typeof grants }
