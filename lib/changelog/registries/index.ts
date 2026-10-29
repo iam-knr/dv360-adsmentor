@@ -3,6 +3,7 @@
 import type { EntityType } from '@prisma/client';
 import type { EntityRegistry } from '../registry-types';
 import { advertiserRegistry } from './advertiser';
+import { audienceRegistry } from './audience';
 import { campaignRegistry } from './campaign';
 import { creativeRegistry } from './creative';
 import { dealRegistry } from './deal';
@@ -20,6 +21,7 @@ import { adGroupRegistry, adRegistry } from './youtube';
 
 export const REGISTRIES: Partial<Record<EntityType, EntityRegistry>> = {
   ADVERTISER: advertiserRegistry,
+  AUDIENCE: audienceRegistry,
   CAMPAIGN: campaignRegistry,
   INSERTION_ORDER: insertionOrderRegistry,
   LINE_ITEM: lineItemRegistry,
