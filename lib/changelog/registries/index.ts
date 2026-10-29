@@ -11,6 +11,7 @@ import { insertionOrderRegistry } from './insertion-order';
 import { lineItemRegistry } from './line-item';
 import {
   channelRegistry,
+  customBiddingRegistry,
   floodlightActivityRegistry,
   floodlightGroupRegistry,
   keywordListRegistry,
@@ -30,6 +31,7 @@ export const REGISTRIES: Partial<Record<EntityType, EntityRegistry>> = {
   LOCATION_LIST: locationListRegistry,
   FLOODLIGHT_GROUP: floodlightGroupRegistry,
   FLOODLIGHT_ACTIVITY: floodlightActivityRegistry,
+  CUSTOM_BIDDING_ALGORITHM: customBiddingRegistry,
   CREATIVE: creativeRegistry,
   DEAL: dealRegistry,
   PARTNER: partnerRegistry,

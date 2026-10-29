@@ -645,6 +645,8 @@ model CustomBiddingAlgorithm {
   errorPct            Decimal?               @db.Decimal(6, 3)
   activeLineItems     Int                    @default(0)
   lastTestRunId       String?
+  /// Wizard rows not yet saved on step 3 (P4-05); hidden from the list and from line item pickers.
+  isDraft             Boolean                @default(false)
   version             Int                    @default(1)
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt

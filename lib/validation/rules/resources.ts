@@ -1,7 +1,14 @@
 // CH, KW, LOC, FL rules: channels, keyword lists, location lists, Floodlight (validation.md 2.21, module 15 4).
-// Custom bidding (CB) stays empty here: module 15 task M15-08 belongs to session P4-05.
+// Custom bidding (CB-001..012, module 15 4.3; M15-08, session P4-05). CB-008 is a stepper guard (service + wizard).
 import { RESOURCE_LIMITS } from '@/lib/resources/limits';
 import { parseKeywords } from '@/lib/resources/keywords';
+import {
+  MAX_MULTIPLIERS,
+  MULTIPLIER_MAX,
+  MULTIPLIER_MIN,
+  OBJECTIVES,
+  isMultiplierKind,
+} from '@/lib/engine/bidding/customBidding';
 import { resolveLocationEntries, type GeoOptionRef } from '@/lib/resources/location';
 import { parseSites } from '@/lib/resources/parse-sites';
 import { COUNTING_METHODS_BY_ACTIVITY } from '../constants/conversions';
@@ -73,6 +80,18 @@ export interface FloodlightConversionInput {
   };
 }
 
+export interface CustomBiddingInput {
+  name: string;
+  objective: string | null;
+  /** `RULES` in v1; `SCRIPT` is dormant (RC-037). */
+  source?: 'RULES' | 'SCRIPT';
+  rules: { groupKey: string; signalKey: string; score?: Num }[];
+  multipliers: { kind: string; values: { valueKey: string; multiplier: Num }[] }[];
+  /** Stored status (edit) and the active line items that use the algorithm (CB-010, CB-011). */
+  status?: 'TRAINING' | 'ACTIVE' | 'SUSPENDED' | 'ARCHIVED';
+  usedByActiveLineItems?: number;
+}
+
 // ---------------------------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------------------------
@@ -90,6 +109,9 @@ const group = (rule: Omit<Rule<FloodlightGroupInput>, 'kind'>) =>
   def<FloodlightGroupInput>('floodlightGroup', rule);
 const conversion = (rule: Omit<Rule<FloodlightConversionInput>, 'kind'>) =>
   def<FloodlightConversionInput>('floodlightConversion', rule);
+
+const customBidding = (rule: Omit<Rule<CustomBiddingInput>, 'kind'>) =>
+  def<CustomBiddingInput>('customBidding', rule);
 
 const PLATFORMS = ['WEB', 'MOBILE_APP', 'CONNECTED_TV'] as const;
 const FORMATS = ['GOOGLE_TAG', 'IFRAME_TAG', 'IMAGE_TAG'] as const;
@@ -507,4 +529,113 @@ export const floodlightConversionRules: readonly AnyRule[] = [
   }),
 ];
 
-export const customBiddingRules: readonly AnyRule[] = [];
+export const customBiddingRules: readonly AnyRule[] = [
+  customBidding({
+    id: 'CB-001',
+    severity: 'error',
+    triggers: ['blur', 'save'],
+    reads: ['name'],
+    message: MSG.ENTER_VALUE,
+    check: (c) => (isBlank(c.name) ? { path: 'name' } : null),
+  }),
+  customBidding({
+    id: 'CB-002',
+    severity: 'error',
+    triggers: ['save'],
+    reads: ['objective'],
+    message: MSG.SELECTION_REQUIRED,
+    check: (c) => (OBJECTIVES.some((o) => o.key === c.objective) ? null : { path: 'objective' }),
+  }),
+  customBidding({
+    id: 'CB-003',
+    severity: 'error',
+    triggers: ['cross'],
+    reads: ['source', 'objective'],
+    message: 'Scripts are only available for the Custom objective.',
+    appliesTo: (c) => c.source === 'SCRIPT',
+    check: (c) => (c.objective === 'CUSTOM' ? null : { path: 'source' }),
+  }),
+  customBidding({
+    id: 'CB-004',
+    severity: 'error',
+    triggers: ['save'],
+    reads: ['rules'],
+    message: MSG.CB_MIN_RULE,
+    check: (c) => (c.rules.length === 0 ? { path: 'rules' } : null),
+  }),
+  customBidding({
+    id: 'CB-005',
+    severity: 'error',
+    triggers: ['blur', 'save'],
+    reads: ['rules'],
+    message: MSG.ENTER_VALUE,
+    check: (c) => {
+      const out = c.rules.flatMap((r, i) =>
+        r.score === undefined || toNum(r.score) === null ? [{ path: `rules[${i}].score` }] : [],
+      );
+      return out.length ? out : null;
+    },
+  }),
+  customBidding({
+    id: 'CB-006',
+    severity: 'error',
+    triggers: ['save'],
+    reads: ['multipliers'],
+    message: 'You can add up to 4 multipliers.',
+    check: (c) => (c.multipliers.length > MAX_MULTIPLIERS ? { path: 'multipliers' } : null),
+  }),
+  customBidding({
+    id: 'CB-007',
+    severity: 'error',
+    triggers: ['save'],
+    reads: ['multipliers'],
+    message: 'Each multiplier can only be used once.',
+    check: (c) => {
+      const seen = new Set<string>();
+      const out: { path: string }[] = [];
+      c.multipliers.forEach((m, i) => {
+        if (!isMultiplierKind(m.kind) || seen.has(m.kind))
+          out.push({ path: `multipliers[${i}].kind` });
+        seen.add(m.kind);
+      });
+      return out.length ? out : null;
+    },
+  }),
+  customBidding({
+    id: 'CB-010',
+    severity: 'warning',
+    triggers: ['cross'],
+    reads: ['status', 'usedByActiveLineItems'],
+    message: 'This algorithm is still training, so bids use a fallback until it is ready.',
+    check: (c) =>
+      c.status === 'TRAINING' && (c.usedByActiveLineItems ?? 0) > 0 ? { path: 'status' } : null,
+  }),
+  customBidding({
+    id: 'CB-011',
+    severity: 'error',
+    triggers: ['cross'],
+    reads: ['status', 'usedByActiveLineItems'],
+    message: 'Choose an active custom bidding algorithm.',
+    check: (c) =>
+      c.status === 'SUSPENDED' && (c.usedByActiveLineItems ?? 0) > 0 ? { path: 'status' } : null,
+  }),
+  customBidding({
+    id: 'CB-012',
+    severity: 'error',
+    triggers: ['blur', 'save'],
+    reads: ['multipliers'],
+    message: 'Enter a number between 0.1 and 10.',
+    check: (c) => {
+      const out: { path: string }[] = [];
+      c.multipliers.forEach((m, i) =>
+        m.values.forEach((v, j) => {
+          const n = toNum(v.multiplier);
+          if (n === null || n < MULTIPLIER_MIN || n > MULTIPLIER_MAX) {
+            out.push({ path: `multipliers[${i}].values[${j}].multiplier` });
+          }
+        }),
+      );
+      return out.length ? out : null;
+    },
+  }),
+];

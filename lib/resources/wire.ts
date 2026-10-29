@@ -276,3 +276,85 @@ export interface YoutubeAssetRow {
 }
 
 export type { WireIssue as ResourceIssue };
+
+// Custom bidding -----------------------------------------------------------------------------------
+
+export type CbStatusKey = 'ACTIVE' | 'SUSPENDED' | 'TRAINING';
+export type CbObjectiveWire = 'BRAND_AWARENESS' | 'CLICKS' | 'CONVERSIONS' | 'CUSTOM';
+
+export interface CbRow {
+  id: string;
+  name: string;
+  /** `RULES` on the wire (conflicts RC-009 maps it to `RULE_BASED`). */
+  source: 'RULES' | 'SCRIPT' | 'GOAL';
+  ownerScope: OwnerScopeKey;
+  status: CbStatusKey;
+  readinessPct: number;
+  updatedAt: string;
+  activeLineItems: number;
+  /** Percent of impressions where a rule could not be evaluated. */
+  errorPct: number;
+}
+
+export interface CbRuleWire {
+  groupKey: string;
+  signalKey: string;
+  value: boolean;
+  score: number;
+}
+
+export interface CbMultiplierWire {
+  kind: string;
+  values: { valueKey: string; multiplier: number }[];
+}
+
+export interface CbDraftInput {
+  id?: string;
+  name: string;
+  objective: CbObjectiveWire | null;
+  rules: CbRuleWire[];
+  multipliers: CbMultiplierWire[];
+}
+
+export interface CbTestWire {
+  sampleSize: number;
+  matchedPct: number;
+  histogram: number[];
+  histogramMax: number;
+  meanScore: number;
+  p90Score: number;
+  warnings: { kind: 'HARD' | 'SOFT'; message: string }[];
+  passed: boolean;
+  ranAt: string;
+}
+
+export interface CbView {
+  id: string;
+  name: string;
+  objective: CbObjectiveWire;
+  ownerScope: OwnerScopeKey;
+  status: CbStatusKey;
+  readinessPct: number;
+  version: number;
+  isDraft: boolean;
+  rules: CbRuleWire[];
+  multipliers: CbMultiplierWire[];
+  /** The test run that still counts for the stored definition (CB-008); null after any edit. */
+  lastTest: CbTestWire | null;
+  lineItems: UsingLineItem[];
+  /** Floodlight activities of the advertiser for `ACTIVITY:{id}` signals. */
+  activities: { id: string; name: string }[];
+}
+
+export interface CbDeleteOutcome {
+  deleted: boolean;
+  usedBy: number;
+}
+
+/** One algorithm in the line item's picker. `id` is the row id the line item stores. */
+export interface CbOption {
+  id: string;
+  name: string;
+  status: CbStatusKey;
+  readinessPct: number;
+}

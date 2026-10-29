@@ -363,6 +363,20 @@ export const lineItemCases: Case[] = [
     expect: [],
   },
   {
+    id: 'X-LI-047 custom value strategy with a training algorithm (CB-010 warns elsewhere)',
+    kind: 'lineItem',
+    base: li(),
+    patch: { bid: { optimizedTowards: 'MAX_CUSTOM_VALUE_COST', customBiddingAlgorithmId: 'cb-1' } },
+    ctx: {
+      io: clicksIo,
+      lookups: {
+        ...fullLookups(),
+        customBidding: new Map([['cb-1', { id: 'cb-1', status: 'TRAINING' as const }]]),
+      },
+    },
+    expect: [],
+  },
+  {
     id: 'V-08-16 DOOH bid automated',
     kind: 'lineItem',
     base: li('DOOH_DISPLAY'),
