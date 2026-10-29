@@ -297,15 +297,15 @@ Plan: `docs/specs/build-plan.md` (owner prerequisites, waves, file ownership, me
 
 ### Phase 4 — Remaining modules (cloud sessions / normal limits after credit)
 Outline of waves and module tasks: `docs/specs/build-plan.md` section 3.7. Module specs: `docs/specs/modules/README.md`.
-- ⬜ P4-01 Creatives (all types, review statuses)
-- ⬜ P4-02 Inventory, deals, Marketplace & PG negotiation
-- ⬜ P4-03 Audiences (all types, combined, custom, lookalike)
-- 🟨 P4-04 Resources: channels, lists, Floodlight, linked accounts, verification (P4-04: M15-01..07 and 09 done, custom bidding M15-08 is P4-05; PR open as draft)
+- ✅ P4-01 Creatives (all types, review statuses) (PR 23)
+- 🟨 P4-02 Inventory, deals, Marketplace & PG negotiation (services on branch `p4-02-inventory`; UI restarted 2026-10-29)
+- 🟨 P4-03 Audiences (all types, combined, custom, lookalike) (session started 2026-10-29, branch `p4-03-audiences`)
+- ✅ P4-04 Resources: channels, lists, Floodlight, linked accounts, verification (M15-01..07 and 09; custom bidding M15-08 is P4-05) (PR 27)
 - ⬜ P4-05 Custom & automated bidding
-- ⬜ P4-06 YouTube line items, ad groups, ads
-- ⬜ P4-07 Reporting: instant reports, offline reports, exports, schedules
+- 🟨 P4-06 YouTube line items, ad groups, ads (rules, constants, migration 0005 on branch `p4-06-youtube`; UI restarted 2026-10-29)
+- 🟨 P4-07 Reporting: instant reports, offline reports, exports, schedules (session started 2026-10-29, branch `p4-07-reporting`)
 - ⬜ P4-08 Planning & reach planner
-- ⬜ P4-09 Partner & advertiser settings, users & roles
+- ✅ P4-09 Partner & advertiser settings, users & roles (PR 24)
 - ⬜ P4-10 Bulk edit, SDF upload/download, rules, experiments
 - ⬜ P4-11 Optimisation recommendations, alerts & troubleshooting
 - ⬜ P4-12 Change history, notifications

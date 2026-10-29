@@ -308,3 +308,19 @@ P4 sessions had no ready prompts; each writes its own scope from its module file
 - The engine timer switches on when the Actions secret `ENGINE_CRON_URL` exists (the workflow skips quietly without it). Add that secret last, after `/api/health` shows `db: true`.
 
 **Environment notes:** cloud sessions cannot merge via GraphQL; use REST. `add_repo` with `access: push` is needed to push from a new orchestrating session. Deadlines unchanged: merge freeze 5 Nov 9:00 AM IST, credit expiry 5 Nov 1:29 PM IST.
+
+### 9.10 State after the second crash (2026-10-29, evening)
+
+Checked on `main` at commit `93cd27b` by the assistant that took over: CI green; local `npm run check` (3,032 unit and component tests), `npm run test:db` (505) and the full Playwright suite (113) all pass. Merged since 9.9: P3-07b (#22), P3-INT (#25: demo path, `/sim/admin/seed`, gap list `docs/gaps/p3.md`), P4-01 creatives (#23), P4-09 settings (#24), P4-04 resources (#27). The live site could not be reached from the cloud container (no network to vercel.app); check https://dv360-adsmentor.vercel.app/api/health in a browser.
+
+Unfinished branches left by the crash (their sessions died; none had a PR): `p4-02-inventory` (services, rules, seed; no UI), `p4-06-youtube` (rules, constants, migration 0005; no UI), `p4-07-reporting` (empty). Note two migrations share the prefix 0004 on `main` (`0004_creatives_ext`, `0004_settings_contacts`); they apply in name order and CI passes, but check that `0005_youtube_ad_groups` still applies after merging `main`.
+
+Cloud sessions started by the assistant (all running at 13:46 UTC, none with a PR yet; told not to merge):
+| Session | Branch | Scope | Session id |
+|---|---|---|---|
+| P4-02 | `p4-02-inventory` | UI on the existing services (module 13) | `session_015aSPDhDx1nyQJRZjsWiM14` |
+| P4-06 | `p4-06-youtube` | YouTube LI, ad groups, ads UI (module 09) | `session_015aSPDjCoNNHz4iu92kjD8P` |
+| P4-07 | `p4-07-reporting` | reporting (module 16) | `session_015aSPDjmCma4XJnZ3GxkE25` |
+| P4-03 | `p4-03-audiences` | audiences (module 14) | `session_015aSPDiUfaiMEJSmJFP4XnF` |
+
+Still not started: P4-05 custom bidding, P4-08 planning, P4-10 bulk/SDF/experiments, P4-11 optimisation/alerts, P4-12 history/notifications, all of Phase 5 and 6. Owner items unchanged (9.8 step 2 and the owner checklist in 9.9). The PROJECT.md Phase 4 checklist was corrected (P4-01, P4-04, P4-09 done).
