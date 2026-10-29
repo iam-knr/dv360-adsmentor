@@ -2,6 +2,7 @@
 // (module 10 2.1, 4.3 rule 5). Dimension keys are the MX-10 matrix labels (RC-011).
 import {
   availabilityOf,
+  TARGETING_AVAILABILITY,
   type Availability,
   type MatrixDimension,
 } from '@/lib/validation/constants/targeting-availability';
@@ -123,10 +124,20 @@ export function typeLabel(type: string): string {
 }
 
 export function availability(type: string, dim: MatrixDimension): Availability {
+  // The YouTube ad group editor reuses the card with the YTAG column of MX-10 (module 09 2.4).
+  if (type === AD_GROUP_TYPE) return TARGETING_AVAILABILITY[dim].YTAG;
   const t = toLiType(type);
   return t ? availabilityOf(t, dim) : 'Y';
 }
 
+const AD_GROUP_TYPE = 'YT_AD_GROUP';
+const AD_GROUP_MENU: MatrixDimension[] = [
+  'APPS_URLS',
+  'KEYWORDS',
+  'CATEGORIES',
+  'DEMOGRAPHICS',
+  'AUDIENCE_LISTS',
+];
 const isYoutube = (type: string) =>
   ['YT_VIDEO', 'YT_AUDIO', 'YT_ON_CTV'].includes(toLiType(type) ?? '');
 const isVideoLike = (type: string) => ['VIDEO', 'CTV'].includes(toLiType(type) ?? '');
@@ -156,6 +167,7 @@ export function preAdded(type: string): MatrixDimension[] {
 
 /** Add targeting menu for a type: groups with the dimensions the type allows (hidden when `N`). */
 export function menuFor(type: string): { group: MenuGroup | null; items: MatrixDimension[] }[] {
+  if (type === AD_GROUP_TYPE) return [{ group: null, items: AD_GROUP_MENU }];
   if (isYoutube(type)) return [{ group: null, items: YOUTUBE_MENU }];
   return (Object.keys(MENU) as MenuGroup[])
     .map((group) => ({

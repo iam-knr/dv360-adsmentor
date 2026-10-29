@@ -106,16 +106,14 @@ export async function loadTargetingState(db: Db, liId: string): Promise<Targetin
   return rowsToState(await toRows(db, rows), li.type);
 }
 
-/** Replaces the LI's own card rows. Locked rows are never written by an LI save (module 10 3.2). */
-export async function persistTargeting(
+type Owner = { kind: 'LINE_ITEM'; id: string } | { kind: 'AD_GROUP'; id: string };
+
+async function persistRows(
   tx: Prisma.TransactionClient,
-  liId: string,
+  owner: Owner,
+  sandboxId: string,
   state: TargetingState,
 ): Promise<void> {
-  const li = await tx.lineItem.findUniqueOrThrow({
-    where: { id: liId },
-    select: { sandboxId: true },
-  });
   const rows = stateToRows(state).filter((r) => !r.isLocked);
   const wanted = rows.filter((r) => r.code !== undefined);
   const options = wanted.length
@@ -127,9 +125,11 @@ export async function persistTargeting(
       })
     : [];
   const optionId = new Map(options.map((o) => [`${o.dimension}:${o.code}`, o.id]));
+  const ownerKey =
+    owner.kind === 'LINE_ITEM' ? { lineItemId: owner.id } : { adGroupId: owner.id };
 
   await tx.targetingAssignment.deleteMany({
-    where: { lineItemId: liId, ownerType: 'LINE_ITEM', dimension: { notIn: [...NOT_CARD] } },
+    where: { ...ownerKey, ownerType: owner.kind, dimension: { notIn: [...NOT_CARD] } },
   });
   if (rows.length === 0) return;
   await tx.targetingAssignment.createMany({
@@ -138,9 +138,9 @@ export async function persistTargeting(
       const codeInText = r.code !== undefined && !id;
       const config = codeInText ? { ...r.config, codeInText: true } : r.config;
       return {
-        sandboxId: li.sandboxId,
-        ownerType: 'LINE_ITEM',
-        lineItemId: liId,
+        sandboxId,
+        ownerType: owner.kind,
+        ...ownerKey,
         dimension: r.dimension as TargetingDimension,
         mode: r.mode,
         optionId: id ?? null,
@@ -153,4 +153,41 @@ export async function persistTargeting(
       };
     }),
   });
+}
+
+/** Replaces the LI's own card rows. Locked rows are never written by an LI save (module 10 3.2). */
+export async function persistTargeting(
+  tx: Prisma.TransactionClient,
+  liId: string,
+  state: TargetingState,
+): Promise<void> {
+  const li = await tx.lineItem.findUniqueOrThrow({
+    where: { id: liId },
+    select: { sandboxId: true },
+  });
+  await persistRows(tx, { kind: 'LINE_ITEM', id: liId }, li.sandboxId, state);
+}
+
+/** Ad group targeting (module 09 2.4): the ad group's own rows, no advertiser locks (P4-06). */
+export const AD_GROUP_TARGETING_TYPE = 'YT_AD_GROUP';
+
+export async function loadAdGroupTargeting(db: Db, adGroupId: string): Promise<TargetingState> {
+  const own = await db.targetingAssignment.findMany({
+    where: { adGroupId, ownerType: 'AD_GROUP' },
+    select: SELECT,
+    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+  });
+  return rowsToState(await toRows(db, own), AD_GROUP_TARGETING_TYPE);
+}
+
+export async function persistAdGroupTargeting(
+  tx: Prisma.TransactionClient,
+  adGroupId: string,
+  state: TargetingState,
+): Promise<void> {
+  const ag = await tx.adGroup.findUniqueOrThrow({
+    where: { id: adGroupId },
+    select: { sandboxId: true },
+  });
+  await persistRows(tx, { kind: 'AD_GROUP', id: adGroupId }, ag.sandboxId, state);
 }
