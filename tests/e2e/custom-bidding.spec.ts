@@ -46,7 +46,7 @@ test('E2E-RES-05: build an algorithm with a rule and two multipliers, test it, s
   await page.locator('#custom-bidding-name').fill('PW viewable value');
   await page.getByText('Brand awareness', { exact: true }).click();
   await page.getByRole('button', { name: 'Add rule' }).click();
-  await expect(page.getByLabel('Rule 1 signal')).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Rule 1 signal' })).toBeVisible();
   await page.getByRole('button', { name: 'Add multiplier' }).click();
   await page.getByRole('button', { name: 'Add multiplier' }).click();
   await page.getByLabel('Ad position Above the fold factor').fill('2');
@@ -115,7 +115,7 @@ test('E2E-RES-06: each step blocks with the module 15 messages', async ({ page }
   await page.getByRole('button', { name: 'Next' }).click();
   await expect(page.getByText('You can add up to 4 multipliers.')).toBeVisible();
   await page.getByRole('button', { name: 'Remove multiplier 5' }).click();
-  await page.getByLabel('Multiplier 2 type').click();
+  await page.getByRole('combobox', { name: 'Multiplier 2 type' }).click();
   await page.getByRole('option', { name: 'Ad position' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await expect(page.getByText('Each multiplier can only be used once.')).toBeVisible();
