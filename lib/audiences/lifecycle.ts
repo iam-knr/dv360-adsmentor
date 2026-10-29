@@ -20,7 +20,7 @@ export interface AudienceConfig {
 }
 
 export function configOf(value: Prisma.JsonValue | null | undefined): AudienceConfig {
-  return value && typeof value === 'object' && !Array.isArray(value) ? (value as AudienceConfig) : {};
+  return value && typeof value === 'object' && !Array.isArray(value) ? (value) : {};
 }
 
 /** Flip due lists to ACTIVE and write their sizes. Returns how many rows changed. */

@@ -34,12 +34,12 @@ export function barFraction(n: number | bigint | null | undefined): number {
   return Math.min(1, Math.log10(v / 100) / 6);
 }
 
-export interface SizeMap {
+export type SizeMap = {
   display: number;
   youtube: number;
   mobileApp: number;
   ctv: number;
-}
+};
 
 export const ZERO_SIZES: SizeMap = { display: 0, youtube: 0, mobileApp: 0, ctv: 0 };
 

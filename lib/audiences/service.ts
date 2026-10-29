@@ -53,7 +53,6 @@ import {
 import {
   CONNECTED_PRODUCTS,
   SOURCE_LABEL,
-  STATUS_LABEL,
   TYPE_LABEL,
   type AudienceInput,
   type AudienceListResult,
@@ -150,14 +149,14 @@ async function lineItemCounts(tx: Tx, ids: string[]): Promise<Map<string, number
 }
 
 function toRow(a: AudienceRowDb, lineItems: number, now: Date): AudienceRow {
-  const type = a.type as AudienceTypeKey;
+  const type = a.type;
   const hours = a.status === 'PROCESSING' ? hoursUntil(a.availableAt, now) : 0;
   return {
     id: a.publicId.toString(),
     name: a.name,
     type,
     typeLabel: TYPE_LABEL[type],
-    status: a.status as AudienceStatusKey,
+    status: a.status,
     source: SOURCE_LABEL[a.source] ?? a.source,
     display: cell(a.sizeDisplay),
     youtube: cell(a.sizeYoutube),
@@ -247,7 +246,7 @@ export async function getAudienceLookups(user: SessionUser, aid: string): Promis
   assertAudienceRead(ctx);
   return withSandbox(ctx.sandboxId, async (tx) => {
     const adv = await loadAdvertiser(tx, aid);
-    const [activities, channels, seeds] = await Promise.all([
+    const [activities, channels, seeds, variables, apps] = await Promise.all([
       tx.floodlightActivity.findMany({
         where: { group: { advertiserId: adv.id }, status: { not: 'ARCHIVED' } },
         orderBy: { name: 'asc' },
@@ -267,8 +266,21 @@ export async function getAudienceLookups(user: SessionUser, aid: string): Promis
         orderBy: { name: 'asc' },
         select: { publicId: true, name: true, sizeDisplay: true, type: true },
       }),
+      tx.floodlightVariable.findMany({
+        where: { group: { advertiserId: adv.id } },
+        orderBy: { ordinal: 'asc' },
+        select: { key: true, name: true },
+        take: 100,
+      }),
+      tx.appCatalog.findMany({
+        orderBy: [{ name: 'asc' }, { appId: 'asc' }],
+        take: 300,
+        select: { id: true, name: true, platform: true },
+      }),
     ]);
     return {
+      variables: variables.map((v) => ({ key: v.key, name: v.name })),
+      apps: apps.map((a) => ({ id: a.id, label: `${a.name} (${a.platform})` })),
       activities: activities.map((a) => ({
         id: a.publicId.toString(),
         name: a.name,
@@ -330,7 +342,7 @@ export async function getAudience(user: SessionUser, seg: string): Promise<Audie
       tx.customerMatchUpload.findMany({ where: { audienceId: a.id }, orderBy: { uploadedAt: 'desc' } }),
       lineItemCounts(tx, [a.id]),
     ]);
-    const type = a.type as AudienceTypeKey;
+    const type = a.type;
     const cfg = configOf(a.config);
     const activity = a.floodlightActivityId
       ? await tx.floodlightActivity.findUnique({
@@ -362,7 +374,7 @@ export async function getAudience(user: SessionUser, seg: string): Promise<Audie
       description: a.description,
       type,
       typeLabel: TYPE_LABEL[type],
-      status: a.status as AudienceStatusKey,
+      status: a.status,
       source: SOURCE_LABEL[a.source] ?? a.source,
       externalSource: a.source === 'GOOGLE_ANALYTICS' && type === 'TAG_BASED',
       version: a.version,
@@ -566,7 +578,7 @@ async function build(
           floodlightActivityId: act?.id ?? null,
           membershipDays: Number(input.membershipDays),
           ...availabilityFor('TAG_BASED', ctx.simNow),
-          config: { targetSizes: target } as unknown as Prisma.InputJsonValue,
+          config: { targetSizes: target },
         },
         children: async (t, id) => {
           if (input.rules.length)
@@ -625,7 +637,7 @@ async function build(
           consentAck: input.consentAck,
           membershipDays: Number(input.membershipDays),
           ...av,
-          config: { targetSizes: target, contactType: input.contactType ?? null } as unknown as Prisma.InputJsonValue,
+          config: { targetSizes: target, contactType: input.contactType ?? null },
         },
         children: async (t, id) => {
           if (match)
@@ -666,9 +678,9 @@ async function build(
             linkedAccountId: chosen?.id,
             action: input.action,
             videoIds: input.videoIds,
-          } as unknown as Prisma.InputJsonValue,
+          },
         },
-        children: async () => undefined,
+        children: () => Promise.resolve(),
       };
     }
     case 'LOOKALIKE': {
@@ -690,7 +702,7 @@ async function build(
           lookalikeCountries: input.countries,
           reachExpansion: lookalikeExpansion(input.reachPct).toFixed(2),
           ...availabilityFor('LOOKALIKE', ctx.simNow),
-          config: { targetSizes: spreadSizes(display) } as unknown as Prisma.InputJsonValue,
+          config: { targetSizes: spreadSizes(display) },
         },
         children: async (t, id) => {
           if (seeds.length)
@@ -745,7 +757,7 @@ async function build(
         data: {
           description: input.description ?? null,
           ...availabilityFor(input.kind, ctx.simNow),
-          config: { targetSizes: target } as unknown as Prisma.InputJsonValue,
+          config: { targetSizes: target },
         },
         children: async (t, id) => {
           const rows: Prisma.CustomListEntryCreateManyInput[] = [];
@@ -782,7 +794,7 @@ export async function createAudience(
         { type: 'AUDIENCE', chain: { advertiserId: adv.id } },
         async (t) => {
           const row = await t.audience.create({
-            data: { ...built.data, sandboxId: ctx.sandboxId, advertiserId: adv.id, name: input.name.trim(), type: input.kind } as Prisma.AudienceUncheckedCreateInput,
+            data: { ...built.data, sandboxId: ctx.sandboxId, advertiserId: adv.id, name: input.name.trim(), type: input.kind },
             select: { id: true, publicId: true, availableAt: true, status: true },
           });
           await built.children(t, row.id);
@@ -793,7 +805,7 @@ export async function createAudience(
         data: {
           id: created.publicId.toString(),
           availableAt: created.availableAt?.toISOString() ?? null,
-          status: created.status as AudienceStatusKey,
+          status: created.status,
           ...(built.match ? { match: built.match } : {}),
         },
         warnings: softIssues(issues),
@@ -838,7 +850,7 @@ export async function updateAudience(
       const stored = await loadStored(tx, seg);
       if (meta.expectedVersion !== undefined && meta.expectedVersion !== stored.version) throw conflict();
       const adv = await loadAdvertiser(tx, (await tx.advertiser.findUniqueOrThrow({ where: { id: stored.advertiserId }, select: { publicId: true } })).publicId.toString());
-      const type = stored.type as AudienceTypeKey;
+      const type = stored.type;
       if (stored.source === 'GOOGLE_ANALYTICS' && type === 'TAG_BASED') throw forbidden();
       const lockedChanges = Object.entries(changes.locked ?? {})
         .filter(([k, v]) => JSON.stringify(v) !== JSON.stringify(lockedValue(stored, k)))
@@ -924,7 +936,7 @@ export async function archiveAudience(
       if (stored.status === 'ARCHIVED') return { data: { archived: true, lineItems: 0 } };
       const n = await activeLineItemCount(tx, stored.id);
       const adv = await loadAdvertiser(tx, (await tx.advertiser.findUniqueOrThrow({ where: { id: stored.advertiserId }, select: { publicId: true } })).publicId.toString());
-      const issues = validateAudience(ctx, adv, 'edit', { type: stored.type as AudienceTypeKey, name: stored.name, targetingLineItems: n });
+      const issues = validateAudience(ctx, adv, 'edit', { type: stored.type, name: stored.name, targetingLineItems: n });
       if (n > 0 && !confirmed) return { data: { archived: false, lineItems: n }, warnings: softIssues(issues) };
       await setStatus(ctx, tx, stored, 'ARCHIVED');
       return { data: { archived: true, lineItems: n } };
@@ -1024,7 +1036,7 @@ export async function addCustomerMatchData(
               availableAt: av.availableAt,
               consentAck: true,
               dataSource: 'UPLOAD',
-              config: { ...configOf(stored.config), targetSizes: spreadSizes(res.matched), contactType: input.contactType } as unknown as Prisma.InputJsonValue,
+              config: { ...configOf(stored.config), targetSizes: spreadSizes(res.matched), contactType: input.contactType },
               version: { increment: 1 },
             },
           });
@@ -1056,7 +1068,6 @@ function eligibilityOf(s: SizeMap): string[] {
   ];
 }
 
-const ELIGIBLE_KEY = { DISPLAY: 'display', YOUTUBE: 'youtube', MOBILE_APP: 'mobileApp', CTV: 'ctv' } as const;
 
 export async function searchAudiencePicker(user: SessionUser, aid: string, q: PickerQuery): Promise<PickerRow[]> {
   const ctx = await serviceCtx(user);
@@ -1089,7 +1100,7 @@ export async function searchAudiencePicker(user: SessionUser, aid: string, q: Pi
         return {
           id: r.publicId.toString(),
           name: r.name,
-          path: [TYPE_LABEL[r.type as AudienceTypeKey], r.name],
+          path: [TYPE_LABEL[r.type], r.name],
           type: r.type,
           sizeBucket: bucketOf(r.sizeDisplay),
           eligibility: eligibilityOf(sizes),
@@ -1179,7 +1190,20 @@ export async function listAudienceLineItems(user: SessionUser, seg: string): Pro
     const a = await loadStored(tx, seg);
     const rows = await tx.targetingAssignment.findMany({
       where: { refType: 'AUDIENCE', refId: a.id, lineItemId: { not: null } },
-      select: { mode: true, lineItem: { select: { id: true, publicId: true, name: true, status: true, type: true } } },
+      select: {
+        mode: true,
+        lineItem: {
+          select: {
+            id: true,
+            publicId: true,
+            name: true,
+            status: true,
+            type: true,
+            campaign: { select: { publicId: true } },
+            io: { select: { publicId: true } },
+          },
+        },
+      },
     });
     const seen = new Map<string, LinkedLineItem>();
     for (const r of rows) {
@@ -1189,6 +1213,8 @@ export async function listAudienceLineItems(user: SessionUser, seg: string): Pro
         name: r.lineItem.name,
         status: r.lineItem.status,
         type: r.lineItem.type,
+        campaignId: r.lineItem.campaign.publicId.toString(),
+        ioId: r.lineItem.io.publicId.toString(),
         mode: r.mode === 'EXCLUDE' ? 'Excluded' : 'Included',
       });
     }
@@ -1219,7 +1245,7 @@ export async function analyzeGeoDistribution(
       if (!seed) throw notFound();
       const users = Number(seed.sizeDisplay ?? 0);
       const issues = validateAudience(ctx, adv, 'create', {
-        type: seed.type as AudienceTypeKey,
+        type: seed.type,
         name: seed.name,
         analysisSeedUsers: users,
       });

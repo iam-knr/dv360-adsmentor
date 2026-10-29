@@ -1,6 +1,6 @@
 // Wire types of the audience screens (module 14 4.1, routes.md 8.11). Client safe. Ids are public ids as strings.
 import type { WireIssue } from '@/lib/campaigns/wire';
-import type { Bucket, GeoDistribution, AudienceInsights } from './analysis';
+import type { Bucket } from './analysis';
 import type { SizeBucket } from './sizes';
 
 export type { WireIssue } from '@/lib/campaigns/wire';
@@ -211,10 +211,14 @@ export interface LinkedLineItem {
   name: string;
   status: string;
   type: string;
+  campaignId: string;
+  ioId: string;
   mode: 'Included' | 'Excluded';
 }
 
 export interface AudienceLookups {
+  variables: { key: string; name: string }[];
+  apps: { id: string; label: string }[];
   activities: { id: string; name: string; type: string; counting: string; remarketing: boolean }[];
   linkedChannels: { id: string; name: string }[];
   firstParty: { id: string; name: string; users: number; type: string }[];
