@@ -26,6 +26,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { colors } from '@/lib/theme/tokens';
 import type { Cell, QueryColumn, QueryResult, VizType } from '@/lib/reporting/types';
 
 export function formatCell(v: Cell | undefined, type: string): string {
@@ -38,7 +39,7 @@ export function formatCell(v: Cell | undefined, type: string): string {
   return String(v);
 }
 
-const SERIES = ['#1a73e8', '#188038', '#e37400', '#a142f4', '#d93025', '#007b83'];
+const SERIES = colors.chart;
 const isNum = (c: QueryColumn) => c.kind === 'METRIC';
 
 function FlatTable({ result }: { result: QueryResult }) {
