@@ -78,9 +78,7 @@ describe('path builders', () => {
     expect(newTargetFor('/p/1/a/2/c/3/explorerios', cmp)).toBe('/p/1/a/2/c/3/ios/new');
     expect(newTargetFor('/p/1/a/2/c/3/details', cmp)).toBeNull();
     const io = { ...cmp, ioId: '4' };
-    expect(newTargetFor('/p/1/a/2/c/3/io/4/explorerlis', io)).toBe(
-      '/p/1/a/2/c/3/io/4/lis/new',
-    );
+    expect(newTargetFor('/p/1/a/2/c/3/io/4/explorerlis', io)).toBe('/p/1/a/2/c/3/io/4/lis/new');
     expect(newIoTarget(cmp)).toBe('/p/1/a/2/c/3/ios/new');
     expect(newIoTarget(io)).toBeNull();
     expect(newIoTarget(adv)).toBeNull();

@@ -55,7 +55,8 @@ describe('route table (routes.md 3)', () => {
       expect(src, row.folder).toContain(`module="${row.module}"`);
       expect(src, row.folder).toContain(`view="${row.view}"`);
       if (row.frame === 'F') expect(src, row.folder).toContain('frame="form"');
-      if (row.frame === 'IO' || row.frame === 'LI') expect(src, row.folder).toContain('frame="tab"');
+      if (row.frame === 'IO' || row.frame === 'LI')
+        expect(src, row.folder).toContain('frame="tab"');
     }
   });
 
