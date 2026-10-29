@@ -44,7 +44,10 @@ export function forecastInstantDeal(input: ForecastInput): InstantDealForecast {
   const wobble = 0.94 + (hashString(key) % 1200) / 10000;
   const p50 = Math.max(
     1000,
-    Math.round((input.sellerImpressions7d * targetingShare(input.targeting, input.optionCounts) * wobble) / 1000) * 1000,
+    Math.round(
+      (input.sellerImpressions7d * targetingShare(input.targeting, input.optionCounts) * wobble) /
+        1000,
+    ) * 1000,
   );
   const p10 = Math.round((p50 * 0.62) / 1000) * 1000;
   const p90 = Math.round((p50 * 1.48) / 1000) * 1000;
@@ -88,10 +91,19 @@ export function payloadHash(p: TokenPayload): string {
 export const issueForecastToken = (p: TokenPayload, nowMs: number): string =>
   `${payloadHash(p)}.${nowMs.toString(36)}`;
 
-export function forecastTokenValid(token: string | null | undefined, p: TokenPayload, nowMs: number): boolean {
+export function forecastTokenValid(
+  token: string | null | undefined,
+  p: TokenPayload,
+  nowMs: number,
+): boolean {
   if (!token) return false;
   const [hash, issued] = token.split('.');
   if (!hash || !issued) return false;
   const at = parseInt(issued, 36);
-  return hash === payloadHash(p) && Number.isFinite(at) && nowMs - at <= TOKEN_TTL_MS && nowMs >= at - 1000;
+  return (
+    hash === payloadHash(p) &&
+    Number.isFinite(at) &&
+    nowMs - at <= TOKEN_TTL_MS &&
+    nowMs >= at - 1000
+  );
 }

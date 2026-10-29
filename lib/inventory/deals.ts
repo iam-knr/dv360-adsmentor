@@ -53,7 +53,12 @@ import type {
   PackageRow,
 } from './types';
 
-const issue = (path: string, code: string, message: string, severity: WireIssue['severity'] = 'error'): WireIssue => ({
+const issue = (
+  path: string,
+  code: string,
+  message: string,
+  severity: WireIssue['severity'] = 'error',
+): WireIssue => ({
   path,
   severity,
   code,
@@ -65,7 +70,10 @@ const fail = (...issues: WireIssue[]) => new ServiceFailure('INVALID', issues);
 // Reads
 // ---------------------------------------------------------------------------------------------
 
-async function campaignLineItemIds(tx: Tx, campaignRef: string | undefined): Promise<Set<string> | undefined> {
+async function campaignLineItemIds(
+  tx: Tx,
+  campaignRef: string | undefined,
+): Promise<Set<string> | undefined> {
   if (!campaignRef) return undefined;
   const ref = parseIdRef(campaignRef);
   if (!ref) throw notFound();
@@ -111,7 +119,10 @@ export async function listOrdersDeals(
       orderBy: [{ startAt: 'desc' }, { publicId: 'asc' }],
     });
     const ids = stored.map((d) => d.id);
-    const [delivery, liIds] = await Promise.all([deliveryByDeal(tx, ids), lineItemsByDeal(tx, ids)]);
+    const [delivery, liIds] = await Promise.all([
+      deliveryByDeal(tx, ids),
+      lineItemsByDeal(tx, ids),
+    ]);
     const rows = stored.map((d) =>
       toDealRow(d, {
         simNow: ctx.simNow,
@@ -129,7 +140,9 @@ export async function listOrdersDeals(
     const rest = visible.filter((r) => !r.actionRequired);
     const orders = new Map<string, OrderRow>();
     const out: (OrderRow | DealRow)[] = [];
-    const orderOf = new Map(stored.filter((d) => d.order).map((d) => [d.orderId as string, d.order!]));
+    const orderOf = new Map(
+      stored.filter((d) => d.order).map((d) => [d.orderId as string, d.order!]),
+    );
     for (const d of rest) {
       if (!d.orderId) {
         out.push(d);
@@ -188,7 +201,12 @@ function capView(raw: unknown): FrequencyCapView | null {
   };
 }
 
-export async function getDeal(user: SessionUser, aid: string, tid: string, campaignId?: string): Promise<DealView> {
+export async function getDeal(
+  user: SessionUser,
+  aid: string,
+  tid: string,
+  campaignId?: string,
+): Promise<DealView> {
   return readCtx(user, async (tx, ctx) => {
     const adv = await loadAdvertiser(tx, ctx, aid);
     const d = await loadDeal(tx, adv.partnerId, tid);
@@ -204,7 +222,10 @@ export async function getDeal(user: SessionUser, aid: string, tid: string, campa
       tx.dealAccess.findMany({ where: { dealId: d.id }, select: { advertiserId: true } }),
       campaignLineItemIds(tx, campaignId),
     ]);
-    const [delivery, liIds] = await Promise.all([deliveryByDeal(tx, [d.id]), lineItemsByDeal(tx, [d.id])]);
+    const [delivery, liIds] = await Promise.all([
+      deliveryByDeal(tx, [d.id]),
+      lineItemsByDeal(tx, [d.id]),
+    ]);
     const row = toDealRow(d, {
       simNow: ctx.simNow,
       currency: adv.currencyCode,
@@ -239,7 +260,8 @@ export async function getDeal(user: SessionUser, aid: string, tid: string, campa
       allAdvertisers: advertisers,
       frequencyCap: capView(d.frequencyCap),
       pgDirect: d.pgDirect,
-      cost: d.cost === null ? null : round2(convert(Number(d.cost), DEAL_CURRENCY, adv.currencyCode)),
+      cost:
+        d.cost === null ? null : round2(convert(Number(d.cost), DEAL_CURRENCY, adv.currencyCode)),
       durationSeconds: d.durationSeconds,
       creativeSource: d.creativeSource,
       committed,
@@ -364,16 +386,29 @@ export async function getDealHistory(
 // Writes: status, frequency cap, advertiser access
 // ---------------------------------------------------------------------------------------------
 
-const ACTION_BY_TARGET = (from: DealStatusKey, target: 'ACTIVE' | 'PAUSED' | 'ARCHIVED'): DealAction => {
+const ACTION_BY_TARGET = (
+  from: DealStatusKey,
+  target: 'ACTIVE' | 'PAUSED' | 'ARCHIVED',
+): DealAction => {
   if (target === 'ACTIVE') return 'ACTIVATE';
   if (target === 'ARCHIVED') return 'ARCHIVE';
   return from === 'ARCHIVED' ? 'UNARCHIVE' : 'PAUSE';
 };
 
-async function currentStatus(tx: Tx, partnerId: string, d: StoredDeal, simNow: Date): Promise<DealStatusKey> {
+async function currentStatus(
+  tx: Tx,
+  partnerId: string,
+  d: StoredDeal,
+  simNow: Date,
+): Promise<DealStatusKey> {
   const ex = await exchangeInfo(tx, partnerId);
   return effectiveDealStatus(
-    { status: d.status, endAt: d.endAt, exchangeEnabled: !ex.disabled.has(d.exchangeId), commitment: d.commitment },
+    {
+      status: d.status,
+      endAt: d.endAt,
+      exchangeEnabled: !ex.disabled.has(d.exchangeId),
+      commitment: d.commitment,
+    },
     simNow,
   );
 }
@@ -402,13 +437,23 @@ async function applyAction(
   extra: { bulkJobId?: string; note?: string } = {},
 ): Promise<WireIssue[]> {
   const from = await currentStatus(tx, partnerId, d, ctx.simNow);
-  const check = checkDealAction(from, action, { allowPausing: d.allowPausing, canWriteAll: canWriteInventory(user) });
+  const check = checkDealAction(from, action, {
+    allowPausing: d.allowPausing,
+    canWriteAll: canWriteInventory(user),
+  });
   if (!check.ok) throw fail(issue('status', check.ruleId, check.message));
   const warnings: WireIssue[] = [];
   if (action === 'ARCHIVE') {
     const n = await activeLineItemUse(tx, d.id);
     if (n > 0)
-      warnings.push(issue('status', 'INV-013', `${n} line ${n === 1 ? 'item uses' : 'items use'} this deal.`, 'warning'));
+      warnings.push(
+        issue(
+          'status',
+          'INV-013',
+          `${n} line ${n === 1 ? 'item uses' : 'items use'} this deal.`,
+          'warning',
+        ),
+      );
   }
   await withChangeLog(
     changeCtx(ctx, tx, {
@@ -439,8 +484,10 @@ function capIssues(cap: FrequencyCapView): WireIssue[] {
   if (!cap.enabled) return [];
   const out: WireIssue[] = [];
   const whole = (v: number | null) => v !== null && Number.isInteger(v) && v >= 1;
-  if (!whole(cap.maxImpressions)) out.push(issue('frequencyCap.maxImpressions', 'FRQ-001', MSG.ENTER_POSITIVE));
-  if (!whole(cap.periodCount)) out.push(issue('frequencyCap.periodCount', 'FRQ-001', MSG.ENTER_POSITIVE));
+  if (!whole(cap.maxImpressions))
+    out.push(issue('frequencyCap.maxImpressions', 'FRQ-001', MSG.ENTER_POSITIVE));
+  if (!whole(cap.periodCount))
+    out.push(issue('frequencyCap.periodCount', 'FRQ-001', MSG.ENTER_POSITIVE));
   if (!cap.period) out.push(issue('frequencyCap.period', 'FRQ-001', MSG.SELECTION_REQUIRED));
   return out;
 }
@@ -456,7 +503,8 @@ export async function updateDeal(
       const adv = await loadAdvertiser(tx, ctx, aid);
       const d = await loadDeal(tx, adv.partnerId, tid);
       if (!canWriteInventory(user)) throw forbidden();
-      if (input.expectedVersion !== undefined && input.expectedVersion !== d.version) throw conflict();
+      if (input.expectedVersion !== undefined && input.expectedVersion !== d.version)
+        throw conflict();
       const warnings: WireIssue[] = [];
       if (input.frequencyCap) {
         const bad = capIssues(input.frequencyCap);
@@ -480,7 +528,13 @@ export async function updateDeal(
         const from = await currentStatus(tx, adv.partnerId, d, ctx.simNow);
         if (from !== input.status) {
           const w = await applyAction(
-            tx, ctx, user, adv.partnerId, adv.id, d, ACTION_BY_TARGET(from, input.status),
+            tx,
+            ctx,
+            user,
+            adv.partnerId,
+            adv.id,
+            d,
+            ACTION_BY_TARGET(from, input.status),
             { ...(input.note ? { note: input.note } : {}) },
           );
           warnings.push(...w);
@@ -495,7 +549,12 @@ export async function updateDeal(
               await t.dealAccess.deleteMany({ where: { dealId: d.id } });
               if (accessIds === null) {
                 await t.dealAccess.create({
-                  data: { sandboxId: ctx.sandboxId, dealId: d.id, partnerId: adv.partnerId, advertiserId: null },
+                  data: {
+                    sandboxId: ctx.sandboxId,
+                    dealId: d.id,
+                    partnerId: adv.partnerId,
+                    advertiserId: null,
+                  },
                 });
               } else {
                 await t.dealAccess.createMany({
@@ -511,7 +570,12 @@ export async function updateDeal(
               where: { id: d.id },
               data: {
                 ...(input.frequencyCap !== undefined
-                  ? { frequencyCap: input.frequencyCap === null ? Prisma.JsonNull : (input.frequencyCap as object) }
+                  ? {
+                      frequencyCap:
+                        input.frequencyCap === null
+                          ? Prisma.JsonNull
+                          : (input.frequencyCap as object),
+                    }
                   : {}),
                 ...(accessIds !== undefined ? { allAdvertisers: accessIds === null } : {}),
                 version: { increment: 1 },
@@ -521,7 +585,10 @@ export async function updateDeal(
           },
         );
       }
-      const fresh = await tx.inventorySourceDeal.findUnique({ where: { id: d.id }, select: { version: true } });
+      const fresh = await tx.inventorySourceDeal.findUnique({
+        where: { id: d.id },
+        select: { version: true },
+      });
       return { data: { version: fresh?.version ?? d.version }, warnings };
     }),
   );
@@ -561,9 +628,17 @@ export async function bulkDealStatus(
       let done = 0;
       for (const d of deals) {
         try {
-          await applyAction(tx, ctx, user, adv.partnerId, adv.id, d, req.action, { bulkJobId: job.id });
+          await applyAction(tx, ctx, user, adv.partnerId, adv.id, d, req.action, {
+            bulkJobId: job.id,
+          });
           await tx.bulkJobItem.create({
-            data: { sandboxId: ctx.sandboxId, jobId: job.id, entityType: 'DEAL', entityId: d.id, status: 'OK' },
+            data: {
+              sandboxId: ctx.sandboxId,
+              jobId: job.id,
+              entityType: 'DEAL',
+              entityId: d.id,
+              status: 'OK',
+            },
           });
           done += 1;
         } catch (e) {
@@ -592,7 +667,11 @@ export async function bulkDealStatus(
 // Packages and deal groups
 // ---------------------------------------------------------------------------------------------
 
-export async function listPackages(user: SessionUser, aid: string, campaignId?: string): Promise<PackageRow[]> {
+export async function listPackages(
+  user: SessionUser,
+  aid: string,
+  campaignId?: string,
+): Promise<PackageRow[]> {
   return readCtx(user, async (tx, ctx) => {
     const adv = await loadAdvertiser(tx, ctx, aid);
     const [exchanges, convert, campaignLis] = await Promise.all([
@@ -620,7 +699,9 @@ export async function listPackages(user: SessionUser, aid: string, campaignId?: 
         dealType: p.dealType,
         rate: round2(convert(Number(p.rate), p.currencyCode, adv.currencyCode)),
         rateOriginal:
-          p.rateCurrencyOriginal && p.rateOriginal !== null && p.rateCurrencyOriginal !== adv.currencyCode
+          p.rateCurrencyOriginal &&
+          p.rateOriginal !== null &&
+          p.rateCurrencyOriginal !== adv.currencyCode
             ? { currency: p.rateCurrencyOriginal, amount: Number(p.rateOriginal) }
             : null,
         currencyCode: adv.currencyCode,
@@ -634,11 +715,17 @@ export async function listPackages(user: SessionUser, aid: string, campaignId?: 
 }
 
 /** Remove a package: archive it and drop its line item assignments. */
-export async function removePackage(user: SessionUser, aid: string, packageId: string): Promise<Result<void>> {
+export async function removePackage(
+  user: SessionUser,
+  aid: string,
+  packageId: string,
+): Promise<Result<void>> {
   return asResult(() =>
     writeCtx(user, async (tx, ctx) => {
       const adv = await loadAdvertiser(tx, ctx, aid);
-      const p = await tx.inventoryPackage.findFirst({ where: { id: packageId, partnerId: adv.partnerId } });
+      const p = await tx.inventoryPackage.findFirst({
+        where: { id: packageId, partnerId: adv.partnerId },
+      });
       if (!p) throw notFound();
       await tx.lineItemInventory.deleteMany({ where: { kind: 'PACKAGE', refId: p.id } });
       await tx.dealGroupMember.deleteMany({ where: { memberKind: 'PACKAGE', memberId: p.id } });
@@ -657,11 +744,21 @@ async function groupRows(tx: Tx, advertiserId: string): Promise<DealGroupRow[]> 
     include: { members: true },
     orderBy: { publicId: 'asc' },
   });
-  const dealIds = groups.flatMap((g) => g.members.filter((m) => m.memberKind === 'DEAL').map((m) => m.memberId));
-  const pkgIds = groups.flatMap((g) => g.members.filter((m) => m.memberKind === 'PACKAGE').map((m) => m.memberId));
+  const dealIds = groups.flatMap((g) =>
+    g.members.filter((m) => m.memberKind === 'DEAL').map((m) => m.memberId),
+  );
+  const pkgIds = groups.flatMap((g) =>
+    g.members.filter((m) => m.memberKind === 'PACKAGE').map((m) => m.memberId),
+  );
   const [deals, pkgs] = await Promise.all([
-    tx.inventorySourceDeal.findMany({ where: { id: { in: dealIds } }, select: { id: true, name: true } }),
-    tx.inventoryPackage.findMany({ where: { id: { in: pkgIds } }, select: { id: true, name: true } }),
+    tx.inventorySourceDeal.findMany({
+      where: { id: { in: dealIds } },
+      select: { id: true, name: true },
+    }),
+    tx.inventoryPackage.findMany({
+      where: { id: { in: pkgIds } },
+      select: { id: true, name: true },
+    }),
   ]);
   const name = new Map([...deals, ...pkgs].map((r) => [r.id, r.name]));
   return groups.map((g) => ({
@@ -669,7 +766,11 @@ async function groupRows(tx: Tx, advertiserId: string): Promise<DealGroupRow[]> 
     publicId: g.publicId.toString(),
     name: g.name,
     kind: g.kind,
-    members: g.members.map((m) => ({ kind: m.memberKind, id: m.memberId, name: name.get(m.memberId) ?? m.memberId })),
+    members: g.members.map((m) => ({
+      kind: m.memberKind,
+      id: m.memberId,
+      name: name.get(m.memberId) ?? m.memberId,
+    })),
   }));
 }
 
@@ -686,7 +787,11 @@ export interface DealGroupInput {
   members: { kind: 'DEAL' | 'PACKAGE'; id: string }[];
 }
 
-async function checkMembers(tx: Tx, partnerId: string, members: DealGroupInput['members']): Promise<void> {
+async function checkMembers(
+  tx: Tx,
+  partnerId: string,
+  members: DealGroupInput['members'],
+): Promise<void> {
   const dealIds = members.filter((m) => m.kind === 'DEAL').map((m) => m.id);
   const pkgIds = members.filter((m) => m.kind === 'PACKAGE').map((m) => m.id);
   const [d, p] = await Promise.all([
@@ -697,9 +802,16 @@ async function checkMembers(tx: Tx, partnerId: string, members: DealGroupInput['
 }
 
 function groupFailure(input: DealGroupInput): { errors: WireIssue[]; warnings: WireIssue[] } {
-  const all = dealGroupIssues({ name: input.name, type: input.type, memberCount: input.members.length });
+  const all = dealGroupIssues({
+    name: input.name,
+    type: input.type,
+    memberCount: input.members.length,
+  });
   const wire = (i: (typeof all)[number]) => issue(i.path, i.ruleId, i.message, i.severity);
-  return { errors: all.filter((i) => i.blocking).map(wire), warnings: all.filter((i) => !i.blocking).map(wire) };
+  return {
+    errors: all.filter((i) => i.blocking).map(wire),
+    warnings: all.filter((i) => !i.blocking).map(wire),
+  };
 }
 
 export async function createDealGroup(
@@ -720,11 +832,13 @@ export async function createDealGroup(
           name: input.name.trim(),
           kind: input.type as 'DEAL_GROUP' | 'PREFERRED_DEAL_GROUP',
           members: {
-            create: [...new Map(input.members.map((m) => [`${m.kind}:${m.id}`, m])).values()].map((m) => ({
-              sandboxId: ctx.sandboxId,
-              memberKind: m.kind,
-              memberId: m.id,
-            })),
+            create: [...new Map(input.members.map((m) => [`${m.kind}:${m.id}`, m])).values()].map(
+              (m) => ({
+                sandboxId: ctx.sandboxId,
+                memberKind: m.kind,
+                memberId: m.id,
+              }),
+            ),
           },
         },
         select: { id: true },
@@ -755,11 +869,13 @@ export async function updateDealGroup(
           name: input.name.trim(),
           kind: input.type as 'DEAL_GROUP' | 'PREFERRED_DEAL_GROUP',
           members: {
-            create: [...new Map(input.members.map((m) => [`${m.kind}:${m.id}`, m])).values()].map((m) => ({
-              sandboxId: ctx.sandboxId,
-              memberKind: m.kind,
-              memberId: m.id,
-            })),
+            create: [...new Map(input.members.map((m) => [`${m.kind}:${m.id}`, m])).values()].map(
+              (m) => ({
+                sandboxId: ctx.sandboxId,
+                memberKind: m.kind,
+                memberId: m.id,
+              }),
+            ),
           },
         },
       });
@@ -769,7 +885,11 @@ export async function updateDealGroup(
 }
 
 /** Hard delete (data-model 7.3). Line item assignments that referenced the group stay and are reported. */
-export async function deleteDealGroup(user: SessionUser, aid: string, groupId: string): Promise<Result<void>> {
+export async function deleteDealGroup(
+  user: SessionUser,
+  aid: string,
+  groupId: string,
+): Promise<Result<void>> {
   return asResult(() =>
     writeCtx(user, async (tx, ctx) => {
       const adv = await loadAdvertiser(tx, ctx, aid);
@@ -780,7 +900,14 @@ export async function deleteDealGroup(user: SessionUser, aid: string, groupId: s
       return {
         data: undefined,
         warnings: used
-          ? [issue('group', 'INV-016', `${used} line ${used === 1 ? 'item references' : 'items reference'} this group.`, 'warning')]
+          ? [
+              issue(
+                'group',
+                'INV-016',
+                `${used} line ${used === 1 ? 'item references' : 'items reference'} this group.`,
+                'warning',
+              ),
+            ]
           : [],
       };
     }),

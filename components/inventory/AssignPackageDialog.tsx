@@ -25,7 +25,11 @@ export function AssignPackageDialog({
     void assignableLineItemsAction(advertiserId, pkg.format).then(setItems);
   }, [advertiserId, pkg.format]);
   if (!items) return null;
-  const picker: PickerItem[] = items.map((l) => ({ id: l.id, label: l.name, secondLine: `${l.campaignName} › ${l.ioName}` }));
+  const picker: PickerItem[] = items.map((l) => ({
+    id: l.id,
+    label: l.name,
+    secondLine: `${l.campaignName} › ${l.ioName}`,
+  }));
   return (
     <DvPickerDialog
       open
@@ -35,17 +39,23 @@ export function AssignPackageDialog({
       applyLabel="Assign"
       searchPlaceholder="Search line items"
       onCancel={onClose}
-      onApply={async (ids) => {
-        const res = await assignInventoryAction(advertiserId, {
-          lineItemIds: ids,
-          items: [{ kind, id: pkg.id, mode: 'INCLUDE' }],
-        });
-        toast.show(
-          res.ok
-            ? { message: res.data.assigned ? `Assigned to ${res.data.assigned} line items` : (res.warnings?.[0]?.message ?? 'Nothing to assign') }
-            : { kind: 'error', message: res.issues[0]?.message ?? "Couldn't assign it." },
-        );
-        onClose();
+      onApply={(ids) => {
+        void (async () => {
+          const res = await assignInventoryAction(advertiserId, {
+            lineItemIds: ids,
+            items: [{ kind, id: pkg.id, mode: 'INCLUDE' }],
+          });
+          toast.show(
+            res.ok
+              ? {
+                  message: res.data.assigned
+                    ? `Assigned to ${res.data.assigned} line items`
+                    : (res.warnings?.[0]?.message ?? 'Nothing to assign'),
+                }
+              : { kind: 'error', message: res.issues[0]?.message ?? "Couldn't assign it." },
+          );
+          onClose();
+        })();
       }}
     />
   );

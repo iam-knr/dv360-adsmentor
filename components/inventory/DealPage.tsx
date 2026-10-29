@@ -44,10 +44,13 @@ const TABS = [
 ];
 
 const date = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { timeZone: 'UTC' });
-const dateTime = (iso: string) => `${new Date(iso).toLocaleString('en-GB', { timeZone: 'UTC' })} UTC`;
+const dateTime = (iso: string) =>
+  `${new Date(iso).toLocaleString('en-GB', { timeZone: 'UTC' })} UTC`;
 const num = (n: number | null) => (n === null ? '-' : n.toLocaleString('en-IN'));
 const money = (n: number | null, code: string) =>
-  n === null ? '-' : `${code === 'INR' ? '₹' : `${code} `}${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  n === null
+    ? '-'
+    : `${code === 'INR' ? '₹' : `${code} `}${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 function Fact({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -62,9 +65,23 @@ function Fact({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-const STATUS_ENTITY: Partial<Record<DealStatusKey, EntityStatus>> = { ACTIVE: 'active', PAUSED: 'paused', DRAFT: 'draft', ARCHIVED: 'archived' };
-const ENTITY_ACTION: Partial<Record<EntityStatus, 'ACTIVE' | 'PAUSED' | 'ARCHIVED'>> = { active: 'ACTIVE', paused: 'PAUSED', archived: 'ARCHIVED' };
-const ACTION_ENTITY = { ACTIVATE: 'active', PAUSE: 'paused', ARCHIVE: 'archived', UNARCHIVE: 'paused' } as const;
+const STATUS_ENTITY: Partial<Record<DealStatusKey, EntityStatus>> = {
+  ACTIVE: 'active',
+  PAUSED: 'paused',
+  DRAFT: 'draft',
+  ARCHIVED: 'archived',
+};
+const ENTITY_ACTION: Partial<Record<EntityStatus, 'ACTIVE' | 'PAUSED' | 'ARCHIVED'>> = {
+  active: 'ACTIVE',
+  paused: 'PAUSED',
+  archived: 'ARCHIVED',
+};
+const ACTION_ENTITY = {
+  ACTIVATE: 'active',
+  PAUSE: 'paused',
+  ARCHIVE: 'archived',
+  UNARCHIVE: 'paused',
+} as const;
 
 function capText(cap: FrequencyCapView | null): string {
   if (!cap?.enabled) return 'No frequency cap';
@@ -94,19 +111,28 @@ export function DealPage({
   const [assign, setAssign] = useState(false);
 
   const save = async (input: Parameters<typeof updateDealAction>[2], done: string) => {
-    const res = await updateDealAction(scope.advertiserId, r.id, { ...input, expectedVersion: deal.version });
+    const res = await updateDealAction(scope.advertiserId, r.id, {
+      ...input,
+      expectedVersion: deal.version,
+    });
     if (!res.ok) {
       toast.show({ kind: 'error', message: res.issues[0]?.message ?? "Couldn't save the deal." });
       return false;
     }
-    toast.show(res.warnings?.length ? { kind: 'warning', message: res.warnings[0]?.message ?? done } : { message: done });
+    toast.show(
+      res.warnings?.length
+        ? { kind: 'warning', message: res.warnings[0]?.message ?? done }
+        : { message: done },
+    );
     router.refresh();
     return true;
   };
 
   const entity = STATUS_ENTITY[r.status];
   const options: EntityStatus[] = entity
-    ? [entity, ...dealActionsFor(r.status).map((a) => ACTION_ENTITY[a])].filter((v, i, a) => a.indexOf(v) === i)
+    ? [entity, ...dealActionsFor(r.status).map((a) => ACTION_ENTITY[a])].filter(
+        (v, i, a) => a.indexOf(v) === i,
+      )
     : [];
   const statusNode = entity ? (
     <DvStatusSelect
@@ -119,7 +145,10 @@ export function DealPage({
       }}
     />
   ) : (
-    <DvStatusDot status={r.status === 'COMPLETED' ? 'completed' : 'notServable'} label={DEAL_STATUS_LABEL[r.status]} />
+    <DvStatusDot
+      status={r.status === 'COMPLETED' ? 'completed' : 'notServable'}
+      label={DEAL_STATUS_LABEL[r.status]}
+    />
   );
 
   return (
@@ -144,7 +173,13 @@ export function DealPage({
         />
       </DvEntityHeader>
       <Box sx={{ px: 4, py: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
-        {tab === 'overviewTab' ? <Overview deal={deal} lineItems={lineItems} onAssign={writable ? () => setAssign(true) : undefined} /> : null}
+        {tab === 'overviewTab' ? (
+          <Overview
+            deal={deal}
+            lineItems={lineItems}
+            onAssign={writable ? () => setAssign(true) : undefined}
+          />
+        ) : null}
         {tab === 'accessTab' ? <Access deal={deal} writable={writable} onSave={save} /> : null}
         {tab === 'settingsTab' ? <Settings deal={deal} writable={writable} onSave={save} /> : null}
         {tab === 'historyTab' ? <DealHistory {...history} /> : null}
@@ -164,15 +199,39 @@ export function DealPage({
   );
 }
 
-function Overview({ deal, lineItems, onAssign }: { deal: DealView; lineItems: DealLineItemRow[]; onAssign?: (() => void) | undefined }) {
+function Overview({
+  deal,
+  lineItems,
+  onAssign,
+}: {
+  deal: DealView;
+  lineItems: DealLineItemRow[];
+  onAssign?: (() => void) | undefined;
+}) {
   const r = deal.row;
   const pg = r.commitment === 'GUARANTEED' && deal.committed !== null;
-  const pct = pg && deal.committed ? Math.min(100, Math.round(((deal.delivered ?? 0) / deal.committed) * 100)) : 0;
+  const pct =
+    pg && deal.committed
+      ? Math.min(100, Math.round(((deal.delivered ?? 0) / deal.committed) * 100))
+      : 0;
   return (
     <>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
-        <DvChartCard title="Delivery over time" period="(last 30 days)" empty={deal.dailySeries.length === 0 ? <DvEmptyState variant="inline" message="No delivery yet" /> : undefined}>
-          <DvSparkBars label="Impressions per day" data={deal.dailySeries.map((d) => ({ label: d.date, value: d.impressions }))} />
+      <Box
+        sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}
+      >
+        <DvChartCard
+          title="Delivery over time"
+          period="(last 30 days)"
+          empty={
+            deal.dailySeries.length === 0 ? (
+              <DvEmptyState variant="inline" message="No delivery yet" />
+            ) : undefined
+          }
+        >
+          <DvSparkBars
+            label="Impressions per day"
+            data={deal.dailySeries.map((d) => ({ label: d.date, value: d.impressions }))}
+          />
         </DvChartCard>
         <DvChartCard title="Win rate">
           <Typography variant="h5" data-testid="win-rate">
@@ -192,8 +251,16 @@ function Overview({ deal, lineItems, onAssign }: { deal: DealView; lineItems: De
       {pg ? (
         <Box data-testid="pg-progress">
           <Typography variant="subtitle2">Delivered vs committed</Typography>
-          <Box role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} sx={{ height: 8, bgcolor: 'surface.sunken', borderRadius: 1, my: 1 }}>
-            <Box sx={{ width: `${pct}%`, height: '100%', bgcolor: 'primary.main', borderRadius: 1 }} />
+          <Box
+            role="progressbar"
+            aria-valuenow={pct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            sx={{ height: 8, bgcolor: 'surface.sunken', borderRadius: 1, my: 1 }}
+          >
+            <Box
+              sx={{ width: `${pct}%`, height: '100%', bgcolor: 'primary.main', borderRadius: 1 }}
+            />
           </Box>
           <Typography variant="body2">
             {num(deal.delivered ?? 0)} of {num(deal.committed)} impressions
@@ -211,7 +278,20 @@ function Overview({ deal, lineItems, onAssign }: { deal: DealView; lineItems: De
           action={onAssign ? { label: 'Assign', onClick: onAssign } : undefined}
         />
       ) : (
-        <Box component="table" aria-label="Line items using this deal" sx={{ width: '100%', borderCollapse: 'collapse', '& th, & td': { textAlign: 'left', p: 1.5, borderBottom: '1px solid', borderColor: 'divider' } }}>
+        <Box
+          component="table"
+          aria-label="Line items using this deal"
+          sx={{
+            width: '100%',
+            borderCollapse: 'collapse',
+            '& th, & td': {
+              textAlign: 'left',
+              p: 1.5,
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+            },
+          }}
+        >
           <thead>
             <tr>
               <th>Line item</th>
@@ -240,7 +320,15 @@ function Overview({ deal, lineItems, onAssign }: { deal: DealView; lineItems: De
   );
 }
 
-function Access({ deal, writable, onSave }: { deal: DealView; writable: boolean; onSave: (i: { advertiserAccess: string[] | null }, done: string) => Promise<boolean> }) {
+function Access({
+  deal,
+  writable,
+  onSave,
+}: {
+  deal: DealView;
+  writable: boolean;
+  onSave: (i: { advertiserAccess: string[] | null }, done: string) => Promise<boolean>;
+}) {
   const a = deal.advertiserAccess;
   const [all, setAll] = useState(a.allAdvertisers);
   const [picked, setPicked] = useState<Set<string>>(new Set(a.advertisers.map((x) => x.id)));
@@ -250,7 +338,10 @@ function Access({ deal, writable, onSave }: { deal: DealView; writable: boolean;
       <Fact label="Write access" value={`Partner: ${a.partnerName}`} />
       {writable ? (
         <Box sx={{ mt: 1 }}>
-          <FormControlLabel control={<Checkbox checked={all} onChange={(e) => setAll(e.target.checked)} />} label="All advertisers permissioned" />
+          <FormControlLabel
+            control={<Checkbox checked={all} onChange={(e) => setAll(e.target.checked)} />}
+            label="All advertisers permissioned"
+          />
           {!all ? (
             <Box role="group" aria-label="Advertisers" sx={{ pl: 3 }}>
               {deal.allAdvertisers.map((x) => (
@@ -278,9 +369,14 @@ function Access({ deal, writable, onSave }: { deal: DealView; writable: boolean;
           <Button
             variant="contained"
             sx={{ mt: 2 }}
-            onClick={async () => {
-              if (!all && picked.size === 0) return setError(INV_MSG.SELECT_ADVERTISER);
-              await onSave({ advertiserAccess: all ? null : [...picked] }, 'Advertiser access was saved');
+            onClick={() => {
+              void (async () => {
+                if (!all && picked.size === 0) return setError(INV_MSG.SELECT_ADVERTISER);
+                await onSave(
+                  { advertiserAccess: all ? null : [...picked] },
+                  'Advertiser access was saved',
+                );
+              })();
             }}
           >
             Save
@@ -289,7 +385,11 @@ function Access({ deal, writable, onSave }: { deal: DealView; writable: boolean;
       ) : (
         <Fact
           label="Partners and Advertisers"
-          value={a.allAdvertisers ? 'All advertisers permissioned' : a.advertisers.map((x) => x.name).join(', ') || '-'}
+          value={
+            a.allAdvertisers
+              ? 'All advertisers permissioned'
+              : a.advertisers.map((x) => x.name).join(', ') || '-'
+          }
         />
       )}
       <Fact label="Default advertiser" value={a.advertisers[0]?.name ?? '-'} />
@@ -297,17 +397,28 @@ function Access({ deal, writable, onSave }: { deal: DealView; writable: boolean;
   );
 }
 
-function Settings({ deal, writable, onSave }: { deal: DealView; writable: boolean; onSave: (i: { frequencyCap: FrequencyCapView }, done: string) => Promise<boolean> }) {
+function Settings({
+  deal,
+  writable,
+  onSave,
+}: {
+  deal: DealView;
+  writable: boolean;
+  onSave: (i: { frequencyCap: FrequencyCapView }, done: string) => Promise<boolean>;
+}) {
   const r = deal.row;
   const code = deal.currencyCode;
-  const [cap, setCap] = useState<FrequencyCapView>(deal.frequencyCap ?? { enabled: false, maxImpressions: null, periodCount: null, period: null });
+  const [cap, setCap] = useState<FrequencyCapView>(
+    deal.frequencyCap ?? { enabled: false, maxImpressions: null, periodCount: null, period: null },
+  );
   const [error, setError] = useState<string | null>(null);
   const asNumber = (v: string) => (v.trim() === '' ? null : Number(v));
   return (
     <>
       {deal.viewOnly ? (
         <DvBanner kind="info" level="inline">
-          Inventory is view only. It is editable by users with write access to all advertisers assigned to this deal.
+          Inventory is view only. It is editable by users with write access to all advertisers
+          assigned to this deal.
         </DvBanner>
       ) : null}
       <DvSectionCard title="Product" layout="stacked">
@@ -329,29 +440,55 @@ function Settings({ deal, writable, onSave }: { deal: DealView; writable: boolea
               : 'Non-guaranteed. You receive potential inventory with no reservation.'
           }
         />
-        <Fact label="Programmatic Guaranteed Direct (BETA)" value={deal.pgDirect ? 'On (locked once started)' : 'Off'} />
+        <Fact
+          label="Programmatic Guaranteed Direct (BETA)"
+          value={deal.pgDirect ? 'On (locked once started)' : 'Off'}
+        />
       </DvSectionCard>
       <DvSectionCard title="Rate and volume" layout="stacked">
         <Fact label="Rate type" value={`${r.rateType === 'FIXED' ? 'CPM (Fixed)' : r.rateType}`} />
         <Fact label="Rate" value={`${money(r.rate, code)} CPM`} />
         <Fact label="Cost" value={money(deal.cost, code)} />
-        <Fact label="Quantity" value={r.quantity === null ? '-' : `${num(r.quantity)} impressions`} />
+        <Fact
+          label="Quantity"
+          value={r.quantity === null ? '-' : `${num(r.quantity)} impressions`}
+        />
       </DvSectionCard>
       <DvSectionCard title="Dates" layout="stacked">
         <Fact label="Start" value={dateTime(r.startAt)} />
         <Fact label="End" value={dateTime(r.endAt)} />
         <Fact label="Day and time" value="No restrictions" />
-        <Fact label="Frequency cap" value={writable ? undefined : `${capText(deal.frequencyCap)} (Advanced Frequency Management)`} />
+        <Fact
+          label="Frequency cap"
+          value={
+            writable ? undefined : `${capText(deal.frequencyCap)} (Advanced Frequency Management)`
+          }
+        />
         {writable ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 420, mt: 1 }}>
             <FormControlLabel
-              control={<Checkbox checked={cap.enabled} onChange={(e) => setCap({ ...cap, enabled: e.target.checked })} />}
+              control={
+                <Checkbox
+                  checked={cap.enabled}
+                  onChange={(e) => setCap({ ...cap, enabled: e.target.checked })}
+                />
+              }
               label="Limit impressions per person"
             />
             {cap.enabled ? (
               <>
-                <DvTextField label="Max impressions" type="number" value={cap.maxImpressions === null ? '' : String(cap.maxImpressions)} onChange={(v) => setCap({ ...cap, maxImpressions: asNumber(v) })} />
-                <DvTextField label="Every" type="number" value={cap.periodCount === null ? '' : String(cap.periodCount)} onChange={(v) => setCap({ ...cap, periodCount: asNumber(v) })} />
+                <DvTextField
+                  label="Max impressions"
+                  type="number"
+                  value={cap.maxImpressions === null ? '' : String(cap.maxImpressions)}
+                  onChange={(v) => setCap({ ...cap, maxImpressions: asNumber(v) })}
+                />
+                <DvTextField
+                  label="Every"
+                  type="number"
+                  value={cap.periodCount === null ? '' : String(cap.periodCount)}
+                  onChange={(v) => setCap({ ...cap, periodCount: asNumber(v) })}
+                />
                 <DvSelect
                   label="Period"
                   value={cap.period ?? ''}
@@ -368,9 +505,11 @@ function Settings({ deal, writable, onSave }: { deal: DealView; writable: boolea
             <Box>
               <Button
                 variant="contained"
-                onClick={async () => {
-                  const ok = await onSave({ frequencyCap: cap }, 'Frequency cap was saved');
-                  setError(ok ? null : 'Check the frequency cap values.');
+                onClick={() => {
+                  void (async () => {
+                    const ok = await onSave({ frequencyCap: cap }, 'Frequency cap was saved');
+                    setError(ok ? null : 'Check the frequency cap values.');
+                  })();
                 }}
               >
                 Save frequency cap
@@ -381,7 +520,10 @@ function Settings({ deal, writable, onSave }: { deal: DealView; writable: boolea
       </DvSectionCard>
       <DvSectionCard title="Format" layout="stacked">
         <Fact label="Format" value={FORMAT_LABEL[r.format]} />
-        <Fact label="Duration" value={deal.durationSeconds ? `${deal.durationSeconds} seconds` : '-'} />
+        <Fact
+          label="Duration"
+          value={deal.durationSeconds ? `${deal.durationSeconds} seconds` : '-'}
+        />
         <Fact label="Creative source" value={deal.creativeSource} />
         <Fact label="Sizes" value={r.sizes.join(', ') || '-'} />
       </DvSectionCard>

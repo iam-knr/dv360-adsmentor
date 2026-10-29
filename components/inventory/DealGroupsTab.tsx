@@ -18,7 +18,11 @@ import {
   type DvColumn,
 } from '@/components/dv';
 import { useViewer } from '@/components/shell/ViewerProvider';
-import { createDealGroupAction, deleteDealGroupAction, updateDealGroupAction } from '@/lib/inventory/actions';
+import {
+  createDealGroupAction,
+  deleteDealGroupAction,
+  updateDealGroupAction,
+} from '@/lib/inventory/actions';
 import type { DealGroupRow } from '@/lib/inventory/types';
 import { InventoryHeader } from './InventoryHeader';
 import { useParam } from './useParam';
@@ -30,7 +34,10 @@ export interface GroupCandidate {
   name: string;
 }
 
-const TYPE_LABEL = { DEAL_GROUP: 'Deal group', PREFERRED_DEAL_GROUP: 'Preferred deal group' } as const;
+const TYPE_LABEL = {
+  DEAL_GROUP: 'Deal group',
+  PREFERRED_DEAL_GROUP: 'Preferred deal group',
+} as const;
 
 function GroupPanel({
   advertiserId,
@@ -47,7 +54,9 @@ function GroupPanel({
   const router = useRouter();
   const [name, setName] = useState(group?.name ?? '');
   const [type, setType] = useState<string>(group?.kind ?? '');
-  const [members, setMembers] = useState<Set<string>>(new Set(group?.members.map((m) => `${m.kind}:${m.id}`) ?? []));
+  const [members, setMembers] = useState<Set<string>>(
+    new Set(group?.members.map((m) => `${m.kind}:${m.id}`) ?? []),
+  );
   const [search, setSearch] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [warning, setWarning] = useState<string | null>(null);
@@ -61,7 +70,9 @@ function GroupPanel({
         return { kind, id };
       }),
     };
-    const res = group ? await updateDealGroupAction(advertiserId, group.id, input) : await createDealGroupAction(advertiserId, input);
+    const res = group
+      ? await updateDealGroupAction(advertiserId, group.id, input)
+      : await createDealGroupAction(advertiserId, input);
     if (!res.ok) {
       setErrors(Object.fromEntries(res.issues.map((i) => [i.path, i.message])));
       return;
@@ -71,21 +82,32 @@ function GroupPanel({
     onClose();
   };
 
-  const shown = candidates.filter((c) => c.name.toLowerCase().includes(search.trim().toLowerCase()));
+  const shown = candidates.filter((c) =>
+    c.name.toLowerCase().includes(search.trim().toLowerCase()),
+  );
   return (
     <DvSlideOver
       open
       title={group ? 'Edit deal group' : 'New deal group'}
       applyLabel={group ? 'Save' : 'Create'}
-      onApply={apply}
+      onApply={() => void apply()}
       onCancel={onClose}
       onDelete={
         group
-          ? async () => {
-              const res = await deleteDealGroupAction(advertiserId, group.id);
-              toast.show(res.ok ? { message: `${group.name} was deleted` } : { kind: 'error', message: res.issues[0]?.message ?? "Couldn't delete the group." });
-              router.refresh();
-              onClose();
+          ? () => {
+              void (async () => {
+                const res = await deleteDealGroupAction(advertiserId, group.id);
+                toast.show(
+                  res.ok
+                    ? { message: `${group.name} was deleted` }
+                    : {
+                        kind: 'error',
+                        message: res.issues[0]?.message ?? "Couldn't delete the group.",
+                      },
+                );
+                router.refresh();
+                onClose();
+              })();
             }
           : undefined
       }
@@ -114,8 +136,17 @@ function GroupPanel({
           ]}
         />
         <Box>
-          <DvTextField label="Deals and packages" placeholder="Search" value={search} onChange={setSearch} />
-          <Box sx={{ maxHeight: 280, overflow: 'auto', mt: 1 }} role="group" aria-label="Deals and packages">
+          <DvTextField
+            label="Deals and packages"
+            placeholder="Search"
+            value={search}
+            onChange={setSearch}
+          />
+          <Box
+            sx={{ maxHeight: 280, overflow: 'auto', mt: 1 }}
+            role="group"
+            aria-label="Deals and packages"
+          >
             {shown.map((c) => (
               <FormControlLabel
                 key={`${c.kind}:${c.id}`}
@@ -135,12 +166,22 @@ function GroupPanel({
                 label={`${c.name} (${c.kind === 'DEAL' ? 'Deal' : 'Package'})`}
               />
             ))}
-            {shown.length === 0 ? <Box sx={{ color: 'text.secondary', py: 2 }}>Nothing matches your search.</Box> : null}
+            {shown.length === 0 ? (
+              <Box sx={{ color: 'text.secondary', py: 2 }}>Nothing matches your search.</Box>
+            ) : null}
           </Box>
           <Box sx={{ typography: 'caption', color: 'text.secondary' }}>{members.size} selected</Box>
         </Box>
-        {warning ? <DvBanner kind="warning" level="inline">{warning}</DvBanner> : null}
-        {errors.members ? <DvBanner kind="error" level="inline">{errors.members}</DvBanner> : null}
+        {warning ? (
+          <DvBanner kind="warning" level="inline">
+            {warning}
+          </DvBanner>
+        ) : null}
+        {errors.members ? (
+          <DvBanner kind="error" level="inline">
+            {errors.members}
+          </DvBanner>
+        ) : null}
       </Box>
     </DvSlideOver>
   );
@@ -161,7 +202,10 @@ export function DealGroupsTab({
   const [panel, setPanel] = useParam('sim_panel');
   const writable = canWrite && !viewer.readOnly;
   const groupId = panel?.startsWith('group:') ? panel.slice('group:'.length) : null;
-  const group = groupId && groupId !== 'new' ? (rows.find((r) => r.id === groupId || r.publicId === groupId) ?? null) : null;
+  const group =
+    groupId && groupId !== 'new'
+      ? (rows.find((r) => r.id === groupId || r.publicId === groupId) ?? null)
+      : null;
   const [page, setPage] = useState(1);
   const [size, setSize] = useState(50);
 
@@ -173,7 +217,12 @@ export function DealGroupsTab({
       sticky: true,
       width: 280,
       cell: (r) => (
-        <Button variant="text" onClick={() => setPanel(`group:${r.id}`)} data-testid="group-link" sx={{ textTransform: 'none', p: 0 }}>
+        <Button
+          variant="text"
+          onClick={() => setPanel(`group:${r.id}`)}
+          data-testid="group-link"
+          sx={{ textTransform: 'none', p: 0 }}
+        >
           {r.name}
         </Button>
       ),
@@ -210,11 +259,23 @@ export function DealGroupsTab({
             setPage(p);
             setSize(s);
           }}
-          emptyState={<DvEmptyState variant="illustrated" title="No deal groups yet" message="Create a group to assign several deals to line items at once." />}
+          emptyState={
+            <DvEmptyState
+              variant="illustrated"
+              title="No deal groups yet"
+              message="Create a group to assign several deals to line items at once."
+            />
+          }
         />
       </Box>
       {writable && (groupId === 'new' || group) ? (
-        <GroupPanel key={group?.id ?? 'new'} advertiserId={scope.advertiserId} group={group} candidates={candidates} onClose={() => setPanel(null)} />
+        <GroupPanel
+          key={group?.id ?? 'new'}
+          advertiserId={scope.advertiserId}
+          group={group}
+          candidates={candidates}
+          onClose={() => setPanel(null)}
+        />
       ) : null}
     </>
   );

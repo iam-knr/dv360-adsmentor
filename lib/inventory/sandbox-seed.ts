@@ -8,7 +8,8 @@ import { exchangeId } from '@/lib/seed/reference';
 
 const DAY = 86_400_000;
 const addDays = (d: Date, n: number) => new Date(d.getTime() + n * DAY);
-const midnight = (d: Date) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+const midnight = (d: Date) =>
+  new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 
 export interface SeedInput {
   sandboxId: string;
@@ -49,12 +50,24 @@ export async function ensureSandboxInventory(tx: Tx, input: SeedInput): Promise<
 
   const order = (code: string, name: string, seller: string, ext: string) =>
     tx.inventoryOrder.create({
-      data: { sandboxId, partnerId, exchangeId: exchangeId(code), sellerName: seller, externalCode: ext, name },
+      data: {
+        sandboxId,
+        partnerId,
+        exchangeId: exchangeId(code),
+        sellerName: seller,
+        externalCode: ext,
+        name,
+      },
     });
   const access = (dealId: string) =>
     tx.dealAccess.create({ data: { sandboxId, dealId, partnerId, advertiserId: null } });
 
-  const o1 = await order('index-exchange', 'Reach and frequency order', 'Index Exchange', 'MP-48210');
+  const o1 = await order(
+    'index-exchange',
+    'Reach and frequency order',
+    'Index Exchange',
+    'MP-48210',
+  );
   const baseDeal = {
     sandboxId,
     partnerId,
@@ -245,15 +258,48 @@ export async function ensureSandboxInventory(tx: Tx, input: SeedInput): Promise<
   });
   await tx.negotiationMessage.createMany({
     data: [
-      { sandboxId, negotiationId: accepted.id, authorKind: 'SELLER' as const, body: 'Proposal drafted.', proposedRate: 160, proposedVolume: 2_000_000n },
-      { sandboxId, negotiationId: accepted.id, authorKind: 'BUYER' as const, body: 'Countering at 145.', proposedRate: 145, proposedVolume: 2_000_000n },
-      { sandboxId, negotiationId: accepted.id, authorKind: 'SELLER' as const, body: 'Your terms work for us. We accept this proposal.', proposedRate: 145, proposedVolume: 2_000_000n },
+      {
+        sandboxId,
+        negotiationId: accepted.id,
+        authorKind: 'SELLER' as const,
+        body: 'Proposal drafted.',
+        proposedRate: 160,
+        proposedVolume: 2_000_000n,
+      },
+      {
+        sandboxId,
+        negotiationId: accepted.id,
+        authorKind: 'BUYER' as const,
+        body: 'Countering at 145.',
+        proposedRate: 145,
+        proposedVolume: 2_000_000n,
+      },
+      {
+        sandboxId,
+        negotiationId: accepted.id,
+        authorKind: 'SELLER' as const,
+        body: 'Your terms work for us. We accept this proposal.',
+        proposedRate: 145,
+        proposedVolume: 2_000_000n,
+      },
     ],
   });
 
   if (templateKey === 'troubleshooting-lab') {
     const lab = await order('openx', 'Troubleshooting order', 'OpenX', 'MP-49002');
-    const common = { ...baseDeal, orderId: lab.id, exchangeId: lab.exchangeId, sellerName: 'OpenX', sellerKind: 'EXCHANGE' as const, commitment: 'GUARANTEED' as const, dealType: 'PROGRAMMATIC_GUARANTEED' as const, format: 'DISPLAY' as const, rate: 130, rateType: 'FIXED' as const, bidRatioPct: 100 };
+    const common = {
+      ...baseDeal,
+      orderId: lab.id,
+      exchangeId: lab.exchangeId,
+      sellerName: 'OpenX',
+      sellerKind: 'EXCHANGE' as const,
+      commitment: 'GUARANTEED' as const,
+      dealType: 'PROGRAMMATIC_GUARANTEED' as const,
+      format: 'DISPLAY' as const,
+      rate: 130,
+      rateType: 'FIXED' as const,
+      bidRatioPct: 100,
+    };
     const expired = await tx.inventorySourceDeal.create({
       data: {
         ...common,

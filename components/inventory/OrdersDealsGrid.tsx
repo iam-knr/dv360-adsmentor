@@ -20,16 +20,27 @@ import {
 } from '@/components/dv';
 import { DvIcon } from '@/components/icons';
 import { useViewer } from '@/components/shell/ViewerProvider';
-import { bulkDealStatusAction, listOrdersDealsAction, updateDealAction } from '@/lib/inventory/actions';
+import {
+  bulkDealStatusAction,
+  listOrdersDealsAction,
+  updateDealAction,
+} from '@/lib/inventory/actions';
 import { dealPath, instantDealPath, type Scope } from '@/lib/inventory/paths';
-import { DEAL_STATUS_LABEL, DEFAULT_DEAL_STATUSES, type DealAction, type DealStatusKey } from '@/lib/inventory/transitions';
+import {
+  DEAL_STATUS_LABEL,
+  DEFAULT_DEAL_STATUSES,
+  type DealAction,
+  type DealStatusKey,
+} from '@/lib/inventory/transitions';
 import type { DealRow, OrderRow, OrdersDeals } from '@/lib/inventory/types';
 import { AppLink } from '@/lib/routes/AppLink';
 import { InventoryHeader } from './InventoryHeader';
 
 type GridRow = OrderRow | DealRow;
 
-const STATUS_OPTIONS = (['ACTIVE', 'ARCHIVED', 'PAUSED', 'DRAFT', 'COMPLETED', 'NOT_SERVABLE'] as DealStatusKey[]).map((v) => ({
+const STATUS_OPTIONS = (
+  ['ACTIVE', 'ARCHIVED', 'PAUSED', 'DRAFT', 'COMPLETED', 'NOT_SERVABLE'] as DealStatusKey[]
+).map((v) => ({
   value: v,
   label: DEAL_STATUS_LABEL[v],
 }));
@@ -57,7 +68,9 @@ export const FILTER_FIELDS: FilterField[] = [
   },
 ];
 
-export const DEFAULT_FILTERS: FilterValue[] = [{ fieldId: 'status', values: [...DEFAULT_DEAL_STATUSES] }];
+export const DEFAULT_FILTERS: FilterValue[] = [
+  { fieldId: 'status', values: [...DEFAULT_DEAL_STATUSES] },
+];
 
 const GROUPS = [
   { id: 'source', label: 'Inventory source', collapsible: true },
@@ -85,7 +98,9 @@ function toQuery(filters: FilterValue[], text: string, campaignId?: string) {
   const commitment = one('commitment');
   const format = one('format');
   return {
-    status: (status?.length ? status : ['ACTIVE', 'ARCHIVED', 'PAUSED', 'DRAFT', 'COMPLETED', 'NOT_SERVABLE']) as DealStatusKey[],
+    status: (status?.length
+      ? status
+      : ['ACTIVE', 'ARCHIVED', 'PAUSED', 'DRAFT', 'COMPLETED', 'NOT_SERVABLE']) as DealStatusKey[],
     ...(commitment ? { commitment: [commitment as 'GUARANTEED'] } : {}),
     ...(format ? { format: [format as 'VIDEO'] } : {}),
     ...(text.trim() ? { q: text.trim() } : {}),
@@ -111,7 +126,10 @@ export function OrdersDealsGrid({ scope, initial }: { scope: Scope; initial: Ord
   const reload = useCallback(
     (f: FilterValue[], t: string) => {
       startLoad(async () => {
-        const res = await listOrdersDealsAction(scope.advertiserId, toQuery(f, t, scope.campaignId));
+        const res = await listOrdersDealsAction(
+          scope.advertiserId,
+          toQuery(f, t, scope.campaignId),
+        );
         if (!res) return setError("Couldn't load orders and deals");
         setError(null);
         setData(res);
@@ -127,8 +145,16 @@ export function OrdersDealsGrid({ scope, initial }: { scope: Scope; initial: Ord
   const pageRows = rows.slice(start, start + pageSize);
   const pageIds = new Set(pageRows.map((r) => r.id));
   const sections = [
-    { id: 'action', label: 'Action required', rowIds: data.actionRequired.filter((r) => pageIds.has(r.id)).map((r) => r.id) },
-    { id: 'rest', label: 'Everything else', rowIds: data.rest.filter((r) => pageIds.has(r.id)).map((r) => r.id) },
+    {
+      id: 'action',
+      label: 'Action required',
+      rowIds: data.actionRequired.filter((r) => pageIds.has(r.id)).map((r) => r.id),
+    },
+    {
+      id: 'rest',
+      label: 'Everything else',
+      rowIds: data.rest.filter((r) => pageIds.has(r.id)).map((r) => r.id),
+    },
   ];
   const dealsById = useMemo(() => {
     const m = new Map<string, DealRow>();
@@ -140,8 +166,14 @@ export function OrdersDealsGrid({ scope, initial }: { scope: Scope; initial: Ord
   }, [rows]);
 
   const changeStatus = async (row: DealRow, next: 'active' | 'paused') => {
-    const res = await updateDealAction(scope.advertiserId, row.id, { status: next === 'active' ? 'ACTIVE' : 'PAUSED' });
-    if (!res.ok) return toast.show({ kind: 'error', message: res.issues[0]?.message ?? "Couldn't change the status." });
+    const res = await updateDealAction(scope.advertiserId, row.id, {
+      status: next === 'active' ? 'ACTIVE' : 'PAUSED',
+    });
+    if (!res.ok)
+      return toast.show({
+        kind: 'error',
+        message: res.issues[0]?.message ?? "Couldn't change the status.",
+      });
     toast.show({ message: `${row.name} is now ${next === 'active' ? 'active' : 'paused'}` });
     reload(filters, text);
   };
@@ -151,18 +183,26 @@ export function OrdersDealsGrid({ scope, initial }: { scope: Scope; initial: Ord
     if (!ids.length) return;
     const action = id.toUpperCase() as DealAction;
     const res = await bulkDealStatusAction(scope.advertiserId, { ids, action });
-    if (!res.ok) return toast.show({ kind: 'error', message: res.issues[0]?.message ?? "Couldn't change the status." });
+    if (!res.ok)
+      return toast.show({
+        kind: 'error',
+        message: res.issues[0]?.message ?? "Couldn't change the status.",
+      });
     const { done, failed, errors } = res.data;
     toast.show({
       kind: failed ? 'warning' : 'neutral',
-      message: failed ? `Status edited on ${done} deals. ${failed} failed: ${errors[0]?.message ?? ''}` : `Status edited on ${done} ${done === 1 ? 'deal' : 'deals'}`,
+      message: failed
+        ? `Status edited on ${done} deals. ${failed} failed: ${errors[0]?.message ?? ''}`
+        : `Status edited on ${done} ${done === 1 ? 'deal' : 'deals'}`,
     });
     reload(filters, text);
   };
 
   const toggleAll = (expand: boolean) => {
     if (!expand) return setGridKey((k) => k + 1);
-    box.current?.querySelectorAll<HTMLButtonElement>('button[aria-label="Expand row"]').forEach((b) => b.click());
+    box.current
+      ?.querySelectorAll<HTMLButtonElement>('button[aria-label="Expand row"]')
+      .forEach((b) => b.click());
   };
 
   const columns: DvColumn<GridRow>[] = [
@@ -190,10 +230,25 @@ export function OrdersDealsGrid({ scope, initial }: { scope: Scope; initial: Ord
           </DvTooltip>
         ),
     },
-    { id: 'id', header: 'ID', group: 'source', accessor: (r) => (r.kind === 'ORDER' ? r.externalCode : r.dealId) },
+    {
+      id: 'id',
+      header: 'ID',
+      group: 'source',
+      accessor: (r) => (r.kind === 'ORDER' ? r.externalCode : r.dealId),
+    },
     { id: 'exchange', header: 'Exchange', group: 'source', accessor: (r) => r.exchangeName },
-    { id: 'delivery', header: 'Delivery method', group: 'details', accessor: (r) => (r.kind === 'DEAL' ? r.deliveryMethod : '') },
-    { id: 'commitment', header: 'Commitment', group: 'details', accessor: (r) => (r.kind === 'DEAL' ? r.commitmentLabel : '') },
+    {
+      id: 'delivery',
+      header: 'Delivery method',
+      group: 'details',
+      accessor: (r) => (r.kind === 'DEAL' ? r.deliveryMethod : ''),
+    },
+    {
+      id: 'commitment',
+      header: 'Commitment',
+      group: 'details',
+      accessor: (r) => (r.kind === 'DEAL' ? r.commitmentLabel : ''),
+    },
     {
       id: 'central',
       header: 'Central partner deal',
@@ -201,15 +256,68 @@ export function OrdersDealsGrid({ scope, initial }: { scope: Scope; initial: Ord
       tooltip: 'A deal negotiated centrally by the partner and shared with advertisers.',
       accessor: (r) => (r.kind === 'DEAL' ? (r.centralPartnerDeal ? 'Yes' : 'No') : ''),
     },
-    { id: 'rate', header: 'Rate (CPM)', group: 'rate', type: 'currency', currencySymbol: data.currencyCode === 'INR' ? '₹' : data.currencyCode, accessor: (r) => (r.kind === 'DEAL' ? r.rate : null) },
-    { id: 'bidRatio', header: 'Bid ratio', group: 'rate', type: 'percent', accessor: (r) => (r.kind === 'DEAL' ? r.bidRatioPct : null) },
-    { id: 'quantity', header: 'Quantity', group: 'rate', type: 'number', accessor: (r) => (r.kind === 'DEAL' ? r.quantity : null) },
-    { id: 'impressions', header: 'Impressions', group: 'delivery', type: 'number', accessor: (r) => (r.kind === 'DEAL' ? r.impressions : null) },
-    { id: 'spend', header: 'Spend', group: 'delivery', type: 'currency', currencySymbol: data.currencyCode === 'INR' ? '₹' : data.currencyCode, accessor: (r) => (r.kind === 'DEAL' ? r.spend : null) },
-    { id: 'winRate', header: 'Win rate', group: 'delivery', type: 'percent', accessor: (r) => (r.kind === 'DEAL' ? r.winRate : null) },
-    { id: 'sizes', header: 'Sizes', group: 'creative', accessor: (r) => (r.kind === 'DEAL' ? r.sizes.join(', ') : '') },
-    { id: 'start', header: 'Start date', group: 'dates', accessor: (r) => (r.kind === 'DEAL' ? date(r.startAt) : '') },
-    { id: 'end', header: 'End date', group: 'dates', accessor: (r) => (r.kind === 'DEAL' ? date(r.endAt) : '') },
+    {
+      id: 'rate',
+      header: 'Rate (CPM)',
+      group: 'rate',
+      type: 'currency',
+      currencySymbol: data.currencyCode === 'INR' ? '₹' : data.currencyCode,
+      accessor: (r) => (r.kind === 'DEAL' ? r.rate : null),
+    },
+    {
+      id: 'bidRatio',
+      header: 'Bid ratio',
+      group: 'rate',
+      type: 'percent',
+      accessor: (r) => (r.kind === 'DEAL' ? r.bidRatioPct : null),
+    },
+    {
+      id: 'quantity',
+      header: 'Quantity',
+      group: 'rate',
+      type: 'number',
+      accessor: (r) => (r.kind === 'DEAL' ? r.quantity : null),
+    },
+    {
+      id: 'impressions',
+      header: 'Impressions',
+      group: 'delivery',
+      type: 'number',
+      accessor: (r) => (r.kind === 'DEAL' ? r.impressions : null),
+    },
+    {
+      id: 'spend',
+      header: 'Spend',
+      group: 'delivery',
+      type: 'currency',
+      currencySymbol: data.currencyCode === 'INR' ? '₹' : data.currencyCode,
+      accessor: (r) => (r.kind === 'DEAL' ? r.spend : null),
+    },
+    {
+      id: 'winRate',
+      header: 'Win rate',
+      group: 'delivery',
+      type: 'percent',
+      accessor: (r) => (r.kind === 'DEAL' ? r.winRate : null),
+    },
+    {
+      id: 'sizes',
+      header: 'Sizes',
+      group: 'creative',
+      accessor: (r) => (r.kind === 'DEAL' ? r.sizes.join(', ') : ''),
+    },
+    {
+      id: 'start',
+      header: 'Start date',
+      group: 'dates',
+      accessor: (r) => (r.kind === 'DEAL' ? date(r.startAt) : ''),
+    },
+    {
+      id: 'end',
+      header: 'End date',
+      group: 'dates',
+      accessor: (r) => (r.kind === 'DEAL' ? date(r.endAt) : ''),
+    },
   ];
 
   return (
@@ -235,10 +343,18 @@ export function OrdersDealsGrid({ scope, initial }: { scope: Scope; initial: Ord
               }}
             />
           </Box>
-          <Button aria-label="Expand all" onClick={() => toggleAll(true)} startIcon={<DvIcon name="unfold_more" size={18} />}>
+          <Button
+            aria-label="Expand all"
+            onClick={() => toggleAll(true)}
+            startIcon={<DvIcon name="unfold_more" size={18} />}
+          >
             Expand all
           </Button>
-          <Button aria-label="Collapse all" onClick={() => toggleAll(false)} startIcon={<DvIcon name="unfold_less" size={18} />}>
+          <Button
+            aria-label="Collapse all"
+            onClick={() => toggleAll(false)}
+            startIcon={<DvIcon name="unfold_less" size={18} />}
+          >
             Collapse all
           </Button>
         </Box>
@@ -256,7 +372,7 @@ export function OrdersDealsGrid({ scope, initial }: { scope: Scope; initial: Ord
                 ],
               },
             ]}
-            onAction={bulk}
+            onAction={(id) => void bulk(id)}
             onClear={() => setSelection(new Set())}
           />
         ) : null}
@@ -281,10 +397,18 @@ export function OrdersDealsGrid({ scope, initial }: { scope: Scope; initial: Ord
           loading={loading}
           error={error}
           getAlert={(r) => (r.kind === 'DEAL' && r.actionRequired ? 'critical' : null)}
-          onAlertClick={(r) => r.kind === 'DEAL' && r.actionReason && toast.show({ kind: 'warning', message: r.actionReason })}
+          onAlertClick={(r) =>
+            r.kind === 'DEAL' &&
+            r.actionReason &&
+            toast.show({ kind: 'warning', message: r.actionReason })
+          }
           getStatus={(r) => (r.kind === 'DEAL' ? GRID_STATUS[r.status] : 'active')}
-          onStatusChange={writable ? (r, next) => r.kind === 'DEAL' && void changeStatus(r, next) : undefined}
-          isArchived={(r) => (r.kind === 'DEAL' ? r.status === 'ARCHIVED' : r.status === 'ARCHIVED')}
+          onStatusChange={
+            writable ? (r, next) => r.kind === 'DEAL' && void changeStatus(r, next) : undefined
+          }
+          isArchived={(r) =>
+            r.kind === 'DEAL' ? r.status === 'ARCHIVED' : r.status === 'ARCHIVED'
+          }
           emptyState={
             <DvEmptyState
               variant="illustrated"
@@ -292,7 +416,15 @@ export function OrdersDealsGrid({ scope, initial }: { scope: Scope; initial: Ord
               message="Create an instant deal or browse the Marketplace to get inventory."
               action={
                 writable
-                  ? { label: 'Instant deal', primary: true, onClick: () => (window.location.href = instantDealPath(scope.partnerId, scope.advertiserId)) }
+                  ? {
+                      label: 'Instant deal',
+                      primary: true,
+                      onClick: () =>
+                        (window.location.href = instantDealPath(
+                          scope.partnerId,
+                          scope.advertiserId,
+                        )),
+                    }
                   : undefined
               }
             />

@@ -14,7 +14,8 @@ export async function GET(req: Request) {
   const params = new URL(req.url).searchParams;
   const advertiser = params.get('advertiser');
   const status = (params.get('status') ?? '').split(',').filter(Boolean);
-  if (!advertiser || status.some((s) => !STATUSES.includes(s))) return badRequest('advertiser and valid filters are required.');
+  if (!advertiser || status.some((s) => !STATUSES.includes(s)))
+    return badRequest('advertiser and valid filters are required.');
   const campaignId = params.get('campaignId');
   const q = params.get('q');
   return readResponse(() =>

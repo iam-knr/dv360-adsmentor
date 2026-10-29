@@ -7,7 +7,11 @@ import type { PlanRow } from './types';
 export type PlanStatusKey = 'PLANNED' | 'TRAFFICKED';
 export const DEFAULT_PLAN_STATUSES: PlanStatusKey[] = ['PLANNED', 'TRAFFICKED'];
 
-const CHANNEL_LABEL: Record<string, string> = { DIGITAL: 'Digital', TV: 'TV', CROSS_MEDIA: 'Cross-media' };
+const CHANNEL_LABEL: Record<string, string> = {
+  DIGITAL: 'Digital',
+  TV: 'TV',
+  CROSS_MEDIA: 'Cross-media',
+};
 
 export async function listPlans(
   user: SessionUser,
@@ -17,7 +21,10 @@ export async function listPlans(
   return readCtx(user, async (tx, ctx) => {
     const adv = await loadAdvertiser(tx, ctx, aid);
     const rows = await tx.plan.findMany({
-      where: { advertiserId: adv.id, status: { in: q.status?.length ? q.status : DEFAULT_PLAN_STATUSES } },
+      where: {
+        advertiserId: adv.id,
+        status: { in: q.status?.length ? q.status : DEFAULT_PLAN_STATUSES },
+      },
       orderBy: [{ startDate: 'desc' }, { publicId: 'asc' }],
     });
     return rows.map((p) => ({

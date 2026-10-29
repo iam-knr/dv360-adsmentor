@@ -5,9 +5,25 @@
 import { getSessionUser } from '@/lib/auth/session';
 import { ServiceFailure, type Result } from '@/lib/campaigns/service-kit';
 import { assignInventoryToLineItems, listAssignableLineItems } from './assign';
-import { bulkDealStatus, createDealGroup, deleteDealGroup, getDealLineItems, listOrdersDeals, removePackage, updateDeal, updateDealGroup, type DealGroupInput, type UpdateDealInput } from './deals';
+import {
+  bulkDealStatus,
+  createDealGroup,
+  deleteDealGroup,
+  getDealLineItems,
+  listOrdersDeals,
+  removePackage,
+  updateDeal,
+  updateDealGroup,
+  type DealGroupInput,
+  type UpdateDealInput,
+} from './deals';
 import { acceptInstantDeal, requestInstantForecast } from './instant';
-import { assignMarketplaceItem, bulkAssignMarketplace, discover, getMarketplaceItem } from './marketplace';
+import {
+  assignMarketplaceItem,
+  bulkAssignMarketplace,
+  discover,
+  getMarketplaceItem,
+} from './marketplace';
 import {
   acceptNegotiation,
   counterNegotiation,
@@ -49,22 +65,36 @@ async function soft<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
   }
 }
 
-export async function listOrdersDealsAction(aid: string, q: OrdersDealsQuery): Promise<OrdersDeals | null> {
+export async function listOrdersDealsAction(
+  aid: string,
+  q: OrdersDealsQuery,
+): Promise<OrdersDeals | null> {
   const user = await getSessionUser();
   return user ? soft(() => listOrdersDeals(user, aid, q), null) : null;
 }
 
-export async function dealLineItemsAction(aid: string, tid: string, pid: string): Promise<DealLineItemRow[]> {
+export async function dealLineItemsAction(
+  aid: string,
+  tid: string,
+  pid: string,
+): Promise<DealLineItemRow[]> {
   const user = await getSessionUser();
   return user ? soft(() => getDealLineItems(user, aid, tid, pid), []) : [];
 }
 
-export async function bulkDealStatusAction(aid: string, req: { ids: string[]; action: DealAction }): Promise<Result<BulkResponse>> {
+export async function bulkDealStatusAction(
+  aid: string,
+  req: { ids: string[]; action: DealAction },
+): Promise<Result<BulkResponse>> {
   const user = await getSessionUser();
   return user ? bulkDealStatus(user, aid, req) : NO_SESSION;
 }
 
-export async function updateDealAction(aid: string, tid: string, input: UpdateDealInput): Promise<Result<{ version: number }>> {
+export async function updateDealAction(
+  aid: string,
+  tid: string,
+  input: UpdateDealInput,
+): Promise<Result<{ version: number }>> {
   const user = await getSessionUser();
   return user ? updateDeal(user, aid, tid, input) : NO_SESSION;
 }
@@ -74,12 +104,19 @@ export async function removePackageAction(aid: string, packageId: string): Promi
   return user ? removePackage(user, aid, packageId) : NO_SESSION;
 }
 
-export async function createDealGroupAction(aid: string, input: DealGroupInput): Promise<Result<{ id: string }>> {
+export async function createDealGroupAction(
+  aid: string,
+  input: DealGroupInput,
+): Promise<Result<{ id: string }>> {
   const user = await getSessionUser();
   return user ? createDealGroup(user, aid, input) : NO_SESSION;
 }
 
-export async function updateDealGroupAction(aid: string, id: string, input: DealGroupInput): Promise<Result<void>> {
+export async function updateDealGroupAction(
+  aid: string,
+  id: string,
+  input: DealGroupInput,
+): Promise<Result<void>> {
   const user = await getSessionUser();
   return user ? updateDealGroup(user, aid, id, input) : NO_SESSION;
 }
@@ -89,7 +126,10 @@ export async function deleteDealGroupAction(aid: string, id: string): Promise<Re
   return user ? deleteDealGroup(user, aid, id) : NO_SESSION;
 }
 
-export async function requestInstantForecastAction(aid: string, payload: InstantDealPayload): Promise<Result<InstantDealForecastView>> {
+export async function requestInstantForecastAction(
+  aid: string,
+  payload: InstantDealPayload,
+): Promise<Result<InstantDealForecastView>> {
   const user = await getSessionUser();
   return user ? requestInstantForecast(user, aid, payload) : NO_SESSION;
 }
@@ -102,12 +142,18 @@ export async function acceptInstantDealAction(
   return user ? acceptInstantDeal(user, aid, payload) : NO_SESSION;
 }
 
-export async function discoverAction(aid: string, req: DiscoverRequest): Promise<DiscoverResult | null> {
+export async function discoverAction(
+  aid: string,
+  req: DiscoverRequest,
+): Promise<DiscoverResult | null> {
   const user = await getSessionUser();
   return user ? soft(() => discover(user, aid, req), null) : null;
 }
 
-export async function marketplaceItemAction(aid: string, id: string): Promise<MarketplaceItem | null> {
+export async function marketplaceItemAction(
+  aid: string,
+  id: string,
+): Promise<MarketplaceItem | null> {
   const user = await getSessionUser();
   return user ? soft(() => getMarketplaceItem(user, aid, id), null) : null;
 }
@@ -129,7 +175,10 @@ export async function bulkAssignMarketplaceAction(
   return user ? bulkAssignMarketplace(user, aid, req) : NO_SESSION;
 }
 
-export async function assignableLineItemsAction(aid: string, format?: 'DISPLAY' | 'VIDEO' | 'AUDIO'): Promise<LineItemChoice[]> {
+export async function assignableLineItemsAction(
+  aid: string,
+  format?: 'DISPLAY' | 'VIDEO' | 'AUDIO',
+): Promise<LineItemChoice[]> {
   const user = await getSessionUser();
   return user ? soft(() => listAssignableLineItems(user, aid, format), []) : [];
 }
@@ -155,7 +204,10 @@ export async function negotiationAction(aid: string, id: string): Promise<Negoti
   return user ? soft(() => getNegotiation(user, aid, id), null) : null;
 }
 
-export async function importNegotiationAction(aid: string, rfpId: string): Promise<Result<{ negotiationId: string }>> {
+export async function importNegotiationAction(
+  aid: string,
+  rfpId: string,
+): Promise<Result<{ negotiationId: string }>> {
   const user = await getSessionUser();
   return user ? importNegotiation(user, aid, { rfpId }) : NO_SESSION;
 }
@@ -169,12 +221,19 @@ export async function counterNegotiationAction(
   return user ? counterNegotiation(user, aid, id, req) : NO_SESSION;
 }
 
-export async function acceptNegotiationAction(aid: string, id: string): Promise<Result<{ dealId: string }>> {
+export async function acceptNegotiationAction(
+  aid: string,
+  id: string,
+): Promise<Result<{ dealId: string }>> {
   const user = await getSessionUser();
   return user ? acceptNegotiation(user, aid, id) : NO_SESSION;
 }
 
-export async function declineNegotiationAction(aid: string, id: string, note?: string): Promise<Result<void>> {
+export async function declineNegotiationAction(
+  aid: string,
+  id: string,
+  note?: string,
+): Promise<Result<void>> {
   const user = await getSessionUser();
   return user ? declineNegotiation(user, aid, id, note ? { note } : {}) : NO_SESSION;
 }

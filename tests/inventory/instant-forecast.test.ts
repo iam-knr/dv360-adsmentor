@@ -27,9 +27,15 @@ describe('instant deal forecast', () => {
     expect(f.estimatedMediaCost).toBeCloseTo((f.impressions7d.p50 / 1000) * 156, 1);
   });
   it('narrower targeting lowers p50 (AC 7)', () => {
-    const wide = forecastInstantDeal({ ...base, targeting: { country: ['India', 'Singapore', 'UAE'] } });
+    const wide = forecastInstantDeal({
+      ...base,
+      targeting: { country: ['India', 'Singapore', 'UAE'] },
+    });
     const narrow = forecastInstantDeal({ ...base, targeting: { country: ['India'] } });
-    const narrower = forecastInstantDeal({ ...base, targeting: { country: ['India'], format: ['Video'] } });
+    const narrower = forecastInstantDeal({
+      ...base,
+      targeting: { country: ['India'], format: ['Video'] },
+    });
     expect(narrow.impressions7d.p50).toBeLessThan(wide.impressions7d.p50);
     expect(narrower.impressions7d.p50).toBeLessThan(narrow.impressions7d.p50);
   });
@@ -41,7 +47,12 @@ describe('instant deal forecast', () => {
 });
 
 describe('forecast token (INV-006)', () => {
-  const payload = { sellerId: 's', name: 'Deal', targeting: { a: ['1', '2'] }, advertiserIds: ['x', 'y'] };
+  const payload = {
+    sellerId: 's',
+    name: 'Deal',
+    targeting: { a: ['1', '2'] },
+    advertiserIds: ['x', 'y'],
+  };
   const now = 1_700_000_000_000;
   it('accepts the same payload within 30 minutes', () => {
     const t = issueForecastToken(payload, now);

@@ -68,7 +68,13 @@ export function DealHistory({
           sx={{
             width: '100%',
             borderCollapse: 'collapse',
-            '& th, & td': { textAlign: 'left', p: 1.5, borderBottom: '1px solid', borderColor: 'divider', verticalAlign: 'top' },
+            '& th, & td': {
+              textAlign: 'left',
+              p: 1.5,
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+              verticalAlign: 'top',
+            },
           }}
         >
           <thead>
@@ -96,7 +102,9 @@ export function DealHistory({
           </tbody>
         </Box>
       )}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
+      <Box
+        sx={{ display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'flex-end', mt: 2 }}
+      >
         <span>{`${first}-${last} of ${total}`}</span>
         <Button disabled={page <= 1} onClick={() => go(filters, page - 1)}>
           Previous

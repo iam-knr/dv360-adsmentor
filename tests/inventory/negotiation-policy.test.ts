@@ -68,6 +68,8 @@ describe('advanceNegotiation', () => {
     expect(advanceNegotiation(waiting, new Date('2026-07-02T00:00:00Z')).kind).toBe('EXPIRE');
   });
   it('leaves closed negotiations alone', () => {
-    expect(advanceNegotiation({ ...base, status: 'ACCEPTED' }, new Date('2030-01-01')).kind).toBe('NONE');
+    expect(advanceNegotiation({ ...base, status: 'ACCEPTED' }, new Date('2030-01-01')).kind).toBe(
+      'NONE',
+    );
   });
 });

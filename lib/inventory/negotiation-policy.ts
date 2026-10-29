@@ -24,7 +24,10 @@ export function parsePolicy(raw: unknown): SellerPolicy {
     minRate: num(o.minRate, DEFAULT_POLICY.minRate),
     maxVolume: num(o.maxVolume, DEFAULT_POLICY.maxVolume),
     maxRounds: num(o.maxRounds, DEFAULT_POLICY.maxRounds),
-    replyDelayHours: Math.min(24, Math.max(6, num(o.replyDelayHours, DEFAULT_POLICY.replyDelayHours))),
+    replyDelayHours: Math.min(
+      24,
+      Math.max(6, num(o.replyDelayHours, DEFAULT_POLICY.replyDelayHours)),
+    ),
   };
 }
 
@@ -55,10 +58,12 @@ export function decideSellerReply(
   round: number,
 ): SellerDecision {
   if (round > policy.maxRounds) {
-    return { kind: 'DECLINE', body: 'We are not able to move further on this proposal, so we are closing it.' };
+    return {
+      kind: 'DECLINE',
+      body: 'We are not able to move further on this proposal, so we are closing it.',
+    };
   }
-  const volume =
-    proposal.volume === null ? null : Math.min(proposal.volume, policy.maxVolume);
+  const volume = proposal.volume === null ? null : Math.min(proposal.volume, policy.maxVolume);
   const volumeCapped = proposal.volume !== null && volume !== proposal.volume;
   if (proposal.rate >= policy.minRate && !volumeCapped) {
     return {
@@ -97,16 +102,22 @@ export interface NegotiationState {
 }
 
 export type Advance =
-  | { kind: 'NONE' }
-  | { kind: 'EXPIRE' }
-  | { kind: 'REPLY'; decision: SellerDecision };
+  { kind: 'NONE' } | { kind: 'EXPIRE' } | { kind: 'REPLY'; decision: SellerDecision };
 
 /** What happens to a negotiation at `simNow`. Replies are due at `replyAt`; open negotiations expire at `expiresAt`. */
 export function advanceNegotiation(n: NegotiationState, simNow: Date): Advance {
   const open = n.status === 'PROPOSED' || n.status === 'COUNTERED';
   if (!open) return { kind: 'NONE' };
-  if (n.awaiting === 'SELLER' && n.replyAt && n.replyAt.getTime() <= simNow.getTime() && n.proposal) {
-    return { kind: 'REPLY', decision: decideSellerReply(n.policy, n.proposal, n.sellerRate, n.round) };
+  if (
+    n.awaiting === 'SELLER' &&
+    n.replyAt &&
+    n.replyAt.getTime() <= simNow.getTime() &&
+    n.proposal
+  ) {
+    return {
+      kind: 'REPLY',
+      decision: decideSellerReply(n.policy, n.proposal, n.sellerRate, n.round),
+    };
   }
   if (n.expiresAt && n.expiresAt.getTime() <= simNow.getTime()) return { kind: 'EXPIRE' };
   return { kind: 'NONE' };

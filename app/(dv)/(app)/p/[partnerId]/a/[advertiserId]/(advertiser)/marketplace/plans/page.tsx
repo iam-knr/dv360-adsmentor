@@ -1,7 +1,11 @@
-import { StubPage } from '@/components/shell/StubPage';
+import { PlansRoute } from '@/components/inventory/pages/PlansRoute';
 
 export const metadata = { title: 'Plans' };
 
-export default function Page() {
-  return <StubPage module="04" title="Plans" view="RO" />;
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ partnerId: string; advertiserId: string }>;
+}) {
+  return <PlansRoute params={await params} />;
 }

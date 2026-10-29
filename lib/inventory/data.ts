@@ -52,7 +52,10 @@ export async function exchangeInfo(
 ): Promise<{ names: Map<string, string>; disabled: Set<string> }> {
   const [exchanges, partnerRows] = await Promise.all([
     tx.exchange.findMany({ select: { id: true, name: true } }),
-    tx.partnerExchange.findMany({ where: { partnerId, enabled: false }, select: { exchangeId: true } }),
+    tx.partnerExchange.findMany({
+      where: { partnerId, enabled: false },
+      select: { exchangeId: true },
+    }),
   ]);
   return {
     names: new Map(exchanges.map((e) => [e.id, e.name])),
@@ -104,7 +107,11 @@ export async function lineItemsByDeal(
   });
   if (members.length) {
     const viaGroup = await tx.lineItemInventory.findMany({
-      where: { kind: 'GROUP', refId: { in: [...new Set(members.map((m) => m.groupId))] }, mode: 'INCLUDE' },
+      where: {
+        kind: 'GROUP',
+        refId: { in: [...new Set(members.map((m) => m.groupId))] },
+        mode: 'INCLUDE',
+      },
       select: { refId: true, lineItemId: true },
     });
     for (const m of members)
@@ -141,7 +148,8 @@ export function toDealRow(
     },
     o.simNow,
   );
-  const unassignedPg = commitment === 'GUARANTEED' && lis.size === 0 && (status === 'ACTIVE' || status === 'DRAFT');
+  const unassignedPg =
+    commitment === 'GUARANTEED' && lis.size === 0 && (status === 'ACTIVE' || status === 'DRAFT');
   const actionRequired = status === 'DRAFT' || status === 'NOT_SERVABLE' || unassignedPg;
   const actionReason =
     status === 'DRAFT'
@@ -174,7 +182,10 @@ export function toDealRow(
     quantity: d.quantityImpressions === null ? null : Number(d.quantityImpressions),
     impressions: delivered ? delivered.impressions : null,
     spend: delivered ? round2(o.convert(delivered.spend, DEAL_CURRENCY, o.currency)) : null,
-    winRate: delivered && delivered.bids > 0 ? round2((delivered.impressions / delivered.bids) * 100) : null,
+    winRate:
+      delivered && delivered.bids > 0
+        ? round2((delivered.impressions / delivered.bids) * 100)
+        : null,
     format: d.format,
     exchangeId: d.exchangeId,
     exchangeName: o.exchanges.names.get(d.exchangeId) ?? d.sellerName,

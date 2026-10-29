@@ -12,7 +12,12 @@ import { DvPageHeader, DvTabs, DvTooltip } from '@/components/dv';
 import { DvIcon } from '@/components/icons';
 import { useViewer } from '@/components/shell/ViewerProvider';
 import { INV_MSG } from '@/lib/inventory/messages';
-import { inventoryPath, instantDealPath, type InventoryTab, type Scope } from '@/lib/inventory/paths';
+import {
+  inventoryPath,
+  instantDealPath,
+  type InventoryTab,
+  type Scope,
+} from '@/lib/inventory/paths';
 
 const TABS = [
   { id: 'orders', label: 'Orders and deals' },

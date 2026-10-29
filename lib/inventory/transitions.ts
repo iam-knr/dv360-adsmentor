@@ -2,7 +2,8 @@
 // never stored (the column is an EntityStatus); see `effectiveDealStatus`.
 import { INV_MSG } from './messages';
 
-export type DealStatusKey = 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'ARCHIVED' | 'COMPLETED' | 'NOT_SERVABLE';
+export type DealStatusKey =
+  'DRAFT' | 'ACTIVE' | 'PAUSED' | 'ARCHIVED' | 'COMPLETED' | 'NOT_SERVABLE';
 export type DealAction = 'ACTIVATE' | 'PAUSE' | 'ARCHIVE' | 'UNARCHIVE';
 export type DealActor = 'USER' | 'SYSTEM';
 

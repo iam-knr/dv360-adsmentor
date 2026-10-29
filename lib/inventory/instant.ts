@@ -25,9 +25,15 @@ import { instantDealIssues } from './rules';
 import type { InstantDealForecastView, InstantDealPayload, SellerCard } from './types';
 
 const DAY = 86_400_000;
-const midnight = (d: Date) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+const midnight = (d: Date) =>
+  new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 
-const toWire = (i: Issue): WireIssue => ({ path: i.path, severity: i.severity, code: i.ruleId, message: i.message });
+const toWire = (i: Issue): WireIssue => ({
+  path: i.path,
+  severity: i.severity,
+  code: i.ruleId,
+  message: i.message,
+});
 const failWith = (issues: Issue[]) => new ServiceFailure('INVALID', issues.map(toWire));
 
 export interface InstantContext {
@@ -42,7 +48,10 @@ export async function getInstantContext(user: SessionUser, aid: string): Promise
   return readCtx(user, async (tx, ctx) => {
     const adv = await loadAdvertiser(tx, ctx, aid);
     const [products, advertisers, convert] = await Promise.all([
-      tx.marketplaceProduct.findMany({ where: { isInstantSeller: true }, orderBy: { name: 'asc' } }),
+      tx.marketplaceProduct.findMany({
+        where: { isInstantSeller: true },
+        orderBy: { name: 'asc' },
+      }),
       tx.advertiser.findMany({
         where: { partnerId: adv.partnerId },
         select: { id: true, name: true },
@@ -91,11 +100,17 @@ export async function requestInstantForecast(
         forecastToken: 'pending',
       });
       if (issues.length) throw failWith(issues);
-      const seller = await tx.marketplaceProduct.findFirst({ where: { id: payload.sellerId, isInstantSeller: true } });
+      const seller = await tx.marketplaceProduct.findFirst({
+        where: { id: payload.sellerId, isInstantSeller: true },
+      });
       if (!seller) throw notFound();
       const convert = await loadConverter(tx, ctx.simNow);
       const options = (seller.instantTargetingOptions as Record<string, string[]> | null) ?? {};
-      const floorCpm = convert(Number(seller.floorPrice ?? 0), seller.floorCurrency, adv.currencyCode);
+      const floorCpm = convert(
+        Number(seller.floorPrice ?? 0),
+        seller.floorCurrency,
+        adv.currencyCode,
+      );
       const f = forecastInstantDeal({
         sellerId: seller.id,
         sellerImpressions7d: Number(seller.sevenDayImpressions),
@@ -133,7 +148,9 @@ export async function acceptInstantDeal(
         forecastToken: valid ? payload.forecastToken : null,
       });
       if (issues.length) throw failWith(issues);
-      const seller = await tx.marketplaceProduct.findFirst({ where: { id: payload.sellerId, isInstantSeller: true } });
+      const seller = await tx.marketplaceProduct.findFirst({
+        where: { id: payload.sellerId, isInstantSeller: true },
+      });
       if (!seller) throw notFound();
       const own = await tx.advertiser.findMany({
         where: { partnerId: adv.partnerId, id: { in: payload.advertiserIds } },
@@ -142,7 +159,11 @@ export async function acceptInstantDeal(
       if (own.length !== new Set(payload.advertiserIds).size) throw notFound();
 
       let order = await tx.inventoryOrder.findFirst({
-        where: { partnerId: adv.partnerId, exchangeId: seller.exchangeId, name: { endsWith: 'instant deals' } },
+        where: {
+          partnerId: adv.partnerId,
+          exchangeId: seller.exchangeId,
+          name: { endsWith: 'instant deals' },
+        },
       });
       if (!order)
         order = await tx.inventoryOrder.create({
@@ -156,10 +177,16 @@ export async function acceptInstantDeal(
           },
         });
       const convert = await loadConverter(tx, ctx.simNow);
-      const floorInr = round2(convert(Number(seller.floorPrice ?? 0), seller.floorCurrency, DEAL_CURRENCY));
+      const floorInr = round2(
+        convert(Number(seller.floorPrice ?? 0), seller.floorCurrency, DEAL_CURRENCY),
+      );
       const today = midnight(ctx.simNow);
-      const taken = await tx.inventorySourceDeal.count({ where: { partnerId: adv.partnerId, source: 'INSTANT' } });
-      const targeting = Object.fromEntries(Object.entries(payload.targeting).filter(([, v]) => v.length));
+      const taken = await tx.inventorySourceDeal.count({
+        where: { partnerId: adv.partnerId, source: 'INSTANT' },
+      });
+      const targeting = Object.fromEntries(
+        Object.entries(payload.targeting).filter(([, v]) => v.length),
+      );
       const deal = await withChangeLog(
         changeCtx(ctx, tx),
         { type: 'DEAL', name: payload.name.trim(), chain: { advertiserId: adv.id } },
@@ -170,7 +197,11 @@ export async function acceptInstantDeal(
               partnerId: adv.partnerId,
               orderId: order.id,
               exchangeId: seller.exchangeId,
-              dealId: String(2_000_000 + (hashString(`${ctx.sandboxId}:${seller.id}:${payload.name.trim()}`) % 900_000) + taken),
+              dealId: String(
+                2_000_000 +
+                  (hashString(`${ctx.sandboxId}:${seller.id}:${payload.name.trim()}`) % 900_000) +
+                  taken,
+              ),
               name: payload.name.trim(),
               description: seller.description,
               status: 'ACTIVE',

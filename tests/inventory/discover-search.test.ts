@@ -21,9 +21,29 @@ const p = (o: Partial<SearchableProduct> & { id: string; name: string }): Search
   ...o,
 });
 const rows = [
-  p({ id: '1', name: 'Premium CTV Video', format: 'VIDEO', device: ['Connected TV'], searchText: 'streaming premium', sevenDayImpressions: 500 }),
-  p({ id: '2', name: 'News Display', categories: ['News'], searchText: 'banner news', sevenDayImpressions: 900 }),
-  p({ id: '3', name: 'Video Highlights', format: 'VIDEO', searchText: 'sports clips', categories: ['Sports'], sevenDayImpressions: 800 }),
+  p({
+    id: '1',
+    name: 'Premium CTV Video',
+    format: 'VIDEO',
+    device: ['Connected TV'],
+    searchText: 'streaming premium',
+    sevenDayImpressions: 500,
+  }),
+  p({
+    id: '2',
+    name: 'News Display',
+    categories: ['News'],
+    searchText: 'banner news',
+    sevenDayImpressions: 900,
+  }),
+  p({
+    id: '3',
+    name: 'Video Highlights',
+    format: 'VIDEO',
+    searchText: 'sports clips',
+    categories: ['Sports'],
+    sevenDayImpressions: 800,
+  }),
 ];
 
 describe('keyword search', () => {
@@ -49,7 +69,12 @@ describe('AI mode (canned phrase rules)', () => {
     expect(i.filters.format).toEqual(['VIDEO']);
     expect(i.filters.country).toEqual(['India']);
     expect(i.chips).toEqual(
-      expect.arrayContaining(['Format: Video', 'Device: Mobile', 'Country: India', 'Category: Sports']),
+      expect.arrayContaining([
+        'Format: Video',
+        'Device: Mobile',
+        'Country: India',
+        'Category: Sports',
+      ]),
     );
   });
   it('applies the interpreted filters to the results', () => {

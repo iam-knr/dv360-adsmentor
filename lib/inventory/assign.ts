@@ -21,7 +21,12 @@ import { loadAdvertiser, writeCtx, type AdvertiserRow } from './guard';
 import { INV_MSG, packageCantAssign } from './messages';
 import type { AssignInventoryItem, BulkResponse, LineItemChoice } from './types';
 
-const wire = (path: string, code: string, message: string, severity: WireIssue['severity'] = 'error'): WireIssue => ({
+const wire = (
+  path: string,
+  code: string,
+  message: string,
+  severity: WireIssue['severity'] = 'error',
+): WireIssue => ({
   path,
   severity,
   code,
@@ -50,7 +55,12 @@ async function loadTargets(tx: Tx, adv: AdvertiserRow, ids: string[]): Promise<T
     select: { id: true, name: true, type: true, fixedBidCpm: true },
   });
   if (rows.length !== unique.length) throw notFound();
-  return rows.map((r) => ({ id: r.id, name: r.name, type: r.type, fixedBidCpm: r.fixedBidCpm === null ? null : Number(r.fixedBidCpm) }));
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    type: r.type,
+    fixedBidCpm: r.fixedBidCpm === null ? null : Number(r.fixedBidCpm),
+  }));
 }
 
 interface ItemInfo {
@@ -63,8 +73,14 @@ interface ItemInfo {
   guaranteed: boolean;
 }
 
-async function loadItems(tx: Tx, adv: AdvertiserRow, items: AssignInventoryItem[]): Promise<ItemInfo[]> {
-  const byKind = (k: AssignInventoryItem['kind']) => [...new Set(items.filter((i) => i.kind === k).map((i) => i.id))];
+async function loadItems(
+  tx: Tx,
+  adv: AdvertiserRow,
+  items: AssignInventoryItem[],
+): Promise<ItemInfo[]> {
+  const byKind = (k: AssignInventoryItem['kind']) => [
+    ...new Set(items.filter((i) => i.kind === k).map((i) => i.id)),
+  ];
   const [deals, packages, groups] = await Promise.all([
     tx.inventorySourceDeal.findMany({
       where: { id: { in: byKind('DEAL') }, partnerId: adv.partnerId },
@@ -74,18 +90,49 @@ async function loadItems(tx: Tx, adv: AdvertiserRow, items: AssignInventoryItem[
       where: { id: { in: byKind('PACKAGE') }, partnerId: adv.partnerId },
       select: { id: true, name: true, format: true },
     }),
-    tx.dealGroup.findMany({ where: { id: { in: byKind('GROUP') }, advertiserId: adv.id }, select: { id: true, name: true } }),
+    tx.dealGroup.findMany({
+      where: { id: { in: byKind('GROUP') }, advertiserId: adv.id },
+      select: { id: true, name: true },
+    }),
   ]);
-  if (deals.length !== byKind('DEAL').length || packages.length !== byKind('PACKAGE').length || groups.length !== byKind('GROUP').length)
+  if (
+    deals.length !== byKind('DEAL').length ||
+    packages.length !== byKind('PACKAGE').length ||
+    groups.length !== byKind('GROUP').length
+  )
     throw notFound();
   const out: ItemInfo[] = [];
   for (const i of items) {
     const d = deals.find((x) => x.id === i.id && i.kind === 'DEAL');
     const p = packages.find((x) => x.id === i.id && i.kind === 'PACKAGE');
     const g = groups.find((x) => x.id === i.id && i.kind === 'GROUP');
-    if (d) out.push({ kind: 'DEAL', id: d.id, name: d.name, format: d.format, rate: Number(d.rate), guaranteed: d.commitment === 'GUARANTEED' });
-    else if (p) out.push({ kind: 'PACKAGE', id: p.id, name: p.name, format: p.format, rate: null, guaranteed: false });
-    else if (g) out.push({ kind: 'GROUP', id: g.id, name: g.name, format: null, rate: null, guaranteed: false });
+    if (d)
+      out.push({
+        kind: 'DEAL',
+        id: d.id,
+        name: d.name,
+        format: d.format,
+        rate: Number(d.rate),
+        guaranteed: d.commitment === 'GUARANTEED',
+      });
+    else if (p)
+      out.push({
+        kind: 'PACKAGE',
+        id: p.id,
+        name: p.name,
+        format: p.format,
+        rate: null,
+        guaranteed: false,
+      });
+    else if (g)
+      out.push({
+        kind: 'GROUP',
+        id: g.id,
+        name: g.name,
+        format: null,
+        rate: null,
+        guaranteed: false,
+      });
   }
   return out;
 }
@@ -107,13 +154,19 @@ export async function assignToLineItems(
   const out: AssignOutcome = { assigned: 0, alreadyAssigned: 0, errors: [], warnings: [] };
 
   if (req.replace) {
-    await tx.lineItemInventory.deleteMany({ where: { lineItemId: { in: targets.map((t) => t.id) } } });
+    await tx.lineItemInventory.deleteMany({
+      where: { lineItemId: { in: targets.map((t) => t.id) } },
+    });
   }
   for (const item of items) {
     const rowMode = mode.get(`${item.kind}:${item.id}`) ?? 'INCLUDE';
     for (const li of targets) {
       if (item.format && !formatFitsLineItem(item.format, li.type)) {
-        out.errors.push({ id: li.id, ruleId: 'INV-017', message: packageCantAssign(LINE_ITEM_TYPE_LABEL[li.type]) });
+        out.errors.push({
+          id: li.id,
+          ruleId: 'INV-017',
+          message: packageCantAssign(LINE_ITEM_TYPE_LABEL[li.type]),
+        });
         continue;
       }
       const existing = await tx.lineItemInventory.findUnique({
@@ -126,21 +179,44 @@ export async function assignToLineItems(
       }
       const create = () =>
         tx.lineItemInventory.create({
-          data: { sandboxId: ctx.sandboxId, lineItemId: li.id, kind: item.kind, refId: item.id, mode: rowMode },
+          data: {
+            sandboxId: ctx.sandboxId,
+            lineItemId: li.id,
+            kind: item.kind,
+            refId: item.id,
+            mode: rowMode,
+          },
           select: { id: true },
         });
       if (item.kind === 'DEAL') {
         // the deal's History shows "Line items" added (registry list field)
         await withChangeLog(
-          changeCtx(ctx, tx, { ...(extra.bulkJobId ? { bulkJobId: extra.bulkJobId, source: 'BULK_EDIT' as const } : {}), ...(extra.note ? { note: extra.note } : {}) }),
+          changeCtx(ctx, tx, {
+            ...(extra.bulkJobId
+              ? { bulkJobId: extra.bulkJobId, source: 'BULK_EDIT' as const }
+              : {}),
+            ...(extra.note ? { note: extra.note } : {}),
+          }),
           { type: 'DEAL', id: item.id, chain: { advertiserId: adv.id } },
           async () => {
             await create();
             return { id: item.id };
           },
         );
-        if (!item.guaranteed && item.rate !== null && li.fixedBidCpm !== null && li.fixedBidCpm < item.rate)
-          out.warnings.push(wire(`lineItem.${li.id}`, 'INV-019', `${li.name}: ${INV_MSG.BID_BELOW_RATE}`, 'warning'));
+        if (
+          !item.guaranteed &&
+          item.rate !== null &&
+          li.fixedBidCpm !== null &&
+          li.fixedBidCpm < item.rate
+        )
+          out.warnings.push(
+            wire(
+              `lineItem.${li.id}`,
+              'INV-019',
+              `${li.name}: ${INV_MSG.BID_BELOW_RATE}`,
+              'warning',
+            ),
+          );
       } else {
         await create();
       }
@@ -167,9 +243,13 @@ export async function assignInventoryToLineItems(
       if (!req.replace) assertSelection(req.lineItemIds.length, req.items.length);
       const o = await assignToLineItems(tx, ctx, adv, req);
       const warnings = [...o.warnings];
-      if (o.alreadyAssigned > 0) warnings.push(wire('target', 'INV-041', INV_MSG.ALREADY_ASSIGNED, 'warning'));
+      if (o.alreadyAssigned > 0)
+        warnings.push(wire('target', 'INV-041', INV_MSG.ALREADY_ASSIGNED, 'warning'));
       if (o.errors.length && o.assigned === 0 && o.alreadyAssigned === 0)
-        throw new ServiceFailure('INVALID', o.errors.map((e) => wire(`lineItem.${e.id}`, e.ruleId, e.message)));
+        throw new ServiceFailure(
+          'INVALID',
+          o.errors.map((e) => wire(`lineItem.${e.id}`, e.ruleId, e.message)),
+        );
       return { data: { assigned: o.assigned, alreadyAssigned: o.alreadyAssigned }, warnings };
     }),
   );

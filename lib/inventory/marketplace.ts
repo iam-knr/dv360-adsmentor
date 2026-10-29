@@ -36,7 +36,12 @@ import type {
   SellerCard,
 } from './types';
 
-const wire = (path: string, code: string, message: string, severity: WireIssue['severity'] = 'error'): WireIssue => ({
+const wire = (
+  path: string,
+  code: string,
+  message: string,
+  severity: WireIssue['severity'] = 'error',
+): WireIssue => ({
   path,
   severity,
   code,
@@ -52,7 +57,8 @@ export const PRODUCT_TYPE_LABEL: Record<string, string> = {
 };
 
 const DAY = 86_400_000;
-const midnight = (d: Date) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+const midnight = (d: Date) =>
+  new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 
 const scaleOf = (p: MarketplaceProduct): ProductScale => p.scale as unknown as ProductScale;
 const num = (v: Prisma.Decimal | null): number => (v === null ? 0 : Number(v));
@@ -92,7 +98,8 @@ export async function getFeatured(user: SessionUser, aid: string): Promise<Featu
       }),
       loadConverter(tx, ctx.simNow),
     ]);
-    const banner = MARKETPLACE_BANNERS.find((b) => products.some((p) => p.bannerKey === b.key)) ?? null;
+    const banner =
+      MARKETPLACE_BANNERS.find((b) => products.some((p) => p.bannerKey === b.key)) ?? null;
     return {
       banner: banner ? { ...banner } : null,
       carousels: FEATURED_CAROUSELS.map((c) => {
@@ -123,7 +130,10 @@ const FILTER_KEYS: Record<string, keyof DiscoverFilters> = {
   exchange: 'exchange',
 };
 
-function searchable(p: MarketplaceProduct, exchangeName: string): SearchableProduct & { raw: MarketplaceProduct } {
+function searchable(
+  p: MarketplaceProduct,
+  exchangeName: string,
+): SearchableProduct & { raw: MarketplaceProduct } {
   const s = scaleOf(p);
   return {
     raw: p,
@@ -144,7 +154,11 @@ function searchable(p: MarketplaceProduct, exchangeName: string): SearchableProd
 
 const exchangeShare = (id: string): number => 5 + (hashString(`share:${id}`) % 31);
 
-function discoverRow(s: ReturnType<typeof searchable>, convert: Converter, currency: string): DiscoverRow {
+function discoverRow(
+  s: ReturnType<typeof searchable>,
+  convert: Converter,
+  currency: string,
+): DiscoverRow {
   const p = s.raw;
   return {
     id: p.id,
@@ -162,7 +176,11 @@ function discoverRow(s: ReturnType<typeof searchable>, convert: Converter, curre
   };
 }
 
-export async function discover(user: SessionUser, aid: string, req: DiscoverRequest): Promise<DiscoverResult> {
+export async function discover(
+  user: SessionUser,
+  aid: string,
+  req: DiscoverRequest,
+): Promise<DiscoverResult> {
   return readCtx(user, async (tx, ctx) => {
     const adv = await loadAdvertiser(tx, ctx, aid);
     const [products, exchanges, convert] = await Promise.all([
@@ -180,20 +198,31 @@ export async function discover(user: SessionUser, aid: string, req: DiscoverRequ
     const ranked = rank(all, req.query ?? '', filters, req.mode);
     const pageSize = Math.min(req.pageSize ?? 25, 100);
     const page = Math.max(1, req.page ?? 1);
-    const facet = (values: (s: (typeof all)[number]) => string[], label: (v: string) => string = (v) => v) => {
+    const facet = (
+      values: (s: (typeof all)[number]) => string[],
+      label: (v: string) => string = (v) => v,
+    ) => {
       const set = [...new Set(all.flatMap(values))].sort();
       return set.map((value) => ({ value, label: label(value) }));
     };
     return {
-      rows: ranked.rows.slice((page - 1) * pageSize, page * pageSize).map((s) => discoverRow(s, convert, adv.currencyCode)),
+      rows: ranked.rows
+        .slice((page - 1) * pageSize, page * pageSize)
+        .map((s) => discoverRow(s, convert, adv.currencyCode)),
       total: ranked.rows.length,
       page,
       pageSize,
       chips: ranked.chips,
       facets: {
-        inventoryType: facet((s) => [s.type], (v) => PRODUCT_TYPE_LABEL[v] ?? v),
+        inventoryType: facet(
+          (s) => [s.type],
+          (v) => PRODUCT_TYPE_LABEL[v] ?? v,
+        ),
         deviceType: facet((s) => s.device),
-        format: facet((s) => [s.format], (v) => FORMAT_LABEL[v as Format] ?? v),
+        format: facet(
+          (s) => [s.format],
+          (v) => FORMAT_LABEL[v as Format] ?? v,
+        ),
         country: facet((s) => s.country),
         category: facet((s) => s.categories),
         genre: facet((s) => s.genre),
@@ -205,15 +234,28 @@ export async function discover(user: SessionUser, aid: string, req: DiscoverRequ
   });
 }
 
-const dealIdOf = (productId: string): string => String(1_000_000 + (hashString(`deal:${productId}`) % 8_999_999));
+const dealIdOf = (productId: string): string =>
+  String(1_000_000 + (hashString(`deal:${productId}`) % 8_999_999));
 
 async function isAssigned(tx: Tx, partnerId: string, p: MarketplaceProduct): Promise<boolean> {
   if (p.type === 'PACKAGE' || p.type === 'PUBLISHER')
-    return (await tx.inventoryPackage.count({ where: { partnerId, marketplaceProductId: p.id, status: { not: 'ARCHIVED' } } })) > 0;
-  return (await tx.inventorySourceDeal.count({ where: { partnerId, exchangeId: p.exchangeId, dealId: dealIdOf(p.id) } })) > 0;
+    return (
+      (await tx.inventoryPackage.count({
+        where: { partnerId, marketplaceProductId: p.id, status: { not: 'ARCHIVED' } },
+      })) > 0
+    );
+  return (
+    (await tx.inventorySourceDeal.count({
+      where: { partnerId, exchangeId: p.exchangeId, dealId: dealIdOf(p.id) },
+    })) > 0
+  );
 }
 
-export async function getMarketplaceItem(user: SessionUser, aid: string, id: string): Promise<MarketplaceItem> {
+export async function getMarketplaceItem(
+  user: SessionUser,
+  aid: string,
+  id: string,
+): Promise<MarketplaceItem> {
   return readCtx(user, async (tx, ctx) => {
     const adv = await loadAdvertiser(tx, ctx, aid);
     const p = await tx.marketplaceProduct.findUnique({ where: { id } });
@@ -281,7 +323,11 @@ async function materialise(
         partnerId: adv.partnerId,
         exchangeId: p.exchangeId,
         name: p.name,
-        packageUuid: `${hashString(`pkg:${ctx.sandboxId}:${p.id}`).toString(16).padStart(8, '0')}${p.id.slice(-24)}`.slice(0, 32),
+        packageUuid:
+          `${hashString(`pkg:${ctx.sandboxId}:${p.id}`).toString(16).padStart(8, '0')}${p.id.slice(-24)}`.slice(
+            0,
+            32,
+          ),
         format: s.format,
         dealType: s.dealType,
         rate: round2(convert(rate, p.floorCurrency, adv.currencyCode)),
@@ -306,7 +352,13 @@ async function materialise(
   if (existing) return { kind: 'DEAL', id: existing.id, created: false };
   const ex = await tx.exchange.findUnique({ where: { id: p.exchangeId }, select: { name: true } });
   const sellerName = ex?.name ?? p.name;
-  let order = await tx.inventoryOrder.findFirst({ where: { partnerId: adv.partnerId, exchangeId: p.exchangeId, externalCode: { startsWith: 'MP-9' } } });
+  let order = await tx.inventoryOrder.findFirst({
+    where: {
+      partnerId: adv.partnerId,
+      exchangeId: p.exchangeId,
+      externalCode: { startsWith: 'MP-9' },
+    },
+  });
   if (!order)
     order = await tx.inventoryOrder.create({
       data: {
@@ -338,7 +390,7 @@ async function materialise(
           sellerKind: p.sellerKind,
           allowPausing: true,
           commitment: 'NON_GUARANTEED',
-          rate: round2(convert(floor * 1.2, p.floorCurrency, 'INR') ),
+          rate: round2(convert(floor * 1.2, p.floorCurrency, 'INR')),
           floorPrice: round2(convert(floor, p.floorCurrency, 'INR')),
           startAt: today,
           endAt: new Date(today.getTime() + 180 * DAY),
@@ -352,7 +404,12 @@ async function materialise(
         select: { id: true },
       });
       await t.dealAccess.create({
-        data: { sandboxId: ctx.sandboxId, dealId: d.id, partnerId: adv.partnerId, advertiserId: null },
+        data: {
+          sandboxId: ctx.sandboxId,
+          dealId: d.id,
+          partnerId: adv.partnerId,
+          advertiserId: null,
+        },
       });
       return d;
     },
@@ -361,7 +418,13 @@ async function materialise(
 }
 
 function noFit(types: string[]): WireIssue[] {
-  return types.map((t) => wire('lineItem', 'INV-017', packageCantAssign(LINE_ITEM_TYPE_LABEL[t as keyof typeof LINE_ITEM_TYPE_LABEL] ?? t)));
+  return types.map((t) =>
+    wire(
+      'lineItem',
+      'INV-017',
+      packageCantAssign(LINE_ITEM_TYPE_LABEL[t as keyof typeof LINE_ITEM_TYPE_LABEL] ?? t),
+    ),
+  );
 }
 
 export async function assignMarketplaceItem(
@@ -387,31 +450,48 @@ export async function assignMarketplaceItem(
         });
         if (lis.length !== lineItemIds.length) throw notFound();
         // nothing is created when no target line item can take the product (INV-017)
-        if (lis.every((l) => !formatFitsLineItem(format, l.type))) throw fail(...noFit([...new Set(lis.map((l) => l.type))]));
+        if (lis.every((l) => !formatFitsLineItem(format, l.type)))
+          throw fail(...noFit([...new Set(lis.map((l) => l.type))]));
       }
       const convert = await loadConverter(tx, ctx.simNow);
       const m = await materialise(tx, ctx, adv, p, convert);
       const warnings: WireIssue[] = [];
       let assigned = 0;
       if (advertiserIds.length && m.kind === 'DEAL') {
-        const own = await tx.advertiser.findMany({ where: { partnerId: adv.partnerId, id: { in: advertiserIds } }, select: { id: true } });
+        const own = await tx.advertiser.findMany({
+          where: { partnerId: adv.partnerId, id: { in: advertiserIds } },
+          select: { id: true },
+        });
         if (own.length !== advertiserIds.length) throw notFound();
         await tx.dealAccess.deleteMany({ where: { dealId: m.id } });
-        await tx.dealAccess.createMany({ data: own.map((a) => ({ sandboxId: ctx.sandboxId, dealId: m.id, advertiserId: a.id })) });
-        await tx.inventorySourceDeal.update({ where: { id: m.id }, data: { allAdvertisers: false } });
+        await tx.dealAccess.createMany({
+          data: own.map((a) => ({ sandboxId: ctx.sandboxId, dealId: m.id, advertiserId: a.id })),
+        });
+        await tx.inventorySourceDeal.update({
+          where: { id: m.id },
+          data: { allAdvertisers: false },
+        });
       }
       if (lineItemIds.length) {
         const item = { kind: m.kind, id: m.id, mode: 'INCLUDE' as const };
         if (lineItemIds.length > 1) {
-          const { outcome } = await bulkAssign(tx, ctx, adv, { lineItemIds, items: [item] }, `Assigned ${p.name} to ${lineItemIds.length} line items`);
+          const { outcome } = await bulkAssign(
+            tx,
+            ctx,
+            adv,
+            { lineItemIds, items: [item] },
+            `Assigned ${p.name} to ${lineItemIds.length} line items`,
+          );
           assigned = outcome.assigned;
           warnings.push(...outcome.warnings);
-          if (outcome.alreadyAssigned) warnings.push(wire('target', 'INV-041', INV_MSG.ALREADY_ASSIGNED, 'warning'));
+          if (outcome.alreadyAssigned)
+            warnings.push(wire('target', 'INV-041', INV_MSG.ALREADY_ASSIGNED, 'warning'));
         } else {
           const o = await assignToLineItems(tx, ctx, adv, { lineItemIds, items: [item] });
           assigned = o.assigned;
           warnings.push(...o.warnings);
-          if (o.alreadyAssigned) warnings.push(wire('target', 'INV-041', INV_MSG.ALREADY_ASSIGNED, 'warning'));
+          if (o.alreadyAssigned)
+            warnings.push(wire('target', 'INV-041', INV_MSG.ALREADY_ASSIGNED, 'warning'));
         }
       } else if (!m.created) {
         warnings.push(wire('target', 'INV-041', INV_MSG.ALREADY_ASSIGNED, 'warning'));
@@ -434,7 +514,8 @@ export async function bulkAssignMarketplace(
       const adv = await loadAdvertiser(tx, ctx, aid);
       const productIds = [...new Set(req.productIds)];
       const lineItemIds = [...new Set(req.lineItemIds)];
-      if (productIds.length === 0 || lineItemIds.length === 0) throw fail(wire('target', 'INV-040', MSG.SELECTION_REQUIRED));
+      if (productIds.length === 0 || lineItemIds.length === 0)
+        throw fail(wire('target', 'INV-040', MSG.SELECTION_REQUIRED));
       const products = await tx.marketplaceProduct.findMany({ where: { id: { in: productIds } } });
       if (products.length !== productIds.length) throw notFound();
       const lis = await tx.lineItem.findMany({
@@ -444,7 +525,9 @@ export async function bulkAssignMarketplace(
       if (lis.length !== lineItemIds.length) throw notFound();
       const convert = await loadConverter(tx, ctx.simNow);
       // only products that fit at least one target are copied into the inventory
-      const usable = products.filter((p) => lis.some((l) => formatFitsLineItem(scaleOf(p).format, l.type)));
+      const usable = products.filter((p) =>
+        lis.some((l) => formatFitsLineItem(scaleOf(p).format, l.type)),
+      );
       if (usable.length === 0) throw fail(...noFit([...new Set(lis.map((l) => l.type))]));
       const items: { kind: 'DEAL' | 'PACKAGE'; id: string; mode: 'INCLUDE' }[] = [];
       for (const p of usable) {

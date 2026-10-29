@@ -22,7 +22,15 @@ const date = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { timeZo
 const money = (n: number, code: string) =>
   `${code === 'INR' ? '₹' : `${code} `}${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-export function PackagesTab({ scope, rows, canWrite }: { scope: Scope; rows: PackageRow[]; canWrite: boolean }) {
+export function PackagesTab({
+  scope,
+  rows,
+  canWrite,
+}: {
+  scope: Scope;
+  rows: PackageRow[];
+  canWrite: boolean;
+}) {
   const { viewer } = useViewer();
   const toast = useToast();
   const router = useRouter();
@@ -41,7 +49,15 @@ export function PackagesTab({ scope, rows, canWrite }: { scope: Scope; rows: Pac
       sticky: true,
       width: 300,
       cell: (r) => (
-        <Box data-testid="package-row" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: r.notUsedInCampaign ? 'text.disabled' : undefined }}>
+        <Box
+          data-testid="package-row"
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            color: r.notUsedInCampaign ? 'text.disabled' : undefined,
+          }}
+        >
           <DvIcon name="inventory_2" size={18} />
           <Box>
             <div>{r.name}</div>
@@ -60,12 +76,26 @@ export function PackagesTab({ scope, rows, canWrite }: { scope: Scope; rows: Pac
       cell: (r) => (
         <span>
           {money(r.rate, r.currencyCode)}
-          {r.rateOriginal ? ` (${r.rateOriginal.currency === 'EUR' ? '€' : `${r.rateOriginal.currency} `}${r.rateOriginal.amount.toFixed(2)})` : ''}
+          {r.rateOriginal
+            ? ` (${r.rateOriginal.currency === 'EUR' ? '€' : `${r.rateOriginal.currency} `}${r.rateOriginal.amount.toFixed(2)})`
+            : ''}
         </span>
       ),
     },
-    { id: 'bidRatio', header: 'Bid ratio', group: 'delivery', type: 'percent', accessor: (r) => r.bidRatioPct },
-    { id: 'used', header: 'Line items', group: 'delivery', type: 'number', accessor: (r) => r.assignedLineItems },
+    {
+      id: 'bidRatio',
+      header: 'Bid ratio',
+      group: 'delivery',
+      type: 'percent',
+      accessor: (r) => r.bidRatioPct,
+    },
+    {
+      id: 'used',
+      header: 'Line items',
+      group: 'delivery',
+      type: 'number',
+      accessor: (r) => r.assignedLineItems,
+    },
     { id: 'start', header: 'Start date', group: 'dates', accessor: (r) => date(r.startAt) },
     {
       id: 'menu',
@@ -73,7 +103,11 @@ export function PackagesTab({ scope, rows, canWrite }: { scope: Scope; rows: Pac
       width: 48,
       cell: (r) =>
         writable ? (
-          <IconButton size="small" aria-label={`Actions for ${r.name}`} onClick={(e) => setMenu({ el: e.currentTarget, row: r })}>
+          <IconButton
+            size="small"
+            aria-label={`Actions for ${r.name}`}
+            onClick={(e) => setMenu({ el: e.currentTarget, row: r })}
+          >
             <DvIcon name="more_vert" size={18} />
           </IconButton>
         ) : null,
@@ -148,13 +182,22 @@ export function PackagesTab({ scope, rows, canWrite }: { scope: Scope; rows: Pac
         primary={{
           label: 'Remove',
           tone: 'danger',
-          onClick: async () => {
-            const row = remove;
-            setRemove(null);
-            if (!row) return;
-            const res = await removePackageAction(scope.advertiserId, row.id);
-            toast.show(res.ok ? { message: `${row.name} was removed` } : { kind: 'error', message: res.issues[0]?.message ?? "Couldn't remove the package." });
-            router.refresh();
+          onClick: () => {
+            void (async () => {
+              const row = remove;
+              setRemove(null);
+              if (!row) return;
+              const res = await removePackageAction(scope.advertiserId, row.id);
+              toast.show(
+                res.ok
+                  ? { message: `${row.name} was removed` }
+                  : {
+                      kind: 'error',
+                      message: res.issues[0]?.message ?? "Couldn't remove the package.",
+                    },
+              );
+              router.refresh();
+            })();
           },
         }}
         secondary={{ label: 'Cancel', onClick: () => setRemove(null) }}

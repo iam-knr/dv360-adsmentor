@@ -14,7 +14,11 @@ export async function inventoryScope(p: RouteParams): Promise<Scope> {
   if (p.campaignId) {
     const chain = await resolveCampaign(p.partnerId, p.advertiserId, p.campaignId);
     if (!chain) notFound();
-    return { partnerId: chain.partner.publicId, advertiserId: chain.advertiser.publicId, campaignId: chain.campaign.publicId };
+    return {
+      partnerId: chain.partner.publicId,
+      advertiserId: chain.advertiser.publicId,
+      campaignId: chain.campaign.publicId,
+    };
   }
   const chain = await resolveAdvertiser(p.partnerId, p.advertiserId);
   if (!chain) notFound();

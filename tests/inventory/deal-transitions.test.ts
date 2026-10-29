@@ -51,16 +51,23 @@ describe('validation 4.7 deal transitions', () => {
   });
 
   it('system-only rows never come from a user action', () => {
-    for (const t of DEAL_TRANSITIONS.filter((t) => t.actor === 'SYSTEM')) expect(t.action).toBeNull();
+    for (const t of DEAL_TRANSITIONS.filter((t) => t.actor === 'SYSTEM'))
+      expect(t.action).toBeNull();
     expect(dealActionsFor('ACTIVE')).toEqual(['PAUSE', 'ARCHIVE']);
     expect(dealActionsFor('COMPLETED')).toEqual([]);
   });
 
   it('derives COMPLETED and NOT_SERVABLE from a stored ACTIVE deal', () => {
     const now = new Date('2026-06-15T00:00:00Z');
-    const base = { status: 'ACTIVE', endAt: new Date('2026-07-01T00:00:00Z'), exchangeEnabled: true };
+    const base = {
+      status: 'ACTIVE',
+      endAt: new Date('2026-07-01T00:00:00Z'),
+      exchangeEnabled: true,
+    };
     expect(effectiveDealStatus(base, now)).toBe('ACTIVE');
-    expect(effectiveDealStatus({ ...base, endAt: new Date('2026-06-01T00:00:00Z') }, now)).toBe('COMPLETED');
+    expect(effectiveDealStatus({ ...base, endAt: new Date('2026-06-01T00:00:00Z') }, now)).toBe(
+      'COMPLETED',
+    );
     expect(effectiveDealStatus({ ...base, exchangeEnabled: false }, now)).toBe('NOT_SERVABLE');
     expect(
       effectiveDealStatus(
@@ -68,6 +75,8 @@ describe('validation 4.7 deal transitions', () => {
         now,
       ),
     ).toBe('COMPLETED');
-    expect(effectiveDealStatus({ ...base, status: 'PAUSED', exchangeEnabled: false }, now)).toBe('PAUSED');
+    expect(effectiveDealStatus({ ...base, status: 'PAUSED', exchangeEnabled: false }, now)).toBe(
+      'PAUSED',
+    );
   });
 });

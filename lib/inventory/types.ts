@@ -109,7 +109,11 @@ export interface DealView {
   sellerName: string;
   description: string | null;
   exchangeName: string;
-  advertiserAccess: { allAdvertisers: boolean; partnerName: string; advertisers: { id: string; name: string }[] };
+  advertiserAccess: {
+    allAdvertisers: boolean;
+    partnerName: string;
+    advertisers: { id: string; name: string }[];
+  };
   allAdvertisers: { id: string; name: string }[];
   frequencyCap: FrequencyCapView | null;
   pgDirect: boolean;

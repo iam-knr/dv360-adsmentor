@@ -15,10 +15,20 @@ export async function DealGroupsPage({ params }: { params: RouteParams }) {
       listPackages(user, scope.advertiserId),
     ]),
   );
-  const flat = [...deals.actionRequired, ...deals.rest.flatMap((r) => (r.kind === 'ORDER' ? r.children : [r]))];
+  const flat = [
+    ...deals.actionRequired,
+    ...deals.rest.flatMap((r) => (r.kind === 'ORDER' ? r.children : [r])),
+  ];
   const candidates: GroupCandidate[] = [
     ...flat.map((d) => ({ kind: 'DEAL' as const, id: d.id, name: d.name })),
     ...packages.map((p) => ({ kind: 'PACKAGE' as const, id: p.id, name: p.name })),
   ];
-  return <DealGroupsTab scope={scope} rows={rows} candidates={candidates} canWrite={canWriteInventory(user)} />;
+  return (
+    <DealGroupsTab
+      scope={scope}
+      rows={rows}
+      candidates={candidates}
+      canWrite={canWriteInventory(user)}
+    />
+  );
 }

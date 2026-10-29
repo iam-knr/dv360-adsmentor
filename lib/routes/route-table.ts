@@ -227,6 +227,14 @@ const PAGES: Row[] = [
     'Negotiations',
     'RO',
   ],
+  [
+    `${C}/marketplace/negotiations/{x}`,
+    `${AC}/(campaign)/marketplace/negotiations/[negId]`,
+    'C',
+    '13',
+    'Negotiation',
+    'RO',
+  ],
   [`${C}/ios/new`, `${FC}/ios/new`, 'F', '07', 'New insertion order', 'STD'],
   // 3.5 Insertion order
   [`${IO}/explorerlis`, `${AIO}/(io)/explorerlis`, 'IO', '07', 'Line items', 'RO'],
@@ -450,6 +458,14 @@ const PAGES: Row[] = [
     'A',
     '13',
     'Negotiations',
+    'RO',
+  ],
+  [
+    `${A}/marketplace/negotiations/{x}`,
+    `${AA}/(advertiser)/marketplace/negotiations/[negId]`,
+    'A',
+    '13',
+    'Negotiation',
     'RO',
   ],
   [

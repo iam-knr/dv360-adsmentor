@@ -9,7 +9,8 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return unauthenticated();
-  const body = (await req.json().catch(() => null)) as (Partial<InstantDealPayload> & { advertiser?: string }) | null;
+  const body = (await req.json().catch(() => null)) as
+    (Partial<InstantDealPayload> & { advertiser?: string }) | null;
   if (!body?.advertiser) return badRequest('advertiser is required.');
   return resultToHttp(
     await requestInstantForecast(user, body.advertiser, {

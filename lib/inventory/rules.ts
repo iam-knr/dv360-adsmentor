@@ -124,11 +124,7 @@ export function pgUnassignedIssues(commitment: string, assignedLineItems: number
 }
 
 /** INV-011: PG Direct is locked once the deal has started. */
-export function pgDirectLockedIssues(
-  startAt: Date,
-  simNow: Date,
-  changed: boolean,
-): Issue[] {
+export function pgDirectLockedIssues(startAt: Date, simNow: Date, changed: boolean): Issue[] {
   return changed && startAt.getTime() <= simNow.getTime()
     ? [issue('INV-011', 'pgDirect', INV_MSG.PG_DIRECT_LOCKED)]
     : [];
