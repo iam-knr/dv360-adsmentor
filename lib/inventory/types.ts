@@ -294,18 +294,6 @@ export interface NegotiationView {
   canWrite: boolean;
 }
 
-export interface PlanRow {
-  id: string;
-  publicId: string;
-  name: string;
-  status: string;
-  totalBudget: number | null;
-  currencyCode: string;
-  startDate: string;
-  endDate: string;
-  channels: string[];
-}
-
 export interface LineItemChoice {
   id: string;
   publicId: string;

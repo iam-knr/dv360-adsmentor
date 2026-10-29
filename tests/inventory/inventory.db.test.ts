@@ -34,7 +34,6 @@ import {
   importNegotiation,
   listNegotiations,
 } from '@/lib/inventory/negotiations';
-import { listPlans } from '@/lib/inventory/plans';
 import { dropWorld } from '../db/helpers';
 import { createCreativeWorld, setSimHours, userFor } from '../creatives/helpers';
 
@@ -420,6 +419,31 @@ describe('deal groups (AC 14)', () => {
   });
 });
 
+describe('deal group members', () => {
+  it('creates a group with a deal and a package as members', async () => {
+    const all = await listOrdersDeals(user(), aid(), {});
+    const deal = [
+      ...all.actionRequired,
+      ...all.rest.flatMap((x) => (x.kind === 'ORDER' ? x.children : [x])),
+    ][0]!;
+    const pkg = (await listPackages(user(), aid()))[0]!;
+    const made = must(
+      await createDealGroup(user(), aid(), {
+        name: 'Two members',
+        type: 'DEAL_GROUP',
+        members: [
+          { kind: 'DEAL', id: deal.id },
+          { kind: 'PACKAGE', id: pkg.id },
+          { kind: 'DEAL', id: deal.id },
+        ],
+      }),
+    );
+    const g = (await listDealGroups(user(), aid())).find((x) => x.id === made.id)!;
+    expect(g.members.map((m) => m.kind).sort()).toEqual(['DEAL', 'PACKAGE']);
+    must(await deleteDealGroup(user(), aid(), made.id));
+  });
+});
+
 describe('negotiations (AC 11, 12, 13)', () => {
   it('reports an unknown RFP and imports the seeded one', async () => {
     expect(
@@ -539,31 +563,5 @@ describe('negotiations (AC 11, 12, 13)', () => {
     });
     await setSimHours(w, 200);
     expect((await getNegotiation(user(), aid(), t.id)).row.status).toBe('EXPIRED');
-  });
-});
-
-describe('Plans list', () => {
-  it('lists planned and trafficked plans of the advertiser', async () => {
-    await prisma.plan.create({
-      data: {
-        sandboxId: w.sandboxId,
-        advertiserId: w.advertiserId,
-        name: 'Diwali plan',
-        locationCountry: 'IN',
-        currencyCode: 'INR',
-        startDate: new Date('2026-10-01'),
-        endDate: new Date('2026-11-15'),
-        totalBudget: 500000,
-        channels: ['DIGITAL'],
-      },
-    });
-    const rows = await listPlans(user(), aid());
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({
-      name: 'Diwali plan',
-      channels: ['Digital'],
-      status: 'PLANNED',
-    });
-    expect(await listPlans(user(), aid(), { status: ['TRAFFICKED'] })).toHaveLength(0);
   });
 });

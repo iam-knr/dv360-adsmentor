@@ -831,17 +831,18 @@ export async function createDealGroup(
           advertiserId: adv.id,
           name: input.name.trim(),
           kind: input.type as 'DEAL_GROUP' | 'PREFERRED_DEAL_GROUP',
-          members: {
-            create: [...new Map(input.members.map((m) => [`${m.kind}:${m.id}`, m])).values()].map(
-              (m) => ({
-                sandboxId: ctx.sandboxId,
-                memberKind: m.kind,
-                memberId: m.id,
-              }),
-            ),
-          },
         },
         select: { id: true },
+      });
+      await tx.dealGroupMember.createMany({
+        data: [...new Map(input.members.map((m) => [`${m.kind}:${m.id}`, m])).values()].map(
+          (m) => ({
+            sandboxId: ctx.sandboxId,
+            groupId: g.id,
+            memberKind: m.kind,
+            memberId: m.id,
+          }),
+        ),
       });
       return { data: { id: g.id }, warnings };
     }),

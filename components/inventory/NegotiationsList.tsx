@@ -97,7 +97,7 @@ export function NegotiationsList({
       sticky: true,
       width: 240,
       cell: (r) => (
-        <AppLink href={negotiationsPath(scope, r.id)} data-testid="negotiation-link">
+        <AppLink href={negotiationsPath(scope, r.publicId)} data-testid="negotiation-link">
           {r.name}
         </AppLink>
       ),

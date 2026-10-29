@@ -26,7 +26,15 @@ import {
   round2,
   type Converter,
 } from './data';
-import { canWriteInventory, loadAdvertiser, readCtx, writeCtx, type AdvertiserRow } from './guard';
+import {
+  canWriteInventory,
+  loadAdvertiser,
+  parseIdRef,
+  readCtx,
+  whereId,
+  writeCtx,
+  type AdvertiserRow,
+} from './guard';
 import { advanceNegotiation, parsePolicy, type SellerDecision } from './negotiation-policy';
 import { acceptNegotiationIssues, counterIssues, importNegotiationIssues } from './rules';
 import type { NegotiationMessageView, NegotiationRow, NegotiationView } from './types';
@@ -270,8 +278,10 @@ export async function getNegotiation(
   return readCtx(user, async (tx, ctx) => {
     const adv = await loadAdvertiser(tx, ctx, aid);
     await settleNegotiations(tx, ctx, adv.partnerId);
+    const ref = parseIdRef(id);
+    if (!ref) throw notFound();
     const n = await tx.negotiation.findFirst({
-      where: { id, partnerId: adv.partnerId, advertiserId: adv.id },
+      where: { ...whereId(ref), partnerId: adv.partnerId, advertiserId: adv.id },
       include: { messages: { orderBy: [{ sentAt: 'asc' }, { id: 'asc' }] } },
     });
     if (!n) throw notFound();
@@ -320,8 +330,10 @@ export async function getNegotiation(
 // ---------------------------------------------------------------------------------------------
 
 async function loadOwn(tx: Tx, adv: AdvertiserRow, id: string): Promise<Negotiation> {
+  const ref = parseIdRef(id);
+  if (!ref) throw notFound();
   const n = await tx.negotiation.findFirst({
-    where: { id, partnerId: adv.partnerId, advertiserId: adv.id },
+    where: { ...whereId(ref), partnerId: adv.partnerId, advertiserId: adv.id },
   });
   if (!n) throw notFound();
   return n;
