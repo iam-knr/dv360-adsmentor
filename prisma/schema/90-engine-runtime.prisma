@@ -1,0 +1,48 @@
+// Engine runtime tables (engine.md 1.7: SimState, SimJob). Added by P3-08b in migration 0003_engine_runtime.
+// The foreign keys to Sandbox and the row level security are in the migration, not in this file: Prisma would need
+// back-relations on Sandbox, which belongs to P3-05a. Every query goes through withBypass or withSandbox.
+
+enum SimJobKind {
+  FAST_FORWARD
+  RESET
+}
+
+enum SimJobStatus {
+  QUEUED
+  RUNNING
+  DONE
+  FAILED
+  CANCELLED
+}
+
+// JSON engine memory between ticks, one row per sandbox x scope x entity. The runtime stores one row per advertiser
+// (scope ADVERTISER): the pure core runs one World per advertiser.
+model SimState {
+  id        String   @id @default(cuid())
+  sandboxId String
+  scope     String
+  entityId  String
+  /** Next tick the state expects (SimStateData.nextTick). */
+  nextTick  BigInt   @default(0)
+  data      Json
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@unique([sandboxId, scope, entityId])
+}
+
+model SimJob {
+  id         String       @id @default(cuid())
+  sandboxId  String
+  kind       SimJobKind
+  status     SimJobStatus @default(QUEUED)
+  /** FAST_FORWARD: { simHours, untilAlert?, untilDate? }. */
+  params     Json
+  /** { doneTicks, totalTicks, simDate, stoppedBy? } */
+  progress   Json?
+  error      String?
+  createdAt  DateTime     @default(now())
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  @@index([sandboxId, status])
+}
