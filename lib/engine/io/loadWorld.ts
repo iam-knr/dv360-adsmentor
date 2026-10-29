@@ -159,7 +159,12 @@ export async function loadWorlds(
   const flByLi = groupBy(liFl, (l) => l.lineItemId);
   const targetsByLi = groupBy(targets, (t) => t.lineItemId);
   const prefsByAdv = groupBy(prefs, (p) => p.advertiserId);
-  const flById = new Map<string, FloodlightActivity>(flRows.map((f) => [f.id, mapActivity(f)]));
+  // Module 15 (M15-09): the Floodlight group supplies the conversion windows and the tag fault of its activities.
+  const flGroups = new Map((await tx.floodlightGroup.findMany({ where })).map((g) => [g.id, g]));
+  const groupOf = new Map(flRows.map((f) => [f.id, flGroups.get(f.groupId)]));
+  const flById = new Map<string, FloodlightActivity>(
+    flRows.map((f) => [f.id, mapActivity(f, groupOf.get(f.id)?.tagStatus)]),
+  );
   const keyOfExchange = (idOrCode: string): string | undefined =>
     keyById.get(idOrCode) ?? exchangeSimClass(idOrCode);
 
@@ -272,7 +277,18 @@ export async function loadWorlds(
         targeting,
         creativeIds: (assignByLi.get(li.id) ?? []).map((a) => a.creativeId).sort(),
         floodlight: (flByLi.get(li.id) ?? [])
-          .map((l) => ({ activityId: l.activityId }))
+          .map((l) => {
+            const g = groupOf.get(l.activityId);
+            return {
+              activityId: l.activityId,
+              ...(g
+                ? {
+                    postClickWindowDays: g.clickWindowDays,
+                    postViewWindowDays: g.impressionWindowDays,
+                  }
+                : {}),
+            };
+          })
           .sort((a, b) => (a.activityId < b.activityId ? -1 : 1)),
         conversionCounting: {
           mode: li.conversionCounting,

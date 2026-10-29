@@ -1,5 +1,6 @@
 // Provisioning of one seeded sandbox: plan, history stub and insert in a single transaction (data-model 3.1 step 2).
 import type { Prisma, PrismaClient } from '@prisma/client';
+import { seedAppCatalog, seedResources } from '../resources/seed';
 import { isoDate } from './dates';
 import { buildHistory } from './history-stub';
 import type { SeedKnobs, TemplateKey } from './knobs';
@@ -108,7 +109,15 @@ export async function provisionSandbox(db: Db, input: ProvisionInput): Promise<P
     const result = await db.$transaction(
       async (tx: Prisma.TransactionClient) => {
         await clearSandboxData(tx, sandbox.id);
-        return insertPlan(tx, plan, history);
+        const inserted = await insertPlan(tx, plan, history);
+        // Module 15 resources (P4-04): Floodlight group, channels, lists, custom bidding rows, YouTube assets.
+        await seedAppCatalog(tx);
+        await seedResources(tx, {
+          sandboxId: sandbox.id,
+          template: input.template,
+          seedValue: input.seedValue,
+        });
+        return inserted;
       },
       { timeout: 300_000, maxWait: 30_000 },
     );
