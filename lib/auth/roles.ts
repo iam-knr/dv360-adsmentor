@@ -39,12 +39,8 @@ export function defaultDvRole(role: AppRole): DvRole {
   return role === 'user' ? 'STANDARD' : 'ADMIN';
 }
 
-/**
- * Where a person lands after sign in (module 19 4.1).
- * Until P3-02b ships `/manage`, a Super admin lands on `/sim/admin` (a page that links to it), so the first
- * production sign in is not a 404. P3-02b flips SUPER_ADMIN_LANDING to '/manage/accounts'.
- */
-export const SUPER_ADMIN_LANDING = '/sim/admin';
+/** Where a person lands after sign in (module 19 4.1). P3-02b flipped the Super admin landing to `/manage/accounts`. */
+export const SUPER_ADMIN_LANDING = '/manage/accounts';
 
 export function landingFor(role: AppRole): string {
   if (role === 'super_admin') return SUPER_ADMIN_LANDING;
