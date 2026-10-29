@@ -103,10 +103,10 @@ Production `https://dv360-adsmentor.vercel.app` (`/api/health` → ok, db true, 
 | 10 | P3-07a | ✅ | #11 | Targeting card, state, 13 editors (flat category list), catalogue API, dev page `/targeting` |
 | 10b | P3-07a follow-up | 🟨 | #16 (open) | Category tree, device OS and make/model, locked-row tooltip, targeting tests, `tests/e2e/targeting.spec.ts` |
 | 11 | P3-06b | ✅ | #12 | Campaign and IO services, forms, lists, step 1 matrix, details pages, list and matrix API, `campaigns.spec.ts` |
-| 11b | P3-06b leftovers | 🟨 | none yet | Campaign page tabs/pin/chart strip, DLG-10 copy settings, DLG-11 stale save, inline budget editor, fee menu, more e2e: a cloud session built these on branch `p3-06b-campaigns-io` AFTER #12 merged. Open a new PR from that branch (merge `main` into it first) |
+| 11b | P3-06b leftovers | 🟨 | #18 (open) | Campaign page tabs/pin/chart strip, DLG-10 copy settings, DLG-11 stale save, inline budget editor, IO header, fee menu, `insertion-orders.spec.ts`. Built by a cloud session on the old branch after #12 merged, re-applied onto `main` as `p3-06b-leftovers`; 29 e2e and 2,580 unit tests pass locally |
 | 12 | P3-06c | ✅ | #13 | Line item picker, form, grids, details page, API, service tests, archived list, e2e |
 | 13 | P3-08b | 🟨 | #15 (open) | Engine runtime, tick endpoint, fast-forward, 5-minute timer |
-| 14 | P3-09 | 🟨 | #10 (open) | Metrics layer behind the performance columns. Merge after #15 (build-plan 3.5 order) |
+| 14 | P3-09 | ✅ | #10 | Metrics layer behind the performance columns (merged before #15; list-page e2e cases were enabled by the line-item and campaign PRs) |
 | 15 | P3-07b | ⬜ | | Geography, apps and URLs, brand suitability, audience builder editors |
 | 15b | P3-02b | 🟨 | #14 (open) | `/manage` dashboard, REDUCED scope (cut 11): accounts, cohorts, audit |
 | 16 | P3-INT | ⬜ | | Integration, demo path, gap list (last) |
@@ -215,10 +215,10 @@ Written when the previous colleague's machine crashed and the work was picked up
 ### 9.2 Open pull requests and merge order
 Merge each with Squash and merge after green checks and a ready Vercel preview. After each merge the next PR usually conflicts in `PROJECT.md` (the status table); resolve by keeping both sides' rows (merge `main` into the branch, keep every row, push).
 1. #15 P3-08b engine runtime (check with owner that the timer secrets exist before enabling it; see 9.5)
-2. #10 P3-09 metrics layer
-3. #14 P3-02b `/manage` (reduced scope)
-4. #16 P3-07a follow-up
-5. A new PR for the P3-06b leftovers (9.3, row 11b)
+2. #14 P3-02b `/manage` (reduced scope). Its e2e check failed on 2026-10-29 before `main` was merged in; re-check after the re-run, do not merge while red
+3. #16 P3-07a follow-up
+4. #18 P3-06b follow-up
+(#10 P3-09 is already merged; #17 is this log.)
 Note: the assistant's attempt to merge by API was blocked by the permission classifier; merges were done by the owner in the browser. ADR-046 allows an assistant to merge, but only if the session is allowed to.
 
 ### 9.3 What is done and what is not, by area
@@ -231,6 +231,11 @@ Done and merged: see the merge table in section 4. Not done (each is also in the
 - **Phase 4 (P4-01 to P4-12), Phase 5, Phase 6:** not started.
 - **Owner prerequisites still open:** P-02 cloud environment `dv360-build`, P-12 usage-credits toggle off and $100 balance, P-03 Vercel import, P-04 Supabase URLs in Vercel, P-06 GitHub Actions secrets, P-07 `AUTH_SECRET` and `CRON_SECRET` in Vercel. Check https://dv360-adsmentor.vercel.app/api/health: `db: true` means P-03/P-04 are done. Nobody can sign in on production until the first Super admin is bootstrapped (`npm run db:bootstrap`, needs the production URLs; run it only with the owner).
 - **Reference screenshots** are still not in `docs/screenshots/`.
+
+### 9.3b Test failures reported but not confirmed
+- Two cloud sessions (P3-08b, P3-07a leftovers) reported "two pre-existing component gallery axe failures" in `npm run check`. They did NOT reproduce: on `main` after #10 (commit `26cfe31`) a clean `npm ci` and `npm test` gave 79 files, 2,575 tests passed, all component gallery axe checks green. Likely causes: a flaky timeout under load (the slowest gallery entries take 2 to 4 seconds) or a stale generated Prisma client in that container. If they show up in CI, run `npx vitest run --project components tests/components/gallery.test.tsx` and read the first failing entry.
+- PR #14 (P3-02b) CI: the `e2e` job failed once before `main` was merged into the branch; the job log could not be read from the cloud container (only "exit code 1"). After the re-run, open the Actions log in the browser (GitHub, Checks tab, e2e, Playwright report artifact). Most likely a spec depending on the shell routes that changed in #12 and #13, or on a missing exchange or segment in the test sandbox (see 9.4).
+- ESLint reports "unnecessary type assertion" in several earlier files only in some installs; `eslint --fix` is safe (it removes casts that do not change the type).
 
 ### 9.4 Run it locally (verified in the cloud container)
 ```bash
