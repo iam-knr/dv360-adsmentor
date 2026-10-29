@@ -94,6 +94,12 @@ async function signIn(page: Page, world: { email: string; password: string } = w
   await page.waitForURL((url) => !url.pathname.startsWith('/sim/login'));
 }
 
+/** The builder reloads its saved copy after the first save of a new report; wait for that before opening dialogs. */
+async function settle(page: Page) {
+  await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(1500);
+}
+
 async function addField(page: Page, label: string) {
   const search = page.getByPlaceholder('Search metrics and dimensions');
   await search.fill(label);
@@ -133,9 +139,12 @@ test('E2E-RPT-01: hub lists the seven templates; a template runs, the file match
   await expect(table).toContainText(impr.toLocaleString('en-US'));
 
   // saved by the run: files page lists it and the CSV equals the preview
-  await page.waitForURL(/instant\/[a-z0-9]+$/);
-  const reportUrl = page.url();
-  await page.goto(`${reportUrl}/runs`);
+  await expect(page.getByText('Report ready')).toBeVisible();
+  const saved = await db.report.findFirstOrThrow({
+    where: { sandboxId: w.sandboxId, name: 'Advertiser overview' },
+    orderBy: { createdAt: 'desc' },
+  });
+  await page.goto(`${hub()}/instant/${saved.id}/runs`);
   await expect(page.getByTestId('run-row')).toHaveCount(1);
   const href = await page.getByRole('link', { name: 'CSV' }).first().getAttribute('href');
   const res = await page.request.get(href!);
@@ -187,6 +196,7 @@ test('E2E-RPT-02: build from scratch, undo and redo, bulk edit, save, rename, sa
   await expect(page.getByTestId('report-title')).toHaveText('PW scratch report');
   await expect(page.getByRole('button', { name: 'Schedule' })).toBeEnabled();
 
+  await settle(page);
   await page.getByRole('button', { name: 'Save as' }).click();
   await page.getByLabel('Report name').fill('PW scratch copy');
   await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
@@ -208,6 +218,7 @@ test('E2E-RPT-03: chart types and their constraints', async ({ page }) => {
   await page.getByRole('option', { name: 'Time series chart' }).click();
   await page.getByRole('button', { name: 'Run report' }).click();
   await expect(page.getByTestId('report-canvas')).toBeVisible();
+  await expect(page.getByText('Report ready')).toBeVisible();
   // Pie needs exactly one dimension and one metric: Date + Impressions is fine
   await page.getByRole('combobox', { name: /Visualisation/ }).click();
   await page.getByRole('option', { name: 'Pie chart' }).click();
@@ -258,6 +269,7 @@ test('E2E-RPT-05: scheduling an instant report stores the next run on the sim cl
   await page.goto(`${hub()}/instant/new?template=advertiser-overview`);
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.waitForURL(/instant\/[a-z0-9]+$/);
+  await settle(page);
   await page.getByRole('button', { name: 'Schedule' }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('File name').fill('pw_daily');
@@ -266,6 +278,7 @@ test('E2E-RPT-05: scheduling an instant report stores the next run on the sim cl
   await expect(page.getByText('Schedule saved')).toBeVisible();
   const row = await db.report.findFirstOrThrow({
     where: { sandboxId: w.sandboxId, name: 'Advertiser overview' },
+    orderBy: { updatedAt: 'desc' },
   });
   expect((row.schedule as { active: boolean }).active).toBe(true);
   expect(row.nextRunSimAt).not.toBeNull();
@@ -280,6 +293,7 @@ test('E2E-RPT-06: share a report with a person who has access to this partner', 
   await page.getByLabel('Report name').blur();
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.waitForURL(/instant\/[a-z0-9]+$/);
+  await settle(page);
   await page.getByRole('button', { name: 'Share', exact: true }).click();
   await page.getByRole('dialog').getByRole('checkbox').first().check();
   await page.getByRole('dialog').getByRole('button', { name: 'Share' }).click();
@@ -317,7 +331,7 @@ test('E2E-RPT-07: role matrix', async ({ browser }) => {
   const p3 = await ctxPc.newPage();
   await signIn(p3, client);
   await p3.goto(`${hub(client)}/instant/new`);
-  await p3.getByPlaceholder('Search metrics and dimensions').fill('Partner Currency');
+  await p3.getByPlaceholder('Search metrics and dimensions').fill('Revenue (Partner Currency)');
   await expect(p3.getByText('No matching fields.')).toBeVisible();
   await ctxPc.close();
 });
