@@ -6,7 +6,6 @@ import type { Prisma } from '@prisma/client';
 import type { SessionUser } from '@/lib/auth/types';
 import { withChangeLog } from '@/lib/changelog';
 import { withSandbox, type Tx } from '@/lib/db';
-import { hashString } from '@/lib/seed/prng';
 import { validate } from '@/lib/validation/engine';
 import googleAudiencesJson from '../../data/reference/google-audiences.json';
 import {
@@ -40,6 +39,7 @@ import {
   customListSize,
   estimateCustomList,
   googleAudienceSize,
+  hashString,
   hoursUntil,
   keyed,
   lookalikeExpansion,

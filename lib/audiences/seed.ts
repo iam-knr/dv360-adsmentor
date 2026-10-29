@@ -5,8 +5,7 @@
 // already has a combined audience. Relative imports only: prisma/seed runs under tsx without the Next alias set.
 import type { Prisma, PrismaClient } from '@prisma/client';
 import googleAudiencesJson from '../../data/reference/google-audiences.json';
-import { hashString } from '../seed/prng';
-import { combinedSize, googleAudienceSize, spreadSizes, type SizeMap } from './sizes';
+import { combinedSize, googleAudienceSize, hashString, spreadSizes, type SizeMap } from './sizes';
 
 type Db = PrismaClient | Prisma.TransactionClient;
 

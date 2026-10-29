@@ -198,7 +198,6 @@ test('E2E-AUD-04: a combined audience is available at once with an expression an
   await page.getByRole('dialog').getByRole('button', { name: 'Apply' }).click();
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByText("An item can't be both included and excluded.")).toBeVisible();
-  await page.getByRole('button', { name: 'Remove PW seed one', exact: false }).last().click().catch(() => undefined);
 });
 
 test('E2E-AUD-04b: a valid combined audience lands in the Combined tab as Active', async ({ page }) => {

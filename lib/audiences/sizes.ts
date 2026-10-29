@@ -1,6 +1,5 @@
 // Audience sizes (module 14 4.3, 5): buckets, availability, and the pure size functions for lookalike, combined,
 // custom lists and customer match. Client safe: no server or database imports. Every number is synthetic `[SIM]`.
-import { hashString } from '../seed/prng';
 
 export const AVAILABILITY_HOURS = 4;
 export const MIN_USABLE_USERS = 1000;
@@ -71,6 +70,16 @@ export function availabilityFor(
 ): { status: 'PROCESSING' | 'ACTIVE'; availableAt: Date } {
   if (type === 'COMBINED') return { status: 'ACTIVE', availableAt: now };
   return { status: 'PROCESSING', availableAt: new Date(now.getTime() + AVAILABILITY_HOURS * 3_600_000) };
+}
+
+/** FNV-1a, 32 bit. Local on purpose: lib/seed/prng pulls in node:crypto, and this file runs in the browser too. */
+export function hashString(text: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
 }
 
 /** Deterministic number in [lo, hi) from a key. */
