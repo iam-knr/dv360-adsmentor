@@ -220,7 +220,7 @@ describe('appeals (AC 7, 8)', () => {
   let rowId = '';
   beforeAll(async () => {
     id = must(await createCreative(user(), aid(), tpDisplay('Appealed'))).id;
-    await engineSync(30);
+    await engineSync(40);
     // one exchange disapproved for an SSL reason
     const review = (
       await prisma.creativeReview.findMany({
