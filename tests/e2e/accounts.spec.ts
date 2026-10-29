@@ -61,7 +61,7 @@ test('E2E-ACC-01 an Admin adds a User; the password is shown once and the User m
   const email = `${uniq('new')}@acc-e2e.example.test`;
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Display name').fill('Nia Newcomer');
-  await expect(page.getByText('Admins can add users only.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Add account' })).toBeVisible();
   await page.getByRole('button', { name: 'Create account' }).click();
 
   const dialog = page.getByRole('dialog', { name: 'Account created' });
@@ -79,11 +79,16 @@ test('E2E-ACC-01 an Admin adds a User; the password is shown once and the User m
   // the secret is gone from the page, the URL and browser storage
   expect(await page.content()).not.toContain(password);
   expect(page.url()).not.toContain(password);
-  expect(await page.evaluate(() => JSON.stringify({ ...localStorage, ...sessionStorage }))).not.toContain(password);
+  expect(
+    await page.evaluate(() => JSON.stringify({ ...localStorage, ...sessionStorage })),
+  ).not.toContain(password);
 
   // the new User signs in with it and is sent to the forced password change
   const ctx = await browser.newContext();
-  await ctx.setExtraHTTPHeaders({ 'x-forwarded-for': '10.77.1.1', ...(bypass ? { 'x-vercel-protection-bypass': bypass } : {}) });
+  await ctx.setExtraHTTPHeaders({
+    'x-forwarded-for': '10.77.1.1',
+    ...(bypass ? { 'x-vercel-protection-bypass': bypass } : {}),
+  });
   const other = await ctx.newPage();
   await other.goto('/sim/login');
   await other.getByLabel('Email').fill(email);
@@ -117,13 +122,18 @@ test('E2E-ACC-02 disable blocks sign in with ACC-070; enable restores it; reset 
   await expect(page.getByRole('button', { name: 'Enable' })).toBeVisible();
 
   const ctx = await browser.newContext();
-  await ctx.setExtraHTTPHeaders({ 'x-forwarded-for': '10.78.1.1', ...(bypass ? { 'x-vercel-protection-bypass': bypass } : {}) });
+  await ctx.setExtraHTTPHeaders({
+    'x-forwarded-for': '10.78.1.1',
+    ...(bypass ? { 'x-vercel-protection-bypass': bypass } : {}),
+  });
   const other = await ctx.newPage();
   await other.goto('/sim/login');
   await other.getByLabel('Email').fill(student.user.email);
   await other.getByLabel('Password').fill(pw);
   await other.getByRole('button', { name: 'Sign in' }).click();
-  await expect(other.getByRole('main').getByRole('alert')).toContainText('Your account is disabled. Contact your admin.');
+  await expect(other.getByRole('main').getByRole('alert')).toContainText(
+    'Your account is disabled. Contact your admin.',
+  );
   await ctx.close();
 
   await page.getByRole('button', { name: 'Enable' }).click();
@@ -142,11 +152,20 @@ test('E2E-ACC-03 role guards: a User and an Admin on settings go to /sim/forbidd
   const { admin: a, cohort } = await adminWithCohort();
   const { admin: b } = await adminWithCohort();
   const pw = generatePassword();
-  const student = await createAccount(db, { tag: 'acc-g', role: 'USER', password: pw, cohortId: cohort.id, ownerAdminId: a.user.id });
+  const student = await createAccount(db, {
+    tag: 'acc-g',
+    role: 'USER',
+    password: pw,
+    cohortId: cohort.id,
+    ownerAdminId: a.user.id,
+  });
   userIds.push(student.user.id);
 
   const ctx = await browser.newContext();
-  await ctx.setExtraHTTPHeaders({ 'x-forwarded-for': '10.79.1.1', ...(bypass ? { 'x-vercel-protection-bypass': bypass } : {}) });
+  await ctx.setExtraHTTPHeaders({
+    'x-forwarded-for': '10.79.1.1',
+    ...(bypass ? { 'x-vercel-protection-bypass': bypass } : {}),
+  });
   const u = await ctx.newPage();
   await signedIn(u, student.user.email, pw);
   await u.goto('/manage/accounts');
@@ -157,7 +176,7 @@ test('E2E-ACC-03 role guards: a User and an Admin on settings go to /sim/forbidd
   await page.goto('/manage/settings');
   await page.waitForURL('**/sim/forbidden');
   await page.goto(`/manage/accounts/${student.user.id}`);
-  await expect(page.getByText('Account not found').or(page.getByText('This page could not be found'))).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
   await page.goto('/manage/accounts');
   await expect(page.getByText(student.user.email)).toHaveCount(0);
 });
