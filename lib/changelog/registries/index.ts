@@ -5,6 +5,7 @@ import type { EntityRegistry } from '../registry-types';
 import { advertiserRegistry } from './advertiser';
 import { campaignRegistry } from './campaign';
 import { creativeRegistry } from './creative';
+import { dealRegistry } from './deal';
 import { insertionOrderRegistry } from './insertion-order';
 import { lineItemRegistry } from './line-item';
 import {
@@ -27,6 +28,7 @@ export const REGISTRIES: Partial<Record<EntityType, EntityRegistry>> = {
   FLOODLIGHT_GROUP: floodlightGroupRegistry,
   FLOODLIGHT_ACTIVITY: floodlightActivityRegistry,
   CREATIVE: creativeRegistry,
+  DEAL: dealRegistry,
   PARTNER: partnerRegistry,
 };
 

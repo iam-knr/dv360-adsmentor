@@ -20,6 +20,9 @@ export interface ShellWorld {
     x: string;
     /** Public id of a creative, for `/creatives/{x}` rows. */
     crId: string;
+    /** Public ids of a deal and a negotiation, for the `/tid/{x}/…/details` and `/negotiations/{x}` rows (P4-02). */
+    dealId: string;
+    negId: string;
   };
   names: { partner: string; advertiser: string; campaign: string };
 }
@@ -98,6 +101,34 @@ export async function createShellWorld(
       height: 250,
     },
   });
+  // module 13: one deal and one imported negotiation so the inventory detail rows have something to open
+  const deal = await db.inventorySourceDeal.create({
+    data: {
+      sandboxId,
+      partnerId: partner.id,
+      exchangeId: 'fixture-exchange',
+      dealId: '9100001',
+      name: 'Fixture preferred deal',
+      dealType: 'PREFERRED_DEAL',
+      sellerName: 'Fixture seller',
+      rate: 100,
+      startAt: new Date('2026-01-01T00:00:00Z'),
+      endAt: new Date('2027-01-01T00:00:00Z'),
+    },
+  });
+  const negotiation = await db.negotiation.create({
+    data: {
+      sandboxId,
+      partnerId: partner.id,
+      advertiserId: advertiser.id,
+      exchangeId: 'fixture-exchange',
+      sellerName: 'Fixture seller',
+      name: 'Fixture negotiation',
+      rfpId: 'RFP-900001',
+      status: 'PROPOSED',
+      awaiting: 'BUYER',
+    },
+  });
   if (opts.role && opts.role !== 'STANDARD') {
     await db.userAccessGrant.create({
       data: { userId: student.user.id, sandboxId, partnerId: partner.id, role: opts.role },
@@ -118,6 +149,8 @@ export async function createShellWorld(
       liId: li.publicId.toString(),
       x: audience.publicId.toString(),
       crId: creative.publicId.toString(),
+      dealId: deal.publicId.toString(),
+      negId: negotiation.publicId.toString(),
     },
     names,
   };
@@ -133,5 +166,14 @@ export function fillPath(path: string, ids: ShellWorld['ids']): string {
     .replace('{ioId}', ids.ioId)
     .replace('{liId}', ids.liId)
     .replace('{kind}', kind)
-    .replace('{x}', path.includes('/creatives/') ? ids.crId : ids.x);
+    .replace(
+      '{x}',
+      path.includes('/creatives/')
+        ? ids.crId
+        : path.includes('/tid/')
+          ? ids.dealId
+          : path.includes('/negotiations/')
+            ? ids.negId
+            : ids.x,
+    );
 }
