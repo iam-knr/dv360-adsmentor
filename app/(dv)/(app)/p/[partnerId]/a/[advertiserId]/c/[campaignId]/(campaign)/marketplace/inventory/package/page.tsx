@@ -1,7 +1,11 @@
-import { StubPage } from '@/components/shell/StubPage';
+import { PackagesPage } from '@/components/inventory/pages/PackagesPage';
 
-export const metadata = { title: 'Packages' };
+export const metadata = { title: 'My inventory' };
 
-export default function Page() {
-  return <StubPage module="13" title="Packages" view="RO" />;
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ partnerId: string; advertiserId: string; campaignId?: string }>;
+}) {
+  return <PackagesPage params={await params} />;
 }
