@@ -461,6 +461,9 @@ model Negotiation {
   spend           Decimal?            @db.Decimal(16, 2)
   lastEditedAt    DateTime            @default(now())
   resultingDealId String?
+  // P4-02: the seller's reply is due at replyAt (sim time); an open negotiation lapses at expiresAt
+  replyAt         DateTime?
+  expiresAt       DateTime?
   createdAt       DateTime            @default(now())
 
   partner    Partner              @relation(fields: [partnerId, sandboxId], references: [id, sandboxId], onDelete: Cascade)
