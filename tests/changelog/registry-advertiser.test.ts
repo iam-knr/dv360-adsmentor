@@ -1,4 +1,5 @@
 // Pattern for AC-05-29: every Prisma column of an entity is registered or marked ignore.
+import { EntityType } from '@prisma/client';
 import { describe, expect, it } from 'vitest';
 import { parseModels, readSchemaText } from '@/lib/db/schema-info';
 import { REGISTRIES, getRegistry, MissingRegistryError } from '@/lib/changelog/registries';
@@ -50,7 +51,10 @@ describe('registry directory', () => {
   });
 
   it('a missing registry is an error, never a silent skip', () => {
-    expect(() => getRegistry('AD')).toThrow(MissingRegistryError);
+    // Whichever EntityType has no registry yet (the entity sessions add theirs one by one).
+    const missing = Object.values(EntityType).find((t) => !REGISTRIES[t]);
+    expect(missing).toBeDefined();
+    expect(() => getRegistry(missing!)).toThrow(MissingRegistryError);
   });
 
   // AC-05-29 asks for a registry per EntityType. The entity sessions add them (campaign, IO, LI: P3-06b/c; the rest: Phase 4).

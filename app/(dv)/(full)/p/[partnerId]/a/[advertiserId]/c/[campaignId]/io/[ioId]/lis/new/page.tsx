@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { LiAppPreStep } from '@/components/line-items/LiAppPreStep';
 import { LiForm } from '@/components/line-items/LiForm';
 import { LiTypePicker } from '@/components/line-items/LiTypePicker';
+import { YtStep1 } from '@/components/youtube/YtStep1';
 import { FormFrame } from '@/components/shell/Frames';
 import {
   getConversionCandidates,
@@ -14,6 +15,13 @@ import { findApp } from '@/lib/line-items/apps';
 import { isFormType } from '@/lib/line-items/type-config';
 import { ioPath } from '@/lib/routes/paths';
 import { requireView } from '@/lib/scope/guard';
+import { MSG } from '@/lib/validation/messages';
+import { isYoutubeEnabled } from '@/lib/youtube/service';
+import {
+  subtypeFrom,
+  type YtAdFormatChoice,
+  type YtOptimization,
+} from '@/lib/validation/constants/youtube';
 import { resolveIo } from '@/lib/scope/resolve';
 
 export const metadata = { title: 'New line item' };
@@ -29,6 +37,8 @@ export default async function Page({
     appId?: string;
     adType?: string;
     name?: string;
+    optimization?: string;
+    format?: string;
   }>;
 }) {
   const user = await requireView('STD');
@@ -84,10 +94,40 @@ export default async function Page({
       </FormFrame>
     );
   }
+  let youtube: { optimization: YtOptimization; choice: YtAdFormatChoice | null } | null = null;
+  if (type === 'YT_VIDEO' || type === 'YT_AUDIO') {
+    const base = ioPath(
+      ids.partnerId,
+      ids.advertiserId,
+      ids.campaignId,
+      ids.ioPublicId,
+      'lis',
+      'new',
+    );
+    const optimization = sp.optimization as YtOptimization | undefined;
+    const choice = (sp.format as YtAdFormatChoice | undefined) ?? null;
+    const known =
+      type === 'YT_AUDIO' || (!!optimization && subtypeFrom(optimization, choice) !== null);
+    if (!name || !known) {
+      return (
+        <FormFrame title="New line item">
+          <YtStep1
+            base={base}
+            type={type}
+            blocked={
+              (await isYoutubeEnabled(user, chain.advertiser.id)) ? null : MSG.YT_NOT_ENABLED
+            }
+          />
+        </FormFrame>
+      );
+    }
+    if (type === 'YT_VIDEO') youtube = { optimization: optimization!, choice };
+  }
   const draft = await getDraftInit(user, chain.io.id, type, {
     ...(pickedApp ? { platform, appId: pickedApp.id } : {}),
     ...(type === 'MOBILE_APP_INSTALL' || type === 'ADS_IN_MOBILE_APPS' ? { adType } : {}),
     ...(name ? { name } : {}),
+    ...(youtube ? { youtube } : {}),
   });
   if (!draft) notFound();
   const [creatives, conversions] = await Promise.all([
