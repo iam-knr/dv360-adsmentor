@@ -20,7 +20,6 @@ import {
   DvUnsavedChangesModal,
   useToast,
 } from '@/components/dv';
-import { useViewer } from '@/components/shell/ViewerProvider';
 import { parseDateRangeParam } from '@/lib/metrics/date-range';
 import { FIELD_BY_KEY } from '@/lib/reporting/catalogue';
 import { runReportAction, saveReportAction } from '@/lib/reporting/actions';
@@ -107,8 +106,7 @@ export function OfflineBuilder(props: OfflineBuilderProps) {
   const { partnerId, partnerName, offlineType, fields, ctx } = props;
   const router = useRouter();
   const toast = useToast();
-  const { viewer } = useViewer();
-  const readOnly = props.readOnly || viewer.readOnly;
+  const readOnly = props.readOnly;
   const base = partnerPath(partnerId, 'reporting');
   const [id, setId] = useState(props.reportId);
   const [version, setVersion] = useState(props.version);

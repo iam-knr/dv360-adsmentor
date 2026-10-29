@@ -26,7 +26,6 @@ import {
   DvTextField,
   useToast,
 } from '@/components/dv';
-import { useViewer } from '@/components/shell/ViewerProvider';
 import {
   deleteReportAction,
   generateReportAction,
@@ -65,7 +64,6 @@ export function ReportsHub(props: ReportsHubProps) {
   const { partnerId, tab, createdBy, q, page, pageSize, total, rows, templates, canWrite } = props;
   const router = useRouter();
   const toast = useToast();
-  const { viewer } = useViewer();
   const [, startTransition] = useTransition();
   const [menu, setMenu] = useState<{ el: HTMLElement; row: ReportRow } | null>(null);
   const [share, setShare] = useState<ReportRow | null>(null);
@@ -93,7 +91,7 @@ export function ReportsHub(props: ReportsHubProps) {
     return qs ? `${base}?${qs}` : base;
   };
   const go = (over: Record<string, string | number | undefined>) => router.push(href(over));
-  const editable = canWrite && !viewer.readOnly;
+  const editable = canWrite;
 
   const openRow = (r: ReportRow) =>
     router.push(

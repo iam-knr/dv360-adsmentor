@@ -156,7 +156,7 @@ export const OFFLINE_TEMPLATES: readonly OfflineTemplate[] = [
     key: 'floodlight-impressions',
     type: 'FLOODLIGHT',
     title: 'Floodlight Impressions',
-    dimensions: ['date', 'advertiser', 'floodlight_activity'],
+    dimensions: ['date', 'advertiser'],
     metrics: ['impressions', 'clicks', 'floodlight_impressions'],
     dateRange: 'LAST_7_DAYS',
   },

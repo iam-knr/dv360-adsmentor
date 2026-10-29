@@ -95,7 +95,10 @@ async function signIn(page: Page, world: { email: string; password: string } = w
 }
 
 async function addField(page: Page, label: string) {
-  await page.getByRole('button', { name: `Add ${label}`, exact: true }).click();
+  const search = page.getByPlaceholder('Search metrics and dimensions');
+  await search.fill(label);
+  await page.getByRole('button', { name: `Add ${label}`, exact: true }).first().click();
+  await search.fill('');
 }
 
 test('E2E-RPT-01: hub lists the seven templates; a template runs, the file matches the preview', async ({ page }) => {
@@ -113,7 +116,7 @@ test('E2E-RPT-01: hub lists the seven templates; a template runs, the file match
   ])
     await expect(page.getByRole('list', { name: 'Suggested templates' }).getByText(t, { exact: true })).toBeVisible();
   await expect(page.getByTestId('created-by-chip')).toBeVisible();
-  await page.getByTestId('created-by-chip').getByTestId('CancelIcon').click();
+  await page.getByTestId('created-by-chip').locator('.MuiChip-deleteIcon').click();
   await expect(page.getByText('Created by: Anyone with access')).toBeVisible();
 
   await page
@@ -152,10 +155,7 @@ test('E2E-RPT-02: build from scratch, undo and redo, bulk edit, save, rename, sa
   await expect(page.getByTestId('canvas-empty')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Schedule' })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Run report' })).toBeDisabled();
-  await page.getByPlaceholder('Search metrics and dimensions').fill('impressions');
   await addField(page, 'Impressions');
-  await addField(page, 'Impressions').catch(() => undefined);
-  await page.getByPlaceholder('Search metrics and dimensions').fill('');
   await expect(page.getByTestId('zone-chip-impressions')).toBeVisible();
   await page.getByRole('button', { name: 'Undo' }).click();
   await expect(page.getByTestId('zone-chip-impressions')).toHaveCount(0);
@@ -201,8 +201,8 @@ test('E2E-RPT-02: build from scratch, undo and redo, bulk edit, save, rename, sa
 test('E2E-RPT-03: chart types and their constraints', async ({ page }) => {
   await signIn(page);
   await page.goto(`${hub()}/instant/new`);
-  await page.getByRole('button', { name: 'Add Date', exact: true }).click();
-  await page.getByRole('button', { name: 'Add Impressions', exact: true }).click();
+  await addField(page, 'Date');
+  await addField(page, 'Impressions');
   await page.getByRole('combobox', { name: /Visualisation/ }).click();
   await page.getByRole('option', { name: 'Time series chart' }).click();
   await page.getByRole('button', { name: 'Run report' }).click();
@@ -219,8 +219,8 @@ test('E2E-RPT-03: chart types and their constraints', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Run report' })).toBeDisabled();
   // Time series without Date is blocked
   await page.getByRole('button', { name: 'Reset' }).click();
-  await page.getByRole('button', { name: 'Add Advertiser', exact: true }).click();
-  await page.getByRole('button', { name: 'Add Impressions', exact: true }).click();
+  await addField(page, 'Advertiser');
+  await addField(page, 'Impressions');
   await page.getByRole('combobox', { name: /Visualisation/ }).click();
   await page.getByRole('option', { name: 'Time series chart' }).click();
   await expect(page.getByText(/This chart needs/)).toBeVisible();
@@ -288,7 +288,7 @@ test('E2E-RPT-06: share a report with a person who has access to this partner', 
   expect(shares[0]?.canEdit).toBe(false);
   // the hub marks it shared
   await page.goto(hub());
-  await page.getByTestId('created-by-chip').getByTestId('CancelIcon').click();
+  await page.getByTestId('created-by-chip').locator('.MuiChip-deleteIcon').click();
   await expect(page.getByRole('row', { name: /PW shared report/ })).toContainText('Shared');
 });
 

@@ -16,7 +16,6 @@ import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 import { DvIcon } from '@/components/icons';
 import { DvBanner, DvEmptyState } from '@/components/dv';
-import { useViewer } from '@/components/shell/ViewerProvider';
 import { runReportAction } from '@/lib/reporting/actions';
 import type { RunRow } from '@/lib/reporting/types';
 import { partnerPath } from '@/lib/routes/paths';
@@ -47,7 +46,6 @@ export function ReportRuns({
   canRun: boolean;
 }) {
   const router = useRouter();
-  const { viewer } = useViewer();
   const [, start] = useTransition();
   const [error, setError] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
@@ -75,7 +73,7 @@ export function ReportRuns({
         <Typography variant="body2" color="text.secondary">
           Report ID: {report.publicId}
         </Typography>
-        {canRun && !viewer.readOnly ? (
+        {canRun ? (
           <Button variant="outlined" disabled={busy} onClick={() => void runNow()}>
             Run now
           </Button>

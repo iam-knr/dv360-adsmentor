@@ -24,7 +24,6 @@ import {
   DvUnsavedChangesModal,
   useToast,
 } from '@/components/dv';
-import { useViewer } from '@/components/shell/ViewerProvider';
 import { FIELD_BY_KEY } from '@/lib/reporting/catalogue';
 import { incompatibleWith } from '@/lib/reporting/engine/compat';
 import { ruleCompatibility, ruleName, ruleViz } from '@/lib/reporting/engine/rules';
@@ -125,8 +124,7 @@ export function ReportBuilder(props: ReportBuilderProps) {
   const { partnerId, partnerName, fields, ctx } = props;
   const router = useRouter();
   const toast = useToast();
-  const { viewer } = useViewer();
-  const readOnly = props.readOnly || viewer.readOnly;
+  const readOnly = props.readOnly;
   const base = partnerPath(partnerId, 'reporting');
 
   const [model, setModel] = useState<Model>(toModel(props.initial));
