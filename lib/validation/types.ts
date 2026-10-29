@@ -376,3 +376,88 @@ export interface ValidationContext {
     templates: Map<string, TemplateInfo>;
   }>;
 }
+
+// ---------------------------------------------------------------------------------------------
+// Creative domain (module 12, validation.md 2.18). Added by P4-01.
+// ---------------------------------------------------------------------------------------------
+
+export type CreativeKindKey =
+  | 'STANDARD_IMAGE'
+  | 'STANDARD_HTML5'
+  | 'THIRD_PARTY_DISPLAY'
+  | 'NATIVE_SITE'
+  | 'NATIVE_VIDEO'
+  | 'VIDEO_FILE'
+  | 'YOUTUBE_VIDEO'
+  | 'AUDIO_FILE'
+  | 'THIRD_PARTY_VIDEO'
+  | 'THIRD_PARTY_AUDIO';
+
+/** A file the form attached. The service fills these from the `Upload` row, never from the client (module 12 4.3). */
+export interface CreativeAssetInput {
+  uploadId?: string | null;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  width?: number | null;
+  height?: number | null;
+  durationSeconds?: number | null;
+  /** HTML5 zip: the archive holds exactly one HTML entry file (set by the service after reading the zip). */
+  entryHtml?: boolean;
+}
+
+export interface NativeFieldsInput {
+  headline?: string | null;
+  body?: string | null;
+  callToAction?: string | null;
+  advertiserName?: string | null;
+  displayUrl?: string | null;
+}
+
+export interface CreativeInput {
+  kind: CreativeKindKey;
+  formatKey?: string | null;
+  name: string;
+  /** Edit only. */
+  status?: 'ACTIVE' | 'PAUSED' | 'ARCHIVED' | null;
+  landingPageUrl?: string | null;
+  width?: Num;
+  height?: Num;
+  durationSeconds?: Num;
+  thirdPartyTag?: string | null;
+  /** VAST tag URL or XML. */
+  vastTag?: string | null;
+  /** YouTube URL or 11-character id as typed. */
+  youtubeVideo?: string | null;
+  requiresMraid?: boolean;
+  requiresHtml5?: boolean;
+  expandDirection?: string;
+  expandsOnHover?: boolean;
+  dontScaleToFit?: boolean;
+  appendTrackingTag?: boolean;
+  requiresPing?: boolean;
+  aiLabel?: 'UNSET' | 'AI_GENERATED' | 'NOT_AI_GENERATED';
+  integrationCode?: string | null;
+  notes?: string | null;
+  skippable?: boolean;
+  skipOffsetSec?: Num;
+  impressionTrackerUrl?: string | null;
+  clickTrackerUrl?: string | null;
+  native?: NativeFieldsInput;
+  mainAsset?: CreativeAssetInput | null;
+  logoAsset?: CreativeAssetInput | null;
+  /** Optimized (format gallery) asset group. */
+  optimized?: {
+    headlines: string[];
+    descriptions: string[];
+    imageCount: number;
+    logoCount: number;
+    businessName?: string | null;
+    callToAction?: string | null;
+  } | null;
+  /** Edit and appeal context filled by the service. */
+  source?: 'DV360' | 'CM360' | 'THIRD_PARTY';
+  activeLineItemCount?: number;
+  /** Appeal request: true when the creative is servable and approved on every exchange (CRE-043). */
+  appeal?: { servableEverywhere: boolean };
+}

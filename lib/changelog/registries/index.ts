@@ -4,6 +4,7 @@ import type { EntityType } from '@prisma/client';
 import type { EntityRegistry } from '../registry-types';
 import { advertiserRegistry } from './advertiser';
 import { campaignRegistry } from './campaign';
+import { creativeRegistry } from './creative';
 import { insertionOrderRegistry } from './insertion-order';
 import { lineItemRegistry } from './line-item';
 
@@ -12,6 +13,7 @@ export const REGISTRIES: Partial<Record<EntityType, EntityRegistry>> = {
   CAMPAIGN: campaignRegistry,
   INSERTION_ORDER: insertionOrderRegistry,
   LINE_ITEM: lineItemRegistry,
+  CREATIVE: creativeRegistry,
 };
 
 export class MissingRegistryError extends Error {
