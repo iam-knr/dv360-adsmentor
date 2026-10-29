@@ -16,6 +16,7 @@ import {
   locationListRegistry,
 } from './resources';
 import { partnerRegistry } from './partner';
+import { adGroupRegistry, adRegistry } from './youtube';
 
 export const REGISTRIES: Partial<Record<EntityType, EntityRegistry>> = {
   ADVERTISER: advertiserRegistry,
@@ -30,6 +31,8 @@ export const REGISTRIES: Partial<Record<EntityType, EntityRegistry>> = {
   CREATIVE: creativeRegistry,
   DEAL: dealRegistry,
   PARTNER: partnerRegistry,
+  AD_GROUP: adGroupRegistry,
+  AD: adRegistry,
 };
 
 export class MissingRegistryError extends Error {

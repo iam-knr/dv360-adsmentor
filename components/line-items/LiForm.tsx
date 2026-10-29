@@ -17,6 +17,15 @@ import { DvSectionCard } from '@/components/dv/DvSectionCard';
 import { DvSelect } from '@/components/dv/DvSelect';
 import { DvTextField } from '@/components/dv/DvTextField';
 import { TargetingCard } from '@/components/targeting';
+import {
+  YtBidCard,
+  YtBudgetPacingCard,
+  YtExtrasCard,
+  YtFrequencyCard,
+  YtSubtypeCard,
+  type YtSectionProps,
+} from '@/components/youtube/YoutubeLiSections';
+import { isYoutubeType } from '@/lib/youtube/li';
 import { useUnsavedGuard } from '@/lib/hooks/useUnsavedGuard';
 import {
   createLineItemAction,
@@ -117,6 +126,19 @@ export function LiForm({
   };
   const warn = (path: string) => issues.find((i) => i.path === path && !i.blocking)?.message;
   const ro = !!readOnly;
+  const yt = isYoutubeType(type) ? (value.youtube ?? null) : null;
+  const ytProps: YtSectionProps | null = yt
+    ? {
+        value,
+        yt,
+        set,
+        setYt: (patch) => set({ youtube: { ...yt, ...patch } }),
+        ro,
+        currency,
+        mode,
+        err,
+      }
+    : null;
 
   const automated = value.bid.mode === 'AUTOMATED';
   const strategies = bidOptions(io, type);
@@ -191,6 +213,19 @@ export function LiForm({
   const counting = value.conversions.countingMode ?? 'ALL';
   const chosenConversions = conversions.filter((c) => value.conversions.activities.includes(c.id));
   const cap = value.frequencyCap;
+  // The YouTube sections are child components, so their paths are known up front.
+  if (yt)
+    for (const p of [
+      'youtube.adFormats',
+      'youtube.viewCap.maxImpressions',
+      'youtube.targetFrequency.maxImpressions',
+      'youtube.productFeed',
+      'youtube.inventorySources',
+      'frequencyCap.maxImpressions',
+      'pacing.dailyAmount',
+      'budget.amount',
+    ])
+      known.add(p);
   const unmatched = issues.filter((i) => i.blocking && !known.has(i.path));
 
   return (
@@ -237,7 +272,7 @@ export function LiForm({
             ]}
             onChange={(status) => set({ status: status as LiFormValue['status'] })}
           />
-          {!ro && advertiserRowId ? (
+          {!ro && advertiserRowId && !yt ? (
             <Box>
               <Button variant="text" size="small" onClick={openCopy}>
                 Copy settings from an existing line item
@@ -250,6 +285,8 @@ export function LiForm({
             </Box>
           ) : null}
         </DvSectionCard>
+
+        {ytProps ? <YtSubtypeCard {...ytProps} /> : null}
 
         {type === 'DEMAND_GEN' ? (
           <Typography variant="body2" role="note">
@@ -312,120 +349,136 @@ export function LiForm({
           ) : null}
         </DvSectionCard>
 
-        <DvSectionCard title="Budget" layout="settings">
-          <DvRadioGroup
-            value={value.budget.mode}
-            readOnly={ro}
-            onChange={(m) =>
-              set({ budget: { ...value.budget, mode: m as 'UNLIMITED' | 'AMOUNT' } })
-            }
-            options={[
-              { value: 'UNLIMITED', label: 'Unlimited' },
-              { value: 'AMOUNT', label: 'Amount' },
-            ]}
-          />
-          {value.budget.mode === 'AMOUNT' ? (
-            <DvTextField
-              label="Budget"
-              numeric
-              prefix={currency}
-              value={String(value.budget.amount ?? '')}
+        {ytProps ? <YtBudgetPacingCard {...ytProps} /> : null}
+
+        {!yt ? (
+          <DvSectionCard title="Budget" layout="settings">
+            <DvRadioGroup
+              value={value.budget.mode}
               readOnly={ro}
-              error={err('budget.amount')}
-              onChange={(amount) => set({ budget: { ...value.budget, amount } })}
+              onChange={(m) =>
+                set({ budget: { ...value.budget, mode: m as 'UNLIMITED' | 'AMOUNT' } })
+              }
+              options={[
+                { value: 'UNLIMITED', label: 'Unlimited' },
+                { value: 'AMOUNT', label: 'Amount' },
+              ]}
             />
-          ) : null}
-        </DvSectionCard>
-
-        <DvSectionCard title="Pacing" layout="settings">
-          {isLocked('pacing') ? (
-            <Typography variant="body2">
-              Pacing is set by the insertion order&apos;s optimization (Flight, ASAP).
-            </Typography>
-          ) : (
-            <>
-              <DvSelect
-                label="Pacing period"
-                value={value.pacing.period ?? 'FLIGHT'}
-                disabled={ro}
-                options={[
-                  { value: 'FLIGHT', label: 'Flight' },
-                  { value: 'DAILY', label: 'Daily' },
-                ]}
-                onChange={(period) =>
-                  set({ pacing: { ...value.pacing, period: period as 'FLIGHT' | 'DAILY' } })
-                }
+            {value.budget.mode === 'AMOUNT' ? (
+              <DvTextField
+                label="Budget"
+                numeric
+                prefix={currency}
+                value={String(value.budget.amount ?? '')}
+                readOnly={ro}
+                error={err('budget.amount')}
+                onChange={(amount) => set({ budget: { ...value.budget, amount } })}
               />
-              <DvSelect
-                label="Pacing type"
-                value={value.pacing.type ?? 'EVEN'}
-                disabled={ro}
-                options={[
-                  { value: 'EVEN', label: 'Even' },
-                  { value: 'ASAP', label: 'ASAP' },
-                  ...(value.pacing.period === 'FLIGHT' ? [{ value: 'AHEAD', label: 'Ahead' }] : []),
-                ]}
-                onChange={(t) => set({ pacing: { ...value.pacing, type: t as 'EVEN' } })}
-              />
-              {value.pacing.period === 'DAILY' ? (
-                <DvTextField
-                  label="Daily amount"
-                  numeric
-                  prefix={currency}
-                  value={String(value.pacing.dailyAmount ?? '')}
-                  readOnly={ro}
-                  error={err('pacing.dailyAmount')}
-                  onChange={(dailyAmount) => set({ pacing: { ...value.pacing, dailyAmount } })}
-                />
-              ) : null}
-            </>
-          )}
-        </DvSectionCard>
+            ) : null}
+          </DvSectionCard>
+        ) : null}
 
-        <DvSectionCard title="Bid strategy" layout="settings">
-          {isLocked('bid') ? (
-            <Typography variant="body2">
-              Bid strategy comes from the insertion order:{' '}
-              {io.optimizedTowards ? BID_STRATEGY_LABEL[io.optimizedTowards] : 'Automated'}.
-            </Typography>
-          ) : (
-            <>
-              {config.bidModes.length > 1 ? (
-                <DvRadioGroup
-                  value={value.bid.mode ?? 'FIXED'}
-                  readOnly={ro}
-                  onChange={(m) => set({ bid: { ...value.bid, mode: m as 'FIXED' | 'AUTOMATED' } })}
-                  options={[
-                    { value: 'FIXED', label: 'Fixed bid' },
-                    { value: 'AUTOMATED', label: 'Optimize bids automatically' },
-                  ]}
-                />
-              ) : null}
-              {automated ? (
+        {!yt ? (
+          <DvSectionCard title="Pacing" layout="settings">
+            {isLocked('pacing') ? (
+              <Typography variant="body2">
+                Pacing is set by the insertion order&apos;s optimization (Flight, ASAP).
+              </Typography>
+            ) : (
+              <>
                 <DvSelect
-                  label="Optimized towards"
-                  value={value.bid.optimizedTowards ?? ''}
+                  label="Pacing period"
+                  value={value.pacing.period ?? 'FLIGHT'}
                   disabled={ro}
-                  error={err('bid.optimizedTowards')}
-                  options={strategies.map((s) => ({ value: s, label: BID_STRATEGY_LABEL[s] }))}
-                  onChange={(s) => set({ bid: { ...value.bid, optimizedTowards: s as never } })}
+                  options={[
+                    { value: 'FLIGHT', label: 'Flight' },
+                    { value: 'DAILY', label: 'Daily' },
+                  ]}
+                  onChange={(period) =>
+                    set({ pacing: { ...value.pacing, period: period as 'FLIGHT' | 'DAILY' } })
+                  }
                 />
-              ) : (
-                <DvTextField
-                  label="Fixed bid (CPM)"
-                  numeric
-                  prefix={currency}
-                  value={String(value.bid.fixedCpm ?? '')}
-                  readOnly={ro}
-                  error={err('bid.fixedCpm')}
-                  onChange={(fixedCpm) => set({ bid: { ...value.bid, fixedCpm } })}
+                <DvSelect
+                  label="Pacing type"
+                  value={value.pacing.type ?? 'EVEN'}
+                  disabled={ro}
+                  options={[
+                    { value: 'EVEN', label: 'Even' },
+                    { value: 'ASAP', label: 'ASAP' },
+                    ...(value.pacing.period === 'FLIGHT'
+                      ? [{ value: 'AHEAD', label: 'Ahead' }]
+                      : []),
+                  ]}
+                  onChange={(t) => set({ pacing: { ...value.pacing, type: t as 'EVEN' } })}
                 />
-              )}
-            </>
-          )}
-        </DvSectionCard>
+                {value.pacing.period === 'DAILY' ? (
+                  <DvTextField
+                    label="Daily amount"
+                    numeric
+                    prefix={currency}
+                    value={String(value.pacing.dailyAmount ?? '')}
+                    readOnly={ro}
+                    error={err('pacing.dailyAmount')}
+                    onChange={(dailyAmount) => set({ pacing: { ...value.pacing, dailyAmount } })}
+                  />
+                ) : null}
+              </>
+            )}
+          </DvSectionCard>
+        ) : null}
 
-        {config.frequency ? (
+        {ytProps ? <YtBidCard {...ytProps} /> : null}
+
+        {!yt ? (
+          <DvSectionCard title="Bid strategy" layout="settings">
+            {isLocked('bid') ? (
+              <Typography variant="body2">
+                Bid strategy comes from the insertion order:{' '}
+                {io.optimizedTowards ? BID_STRATEGY_LABEL[io.optimizedTowards] : 'Automated'}.
+              </Typography>
+            ) : (
+              <>
+                {config.bidModes.length > 1 ? (
+                  <DvRadioGroup
+                    value={value.bid.mode ?? 'FIXED'}
+                    readOnly={ro}
+                    onChange={(m) =>
+                      set({ bid: { ...value.bid, mode: m as 'FIXED' | 'AUTOMATED' } })
+                    }
+                    options={[
+                      { value: 'FIXED', label: 'Fixed bid' },
+                      { value: 'AUTOMATED', label: 'Optimize bids automatically' },
+                    ]}
+                  />
+                ) : null}
+                {automated ? (
+                  <DvSelect
+                    label="Optimized towards"
+                    value={value.bid.optimizedTowards ?? ''}
+                    disabled={ro}
+                    error={err('bid.optimizedTowards')}
+                    options={strategies.map((s) => ({ value: s, label: BID_STRATEGY_LABEL[s] }))}
+                    onChange={(s) => set({ bid: { ...value.bid, optimizedTowards: s as never } })}
+                  />
+                ) : (
+                  <DvTextField
+                    label="Fixed bid (CPM)"
+                    numeric
+                    prefix={currency}
+                    value={String(value.bid.fixedCpm ?? '')}
+                    readOnly={ro}
+                    error={err('bid.fixedCpm')}
+                    onChange={(fixedCpm) => set({ bid: { ...value.bid, fixedCpm } })}
+                  />
+                )}
+              </>
+            )}
+          </DvSectionCard>
+        ) : null}
+
+        {ytProps ? <YtFrequencyCard {...ytProps} /> : null}
+
+        {config.frequency && !yt ? (
           <DvSectionCard title="Frequency cap" layout="settings">
             {higherCapText ? <Typography variant="body2">{higherCapText}</Typography> : null}
             <DvRadioGroup
@@ -463,6 +516,8 @@ export function LiForm({
             />
           </DvSectionCard>
         ) : null}
+
+        {ytProps ? <YtExtrasCard {...ytProps} /> : null}
 
         {config.creatives ? (
           <DvSectionCard title="Creatives" layout="stacked">

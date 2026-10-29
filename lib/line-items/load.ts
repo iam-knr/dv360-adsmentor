@@ -18,6 +18,8 @@ import type {
 } from '@/lib/validation/types';
 import type { SessionUser } from '@/lib/auth/types';
 import { defaultTargetingInput, toValidationInput, type FormIo, type LiFormValue } from './form';
+import { YT_INVENTORY_SOURCES, type YtInventorySource } from '@/lib/validation/constants/youtube';
+import { isYoutubeType, youtubeFromRow } from '@/lib/youtube/li';
 import { exchangeFormatOf, exchangeSupports } from './type-config';
 
 export const LI_INCLUDE = {
@@ -179,7 +181,9 @@ export async function rowToForm(tx: Tx, li: StoredLi, partnerId: string): Promis
       : null;
   const loaded = await loadTargetingState(tx, li.id);
   const targetingState = loaded.lineItemType === 'unknown' ? emptyTargetingState(type) : loaded;
+  const youtube = isYoutubeType(type) ? await youtubeSection(tx, li) : undefined;
   return {
+    ...(youtube ? { youtube } : {}),
     name: li.name,
     status: li.status === 'SCHEDULED_FOR_DELETION' ? 'ARCHIVED' : li.status,
     type,
@@ -248,6 +252,27 @@ export async function rowToForm(tx: Tx, li: StoredLi, partnerId: string): Promis
   };
 }
 
+/** The YouTube section of a stored line item: its columns, inventory source rows and the ad count of a sequence. */
+async function youtubeSection(tx: Tx, li: StoredLi) {
+  const [sources, ads] = await Promise.all([
+    tx.targetingAssignment.findMany({
+      where: { lineItemId: li.id, ownerType: 'LINE_ITEM', dimension: 'INVENTORY_SOURCE' },
+      select: { valueText: true },
+    }),
+    li.ytSubtype === 'AD_SEQUENCE'
+      ? tx.ad.count({
+          where: { adGroup: { lineItemId: li.id, status: 'ACTIVE' }, status: 'ACTIVE' },
+        })
+      : Promise.resolve(0),
+  ]);
+  const picked = sources
+    .map((r) => r.valueText)
+    .filter((v): v is YtInventorySource =>
+      (YT_INVENTORY_SOURCES as readonly string[]).includes(v ?? ''),
+    );
+  return youtubeFromRow(li, sources.length ? picked : [...YT_INVENTORY_SOURCES], ads);
+}
+
 const FORMAT_OF_KIND: Record<CreativeKind, CreativeFormat> = {
   STANDARD_IMAGE: 'IMAGE',
   STANDARD_HTML5: 'HTML5',
@@ -304,8 +329,18 @@ export async function buildLiContext(
   user: SessionUser,
   io: LoadedIo,
   original?: LiFormValue,
+  liId?: string,
 ): Promise<ValidationContext> {
   const advertiser = io.row.advertiser;
+  const adGroups = liId
+    ? await tx.adGroup.findMany({
+        where: { lineItemId: liId },
+        select: { id: true, status: true, _count: { select: { ads: true } } },
+      })
+    : [];
+  const merchant = await tx.linkedAccount.count({
+    where: { advertiserId: advertiser.id, type: 'MERCHANT_CENTER', status: 'LINKED' },
+  });
   const [exchanges, creatives, activities, algorithms, templates, now] = await Promise.all([
     tx.partnerExchange.findMany({
       where: { partnerId: advertiser.partnerId, enabled: true },
@@ -344,7 +379,19 @@ export async function buildLiContext(
       googleInventoryEnabled: advertiser.googleInventoryEnabled,
       appAttributionLinked: false,
       attributionModelIds: io.attributionModelIds,
+      merchantCenterLinked: merchant > 0,
     },
+    ...(liId
+      ? {
+          children: {
+            adGroups: adGroups.map((g) => ({
+              id: g.id,
+              status: g.status === 'PAUSED' ? ('PAUSED' as const) : ('ACTIVE' as const),
+              adCount: g._count.ads,
+            })),
+          },
+        }
+      : {}),
     campaign: io.campaignSnapshot,
     io: io.snapshot,
     lookups: {

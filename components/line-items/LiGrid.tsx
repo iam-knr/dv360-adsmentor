@@ -129,6 +129,20 @@ export function LiGrid({
       accessor: (r) => r.clicks,
       total: () => sum('clicks').toLocaleString('en-US'),
     },
+    ...(shown.some((r) => r.trueViewViews !== undefined)
+      ? [
+          {
+            id: 'trueViewViews',
+            header: 'TrueView: Views',
+            group: 'delivery',
+            type: 'number',
+            align: 'right',
+            accessor: (r: LineItemRow) => r.trueViewViews ?? null,
+            total: () =>
+              shown.reduce((acc, r) => acc + (r.trueViewViews ?? 0), 0).toLocaleString('en-US'),
+          } satisfies DvColumn<LineItemRow>,
+        ]
+      : []),
     {
       id: 'revenue',
       header: 'Revenue',

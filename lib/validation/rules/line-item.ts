@@ -185,6 +185,7 @@ export const LI_010 = def({
   triggers: ['save'],
   reads: ['inventory.quality'],
   message: 'Choose an inventory quality option.',
+  appliesTo: (l) => !isYoutubeOrDemandGen(l), // YouTube and Demand Gen use Google inventory (no quality dropdown)
   check: (l) =>
     l.inventory.quality && QUALITIES.includes(l.inventory.quality)
       ? null
@@ -395,7 +396,8 @@ export const LI_036 = def({
   triggers: ['blur'],
   reads: ['pacing.period', 'pacing.dailyAmount'],
   message: MSG.ENTER_POSITIVE,
-  appliesTo: (l) => l.pacing.period === 'DAILY',
+  // YouTube line items have LI-YT-006 and LI-YT-007 for the same field
+  appliesTo: (l) => l.pacing.period === 'DAILY' && !(l.type && YOUTUBE_LI_TYPES.includes(l.type)),
   check: (l) => (positive(l.pacing.dailyAmount) ? null : { path: 'pacing.dailyAmount' }),
 });
 
@@ -468,6 +470,7 @@ export const LI_043 = def({
   appliesTo: (l) =>
     l.bid.mode === 'AUTOMATED' &&
     !!l.bid.optimizedTowards &&
+    !(l.type && YOUTUBE_LI_TYPES.includes(l.type)) && // the YouTube bid value lives on the ad group (AG-003)
     strategyNeedsTarget(l.bid.optimizedTowards, l.bid.priority),
   check: (l) => (positive(l.bid.targetValue) ? null : { path: 'bid.targetValue' }),
 });
