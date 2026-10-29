@@ -65,6 +65,9 @@ export interface AudienceRuleInput {
 const aud = (rule: Omit<Rule<AudienceRuleInput>, 'kind'>): AnyRule =>
   ({ kind: 'audience', ...rule }) as unknown as AnyRule;
 
+/** Kind-specific fields are locked after creation (AUD-110), so their rules read only when creating. */
+const creating = (ctx: { mode: string }) => ctx.mode === 'create';
+
 const isCustom = (t: AudienceKindKey) =>
   t === 'CUSTOM_AFFINITY' || t === 'CUSTOM_INTENT_DISPLAY_VIDEO' || t === 'CUSTOM_INTENT_YOUTUBE';
 const isIntent = (t: AudienceKindKey) =>
@@ -96,7 +99,7 @@ export const audienceRules: readonly AnyRule[] = [
     triggers: ['save'],
     reads: ['floodlightActivityId'],
     message: 'Select a Floodlight activity.',
-    appliesTo: (a) => a.type === 'TAG_BASED',
+    appliesTo: (a, ctx) => creating(ctx) && (a.type === 'TAG_BASED'),
     check: (a) => (isBlank(a.floodlightActivityId) ? { path: 'floodlightActivityId' } : null),
   }),
   aud({
@@ -105,7 +108,7 @@ export const audienceRules: readonly AnyRule[] = [
     triggers: ['save'],
     reads: ['tagRules'],
     message: MSG.ENTER_VALUE,
-    appliesTo: (a) => a.type === 'TAG_BASED',
+    appliesTo: (a, ctx) => creating(ctx) && (a.type === 'TAG_BASED'),
     check: (a) =>
       (a.tagRules ?? []).flatMap((r, i) =>
         isBlank(r.variableKey) || isBlank(r.operator) || isBlank(r.value)
@@ -119,7 +122,7 @@ export const audienceRules: readonly AnyRule[] = [
     triggers: ['blur', 'save'],
     reads: ['floodlightActivityId'],
     message: 'Turn on remarketing for this Floodlight activity first.',
-    appliesTo: (a) => a.type === 'TAG_BASED' && !isBlank(a.floodlightActivityId),
+    appliesTo: (a, ctx) => creating(ctx) && (a.type === 'TAG_BASED' && !isBlank(a.floodlightActivityId)),
     check: (a) => (a.activityRemarketing ? null : { path: 'floodlightActivityId' }),
   }),
   aud({
@@ -128,7 +131,7 @@ export const audienceRules: readonly AnyRule[] = [
     triggers: ['save'],
     reads: ['dataSource'],
     message: MSG.SELECTION_REQUIRED,
-    appliesTo: (a) => a.type === 'CUSTOMER_MATCH',
+    appliesTo: (a, ctx) => creating(ctx) && (a.type === 'CUSTOMER_MATCH'),
     check: (a) => (a.dataSource ? null : { path: 'dataSource' }),
   }),
   aud({
@@ -137,7 +140,7 @@ export const audienceRules: readonly AnyRule[] = [
     triggers: ['save'],
     reads: ['file'],
     message: 'Upload a CSV file with at least one identifier column.',
-    appliesTo: (a) => a.type === 'CUSTOMER_MATCH' && a.dataSource === 'UPLOAD',
+    appliesTo: (a, ctx) => creating(ctx) && (a.type === 'CUSTOMER_MATCH' && a.dataSource === 'UPLOAD'),
     check: (a) =>
       !a.file?.present || a.file.error === 'NO_FILE' || a.file.error === 'NOT_CSV' || a.file.error === 'NO_IDENTIFIER'
         ? { path: 'file' }
@@ -158,7 +161,7 @@ export const audienceRules: readonly AnyRule[] = [
     triggers: ['save'],
     reads: ['consentAck'],
     message: 'Confirm that you have permission to use this data.',
-    appliesTo: (a) => a.type === 'CUSTOMER_MATCH' && a.dataSource === 'UPLOAD',
+    appliesTo: (a, ctx) => creating(ctx) && (a.type === 'CUSTOMER_MATCH' && a.dataSource === 'UPLOAD'),
     check: (a) => (a.consentAck ? null : { path: 'consentAck' }),
   }),
   aud({
@@ -179,7 +182,7 @@ export const audienceRules: readonly AnyRule[] = [
     triggers: ['save'],
     reads: ['file'],
     message: 'Upload a file with 100,000 rows or fewer.',
-    appliesTo: (a) => a.type === 'CUSTOMER_MATCH' && a.dataSource === 'UPLOAD',
+    appliesTo: (a, ctx) => creating(ctx) && (a.type === 'CUSTOMER_MATCH' && a.dataSource === 'UPLOAD'),
     check: (a) => (a.file?.error === 'TOO_MANY_ROWS' ? { path: 'file' } : null),
   }),
   aud({
@@ -188,7 +191,7 @@ export const audienceRules: readonly AnyRule[] = [
     triggers: ['save'],
     reads: ['includeGroups'],
     message: 'Add at least one audience to include.',
-    appliesTo: (a) => a.type === 'COMBINED',
+    appliesTo: (a, ctx) => creating(ctx) && (a.type === 'COMBINED'),
     check: (a) => ((a.includeGroups ?? []).some((g) => g.length > 0) ? null : { path: 'includeGroups' }),
   }),
   aud({
@@ -197,7 +200,7 @@ export const audienceRules: readonly AnyRule[] = [
     triggers: ['save', 'cross'],
     reads: ['includeGroups', 'excludeIds'],
     message: "An item can't be both included and excluded.",
-    appliesTo: (a) => a.type === 'COMBINED',
+    appliesTo: (a, ctx) => creating(ctx) && (a.type === 'COMBINED'),
     check: (a) => {
       const inc = new Set((a.includeGroups ?? []).flat());
       return (a.excludeIds ?? []).some((id) => inc.has(id)) ? { path: 'excludeIds' } : null;
@@ -209,7 +212,7 @@ export const audienceRules: readonly AnyRule[] = [
     triggers: ['save'],
     reads: ['seeds'],
     message: 'Select between 1 and 10 first-party lists.',
-    appliesTo: (a) => a.type === 'LOOKALIKE',
+    appliesTo: (a, ctx) => creating(ctx) && (a.type === 'LOOKALIKE'),
     check: (a) => {
       const n = (a.seeds ?? []).length;
       return n < 1 || n > 10 ? { path: 'seeds' } : null;
@@ -221,7 +224,7 @@ export const audienceRules: readonly AnyRule[] = [
     triggers: ['save', 'blur'],
     reads: ['seeds'],
     message: MSG.LOOKALIKE_MIN,
-    appliesTo: (a) => a.type === 'LOOKALIKE',
+    appliesTo: (a, ctx) => creating(ctx) && (a.type === 'LOOKALIKE'),
     check: (a) =>
       (a.seeds ?? []).flatMap((s, i) => (s.users < 1000 ? [{ path: `seeds[${i}]` }] : [])),
   }),
@@ -231,7 +234,7 @@ export const audienceRules: readonly AnyRule[] = [
     triggers: ['save'],
     reads: ['reachPct'],
     message: 'Choose a reach between 2.5% and 10%.',
-    appliesTo: (a) => a.type === 'LOOKALIKE',
+    appliesTo: (a, ctx) => creating(ctx) && (a.type === 'LOOKALIKE'),
     check: (a) => {
       const n = toNum(a.reachPct);
       return n === null || ![2.5, 5, 7.5, 10].includes(n) ? { path: 'reachPct' } : null;
@@ -243,7 +246,7 @@ export const audienceRules: readonly AnyRule[] = [
     triggers: ['save'],
     reads: ['countries'],
     message: 'Choose at least one country or region.',
-    appliesTo: (a) => a.type === 'LOOKALIKE',
+    appliesTo: (a, ctx) => creating(ctx) && (a.type === 'LOOKALIKE'),
     check: (a) => ((a.countries ?? []).length === 0 ? { path: 'countries' } : null),
   }),
   aud({
@@ -262,7 +265,7 @@ export const audienceRules: readonly AnyRule[] = [
     triggers: ['save'],
     reads: ['interests', 'urls', 'apps'],
     message: 'Add at least one interest, URL or app.',
-    appliesTo: (a) => a.type === 'CUSTOM_AFFINITY',
+    appliesTo: (a, ctx) => creating(ctx) && (a.type === 'CUSTOM_AFFINITY'),
     check: (a) =>
       (a.interests ?? []).length + (a.urls ?? []).length + (a.apps ?? []).length === 0
         ? { path: 'interests' }
@@ -284,7 +287,7 @@ export const audienceRules: readonly AnyRule[] = [
     triggers: ['blur', 'save'],
     reads: ['urls'],
     message: MSG.VALID_URL,
-    appliesTo: (a) => isCustom(a.type),
+    appliesTo: (a, ctx) => creating(ctx) && (isCustom(a.type)),
     check: (a) =>
       (a.urls ?? []).flatMap((u, i) => (isUrl(u.includes('://') ? u : `https://${u}`) ? [] : [{ path: `urls[${i}]` }])),
   }),
@@ -310,7 +313,7 @@ export const audienceRules: readonly AnyRule[] = [
     triggers: ['save'],
     reads: ['keywords', 'urls'],
     message: 'Add at least one keyword or URL.',
-    appliesTo: (a) => isIntent(a.type),
+    appliesTo: (a, ctx) => creating(ctx) && (isIntent(a.type)),
     check: (a) => ((a.keywords ?? []).length + (a.urls ?? []).length === 0 ? { path: 'keywords' } : null),
   }),
   aud({
@@ -319,7 +322,7 @@ export const audienceRules: readonly AnyRule[] = [
     triggers: ['save'],
     reads: ['linkedChannels'],
     message: 'Link a YouTube channel before creating this audience.',
-    appliesTo: (a) => a.type === 'YOUTUBE_USERS',
+    appliesTo: (a, ctx) => creating(ctx) && (a.type === 'YOUTUBE_USERS'),
     check: (a) => ((a.linkedChannels ?? 0) === 0 ? { path: 'linkedAccountId' } : null),
   }),
   aud({
@@ -355,7 +358,7 @@ export const audienceRules: readonly AnyRule[] = [
     triggers: ['save'],
     reads: ['includeGroups'],
     message: "An audience can't include itself.",
-    appliesTo: (a) => a.type === 'COMBINED',
+    appliesTo: (a, ctx) => creating(ctx) && (a.type === 'COMBINED'),
     check: (a) => (a.cyclic ? { path: 'includeGroups' } : null),
   }),
   aud({
@@ -364,7 +367,7 @@ export const audienceRules: readonly AnyRule[] = [
     triggers: ['save'],
     reads: ['includeGroups'],
     message: 'All included audiences are archived.',
-    appliesTo: (a) => a.type === 'COMBINED',
+    appliesTo: (a, ctx) => creating(ctx) && (a.type === 'COMBINED'),
     check: (a) => (a.allIncludedArchived ? { path: 'includeGroups' } : null),
   }),
   aud({

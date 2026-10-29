@@ -786,6 +786,7 @@ export async function createAudience(
     assertAudienceWrite(ctx);
     return withSandbox(ctx.sandboxId, async (tx) => {
       const adv = await loadAdvertiser(tx, aid);
+      await settle(tx, ctx, adv.id);
       const built = await build(tx, ctx, adv, input);
       const issues = validateAudience(ctx, adv, 'create', built.rules);
       if (issues.some((i) => i.blocking)) throw invalid(issues);
@@ -820,6 +821,7 @@ export async function validateAudienceDraft(user: SessionUser, aid: string, inpu
   assertAudienceRead(ctx);
   return withSandbox(ctx.sandboxId, async (tx) => {
     const adv = await loadAdvertiser(tx, aid);
+    await settle(tx, ctx, adv.id);
     const built = await build(tx, ctx, adv, input);
     return validateAudience(ctx, adv, 'create', built.rules);
   });
@@ -1153,6 +1155,7 @@ export async function estimateAudience(
   }
   return withSandbox(ctx.sandboxId, async (tx) => {
     const adv = await loadAdvertiser(tx, aid);
+    await settle(tx, ctx, adv.id);
     const est = await estimateCombined(tx, adv.id, draft.draft);
     if (est.resolved.include.every((g) => g.length === 0)) return { unavailable: true as const };
     const nameOf = async (m: { kind: string; id: string }) => {
@@ -1244,7 +1247,7 @@ export async function analyzeGeoDistribution(
       });
       if (!seed) throw notFound();
       const users = Number(seed.sizeDisplay ?? 0);
-      const issues = validateAudience(ctx, adv, 'create', {
+      const issues = validateAudience(ctx, adv, 'edit', {
         type: seed.type,
         name: seed.name,
         analysisSeedUsers: users,
@@ -1294,7 +1297,7 @@ export async function getAudienceInsights(
         select: { id: true, publicId: true, name: true, optimizedTargeting: true },
       });
       if (!li) throw notFound();
-      const issues = validateAudience(ctx, adv, 'create', {
+      const issues = validateAudience(ctx, adv, 'edit', {
         type: 'CUSTOM_AFFINITY',
         name: li.name,
         insightsOptimized: li.optimizedTargeting,
