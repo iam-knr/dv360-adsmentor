@@ -59,6 +59,7 @@ export function CampaignsList({
     [rows, filter],
   );
   const start = (page.page - 1) * page.size;
+  const sumSpent = () => shown.reduce((acc, r) => acc + r.spent, 0);
 
   const columns: DvColumn<CampaignRow>[] = [
     {
@@ -86,6 +87,7 @@ export function CampaignsList({
       align: 'right',
       currencySymbol: currency,
       accessor: (r) => r.spent,
+      total: () => formatCurrency(sumSpent(), currency),
     },
     { id: 'kpiGoal', header: 'Goal', group: 'delivery', accessor: (r) => r.kpiGoal },
     { id: 'kpiActual', header: 'KPI actual', group: 'delivery', accessor: (r) => r.kpiActual },
@@ -134,6 +136,7 @@ export function CampaignsList({
         page={page.page}
         pageSize={page.size}
         total={shown.length}
+        totalRow
         onPageChange={(p, size) => setPage({ page: p, size })}
         getStatus={(r) => DOT[r.status]}
         isArchived={(r) => r.status === 'ARCHIVED'}
