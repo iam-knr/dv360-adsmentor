@@ -8,6 +8,12 @@ import type { FreqMode, FreqPeriod } from './constants/frequency';
 import type { CampaignGoal, Kpi } from './constants/goals-kpis';
 import type { BidStrategy, IoObjective, IoType } from './constants/io-matrix';
 import type { LiType } from './constants/li-compat';
+import type {
+  YtAdFormatChoice,
+  YtInventorySource,
+  YtOptimization,
+  YtSubtype,
+} from './constants/youtube';
 import type { OptimizationMode, PacingPeriod, PacingType } from './constants/pacing';
 
 export type { CampaignGoal, Kpi } from './constants/goals-kpis';
@@ -252,6 +258,25 @@ export interface LineItemInput {
   copiedFromType?: LiType | null;
   /** Demand Gen ads (LI-DG-007..009). */
   ads?: { headline?: string | null; description?: string | null; businessName?: string | null }[];
+  /** YouTube & partners settings (module 09, LI-YT). */
+  youtube?: YoutubeLiInput | null;
+}
+
+/** The YouTube part of a line item (module 09 3.2). Exposure cap is the line item's `frequencyCap`. */
+export interface YoutubeLiInput {
+  subtype: YtSubtype | null;
+  /** Step 1 choice (LI-YT-002, LI-YT-003); the subtype is derived from them on create. */
+  optimization?: YtOptimization | null;
+  adFormatChoice?: YtAdFormatChoice | null;
+  adFormats: { inStream: boolean; inFeed: boolean; shorts: boolean };
+  viewCap: FrequencyCapInput;
+  /** Exposures per period; `maxImpressions` is the exposure target (LI-YT-012). */
+  targetFrequency?: FrequencyCapInput | null;
+  productFeed: boolean;
+  relatedVideoIds: string[];
+  inventorySources: YtInventorySource[];
+  /** Number of ads in the line item's ad groups, for the sequence check (LI-YT-020). */
+  sequenceSteps?: number;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -271,6 +296,10 @@ export interface AdvertiserSnapshot {
   appAttributionLinked: boolean;
   attributionModelIds: string[];
   businessName?: string | null;
+  /** Default logo of YouTube ads (Advertiser settings, AD-014). */
+  logoAssetId?: string | null;
+  /** A Merchant Center account is linked in Data manager (LI-YT-013). */
+  merchantCenterLinked?: boolean;
 }
 
 export interface CampaignSnapshot {
@@ -348,6 +377,13 @@ export interface CustomBiddingInfo {
   status: 'TRAINING' | 'ACTIVE' | 'SUSPENDED' | 'ARCHIVED';
 }
 
+export interface YoutubeVideoInfo {
+  videoId: string;
+  durationSec: number;
+  orientation: 'HORIZONTAL' | 'VERTICAL';
+  isPublic: boolean;
+}
+
 export interface TemplateInfo {
   id: string;
   liType: LiType;
@@ -374,6 +410,7 @@ export interface ValidationContext {
     floodlightActivities: Map<string, FloodlightInfo>;
     customBidding: Map<string, CustomBiddingInfo>;
     templates: Map<string, TemplateInfo>;
+    youtubeVideos: Map<string, YoutubeVideoInfo>;
   }>;
 }
 
@@ -460,4 +497,42 @@ export interface CreativeInput {
   activeLineItemCount?: number;
   /** Appeal request: true when the creative is servable and approved on every exchange (CRE-043). */
   appeal?: { servableEverywhere: boolean };
+}
+
+// ---------------------------------------------------------------------------------------------
+// YouTube domain (module 09, validation.md 2.12 and 2.13). Added by P4-06.
+// ---------------------------------------------------------------------------------------------
+
+export interface AdGroupInput {
+  name: string;
+  status?: 'ACTIVE' | 'PAUSED' | null;
+  /** Target CPM or Max CPV in minor units (RC-019), by the line item's bid kind. */
+  bid?: Num;
+  /** TargetingDimension keys present in the ad group (AG-006). */
+  dimensions?: string[];
+  lineItemType?: LiType | null;
+  /** Ads in the group, filled by the service (AG-005). */
+  adCount?: number;
+}
+
+export interface AdInput {
+  name: string;
+  status?: 'ACTIVE' | 'PAUSED' | null;
+  /** Video as typed (URL or id) and the id it resolved to, if any. */
+  videoRef?: string | null;
+  videoId?: string | null;
+  headline?: string | null;
+  longHeadline?: string | null;
+  description?: string | null;
+  callToAction?: string | null;
+  businessName?: string | null;
+  logoAssetId?: string | null;
+  path1?: string | null;
+  path2?: string | null;
+  /** The merged URLs (protocol plus typed value). */
+  landingPageUrl?: string | null;
+  clickTrackerUrl?: string | null;
+  impressionTrackerUrl?: string | null;
+  companionMode?: 'NONE' | 'OWN' | null;
+  companionAssetId?: string | null;
 }

@@ -94,6 +94,23 @@ export const MSG = {
   CRE_SKIP_OFFSET: 'The skip offset must be shorter than the video.',
   CRE_FILE_TOO_LARGE: 'That file is too large.',
   CRE_GWD_ONLY: 'This format can only be built in a design tool outside this simulator.',
+
+  // YouTube domain (module 09, validation.md 2.12 and 2.13). Wordings marked [SIM] in the document.
+  YT_AD_FORMAT: 'Select at least one ad format.',
+  YT_BID_LOCKED: 'Bid strategy is set by the line item type.',
+  YT_PACING_NOTE: 'Actual spend on a given day may vary.',
+  YT_MERCHANT: 'Link a Merchant Center account to use a product feed.',
+  YT_NO_AD_GROUPS: "This line item has no active ad groups and won't run.",
+  YT_SEQUENCE: 'Add at least two ads to the sequence.',
+  YT_NOT_ENABLED:
+    "YouTube & partners and Demand Gen line items aren't enabled for this advertiser.",
+  YT_VIDEO_NOT_FOUND: "We couldn't find that video. Check the URL or ID.",
+  YT_BUSINESS_LOCKED:
+    "The business name is set for the whole advertiser and can't be cleared here.",
+  YT_ADD_LOGO: 'Add a logo.',
+  YT_COMPANION: 'Upload a companion banner image.',
+  YT_AI_LABEL: 'Laws in some regions may require labelling AI-made ads.',
+  YT_AD_GROUP_DIM: "{Dimension} targeting isn't available for ad groups.",
 } as const;
 
 export type MsgKey = keyof typeof MSG;

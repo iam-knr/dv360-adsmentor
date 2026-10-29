@@ -188,6 +188,9 @@ model LineItem {
   viewFreqMax              Int?
   viewFreqUnit             FrequencyUnit?
   viewFreqUnitCount        Int?
+  targetFreqExposures      Int? // Δ-09-1, P4-06: Target frequency subtypes (LI-YT-012)
+  targetFreqUnit           FrequencyUnit?
+  targetFreqUnitCount      Int?
   conversionCounting       ConversionCounting @default(ALL)
   conversionCountingPct    Int?
   attributionModelId       String?
@@ -273,6 +276,11 @@ model Ad {
   path2            String?
   landingPageUrl   String
   clickTrackerUrl  String?
+  impressionTrackerUrl String?
+  urlSuffix        String?
+  /// When the simulated ad review decides (P4-06, Δ-09-8) and what it will decide; settled lazily by the ad service.
+  reviewDecideAt   DateTime?
+  plannedVerdict   AdReviewStatus?
   version          Int            @default(1)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt

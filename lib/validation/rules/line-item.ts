@@ -468,6 +468,7 @@ export const LI_043 = def({
   appliesTo: (l) =>
     l.bid.mode === 'AUTOMATED' &&
     !!l.bid.optimizedTowards &&
+    !(l.type && YOUTUBE_LI_TYPES.includes(l.type)) && // the YouTube bid value lives on the ad group (AG-003)
     strategyNeedsTarget(l.bid.optimizedTowards, l.bid.priority),
   check: (l) => (positive(l.bid.targetValue) ? null : { path: 'bid.targetValue' }),
 });
