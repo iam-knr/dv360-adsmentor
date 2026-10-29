@@ -350,3 +350,11 @@ export interface CbDeleteOutcome {
   deleted: boolean;
   usedBy: number;
 }
+
+/** One algorithm in the line item's picker. `id` is the row id the line item stores. */
+export interface CbOption {
+  id: string;
+  name: string;
+  status: CbStatusKey;
+  readinessPct: number;
+}

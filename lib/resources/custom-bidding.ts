@@ -46,6 +46,7 @@ import type { ResourceScope } from './lists';
 import type {
   CbDeleteOutcome,
   CbDraftInput,
+  CbOption,
   CbMultiplierWire,
   CbRow,
   CbRuleWire,
@@ -339,6 +340,36 @@ export async function listCustomBidding(user: SessionUser, scope: ResourceScope)
   });
 }
 
+/** Algorithms a line item can pick: saved ones of the advertiser and its partner. Ids are row ids, as the line item stores them. */
+export async function listCustomBiddingOptions(
+  user: SessionUser,
+  advertiserRowId: string,
+): Promise<CbOption[]> {
+  const ctx = await serviceCtx(user);
+  assertResourceRead(ctx);
+  return withSandbox(ctx.sandboxId, async (tx) => {
+    const adv = await tx.advertiser.findUnique({
+      where: { id: advertiserRowId },
+      select: { partnerId: true },
+    });
+    if (!adv) return [];
+    const rows = await tx.customBiddingAlgorithm.findMany({
+      where: {
+        isDraft: false,
+        OR: [{ advertiserId: advertiserRowId }, { partnerId: adv.partnerId }],
+      },
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      select: { id: true, name: true, status: true, readinessPct: true },
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      status: r.status,
+      readinessPct: r.readinessPct,
+    }));
+  });
+}
+
 async function viewOf(tx: Tx, alg: AlgorithmFull): Promise<CbView> {
   const lastRun = alg.lastTestRunId
     ? await tx.customBiddingTestRun.findUnique({ where: { id: alg.lastTestRunId } })
@@ -399,7 +430,7 @@ export async function validateCustomBidding(
   assertResourceRead(ctx);
   return withSandbox(ctx.sandboxId, async (tx) => {
     const parent = await parentOf(tx, scope);
-    return checkDraft(ctx, parent.adv, input, input.id ? 'edit' : 'create').map((i) => ({
+    return checkDraft(ctx, parent.adv, normalise(input), input.id ? 'edit' : 'create').map((i) => ({
       path: i.path,
       severity: i.severity,
       code: i.ruleId,
@@ -452,13 +483,54 @@ async function writeChildren(
   }
 }
 
+/** Wizard fields arrive as the text typed; numbers are read once here. */
+function normalise(input: CbDraftInput): CbDraftInput {
+  return {
+    ...input,
+    rules: input.rules.map((r) => ({
+      ...r,
+      score: r.score === ('' as never) ? (NaN as number) : Number(r.score),
+    })),
+    multipliers: input.multipliers.map((m) => ({
+      ...m,
+      values: m.values.map((v) => ({
+        ...v,
+        multiplier: v.multiplier === ('' as never) ? (NaN as number) : Number(v.multiplier),
+      })),
+    })),
+  };
+}
+
+/** Floodlight activities the `ACTIVITY:` signals can name, for the wizard's rule picker. */
+export async function customBiddingActivities(
+  user: SessionUser,
+  scope: ResourceScope,
+): Promise<{ id: string; name: string }[]> {
+  const ctx = await serviceCtx(user);
+  assertResourceRead(ctx);
+  return withSandbox(ctx.sandboxId, async (tx) => {
+    const parent = await parentOf(tx, scope);
+    return tx.floodlightActivity.findMany({
+      where: {
+        status: 'ACTIVE',
+        group: parent.advertiserId
+          ? { advertiserId: parent.advertiserId }
+          : { advertiser: { partnerId: parent.partnerId as string } },
+      },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    });
+  });
+}
+
 export async function saveCustomBiddingDraft(
   user: SessionUser,
   scope: ResourceScope,
-  input: CbDraftInput,
+  rawInput: CbDraftInput,
   meta: WriteMeta = {},
 ): Promise<Result<{ id: string; version: number; reset: boolean }>> {
   return asResult(async () => {
+    const input = normalise(rawInput);
     const ctx = await serviceCtx(user);
     assertResourceWrite(ctx);
     return withSandbox(ctx.sandboxId, async (tx) => {
@@ -482,7 +554,6 @@ export async function saveCustomBiddingDraft(
           fingerprint(objective, input.rules, input.multipliers);
       // Editing a saved algorithm resets the model and clears the test (module 15 S7 Edit).
       const reset = !!stored && !stored.isDraft && changed;
-      const isDraft = stored ? stored.isDraft : true;
 
       const saved = await withChangeLog(
         changeCtx(ctx, tx, { note: meta.changeNote ?? '' }),
@@ -543,7 +614,6 @@ export async function saveCustomBiddingDraft(
         where: { id: saved.id },
         select: { publicId: true, version: true },
       });
-      void isDraft;
       return {
         data: { id: row.publicId.toString(), version: row.version, reset },
         warnings: softIssues(issues),

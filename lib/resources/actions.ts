@@ -29,9 +29,24 @@ import {
   type ResourceScope,
 } from './lists';
 import { getBrandControls } from './brand-service';
+import {
+  deleteCustomBidding,
+  getCustomBidding,
+  runCustomBiddingTest,
+  saveCustomBidding,
+  saveCustomBiddingDraft,
+  setCustomBiddingStatus,
+  validateCustomBidding,
+} from './custom-bidding';
 import type { Result } from './kit';
 import type {
   BrandControlsView,
+  CbDeleteOutcome,
+  CbDraftInput,
+  CbStatusKey,
+  CbTestWire,
+  CbView,
+  OwnerScopeKey,
   ChannelInput,
   ChannelView,
   FloodlightConversionInput,
@@ -229,4 +244,55 @@ export async function brandControlsAction(
 ): Promise<BrandControlsView | null> {
   const user = await getSessionUser();
   return user ? getBrandControls(user, scope, tab, filter).catch(() => null) : null;
+}
+
+// Custom bidding ---------------------------------------------------------------------------------
+
+export async function getCustomBiddingAction(id: string): Promise<CbView | null> {
+  const user = await getSessionUser();
+  return user ? getCustomBidding(user, id).catch(() => null) : null;
+}
+
+export async function validateCustomBiddingAction(
+  scope: ResourceScope,
+  input: CbDraftInput,
+): Promise<WireIssue[]> {
+  const user = await getSessionUser();
+  return user ? validateCustomBidding(user, scope, input).catch(() => []) : [];
+}
+
+export async function saveCustomBiddingDraftAction(
+  scope: ResourceScope,
+  input: CbDraftInput,
+  meta?: WriteMeta,
+): Promise<Result<{ id: string; version: number; reset: boolean }>> {
+  const user = await getSessionUser();
+  return user ? saveCustomBiddingDraft(user, scope, input, meta) : NO_SESSION;
+}
+
+export async function runCustomBiddingTestAction(id: string): Promise<Result<CbTestWire>> {
+  const user = await getSessionUser();
+  return user ? runCustomBiddingTest(user, id) : NO_SESSION;
+}
+
+export async function saveCustomBiddingAction(
+  id: string,
+  req: { ownerScope: OwnerScopeKey; activate: boolean },
+  meta?: WriteMeta,
+): Promise<Result<{ id: string; status: CbStatusKey }>> {
+  const user = await getSessionUser();
+  return user ? saveCustomBidding(user, id, req, meta) : NO_SESSION;
+}
+
+export async function setCustomBiddingStatusAction(
+  id: string,
+  action: 'ACTIVATE' | 'SUSPEND',
+): Promise<Result<{ status: CbStatusKey; usedBy: number }>> {
+  const user = await getSessionUser();
+  return user ? setCustomBiddingStatus(user, id, action) : NO_SESSION;
+}
+
+export async function deleteCustomBiddingAction(id: string): Promise<Result<CbDeleteOutcome>> {
+  const user = await getSessionUser();
+  return user ? deleteCustomBidding(user, id) : NO_SESSION;
 }
