@@ -62,7 +62,10 @@ export function BrandControls({ view, basePath }: { view: BrandControlsView; bas
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {view.rows.map((r) => (
             <DvSectionCard key={r.key} title={r.title}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box
+                data-testid={`coverage-${r.key}`}
+                sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+              >
                 <DvCoverageBar done={r.enabled} total={r.total} noun="Line items" />
                 <Typography variant="body2">{r.summary}</Typography>
                 <Button

@@ -266,7 +266,11 @@ test.describe('RT 9 smoke over routes.md section 3', () => {
     reporter = await world({ tag: 'smoke-rep', role: 'REPORTING_ONLY' });
   });
 
-  const pages = ROUTE_TABLE.filter((r) => !r.redirectTo && r.frame !== '404');
+  // Edit pages of module 15 look the entity up; the placeholder id `{x}` is an audience, so they are 404 for real (P4-04).
+  const LOOKUP_PAGES = ['/fl/events/{x}', '/ll/{x}'];
+  const pages = ROUTE_TABLE.filter(
+    (r) => !r.redirectTo && r.frame !== '404' && !LOOKUP_PAGES.some((p) => r.path.endsWith(p)),
+  );
   const redirects = ROUTE_TABLE.filter((r) => r.redirectTo && r.path !== '/');
 
   test('every page row returns 200 for a STANDARD student (404 where the row needs ADMIN)', async ({

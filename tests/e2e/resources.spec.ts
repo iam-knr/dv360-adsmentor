@@ -78,8 +78,9 @@ test('E2E-RES-01: create a channel with URLs and apps, edit it, and the unsaved 
 
   // Edit: open, change, close with edits -> CHANNEL_UNSAVED dialog, keep editing, then save.
   await page.getByRole('button', { name: 'PW trusted sites' }).click();
+  await expect(page.locator('#channel-name')).toHaveValue('PW trusted sites'); // panel loaded
   await page.locator('#channel-name').fill('PW trusted sites v2');
-  await page.getByRole('button', { name: 'Close' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
   await expect(
     page.getByText(
       'You have made changes to this channel that have not yet been saved and will be lost.',
@@ -126,7 +127,7 @@ test('E2E-RES-02: a negative keyword list takes three separator forms, shows its
     },
   });
   await page.reload();
-  const keywordCard = page.locator('section, div').filter({ hasText: 'Keyword exclusions' }).last();
+  const keywordCard = page.getByTestId('coverage-KEYWORDS');
   await expect(keywordCard).toContainText('100% (1/1 Line items)');
   await page.goto(`${adv()}/negative-keywords?list=${list.publicId}`);
   await expect(page.getByRole('table', { name: 'Line items' })).toContainText(li.name);
@@ -144,12 +145,12 @@ test('E2E-RES-03: location list errors name the line, the fixed list saves, a us
   await page.locator('#location-list-name').fill('PW metros');
   await page.getByRole('radio', { name: /Regional Targeting/ }).check();
   await page.locator('#location-list-entries').fill('560001\n!!\n400001\n??');
-  await page.getByRole('button', { name: 'Create' }).click();
+  await page.getByRole('button', { name: 'Save' }).click();
   await expect(
     page.getByText("Line 2: Line 2 isn't a valid postal code or DMA region.").first(),
   ).toBeVisible();
   await page.locator('#location-list-entries').fill('560001\n400001');
-  await page.getByRole('button', { name: 'Create' }).click();
+  await page.getByRole('button', { name: 'Save' }).click();
   await page.waitForURL(/location-lists-v2/);
   await expect(page.getByRole('row', { name: /PW metros/ })).toContainText('Regional');
 
@@ -160,7 +161,7 @@ test('E2E-RES-03: location list errors name the line, the fixed list saves, a us
   await page
     .locator('#location-list-entries')
     .fill('12.9716,77.5946;10\n12 Orchard Lane, Bengaluru');
-  await page.getByRole('button', { name: 'Create' }).click();
+  await page.getByRole('button', { name: 'Save' }).click();
   await page.waitForURL(/location-lists-v2/);
   await expect(page.getByRole('row', { name: /PW stores/ })).toContainText('Proximity');
 
@@ -233,8 +234,7 @@ test('E2E-RES-07: brand controls coverage follows the line item settings', async
   await signIn(page);
   const li = await db.lineItem.findFirstOrThrow({ where: { sandboxId: w.sandboxId } });
   await page.goto(`${adv()}/brand/controls`);
-  const verification = () =>
-    page.locator('section, div').filter({ hasText: 'Verification services' }).last();
+  const verification = () => page.getByTestId('coverage-VERIFICATION');
   await expect(verification()).toContainText('0% (0/1 Line items)');
   await db.targetingAssignment.create({
     data: {
