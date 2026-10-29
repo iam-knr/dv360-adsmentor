@@ -256,20 +256,21 @@ One explore file per item; screenshots on demo data only.
 - ✅ P1-02 Partner level (§5.2) → docs/explore/02-partner-level.md
 - ✅ P1-03 Campaigns (§5.3) → docs/explore/03-campaigns.md
 - ✅ P1-04 Insertion orders (§5.3) → docs/explore/04-insertion-orders.md
-- 🟨 P1-05 Line items (§5.3) → docs/explore/05-line-items.md (Display/Video/Mobile-app/Ads-in-apps done; DOOH, Demand Gen need an awareness / no-objective IO and Floodlight optimisation — revisit)
+- ✅ P1-05 Line items (§5.3) → docs/explore/05-line-items.md + docs/explore/19-gap-finish.md (CTV, Video, Display DOOH, Mobile app install 2 steps, YouTube 2 steps with ad group and ad; Demand Gen skipped by owner decision)
 - ✅ P1-06 YouTube ad groups & ads (§5.3) → docs/explore/06-youtube.md
 - ✅ P1-07 Targeting — every dimension (§5.4) → docs/explore/07-targeting.md
-- 🟨 P1-08 Creatives (§5.5) → docs/explore/08-creatives.md (library, menus, 3P display form, creative page, review statuses, format gallery, appeals done; upload/native/video/audio forms pending)
+- ✅ P1-08 Creatives (§5.5) → docs/explore/08-creatives.md + docs/explore/19-gap-finish.md (all New ▾ forms, routes, validation messages, bulk native site)
 - ✅ P1-09 Inventory & Marketplace (§5.6) → docs/explore/09-inventory.md
 - ✅ P1-10 Audiences (§5.7) → docs/explore/10-audiences.md
 - ✅ P1-11 Resources incl. Floodlight & custom bidding (§5.8) → docs/explore/11-resources.md
 - ✅ P1-12 Reporting — instant & offline (§5.9) → docs/explore/12-reporting.md
-- 🟨 P1-13 Planning & reach planner (§5.10) → docs/explore/13-planning.md (Plans list, plan forecast page, columns, Cross-media reach create flow done; New plan, editable plan settings, forecast charts, plan → campaign conversion blocked by Limited Access + past-dated demo plans — revisit)
+- ✅ P1-13 Planning & reach planner (§5.10) → docs/explore/13-planning.md + docs/explore/19-gap-finish.md (New plan wizard, editable plan, Add ad formats, Additional Settings; forecast charts with data and plan → campaign not seen)
 - ✅ P1-14 Advertiser settings (§5.11) → docs/explore/14-advertiser-settings.md
-- 🟨 P1-15 Bulk tools, SDF, rules, experiments, optimisation, alerts (§5.3) → docs/explore/15-bulk-sdf-experiments.md + docs/explore/18-experiments.md (A/B tests and lift studies now fully documented; only bulk edit side panels remain blocked by Limited Access)
+- ✅ P1-15 Bulk tools, SDF, rules, experiments, optimisation, alerts (§5.3) → docs/explore/15-bulk-sdf-experiments.md + docs/explore/18-experiments.md + docs/explore/19-gap-finish.md (A/B create form, live Intelligence alerts and suggestions; bulk edit side panels still not seen)
 - ✅ P1-16 Change history, notifications, misc (§5.12) → docs/explore/16-history-notifications.md
 - ✅ P1-17 Gap sweep: click every remaining menu item; add anything missing to §5 → docs/explore/17-gap-sweep.md (filled creative page/history, audience detail, Google tag, channel & keyword list editors, report runs, 404; remaining blocked gaps listed there for Phase 2 from public docs)
 - ✅ P1-18 Experiments: A/B tests + Brand/Search lift studies → docs/explore/18-experiments.md
+- ✅ P1-19 Gap finish in the second demo advertiser (create access): creatives, campaign → IO → LI chain for YouTube (with ad group and ad), CTV, DOOH, App install, Video, Display; New plan; A/B create → docs/explore/19-gap-finish.md
 
 ### Phase 2 — Specs & architecture — target: 31 Oct–1 Nov
 - ✅ P2-01 Data model (all entities & relationships) → [docs/specs/data-model.md](docs/specs/data-model.md)
@@ -450,6 +451,7 @@ Full records: `docs/decisions.md` (ADR-001 to ADR-046).
 | 2026-10-28 | P3-05b | Seed generator in `lib/seed`: `mulberry32` plan builder for `starter-agency`, `healthy` and `troubleshooting-lab` (36 line items of every non-YouTube type, 11 planted delivery stories plus pacing cases, hidden `SIM_SEED` change groups, alerts), closed-form history stub (90 days daily, 14 days hourly, exchange and device slices, Troubleshooter diagnostics), 71 exchanges with `simClass`, targeting catalogue, vendor allow-list; `npm run db:seed` and demo class bootstrap (instructor, 3 students), both idempotent and blocked in production; 143 unit and 23 db tests. `FxRate`, `GoogleAudience`, alert preferences and the other Appendix C tables wait for P3-05c | P3-05c, P3-02, P3-09, P3-INT (swap the stub for `engine.fastForward`) |
 | 2026-10-28 | P3-02 | Auth done: Auth.js credentials with argon2id, lockout (5 failures, 15 minutes), password policy and generator, forced password change, sessions with `sessionVersion`, single session and idle/absolute limits, class access windows with freeze/unfreeze, `can()` for the six DV360 levels, view-as, `middleware.ts` guards, `/sim` pages, first Super admin bootstrap (`prisma/bootstrap/10-admin.bootstrap.ts`, idempotent), `provisionStudent`; Vitest unit and db suites in `tests/auth`, `tests/e2e/auth.spec.ts` | P3-02b (`/manage`), P3-03 (shell calls `requireOpenClass`, mounts `ViewAsBanner`), P3-08b (tick calls `tickAccessWindows`) |
 | 2026-10-28 | P3-08a | Pure engine core in `lib/engine` and `engine/params.json`: `runTick(world, state, params, tick)` with supply cells, eligibility funnel (integer conservation), frequency, bidding (fixed plus 16 goals, learning, lambda), auction, outcomes, Floodlight conversions, pacing, fees and revenue, diagnostics, alert decisions, hourly and daily slices, `forecast`, `estimateAudienceSize`; determinism, property and calibration tests, `npm run engine:golden`; p50 55 ms per sandbox-tick on the benchmark fixture | P3-08b (runtime, tick endpoint), P3-09 |
+| 2026-10-29 | P1-19 | Gap finish documented in `docs/explore/19-gap-finish.md` (creative forms and routes; IO type/objective gating; LI picker rules; CTV, Video, DOOH, App install, YouTube LI forms; YouTube ad group and ad; New plan wizard; A/B create; live Intelligence). Owner-approved test entities in the paused demo advertiser listed there. Specs 04, 06, 07, 08, 09, 12, 17 now point to it | P3-03 finish, then wave 4 |
 
 ---
 

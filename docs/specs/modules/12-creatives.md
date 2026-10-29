@@ -408,3 +408,6 @@ Order: 01, 02, 03, 04 in parallel, then 05, 06, 11, then 07, 08, 09, 10, 12, 13,
 - Q6. Do we show "AI label" on Third-party creatives? 08 shows none on the third-party form but 17 shows it on the image page. Assumed shown on all non-third-party kinds, hidden on third-party tags (CRE-030 applies to uploaded kinds).
 - Q7. Whether pending creatives can already be assigned. Assumed yes.
 - Q8. Companion banners: separate library creatives (data-model `companionOfCreativeId`) or inline assets? Assumed inline asset that creates a hidden child creative row so the Companions column works.
+
+---
+**Observed in DV360 (2026-10-29):** read `docs/explore/19-gap-finish.md` sections 1 before building this module. Where it differs from this spec, the explore file wins (observed behaviour); section 5 there lists the flows this module must implement.

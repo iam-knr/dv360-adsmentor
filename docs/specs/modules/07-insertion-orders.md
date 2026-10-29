@@ -391,3 +391,6 @@ Whitelist for IOs: pacing (period, type, daily amount), KPI (type, value), frequ
 | C-07-11 | `engine.forecast` signature is `(world, liDraft, window)` (ENG 1.6) while Explore budget options needs an IO-level forecast at +25/+50% | ENG 1.6, 9.4 | Add `engine.forecastIo(world, ioId, budgetDeltaPct[])` |
 | C-07-12 | DM `RecommendationType` vs ENG 3.7 suggestion rules differ (see 06 C-06-4) | | union |
 | C-07-13 | VAL IO-052 limits automation to DISPLAY/VIDEO/CTV but IO-051 and explore say "cross-exchange" only; YouTube LIs are not cross-exchange, DOOH is not allowed. No spec says how Demand Gen and Mobile app install LIs count | VAL IO-052, explore 04 | Treat MOBILE_APP_INSTALL / ADS_IN_MOBILE_APPS as not allowed (Q-07-10) |
+
+---
+**Observed in DV360 (2026-10-29):** read `docs/explore/19-gap-finish.md` sections 2.2 before building this module. Where it differs from this spec, the explore file wins (observed behaviour); section 5 there lists the flows this module must implement.

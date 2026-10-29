@@ -509,3 +509,6 @@ Determinism: the plan forecast uses a seeded noise term `hash(sandboxSeed, plan.
 | C-04-8 | VAL has no rules for plan editing beyond PLN-001 to 004; `PLN-020` to `PLN-031` here are proposals. VAL 4.9 lists plan states but not the transitions or who may convert | `validation.md` 2.25, 4.9 | Register proposals; add Plan to the state table |
 | C-04-9 | DM 7.3 says plans are hard deleted ("Remove plan"); DM 5.15 has no ARCHIVED state; routes describe DLG-06 "This can't be undone" | `data-model.md` 7.3 | Consistent; noted for the build |
 | C-04-10 | Plans live under the Inventory nav group (RT 4.3) and in module 09 explore; the module split in this task puts Plans here, so the Inventory module must not also build `marketplace/plans` | `routes.md` 3.9 | Inventory module owns the other four items; this module owns `marketplace/plans` and `pr/{planId}` |
+
+---
+**Observed in DV360 (2026-10-29):** read `docs/explore/19-gap-finish.md` sections 3 before building this module. Where it differs from this spec, the explore file wins (observed behaviour); section 5 there lists the flows this module must implement.

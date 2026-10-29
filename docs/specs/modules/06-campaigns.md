@@ -379,3 +379,6 @@ Parallelisation note: T06-02 and T06-03 can run beside module 07 T07-02. P3-06 (
 | C-06-7 | `AlertGroup`, `ChartCard`, `ChartCardSpec` shapes undefined in RT | RT 8.4, 8.17 | defined in this file and 11 |
 | C-06-8 | RT 6.3 says after Create campaign go to `[C]`, but RT 3.3 lists `cs/new` as frame F; DS 4.3 says full-screen form behaviour; the paused banner stays (RT Q1) while the top bar hides. Not a break, noted for the shell builder | RT Q1 | none |
 | C-06-9 | ENG 3.7 says `NO_SPEND_LI` text "haven't spent anything today or yesterday" but explore 03 alert text reads "4 of 5 line items aren't spending in {IO}" | ENG 3.7 vs explore 03 | Alerts page uses the explore 03 wording (grouped by IO); Intelligence uses the ENG plural text. Both read the same rows |
+
+---
+**Observed in DV360 (2026-10-29):** read `docs/explore/19-gap-finish.md` sections 2.1 before building this module. Where it differs from this spec, the explore file wins (observed behaviour); section 5 there lists the flows this module must implement.

@@ -1,5 +1,5 @@
 # DV360 Simulator by Adsmetor — Project Log (tasks, discussions, build details)
-Last updated: 2026-10-28 (owner approvals recorded) · Master plan: `PROJECT.md` · Findings: `docs/explore/` · Specs: `docs/specs/` · Decisions: `docs/decisions.md` · Build plan: `docs/specs/build-plan.md`
+Last updated: 2026-10-29 (Phase 1 gap finish, Phase 3 status) · Master plan: `PROJECT.md` · Findings: `docs/explore/` · Specs: `docs/specs/` · Decisions: `docs/decisions.md` · Build plan: `docs/specs/build-plan.md`
 
 ---
 
@@ -29,6 +29,8 @@ A classroom-only training simulator for FREE students (paying Ads Mentor student
 | D18 | Logo | `docs/brand/adsmentor-logo-horizontal.png` committed; used in app bar and login; P3-03 derives a square icon. Screenshots still missing. Closes RC-058, P-09 partly (ADR-043) | Kailas |
 | D19 | Repo visibility | Stays public. Never commit secrets, `.env*`, keys, DB URLs or student data; secret scan in P3-01 CI. Closes RC-059 (ADR-044) | Kailas |
 | D20 | Class size | Default up to 25 concurrent students; free cohorts may be larger; RC-057 is an open owner question (cohort size, public self-signup; default 25, no self-signup). Free Supabase tier for the pilot with reduced retention; P6-03 target 25, 60 stretch (ADR-045, ADR-048) | Kailas |
+| D22 | Gap-finish writes | Owner approved creating test entities in the paused second demo advertiser: 6 campaigns (Paused), 6 IOs (Draft), 1 YouTube LI (Draft); DV360 also auto-saved 1 empty plan. Listed in `19-gap-finish.md` section 6; archive later | Kailas |
+| D23 | Demand Gen | Skipped in exploration by owner decision; build from public docs | Kailas |
 | D21 | Merge authority | Cowork assistant may merge Phase 3+ build PRs after green checks and preview, in merge order, with no open comments; squash only; reports every merge. Closes P-13 (ADR-046) | Kailas |
 
 ## 3. Environment notes
@@ -58,20 +60,21 @@ Status: ✅ done · 🟨 partly done · ⬜ not started
 | P1-02 | Partner level | ✅ | `02-partner-level.md` | Advertisers list; date picker presets; basic details (SDF versions); exchanges list; targeting defaults; advertiser configurations; brand controls; users & roles |
 | P1-03 | Campaigns | ✅ | `03-campaigns.md` | List + actions; New campaign form; goal→KPI table; validation; campaign page; alerts |
 | P1-04 | Insertion orders | ✅ | `04-insertion-orders.md` | Type + objective matrix; full form (budget segments, pacing, KPIs, optimisation, freq cap, partner costs); IO page |
-| P1-05 | Line items | 🟨 | `05-line-items.md` | Type picker; full Display form; type differences; LI page; Troubleshooter funnel. Gaps: DOOH, Demand Gen, app-install step 2 |
+| P1-05 | Line items | ✅ | `05-line-items.md`, `19-gap-finish.md` | Type picker; full Display form; type differences; LI page; Troubleshooter funnel; CTV, Video, Display DOOH, App install (2 steps), YouTube (2 steps, geography modal). Demand Gen skipped (owner) |
 | P1-06 | YouTube | ✅ | `06-youtube.md` | YT LI subtypes/ad formats; details; ad groups; create ad + preview |
 | P1-07 | Targeting | ✅ | `07-targeting.md` | All 16 Display targeting editors |
-| P1-08 | Creatives | 🟨 | `08-creatives.md` | Library; New menu; 3P display form; creative status & exchange review; format gallery; appeals. Gaps: upload/native/video/audio forms |
+| P1-08 | Creatives | ✅ | `08-creatives.md`, `19-gap-finish.md` | Library; New menu; all create forms (HTML5/image, YouTube, video file, VAST video, VAST audio, audio file, bulk native site) with routes and validation messages; status & exchange review; format gallery; appeals |
 | P1-09 | Inventory & Marketplace | ✅ | `09-inventory.md` | Orders/deals, packages, groups; deal page; instant deals; Featured & Discover; plans & negotiations lists |
 | P1-10 | Audiences | ✅ | `10-audiences.md` | Tabs; create types; tag-based, combined, lookalike, custom affinity forms; analysis |
 | P1-11 | Resources | ✅ | `11-resources.md` | Brand controls; channels; negative keywords; Floodlight; YouTube assets; location lists; custom bidding wizard |
 | P1-12 | Reporting | ✅ | `12-reporting.md` | Hub, templates, instant builder, ~700-field catalogue, offline builder |
-| P1-13 | Planning & reach planner | 🟨 | `13-planning.md` | Plans list; plan forecast page (KPIs, tabs, line-items table, columns); Cross-media reach create flow. Gaps: New plan, editable settings, forecast charts, plan → campaign |
+| P1-13 | Planning & reach planner | ✅ | `13-planning.md`, `19-gap-finish.md` | Plans list; New plan wizard (channels, location, dates, demographics, sub-location); editable plan (Adjust your plan panel, Add ad formats, Additional Settings); forecast page; Cross-media reach. Not seen: charts with data, plan → campaign |
 | P1-14 | Advertiser settings | ✅ | `14-advertiser-settings.md` | Basic details (SDF, ad server, authorizations, EU political, Demand Gen Floodlight switch, 3P services); targeting rules; data manager; alert preferences (10 alerts); policy center certificates |
-| P1-15 | Bulk, SDF, rules, experiments, optimisation | 🟨 | `15-bulk-sdf-experiments.md` | SDF download/upload; bulk Action bar; custom charts; Intelligence panel; lift study form; targeting templates. Gaps: bulk edit panels only (A/B now in 18) |
+| P1-15 | Bulk, SDF, rules, experiments, optimisation | ✅ | `15-bulk-sdf-experiments.md`, `19-gap-finish.md` | SDF download/upload; bulk Action bar; custom charts; Intelligence (live alerts and suggestions); lift study; A/B create; targeting templates. Not seen: bulk edit side panels |
 | P1-16 | Change history, notifications | ✅ | `16-history-notifications.md` | History page at advertiser/IO level (toggles, date range, day cards, old → new), notes panel, notifications, right rail |
 | P1-17 | Gap sweep | ✅ | `17-gap-sweep.md` | Filled: image creative page, creative History, audience detail, Google tag tab, channel/keyword list editors, report runs, 404. Remaining gaps blocked by demo access — see file |
 | P1-18 | Experiments (A/B + lift) | ✅ | `18-experiments.md` | A/B create/report/settings; lift study create (eligibility, required media cost, survey), report slices, review & fix |
+| P1-19 | Gap finish (create access) | ✅ | `19-gap-finish.md` | Campaign → IO → LI chain for YouTube (+ ad group, ad), CTV, DOOH, App install, Video, Display; IO type/objective gating; LI picker rules; creatives; New plan; A/B create. Build requirements table in section 5 |
 
 ### Phase 2 — Specs and architecture (`docs/specs/`)
 | ID | Task | Status | File | Notes |
@@ -84,18 +87,34 @@ Status: ✅ done · 🟨 partly done · ⬜ not started
 | P2-06 | Module specs | ✅ | `specs/modules/` (18 files + README) | 231 build tasks |
 | P2-07 | Build order, conflicts, prompts | ✅ | `specs/conflicts.md`, `specs/build-plan.md`, `decisions.md` | 67 conflict rows; 16 session prompts |
 
+### Phase 3 — Foundation build (cloud sessions, `docs/specs/build-plan.md` section 3)
+Production `https://dv360-adsmentor.vercel.app` (`/api/health` → ok, db true, version = main). Every PR gets a Vercel preview.
+| Merge | Session | Status | PR | What |
+|---|---|---|---|---|
+| 1 | P3-01 | ✅ | #1 | Scaffold, CI (lint, typecheck, unit, db, e2e, secret scan), Vercel deploy, health route |
+| 2 | P3-05a | ✅ | #2 | Core schema, RLS, `withChangeLog` |
+| 3 | P3-04 | ✅ | #4 | UI kit (Tier A and B), gallery |
+| 4 | P3-06a | ✅ | #3 | Validation core |
+| 5 | P3-08a | ✅ | #8 | Engine core (pure) |
+| 6 | P3-02 | ✅ | #7 | Auth, roles, access windows, `/sim` pages |
+| 7 | P3-05b | ✅ | #6 | Seed generator |
+| 8 | P3-05c | ✅ | #5 | Remaining 112 tables |
+| 9 | P3-03 | 🟨 | — | App shell: code pushed to branch `p3-03-shell` (197 files; typecheck, lint, 2,023 unit tests pass) but the session stopped when the colleague's machine crashed: no shell tests, no `docs: status P3-03`, no PR |
+| 10 to 14 | P3-07a, P3-06b, P3-06c, P3-08b, P3-09 | ⬜ | | Wave 4 (P3-08b and P3-09 prerequisites already merged) |
+| 15, 15b, 16 | P3-07b, P3-02b, P3-INT | ⬜ | | Wave 5 |
+
 ### Known gaps to revisit
-- LI: DOOH, Demand Gen, app-install step 2, YouTube audio, YT target-frequency/TrueView/ad-sequence forms.
-- Creatives: HTML5/image, video, audio, native, VAST, bulk upload.
+Filled by `19-gap-finish.md`: DOOH, app-install step 2, CTV and Video LI forms, YouTube ad group and ad, all creative forms, New plan and editable plan, A/B create. Still open (build from public docs):
+- LI: Demand Gen (skipped by owner), Video DOOH form, YouTube audio, YouTube non-skippable / target frequency / TrueView / ad sequence step-2 variants.
 - Targeting: video-only options; Apps & URLs sub-pages; IAS/Scope3 options.
 - Partner: create advertiser, billing, role picker.
 - Inventory: negotiation/RFP flow; deal group create.
-- Audiences: detail page; custom intent; YouTube users.
-- Resources: channel/keyword list/app & CTV Floodlight forms; Google tag tab; custom bidding Test step.
-- Reporting: full Date/Fees/Conversions/YouTube lists; results grid; Inventory Availability builder.
-- Planning: New plan flow; editable Location/Dates/Demographics/Additional Settings; forecast charts per tab; plan line-item editor; Copy dialog; plan → campaign conversion (demo has Limited Access and only past-dated plans).
+- Audiences: custom intent; YouTube users.
+- Resources: channel/keyword list create; app & CTV Floodlight forms; custom bidding Test step.
+- Reporting: full Date/Fees/Conversions/YouTube lists; Inventory Availability builder; downloaded file layout.
+- Planning: forecast charts with data; plan → campaign conversion; Copy dialog.
 - Advertiser settings: other ad server options; Google tag Manage page; Link new account flows; Schedule for deletion dialog; targeting rules editors.
-- Bulk/SDF/experiments: A/B test create flow; bulk edit Settings/Creative assignment panels; SDF Download step 2; Download metadata/QA outputs; lift study Object type/Intended action options.
+- Bulk/SDF/experiments: bulk edit Settings/Creative assignment panels; SDF Download step 2; Download metadata/QA outputs; A/B View report.
 - History: Download file format.
 
 ## 5. Build details
@@ -174,6 +193,7 @@ Full list with defaults: `PROJECT.md` section 11 and `docs/specs/conflicts.md` s
 6. Access to an IO without objective and a Floodlight-optimised advertiser to finish the LI gaps (still open from Phase 1).
 
 ## 8. Next steps
+0. 2026-10-29: finish P3-03 (shell tests, status commit, PR, merge 9), then run wave 4. Build sessions follow `docs/explore/19-gap-finish.md` where it differs from the specs.
 1. Phase 1 and Phase 2 are done (Phase 1 gaps are listed in "Known gaps"; they are filled from public docs in the specs). Owner approvals of 2026-10-28 are recorded (ADR-039 to ADR-046).
 2. Owner: complete P-02 (cloud environment `dv360-build`) and P-12 (usage credits off, $100 balance) by Sat 31 Oct; P-03 (Vercel import into Hobby), P-04 (Supabase URLs into Vercel), P-06 (GitHub Actions secrets) and P-07 (`AUTH_SECRET`, `CRON_SECRET` into Vercel) by Sun 1 Nov morning. Values go only into Vercel, never chat or the repo.
 3. Sun 1 Nov: run wave 1 (P3-01, including the secret-scan CI step), then waves 2 to 5 as in build-plan section 3. The Cowork assistant merges build PRs under the conditions in build-plan 3.6. Merge freeze Thu 5 Nov 9:00 AM IST; credit expires 1:29 PM IST.

@@ -410,3 +410,6 @@ Engine gaps found: no YouTube ad review simulation (Δ-09-8), no per-surface vol
 | C-09-11 | RT 5.4 puts ad group and ad slide-overs on `?sim_panel` (entity slide-overs, Back closes), but DM / explore also show ad groups inside the LI form (draft-bound). Two mounts of one editor | RT 5.4 | slide-over saves immediately via its own action in both mounts; the LI form card just refreshes |
 | C-09-12 | RT `AdGroupInput.status` allows ACTIVE/PAUSED, but ad group has no Draft; the explore step 2 shows "This active ad group doesn't have any ads" so create default ACTIVE | RT 8.7 | default ACTIVE |
 | C-09-13 | RT `LineItemInput` YouTube branch is `type:'YOUTUBE_VIDEO'` while 08 uses VAL keys | RT 8.6 | see 08 C-08-1 |
+
+---
+**Observed in DV360 (2026-10-29):** read `docs/explore/19-gap-finish.md` sections 2.4, 2.5 before building this module. Where it differs from this spec, the explore file wins (observed behaviour); section 5 there lists the flows this module must implement.

@@ -294,3 +294,6 @@ Engine deltas requested: Δ17-14 explicit tick modules `advanceExperiments` (SCH
 - Q6. The cross-exchange tab of lift reports: do we show it at all for non-YouTube studies? Assumed yes with synthetic values.
 - Q7. Lift object type list and language list are partial; need a full-access capture.
 - Q8. Does "Add flight" require the same IOs? Assumed yes, with eligibility re-checked.
+
+---
+**Observed in DV360 (2026-10-29):** read `docs/explore/19-gap-finish.md` sections 4 before building this module. Where it differs from this spec, the explore file wins (observed behaviour); section 5 there lists the flows this module must implement.
