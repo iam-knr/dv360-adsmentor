@@ -265,7 +265,7 @@ export async function saveCustomBiddingDraftAction(
   scope: ResourceScope,
   input: CbDraftInput,
   meta?: WriteMeta,
-): Promise<Result<{ id: string; version: number; reset: boolean }>> {
+): Promise<Result<{ id: string; version: number; reset: boolean; changed: boolean }>> {
   const user = await getSessionUser();
   return user ? saveCustomBiddingDraft(user, scope, input, meta) : NO_SESSION;
 }

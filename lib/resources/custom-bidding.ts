@@ -465,20 +465,17 @@ async function writeChildren(
     })),
   });
   for (const [i, m] of input.multipliers.entries()) {
-    await tx.customBiddingMultiplier.create({
-      data: {
+    const row = await tx.customBiddingMultiplier.create({
+      data: { sandboxId, algorithmId, kind: m.kind as CbMultiplierKindKey, ordinal: i + 1 },
+      select: { id: true },
+    });
+    await tx.customBiddingMultiplierValue.createMany({
+      data: m.values.map((v) => ({
         sandboxId,
-        algorithmId,
-        kind: m.kind as CbMultiplierKindKey,
-        ordinal: i + 1,
-        values: {
-          create: m.values.map((v) => ({
-            sandboxId,
-            valueKey: v.valueKey,
-            multiplier: v.multiplier,
-          })),
-        },
-      },
+        multiplierId: row.id,
+        valueKey: v.valueKey,
+        multiplier: v.multiplier,
+      })),
     });
   }
 }
@@ -528,7 +525,7 @@ export async function saveCustomBiddingDraft(
   scope: ResourceScope,
   rawInput: CbDraftInput,
   meta: WriteMeta = {},
-): Promise<Result<{ id: string; version: number; reset: boolean }>> {
+): Promise<Result<{ id: string; version: number; reset: boolean; changed: boolean }>> {
   return asResult(async () => {
     const input = normalise(rawInput);
     const ctx = await serviceCtx(user);
@@ -615,7 +612,7 @@ export async function saveCustomBiddingDraft(
         select: { publicId: true, version: true },
       });
       return {
-        data: { id: row.publicId.toString(), version: row.version, reset },
+        data: { id: row.publicId.toString(), version: row.version, reset, changed },
         warnings: softIssues(issues),
       };
     });

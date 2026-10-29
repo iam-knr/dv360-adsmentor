@@ -69,8 +69,10 @@ const listPathOf = ({ partnerId, advertiserId }: CbScopeProps) =>
     ? advertiserPath(partnerId, advertiserId, 'custom-bidding')
     : partnerPath(partnerId, 'custom-bidding');
 
-const itemPathOf = (s: CbScopeProps, ...sub: string[]) =>
-  advertiserPath(s.partnerId, s.advertiserId ?? '', 'custom-bidding', ...sub);
+const itemPathOf = (s: CbScopeProps, id: string) =>
+  s.advertiserId
+    ? advertiserPath(s.partnerId, s.advertiserId, 'custom-bidding', id)
+    : partnerPath(s.partnerId, 'custom-bidding', id);
 
 const STATUS_LABEL: Record<CbStatusKey, string> = {
   ACTIVE: 'Active',
@@ -91,11 +93,8 @@ export function CustomBiddingListPage({ rows, ...scope }: CbScopeProps & { rows:
   const [confirm, setConfirm] = useState<CbRow | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, start] = useTransition();
-  const newPath = scope.advertiserId
-    ? itemPathOf(scope, 'new')
-    : partnerPath(scope.partnerId, 'custom-bidding', 'new');
-  const rowPath = (id: string) =>
-    scope.advertiserId ? itemPathOf(scope, id) : partnerPath(scope.partnerId, 'custom-bidding', id);
+  const newPath = itemPathOf(scope, 'new');
+  const rowPath = (id: string) => itemPathOf(scope, id);
 
   const counts = useMemo(() => {
     const by = { ACTIVE: 0, TRAINING: 0, SUSPENDED: 0 };
@@ -422,6 +421,14 @@ export function CustomBiddingWizard({
     ]);
   };
 
+  /** Keep `?step=` in the address so a refresh lands on the same step (module 15 S7). */
+  const goStep = (idx: number, algorithmId: string | null = id) => {
+    setStepIdx(idx);
+    if (algorithmId) {
+      router.replace(`${itemPathOf(scope, algorithmId)}?step=${STEPS[idx]!.id}`, { scroll: false });
+    }
+  };
+
   const next = () =>
     start(async () => {
       if (stepIdx === 0) {
@@ -440,12 +447,11 @@ export function CustomBiddingWizard({
         setVersion(res.data.version);
         if (res.data.reset) setResetNote(true);
         // Any edit that changed the definition cleared the test (CB-008).
-        const changed = !initial || res.data.reset || test === null;
-        if (changed) setTest(null);
-        setStepIdx(1);
+        if (res.data.changed) setTest(null);
+        goStep(1, res.data.id);
         return;
       }
-      if (stepIdx === 1) setStepIdx(2);
+      if (stepIdx === 1) goStep(2);
     });
 
   const runTest = () =>
@@ -800,7 +806,7 @@ export function CustomBiddingWizard({
       ) : (
         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
           {stepIdx > 0 ? (
-            <Button onClick={() => setStepIdx(stepIdx - 1)}>Back</Button>
+            <Button onClick={() => goStep(stepIdx - 1)}>Back</Button>
           ) : (
             <Button onClick={() => router.push(listPath)}>Cancel</Button>
           )}
