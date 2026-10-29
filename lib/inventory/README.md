@@ -17,8 +17,8 @@ Session P4-02 (inventory and marketplace), branch `p4-02-inventory`. Spec: `docs
 | M13-08 | Marketplace Featured and Bulk assign dialog                                                                                                                                                                                                                                                 |
 | M13-09 | Marketplace Discover (keyword and canned AI search, filters, slide-over, Assign)                                                                                                                                                                                                            |
 | M13-10 | Negotiations list, import, page, counter, accept, decline; seller policy (`negotiation-policy.ts`)                                                                                                                                                                                          |
-| M13-11 | `assignInventoryToLineItems` service                                                                                                                                                                                                                                                        |
-| M13-12 | Plans list page, campaign-scope variants                                                                                                                                                                                                                                                    |
+| M13-11 | `assignInventoryToLineItems` service (`assign.ts`), also behind Assign, Bulk assign and the deal page. Not yet called from the line item form rows (P3-06c)                                                                                                                                 |
+| M13-12 | Campaign-scope variants of the inventory, Marketplace and Negotiations pages. The Plans list stays a stub: RC-050 gives `marketplace/plans` to module 04                                                                                                                                    |
 | M13-13 | Playwright `tests/e2e/inventory.spec.ts` (E2E-INV-01..08)                                                                                                                                                                                                                                   |
 
 ## File ownership
@@ -26,12 +26,13 @@ Session P4-02 (inventory and marketplace), branch `p4-02-inventory`. Spec: `docs
 Create and edit: `lib/inventory/**`, `components/inventory/**`, `app/api/dv/{inventory,instant-deals,marketplace,negotiations}/**`,
 `tests/inventory/**`, `tests/e2e/inventory.spec.ts`, `prisma/schema/92-p4-02-inventory.prisma`, `prisma/migrations/0005_p4_02_inventory_deltas/**`,
 `prisma/seed/30-marketplace.seed.ts`, `lib/changelog/registries/deal.ts`, `lib/validation/rules/inventory.ts` (Phase 4 domain file),
-the stub route pages for the inventory, marketplace, negotiations, plans list and instant-deal routes under `app/(dv)/**`.
+the stub route pages for the inventory, marketplace, negotiations and instant-deal routes under `app/(dv)/**`.
+Additive rows in `lib/routes/route-table.ts` for `marketplace/negotiations/{x}` (advertiser and campaign scope).
 Additive one-liners: `lib/changelog/registries/index.ts`, `lib/validation/rules/index` registration if needed.
-Fixture update: `tests/shell/e2e-world.ts` (a deal id for the `/tid/{x}/…/details` route row).
+Fixture update: `tests/shell/e2e-world.ts` (a deal id and a negotiation id for the `/tid/{x}/…/details` and `/negotiations/{x}` route rows).
 
 ## Not in this session
 
 Engine edits (`lib/engine/**` is P3-08a/b): `advanceNegotiations` and `instantDealForecast` are pure modules here
 (`negotiation-policy.ts`, `forecast.ts`) called by the services; negotiation replies advance lazily when a page or action reads them.
-Plan page and editor (P4-08), SDF internals (P4-10), LI form rows (P3-06c; they call `assignInventoryToLineItems`).
+Plans list, plan page and editor (module 04, P4-08), SDF internals (P4-10), LI form rows (P3-06c; they call `assignInventoryToLineItems`).
