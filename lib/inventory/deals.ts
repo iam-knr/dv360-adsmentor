@@ -868,16 +868,18 @@ export async function updateDealGroup(
         data: {
           name: input.name.trim(),
           kind: input.type as 'DEAL_GROUP' | 'PREFERRED_DEAL_GROUP',
-          members: {
-            create: [...new Map(input.members.map((m) => [`${m.kind}:${m.id}`, m])).values()].map(
-              (m) => ({
-                sandboxId: ctx.sandboxId,
-                memberKind: m.kind,
-                memberId: m.id,
-              }),
-            ),
-          },
         },
+      });
+      // members are written apart: a nested create inside an update does not accept the composite `sandboxId`
+      await tx.dealGroupMember.createMany({
+        data: [...new Map(input.members.map((m) => [`${m.kind}:${m.id}`, m])).values()].map(
+          (m) => ({
+            sandboxId: ctx.sandboxId,
+            groupId: g.id,
+            memberKind: m.kind,
+            memberId: m.id,
+          }),
+        ),
       });
       return { data: undefined, warnings };
     }),
