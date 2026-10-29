@@ -1,6 +1,7 @@
 // One batch of ticks for one sandbox inside one transaction (engine.md 1.4): lock the clock, load the Worlds once, run
 // ticks in order, persist each tick, save the state and move the clock. A batch is applied completely or not at all.
 import type { Tx } from '@/lib/db';
+import { runDueReports } from '@/lib/reporting/due';
 import { runTick } from '../tick';
 import { dueTicks } from '../clock/clock';
 import { defaultParams } from '../params/load';
@@ -161,6 +162,12 @@ export async function runBatch(
         : {}),
     },
   });
+  // scheduled reports whose occurrence the clock has now passed (module 16 4.5)
+  if (ticks > 0) {
+    await runDueReports(tx, sandboxId, new Date(clock.simStartMs + tick * MS_HOUR)).catch((e) =>
+      console.error('runDueReports failed', e),
+    );
+  }
   // nightly retention: when the batch crossed a sim midnight
   if (Math.floor(tick / 24) > Math.floor(clock.tickIndex / 24)) {
     await trimHourly(tx, sandboxId, clock.simStartMs + tick * MS_HOUR);

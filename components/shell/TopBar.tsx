@@ -14,11 +14,13 @@ import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import InputBase from '@mui/material/InputBase';
 import Menu from '@mui/material/Menu';
+import MuiLink from '@mui/material/Link';
 import MenuItem from '@mui/material/MenuItem';
 import Popover from '@mui/material/Popover';
 import Typography from '@mui/material/Typography';
 import { DvBreadcrumbs, DvTooltip } from '@/components/dv';
 import { DvIcon, type DvIconName } from '@/components/icons';
+import { markInboxReadAction } from '@/lib/reporting/actions';
 import { sizes } from '@/lib/theme/tokens';
 import { topCrumbs } from '@/lib/nav/breadcrumbs';
 import { AppLink } from '@/lib/routes/AppLink';
@@ -95,7 +97,8 @@ function SearchOverlay({ open, onClose }: { open: boolean; onClose: () => void }
 }
 
 export function TopBar() {
-  const { viewer } = useViewer();
+  const { viewer, chrome } = useViewer();
+  const inbox = chrome.inbox ?? [];
   const { scope, ids } = usePageScope();
   const hasNav = useHasNav();
   const { toggleNav } = useChromeState();
@@ -188,7 +191,10 @@ export function TopBar() {
         <BarIcon
           label="Notifications"
           icon="notifications"
-          onClick={(el) => setMenu({ id: 'bell', el })}
+          onClick={(el) => {
+            setMenu({ id: 'bell', el });
+            if (inbox.some((m) => !m.read)) void markInboxReadAction();
+          }}
         />
         <BarIcon
           label="User management and email preferences"
@@ -248,9 +254,33 @@ export function TopBar() {
             <DvIcon name="close" size={20} />
           </IconButton>
         </Box>
-        <Typography variant="body2" sx={{ p: 4, pt: 0 }}>
-          No notifications
-        </Typography>
+        {inbox.length === 0 ? (
+          <Typography variant="body2" sx={{ p: 4, pt: 0 }}>
+            No notifications
+          </Typography>
+        ) : (
+          <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0, maxHeight: 360, overflowY: 'auto' }}>
+            {inbox.map((m) => (
+              <Box
+                component="li"
+                key={m.id}
+                data-testid="inbox-item"
+                sx={{ px: 4, py: 2, borderTop: '1px solid', borderColor: 'divider', fontWeight: m.read ? 400 : 500 }}
+              >
+                {m.href ? (
+                  <MuiLink component={AppLink} href={m.href} onClick={close} underline="hover">
+                    {m.title}
+                  </MuiLink>
+                ) : (
+                  <Typography variant="body2">{m.title}</Typography>
+                )}
+                <Typography variant="caption" display="block" color="text.secondary">
+                  {m.body}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        )}
       </Popover>
 
       <Menu anchorEl={menu?.el} open={menu?.id === 'users'} onClose={close}>

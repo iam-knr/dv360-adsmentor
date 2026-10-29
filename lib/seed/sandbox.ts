@@ -1,6 +1,7 @@
 // Provisioning of one seeded sandbox: plan, history stub and insert in a single transaction (data-model 3.1 step 2).
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { seedAppCatalog, seedResources } from '../resources/seed';
+import { seedReports } from '../reporting/seed';
 import { seedYoutube, seedYoutubeVideos } from '../youtube/seed';
 import { isoDate } from './dates';
 import { buildHistory } from './history-stub';
@@ -125,6 +126,20 @@ export async function provisionSandbox(db: Db, input: ProvisionInput): Promise<P
           template: input.template,
           seedValue: input.seedValue,
         });
+        // Module 16 reports (P4-07): saved instant reports with runs, one scheduled offline report.
+        const partner = await tx.partner.findFirst({
+          where: { sandboxId: sandbox.id },
+          select: { id: true, publicId: true },
+        });
+        if (partner)
+          await seedReports(tx, {
+            sandboxId: sandbox.id,
+            partnerId: partner.id,
+            partnerPublicId: partner.publicId.toString(),
+            ownerUserId: input.ownerUserId,
+            template: input.template,
+            today: input.today ?? simToday(),
+          });
         return inserted;
       },
       { timeout: 300_000, maxWait: 30_000 },

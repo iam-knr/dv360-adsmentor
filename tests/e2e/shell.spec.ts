@@ -267,7 +267,15 @@ test.describe('RT 9 smoke over routes.md section 3', () => {
   });
 
   // Edit pages of module 15 look the entity up; the placeholder id `{x}` is an audience, so they are 404 for real (P4-04).
-  const LOOKUP_PAGES = ['/fl/events/{x}', '/ll/{x}'];
+  // The report pages of module 16 do the same: `{x}` is not a report (P4-07, covered by reporting.spec.ts).
+  const LOOKUP_PAGES = [
+    '/fl/events/{x}',
+    '/ll/{x}',
+    '/reporting/instant/{x}',
+    '/reporting/instant/{x}/runs',
+    '/reporting/offline/{x}',
+    '/reporting/{kind}/{x}/runs',
+  ];
   const pages = ROUTE_TABLE.filter(
     (r) => !r.redirectTo && r.frame !== '404' && !LOOKUP_PAGES.some((p) => r.path.endsWith(p)),
   );

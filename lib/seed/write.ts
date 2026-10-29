@@ -137,6 +137,7 @@ export async function insertPlan(
  */
 export async function clearSandboxData(tx: Tx, sandboxId: string): Promise<void> {
   const where = { sandboxId };
+  await tx.inboxMessage.deleteMany({ where });
   await tx.changeEntry.deleteMany({ where });
   await tx.changeGroup.deleteMany({ where });
   await tx.simHourlyMetric.deleteMany({ where });

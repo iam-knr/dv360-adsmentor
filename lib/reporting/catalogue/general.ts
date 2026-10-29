@@ -1,0 +1,208 @@
+// General (135 dimensions), Date (9), Location (9) and Computer System (9). Labels follow docs/explore/12-reporting.md.
+import { calendarDim, derivedDim, entityDim, sliceDim, snapshot, zeroDim } from './generators';
+import type { ReportFieldDef } from './types';
+
+const G = 'General' as const;
+
+export function generalFields(): ReportFieldDef[] {
+  const fav = { frequentlyUsed: true };
+  return [
+    // Partner, advertiser, campaign, IO, line item attributes (entity join)
+    entityDim(G, 'Partner', 'partner.name'),
+    entityDim(G, 'Partner ID', 'partner.id', 'ID'),
+    entityDim(G, 'Partner Currency', 'partner.currency'),
+    entityDim(G, 'Partner Status', 'partner.status'),
+    entityDim(G, 'Central Partner ID', 'partner.id', 'ID'),
+    entityDim(G, 'Advertiser', 'advertiser.name', 'STRING', fav),
+    entityDim(G, 'Advertiser ID', 'advertiser.id', 'ID'),
+    entityDim(G, 'Advertiser Currency', 'advertiser.currency', 'STRING', fav),
+    entityDim(G, 'Advertiser Status', 'advertiser.status'),
+    entityDim(G, 'Advertiser Time Zone', 'advertiser.timeZone'),
+    entityDim(G, 'Advertiser Integration Code', 'advertiser.integrationCode'),
+    entityDim(G, 'Campaign', 'campaign.name'),
+    entityDim(G, 'Campaign ID', 'campaign.id', 'ID'),
+    entityDim(G, 'Campaign Status', 'campaign.status'),
+    entityDim(G, 'Campaign Goal', 'campaign.goal'),
+    entityDim(G, 'Campaign Start Date', 'campaign.startDate', 'DATE'),
+    entityDim(G, 'Campaign End Date', 'campaign.endDate', 'DATE'),
+    entityDim(G, 'Insertion Order', 'io.name', 'STRING', fav),
+    entityDim(G, 'IO ID', 'io.id', 'ID'),
+    entityDim(G, 'IO Status', 'io.status'),
+    entityDim(G, 'IO Goal Type', 'io.goalType'),
+    entityDim(G, 'IO Goal Value', 'io.goalValue', 'DECIMAL'),
+    entityDim(G, 'IO Integration Code', 'io.integrationCode'),
+    entityDim(G, 'IO Daily Frequency', 'io.dailyFrequency'),
+    entityDim(G, 'IO Start Date', 'io.startDate', 'DATE'),
+    entityDim(G, 'IO End Date', 'io.endDate', 'DATE'),
+    entityDim(G, 'Line Item', 'lineItem.name'),
+    entityDim(G, 'LI ID', 'lineItem.id', 'ID'),
+    entityDim(G, 'LI Type', 'lineItem.type'),
+    entityDim(G, 'LI Status', 'lineItem.status'),
+    entityDim(G, 'LI Budget', 'lineItem.budget', 'DECIMAL'),
+    entityDim(G, 'LI Start Date', 'lineItem.startDate', 'DATE'),
+    entityDim(G, 'LI End Date', 'lineItem.endDate', 'DATE'),
+    entityDim(G, 'LI Integration Code', 'lineItem.integrationCode'),
+    entityDim(G, 'LI Daily Frequency', 'lineItem.dailyFrequency'),
+    entityDim(G, 'LI Lifetime Frequency', 'lineItem.lifetimeFrequency'),
+    entityDim(G, 'LI Pacing Percentage', 'lineItem.pacingPct', 'PERCENT'),
+    entityDim(G, 'Bid Strategy Type', 'lineItem.bidStrategyType'),
+    entityDim(G, 'Optimized Targeting', 'lineItem.optimizedTargeting'),
+    // Budget segment (depends on the sim date of the row)
+    entityDim(G, 'Budget Segment Name', 'segment.name'),
+    entityDim(G, 'Budget Segment Start Date', 'segment.startDate', 'DATE'),
+    entityDim(G, 'Budget Segment End Date', 'segment.endDate', 'DATE'),
+    entityDim(G, 'Budget Type (Segment)', 'segment.type'),
+    // Exchange and inventory
+    sliceDim(G, 'Exchange', 'exchange', 'name'),
+    sliceDim(G, 'Exchange ID', 'exchange', 'id', 'ID'),
+    sliceDim(G, 'Exchange Code', 'exchange', 'code'),
+    sliceDim(G, 'Inventory Source', 'deal', 'name'),
+    sliceDim(G, 'Inventory Source ID', 'deal', 'id', 'ID'),
+    sliceDim(G, 'Inventory Source Type', 'deal', 'type'),
+    sliceDim(G, 'Inventory Source Group', 'deal', 'group'),
+    sliceDim(G, 'Inventory Source Group ID', 'deal', 'groupId', 'ID'),
+    sliceDim(G, 'Inventory Source Permissions', 'deal', 'permissions'),
+    sliceDim(G, 'Inventory Commitment Type', 'deal', 'commitmentType'),
+    sliceDim(G, 'Inventory Delivery Method', 'deal', 'deliveryMethod'),
+    sliceDim(G, 'Inventory Media Cost Type', 'deal', 'mediaCostType'),
+    sliceDim(G, 'Inventory Rate Type', 'deal', 'rateType'),
+    sliceDim(G, 'Commitment Deal Name', 'deal', 'name'),
+    sliceDim(G, 'Commitment Deal ID', 'deal', 'id', 'ID'),
+    sliceDim(G, 'Commitment Deal Mode', 'deal', 'commitmentMode'),
+    sliceDim(G, 'Public Inventory', 'exchange', 'public'),
+    // Creative
+    sliceDim(G, 'Creative', 'creative', 'name'),
+    sliceDim(G, 'Creative ID', 'creative', 'id', 'ID'),
+    sliceDim(G, 'Creative Size', 'creative', 'size'),
+    sliceDim(G, 'Creative Type', 'creative', 'type'),
+    sliceDim(G, 'Creative Status', 'creative', 'status'),
+    sliceDim(G, 'Creative Source', 'creative', 'source'),
+    sliceDim(G, 'Creative Width', 'creative', 'width', 'INT'),
+    sliceDim(G, 'Creative Height', 'creative', 'height', 'INT'),
+    sliceDim(G, 'Creative Integration Code', 'creative', 'integrationCode'),
+    sliceDim(G, 'Companion Creative', 'creative', 'companionName'),
+    sliceDim(G, 'Companion Creative ID', 'creative', 'companionId', 'ID'),
+    sliceDim(G, 'Companion Creative Size', 'creative', 'companionSize'),
+    zeroDim(G, 'Creative Asset'),
+    zeroDim(G, 'Creative Attributes'),
+    zeroDim(G, 'Creative Rendered in AMP'),
+    zeroDim(G, 'Asset Combination'),
+    // Format and environment
+    sliceDim(G, 'Format', 'format'),
+    sliceDim(G, 'Media Type', 'format', 'mediaType'),
+    sliceDim(G, 'Ad Type', 'format', 'adType'),
+    sliceDim(G, 'Platform', 'device', 'platform'),
+    // Conversion and Floodlight
+    sliceDim(G, 'Conversion Source', 'activity', 'group'),
+    sliceDim(G, 'Conversion Source ID', 'activity', 'groupId', 'ID'),
+    sliceDim(G, 'Conversion Type', 'activity', 'type'),
+    sliceDim(G, 'Conversion Ad Event Type', 'activity', 'adEventType'),
+    sliceDim(G, 'Conversion Ad Event Type ID', 'activity', 'adEventTypeId', 'ID'),
+    sliceDim(G, 'Order ID', 'activity', 'orderId', 'ID', { offline: ['FLOODLIGHT'] }),
+    derivedDim(G, 'Time to Conversion', 'activity', 'timeToConversion'),
+    sliceDim(G, 'Click Type', 'format', 'clickType'),
+    // Derived tier (engine 9.3)
+    derivedDim(G, 'App/URL', 'exchange', 'appUrl'),
+    derivedDim(G, 'App/URL ID', 'exchange', 'appUrlId', 'ID'),
+    derivedDim(G, 'App/URL Excluded', 'exchange', 'appUrlExcluded'),
+    derivedDim(G, 'Channel', 'exchange', 'channel'),
+    derivedDim(G, 'Channel ID', 'exchange', 'channelId', 'ID'),
+    derivedDim(G, 'Channel Type', 'exchange', 'channelType'),
+    derivedDim(G, 'Category', 'exchange', 'category'),
+    derivedDim(G, 'Keyword', 'exchange', 'keyword'),
+    derivedDim(G, 'Seller Id', 'exchange', 'sellerId'),
+    derivedDim(G, 'Authorized Seller State', 'exchange', 'authorizedSellerState'),
+    derivedDim(G, 'Served Pixel Density', 'device', 'pixelDensity'),
+    derivedDim(G, 'Ad Position', 'format', 'adPosition'),
+    derivedDim(G, 'Position in Content', 'format', 'positionInContent'),
+    derivedDim(G, 'Video Ad Position In Stream', 'format', 'videoAdPositionInStream'),
+    derivedDim(G, 'Video Player Size', 'format', 'videoPlayerSize'),
+    derivedDim(G, 'Video Content Duration', 'format', 'videoContentDuration'),
+    derivedDim(G, 'Video Creative Duration', 'format', 'videoCreativeDuration'),
+    derivedDim(
+      G,
+      'Video Creative Duration (Skippable)',
+      'format',
+      'videoCreativeDurationSkippable',
+    ),
+    derivedDim(G, 'Max Video Duration', 'format', 'maxVideoDuration'),
+    derivedDim(G, 'Video Skippable Support', 'format', 'videoSkippableSupport'),
+    derivedDim(G, 'Video Skippable Support (IAR)', 'format', 'videoSkippableSupportIar'),
+    derivedDim(G, 'Video Format Support', 'format', 'videoFormatSupport'),
+    derivedDim(G, 'Video Content Live Stream', 'format', 'videoContentLiveStream'),
+    derivedDim(G, 'Digital Content Label (IAR)', 'exchange', 'digitalContentLabelIar'),
+    derivedDim(G, 'Matched Genre Target', 'exchange', 'genre'),
+    derivedDim(G, 'Language', 'exchange', 'language'),
+    derivedDim(G, 'Audio Feed Type', 'format', 'audioFeedType'),
+    derivedDim(G, 'Rewarded', 'format', 'rewarded'),
+    derivedDim(G, 'MRAID Support', 'device', 'mraid'),
+    derivedDim(G, 'Active View Expected Viewability', 'format', 'expectedViewability'),
+    derivedDim(G, 'Targeted location', 'exchange', 'targetedLocation'),
+    derivedDim(G, 'Targeted Data Providers', 'exchange', 'targetedDataProviders'),
+    // Not modelled (status ZERO): the column exists and prints " - "
+    zeroDim(G, 'AMP Page Request'),
+    zeroDim(G, 'Billable Outcome'),
+    zeroDim(G, 'Business Chain'),
+    zeroDim(G, 'CTV Audience Expansion'),
+    zeroDim(G, 'Commerce Partner Name'),
+    zeroDim(G, 'Data Provider'),
+    zeroDim(G, 'Data Provider ID'),
+    zeroDim(G, 'Merchant ID'),
+    zeroDim(G, 'Sponsored Product Id'),
+    zeroDim(G, 'Variant ID'),
+    zeroDim(G, 'Variant Name'),
+    zeroDim(G, 'Variant Version'),
+    zeroDim(G, 'Seller Name'),
+    sliceDim(G, 'Floodlight Activity', 'activity', 'name', 'STRING', { offline: ['FLOODLIGHT'] }),
+    sliceDim(G, 'Floodlight Activity ID', 'activity', 'id', 'ID', { offline: ['FLOODLIGHT'] }),
+    // The two numeric budget segment fields are metrics in the builder (they sit in the METRICS zone of the IO pacing
+    // template); the segment name and dates above are dimensions.
+    snapshot(G, 'Budget Segment Budget', 'SEGMENT', 'budget', 'MONEY'),
+    snapshot(G, 'Budget Segment Pacing Percentage', 'SEGMENT', 'pacingPct', 'PERCENT'),
+  ];
+}
+
+const D = 'Date' as const;
+export function dateFields(): ReportFieldDef[] {
+  return [
+    sliceDim(D, 'Date', 'date', undefined, 'DATE', { frequentlyUsed: false }),
+    calendarDim(D, 'Day of Week', 'dayOfWeek'),
+    sliceDim(D, 'Hour', 'hour', undefined, 'INT'),
+    calendarDim(D, 'Week', 'week'),
+    calendarDim(D, 'Month', 'month'),
+    calendarDim(D, 'Month Year', 'monthYear'),
+    calendarDim(D, 'Quarter', 'quarter'),
+    calendarDim(D, 'Year', 'year'),
+    sliceDim(D, 'Date and Hour', 'hour', 'dateHour', 'DATETIME'),
+  ];
+}
+
+const L = 'Location' as const;
+export function locationFields(): ReportFieldDef[] {
+  return [
+    sliceDim(L, 'Country', 'region', 'country'),
+    sliceDim(L, 'Region', 'region', 'name'),
+    sliceDim(L, 'Region ID', 'region', 'id', 'ID'),
+    derivedDim(L, 'City', 'region', 'city'),
+    derivedDim(L, 'City ID', 'region', 'cityId', 'ID'),
+    derivedDim(L, 'DMA', 'region', 'dma'),
+    derivedDim(L, 'DMA Code', 'region', 'dmaCode', 'ID'),
+    derivedDim(L, 'Zip Code', 'region', 'zip'),
+    derivedDim(L, 'Zip Code ID', 'region', 'zipId', 'ID'),
+  ];
+}
+
+const C = 'Computer System' as const;
+export function computerSystemFields(): ReportFieldDef[] {
+  return [
+    sliceDim(C, 'Device Type', 'device'),
+    sliceDim(C, 'Environment', 'environment'),
+    derivedDim(C, 'Browser', 'device', 'browser'),
+    derivedDim(C, 'Operating System', 'device', 'os'),
+    derivedDim(C, 'Device Make', 'device', 'deviceMake'),
+    derivedDim(C, 'Device Model', 'device', 'deviceModel'),
+    derivedDim(C, 'ISP or Carrier', 'device', 'isp'),
+    derivedDim(C, 'ISP or Carrier ID', 'device', 'ispId', 'ID'),
+    derivedDim(C, 'Attributed Event Platform Type', 'device', 'attributedEventPlatformType'),
+  ];
+}
