@@ -26,6 +26,7 @@ import {
   type DvColumn,
 } from '@/components/dv';
 import { useViewer } from '@/components/shell/ViewerProvider';
+import { colors } from '@/lib/theme/tokens';
 import { useUnsavedGuard } from '@/lib/hooks/useUnsavedGuard';
 import { AppLink } from '@/lib/routes/AppLink';
 import { advertiserPath, partnerPath } from '@/lib/routes/paths';
@@ -842,7 +843,7 @@ function TestResult({ test }: { test: CbTestWire }) {
         <BarChart width={264} height={120} data={data}>
           <XAxis dataKey="bin" hide />
           <ChartTooltip />
-          <Bar dataKey="count" fill="#1a73e8" isAnimationActive={false} />
+          <Bar dataKey="count" fill={colors.chart[0]} isAnimationActive={false} />
         </BarChart>
       </DvChartCard>
       {test.warnings.length > 0 ? (
