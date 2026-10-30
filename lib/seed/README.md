@@ -10,6 +10,7 @@ buildSandboxPlan(input)    plan.ts           rows for one sandbox, no database
 buildHistory(plan)         history-stub.ts   SimDailyMetric, SimHourlyMetric, DeliveryDiagnostic
 provisionSandbox(db, ...)  sandbox.ts        Sandbox row, clear, insert, mark READY
 seedReferenceData(db)      reference-db.ts   Exchange and TargetingOption, idempotent
+ensureReferenceData(db)    ensure.ts         seedReferenceData + Marketplace catalogue, one transaction under an advisory lock
 ```
 
 ## Commands
@@ -21,7 +22,9 @@ npm run db:bootstrap   # demo class: instructor, three students, one starter-age
 
 Both are idempotent. A sandbox that is `READY` at the current `SEED_VERSION` with the same template and seed value is left alone. Bump `SEED_VERSION` in `sandbox.ts` when the generator changes what it writes; the next run rebuilds the older sandboxes.
 
-Seeds never run from the Vercel build. `prisma/seed/index.ts` refuses to run when `NODE_ENV=production`, `VERCEL=1` or `VERCEL_ENV=production` unless `SEED_ALLOW_PRODUCTION=1`. The demo class bootstrap is skipped in the same cases unless `SEED_DEMO=1`, and then it needs `SEED_STUDENT_PASSWORD` (a generated password is never printed to a production log).
+**Production reference data.** The Vercel build runs `prisma/bootstrap/05-reference.bootstrap.ts`, which calls `ensureReferenceData` (exchanges, targeting catalogue, report reference rows, Marketplace catalogue). It is idempotent and creates no accounts, classrooms or sandboxes. `provisionSandbox` calls it too when the exchanges are missing, so a student sandbox never fails for lack of reference data. See `docs/gaps/prod-seed.md`.
+
+The full seeds never run from the Vercel build. `prisma/seed/index.ts` refuses to run when `NODE_ENV=production`, `VERCEL=1` or `VERCEL_ENV=production` unless `SEED_ALLOW_PRODUCTION=1`. The demo class bootstrap is skipped in the same cases unless `SEED_DEMO=1`, and then it needs `SEED_STUDENT_PASSWORD` (a generated password is never printed to a production log).
 
 ## Templates
 
