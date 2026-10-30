@@ -2,6 +2,7 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { seedAudiences } from '../audiences/seed';
 import { seedBulk } from '../bulk/seed';
+import { seedPlans } from '../planning/seed';
 import { seedAppCatalog, seedResources } from '../resources/seed';
 import { seedReports } from '../reporting/seed';
 import { seedYoutube, seedYoutubeVideos } from '../youtube/seed';
@@ -148,6 +149,13 @@ export async function provisionSandbox(db: Db, input: ProvisionInput): Promise<P
             template: input.template,
             today: input.today ?? simToday(),
           });
+        // Module 04 (P4-08): twelve plans per advertiser with forecast snapshots.
+        await seedPlans(tx, {
+          sandboxId: sandbox.id,
+          template: input.template,
+          seedValue: input.seedValue,
+          today: input.today ?? simToday(),
+        });
         // Module 11 (P4-10a): bulk job history, saved column views and chart views.
         await seedBulk(tx, { sandboxId: sandbox.id, ownerUserId: input.ownerUserId, now: new Date() });
         return inserted;

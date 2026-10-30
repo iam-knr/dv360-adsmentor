@@ -14,7 +14,13 @@ export interface DvModalProps {
   open: boolean;
   title: string;
   size?: 'sm' | 'md' | 'lg';
-  primary: { label: string; onClick: () => void; loading?: boolean; tone?: 'default' | 'danger' };
+  primary: {
+    label: string;
+    onClick: () => void;
+    loading?: boolean;
+    disabled?: boolean;
+    tone?: 'default' | 'danger';
+  };
   secondary?: { label: string; onClick: () => void };
   children: ReactNode;
   initialFocus?: 'primary' | 'secondary';
@@ -68,7 +74,7 @@ export function DvModal({
         <Button
           variant="contained"
           color={primary.tone === 'danger' ? 'error' : 'primary'}
-          disabled={primary.loading}
+          disabled={primary.loading || primary.disabled}
           onClick={primary.onClick}
           autoFocus={initialFocus === 'primary'}
           startIcon={

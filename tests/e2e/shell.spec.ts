@@ -275,6 +275,8 @@ test.describe('RT 9 smoke over routes.md section 3', () => {
     '/audience/{x}/explorerlis',
     '/audience/{kind}/{x}/details',
     '/ll/{x}',
+    '/pr/{x}/marketplace/plan',
+    '/cross-media-reach/{x}',
     '/reporting/instant/{x}',
     '/reporting/instant/{x}/runs',
     '/reporting/offline/{x}',
