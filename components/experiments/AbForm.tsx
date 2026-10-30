@@ -109,7 +109,7 @@ export function AbForm({
     let live = true;
     void candidatesAction(advertiserId, {
       compare: target === 'LINE_ITEM' ? 'LINE_ITEMS' : 'INSERTION_ORDERS',
-      ...(initial ? { exceptTestId: initial.publicId } : {}),
+      ...(initial ? { exceptTestId: initial.id } : {}),
     }).then((rows) => live && setCandidates(rows));
     return () => {
       live = false;

@@ -17,6 +17,7 @@ export default defineConfig({
           environment: 'node',
           include: [
             'tests/{unit,validation,engine,seed,metrics,changelog,auth,targeting,accounts,settings,creatives,resources,inventory,reporting,youtube,audiences,planning}/**/*.test.ts',
+            'tests/experiments/**/*.test.ts',
           ],
           exclude: ['**/*.db.test.ts', '**/db/**'],
           setupFiles: ['./vitest.setup.ts'],
