@@ -16,7 +16,7 @@ export default defineConfig({
           name: 'unit',
           environment: 'node',
           include: [
-            'tests/{unit,validation,engine,seed,metrics,changelog,auth,targeting,accounts,settings,creatives,resources,inventory,reporting,youtube,audiences,planning}/**/*.test.ts',
+            'tests/{unit,validation,engine,seed,metrics,changelog,auth,targeting,accounts,settings,creatives,resources,inventory,reporting,youtube,audiences,planning,bulk,sdf,charts}/**/*.test.ts',
             'tests/experiments/**/*.test.ts',
           ],
           exclude: ['**/*.db.test.ts', '**/db/**'],

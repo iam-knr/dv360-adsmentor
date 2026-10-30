@@ -755,6 +755,7 @@ export async function patchIoBudget(
 export async function archiveInsertionOrders(
   user: SessionUser,
   ioIds: string[],
+  opts: { jobId?: string } = {},
 ): Promise<Result<{ jobId: string } & CascadeResult>> {
   return asResult(async () => {
     const ctx = await serviceCtx(user);
@@ -764,25 +765,30 @@ export async function archiveInsertionOrders(
       for (const id of ioIds) ios.push(await loadIo(tx, id));
       const first = ios[0];
       if (!first) throw notFound();
-      const adv = await tx.advertiser.findUnique({
-        where: { id: first.advertiserId },
-        select: { partnerId: true },
-      });
-      const actor = ctx.user.actor ?? ctx.user;
-      const job = await tx.bulkJob.create({
-        data: {
-          sandboxId: ctx.sandboxId,
-          advertiserId: first.advertiserId,
-          partnerId: adv?.partnerId ?? '',
-          requestedById: actor.id,
-          source: 'BULK_EDIT',
-          action: 'ARCHIVE',
-          description: `Archived ${ios.length} ${ios.length === 1 ? 'insertion order' : 'insertion orders'}`,
-          status: 'COMPLETED',
-          selectionCount: ios.length,
-        },
-        select: { id: true },
-      });
+      // A bulk job (module 11) passes its own id; the direct Archive dialog creates one here.
+      let job: { id: string };
+      if (opts.jobId) job = { id: opts.jobId };
+      else {
+        const adv = await tx.advertiser.findUnique({
+          where: { id: first.advertiserId },
+          select: { partnerId: true },
+        });
+        const actor = ctx.user.actor ?? ctx.user;
+        job = await tx.bulkJob.create({
+          data: {
+            sandboxId: ctx.sandboxId,
+            advertiserId: first.advertiserId,
+            partnerId: adv?.partnerId ?? '',
+            requestedById: actor.id,
+            source: 'BULK_EDIT',
+            action: 'ARCHIVE',
+            description: `Archived ${ios.length} ${ios.length === 1 ? 'insertion order' : 'insertion orders'}`,
+            status: 'COMPLETED',
+            selectionCount: ios.length,
+          },
+          select: { id: true },
+        });
+      }
       const cctx = { ...changeCtx(ctx, tx, { source: 'BULK_EDIT', bulkJobId: job.id }), tx };
       const total: CascadeResult = { insertionOrders: 0, lineItems: 0 };
       for (const io of ios) {

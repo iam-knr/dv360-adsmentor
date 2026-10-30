@@ -1,6 +1,7 @@
 // Provisioning of one seeded sandbox: plan, history stub and insert in a single transaction (data-model 3.1 step 2).
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { seedAudiences } from '../audiences/seed';
+import { seedBulk } from '../bulk/seed';
 import { seedExperiments } from '../experiments/seed';
 import { seedPlans } from '../planning/seed';
 import { seedAppCatalog, seedResources } from '../resources/seed';
@@ -155,6 +156,12 @@ export async function provisionSandbox(db: Db, input: ProvisionInput): Promise<P
           template: input.template,
           seedValue: input.seedValue,
           today: input.today ?? simToday(),
+        });
+        // Module 11 (P4-10a): bulk job history, saved column views and chart views.
+        await seedBulk(tx, {
+          sandboxId: sandbox.id,
+          ownerUserId: input.ownerUserId,
+          now: new Date(),
         });
         // Module 17 (P4-10b): two A/B tests and three lift studies per advertiser, built on the history above.
         await seedExperiments(tx, {
