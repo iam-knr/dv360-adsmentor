@@ -11,7 +11,8 @@ const pageFile = (r: RouteRow) => join(APP, r.folder, 'page.tsx');
 function pagesUnder(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const p = join(dir, name);
-    if (statSync(p).isDirectory()) return pagesUnder(p);
+    // `@slot` folders are parallel and intercepting routes (module 17 S5), not routes of their own
+    if (statSync(p).isDirectory()) return name.startsWith('@') ? [] : pagesUnder(p);
     return name === 'page.tsx' ? [relative(APP, dir).split(sep).join('/')] : [];
   });
 }

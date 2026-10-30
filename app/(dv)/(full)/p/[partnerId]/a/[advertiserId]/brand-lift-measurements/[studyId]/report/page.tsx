@@ -1,7 +1,11 @@
-import { StubPage } from '@/components/shell/StubPage';
+import { LiftReportRoute } from '@/components/experiments/pages/ExperimentRoutes';
 
-export const metadata = { title: 'Brand Lift Report' };
+export const metadata = { title: 'Lift study report' };
 
-export default function Page() {
-  return <StubPage module="17" title="Brand Lift Report" view="RO" frame="form" />;
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ partnerId: string; advertiserId: string; studyId: string }>;
+}) {
+  return <LiftReportRoute params={await params} />;
 }

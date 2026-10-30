@@ -2,6 +2,7 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { seedAudiences } from '../audiences/seed';
 import { seedBulk } from '../bulk/seed';
+import { seedExperiments } from '../experiments/seed';
 import { seedPlans } from '../planning/seed';
 import { seedAppCatalog, seedResources } from '../resources/seed';
 import { seedReports } from '../reporting/seed';
@@ -161,6 +162,13 @@ export async function provisionSandbox(db: Db, input: ProvisionInput): Promise<P
           sandboxId: sandbox.id,
           ownerUserId: input.ownerUserId,
           now: new Date(),
+        });
+        // Module 17 (P4-10b): two A/B tests and three lift studies per advertiser, built on the history above.
+        await seedExperiments(tx, {
+          sandboxId: sandbox.id,
+          template: input.template,
+          seedValue: input.seedValue,
+          today: input.today ?? simToday(),
         });
         return inserted;
       },
