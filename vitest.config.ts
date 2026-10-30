@@ -16,7 +16,7 @@ export default defineConfig({
           name: 'unit',
           environment: 'node',
           include: [
-            'tests/{unit,validation,engine,seed,metrics,changelog,auth,targeting,accounts,settings,creatives,resources,inventory,reporting,youtube,audiences,planning}/**/*.test.ts',
+            'tests/{unit,validation,engine,seed,metrics,changelog,auth,targeting,accounts,settings,creatives,resources,inventory,reporting,youtube,audiences,planning,history}/**/*.test.ts',
             'tests/experiments/**/*.test.ts',
           ],
           exclude: ['**/*.db.test.ts', '**/db/**'],
@@ -34,6 +34,7 @@ export default defineConfig({
             'tests/{components,shell,settings}/**/*.test.tsx',
             'tests/creatives/**/*.test.tsx',
             'tests/reporting/**/*.test.tsx',
+            'tests/history/**/*.test.tsx',
           ],
           setupFiles: ['./vitest.setup.ts'],
         },

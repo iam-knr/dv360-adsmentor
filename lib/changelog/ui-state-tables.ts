@@ -11,6 +11,8 @@ export const UI_STATE_TABLES: readonly string[] = [
   'UserEmailPreference',
   'SavedView',
   'ChartCard',
+  // History notes are annotations on a day, not changes to an entity (module 05 4.6, DM 6.1)
+  'HistoryNote',
 ];
 
 // Engine output and the log itself. The engine's tick writes are exempt by path in module 05 4.1.1;

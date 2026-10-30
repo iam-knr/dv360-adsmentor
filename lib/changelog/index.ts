@@ -169,13 +169,21 @@ async function run<T>(
   const summary = opts.summary ?? summarise({ kind: saveKind, entries, noun: registry.noun });
   const actor = ctx.actor;
 
+  // An entity is part of its own chain, so its History page finds its own groups (module 05 C-05-2) even when a
+  // service passes only the parents.
+  const chain = { ...ref.chain };
+  if (ref.type === 'ADVERTISER') chain.advertiserId ??= id;
+  if (ref.type === 'CAMPAIGN') chain.campaignId ??= id;
+  if (ref.type === 'INSERTION_ORDER') chain.ioId ??= id;
+  if (ref.type === 'LINE_ITEM') chain.lineItemId ??= id;
+
   const base = {
     sandboxId: ctx.sandboxId,
     classroomId: ctx.classroomId,
-    advertiserId: ref.chain.advertiserId ?? null,
-    campaignId: ref.chain.campaignId ?? null,
-    ioId: ref.chain.ioId ?? null,
-    lineItemId: ref.chain.lineItemId ?? null,
+    advertiserId: chain.advertiserId ?? null,
+    campaignId: chain.campaignId ?? null,
+    ioId: chain.ioId ?? null,
+    lineItemId: chain.lineItemId ?? null,
     entityType: ref.type,
     entityId: id,
     entityPublicId: publicId,
