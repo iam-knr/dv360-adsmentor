@@ -19,6 +19,7 @@ export default defineConfig({
             'tests/{unit,validation,engine,seed,metrics,changelog,auth,targeting,accounts,settings,creatives,resources,inventory,reporting,youtube,audiences,planning,bulk,sdf,charts,history}/**/*.test.ts',
             'tests/experiments/**/*.test.ts',
             'tests/{optimisation,troubleshooter}/**/*.test.ts',
+            'tests/instructor/**/*.test.ts',
           ],
           exclude: ['**/*.db.test.ts', '**/db/**'],
           setupFiles: ['./vitest.setup.ts'],
