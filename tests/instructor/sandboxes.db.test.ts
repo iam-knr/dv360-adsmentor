@@ -26,6 +26,8 @@ const code = async (p: Promise<unknown>) => {
 };
 
 beforeAll(async () => {
+  // closed-form history only: these tests check the console, not the engine backfill (tests/sandbox/provision.db.test.ts)
+  process.env.SANDBOX_ENGINE_DAYS = '0';
   await seedReferenceData(prisma);
   const a = await createAccount(prisma, { tag: 'sbx-admin', role: 'ADMIN' });
   const b = await createAccount(prisma, { tag: 'sbx-other', role: 'ADMIN' });
@@ -38,7 +40,12 @@ beforeAll(async () => {
   classId = c.id;
   className = c.name;
   for (const n of ['One', 'Two']) {
-    const u = await createAccount(prisma, { tag: `sbx-${n}`, role: 'USER', cohortId: c.id, name: `Student ${n}` });
+    const u = await createAccount(prisma, {
+      tag: `sbx-${n}`,
+      role: 'USER',
+      cohortId: c.id,
+      name: `Student ${n}`,
+    });
     await prisma.classroomMember.create({ data: { classroomId: c.id, userId: u.user.id } });
     userIds.push(u.user.id);
     students.push({ id: u.user.id, name: u.user.name });
@@ -59,12 +66,16 @@ describe('create and reset (M18-AC12)', () => {
     expect(r.ok, r.error).toBe(true);
     const sb = await sandboxOf(students[0]!.id);
     expect(sb).toMatchObject({ provisionState: 'READY', status: 'ACTIVE', kind: 'STUDENT' });
-    const grants = await prisma.userAccessGrant.findMany({ where: { sandboxId: sb.id, userId: students[0]!.id } });
+    const grants = await prisma.userAccessGrant.findMany({
+      where: { sandboxId: sb.id, userId: students[0]!.id },
+    });
     expect(grants).toHaveLength(1);
     expect(grants[0]!.role).toBe('STANDARD');
     // idempotent: a second call neither duplicates the grant nor rebuilds
     await createSandboxFor(admin, classId, students[0]!.id);
-    expect(await prisma.sandbox.count({ where: { classroomId: classId, ownerUserId: students[0]!.id } })).toBe(1);
+    expect(
+      await prisma.sandbox.count({ where: { classroomId: classId, ownerUserId: students[0]!.id } }),
+    ).toBe(1);
     expect(await prisma.userAccessGrant.count({ where: { sandboxId: sb.id } })).toBe(1);
     expect((await sandboxOf(students[0]!.id)).resetCount).toBe(0);
     await createSandboxFor(admin, classId, students[1]!.id);
@@ -75,9 +86,17 @@ describe('create and reset (M18-AC12)', () => {
     const two = await sandboxOf(students[1]!.id);
     // the student "does work": rename the first advertiser in sandbox one and in sandbox two
     for (const sb of [one, two]) {
-      await prisma.advertiser.updateMany({ where: { sandboxId: sb.id }, data: { name: 'Student edit' } });
+      await prisma.advertiser.updateMany({
+        where: { sandboxId: sb.id },
+        data: { name: 'Student edit' },
+      });
     }
-    const r = await resetSandboxes(admin, { classId, scope: 'USER', userIds: [students[0]!.id], confirm: 'RESET' });
+    const r = await resetSandboxes(admin, {
+      classId,
+      scope: 'USER',
+      userIds: [students[0]!.id],
+      confirm: 'RESET',
+    });
     expect(r.outcomes).toEqual([{ userId: students[0]!.id, name: students[0]!.name, ok: true }]);
     const afterOne = await sandboxOf(students[0]!.id);
     expect(afterOne.id).toBe(one.id);
@@ -85,27 +104,62 @@ describe('create and reset (M18-AC12)', () => {
     expect(afterOne.lastResetAt).not.toBeNull();
     expect(afterOne.status).toBe('ACTIVE');
     expect(afterOne.provisionState).toBe('READY');
-    expect(await prisma.advertiser.count({ where: { sandboxId: one.id, name: 'Student edit' } })).toBe(0);
-    expect(await prisma.advertiser.count({ where: { sandboxId: two.id, name: 'Student edit' } })).toBeGreaterThan(0);
+    expect(
+      await prisma.advertiser.count({ where: { sandboxId: one.id, name: 'Student edit' } }),
+    ).toBe(0);
+    expect(
+      await prisma.advertiser.count({ where: { sandboxId: two.id, name: 'Student edit' } }),
+    ).toBeGreaterThan(0);
     expect((await sandboxOf(students[1]!.id)).resetCount).toBe(0);
     // access grant survives the reset (the partner keeps its id)
-    expect(await prisma.userAccessGrant.count({ where: { sandboxId: one.id, userId: students[0]!.id } })).toBe(1);
-    expect(await prisma.auditLog.count({ where: { classroomId: classId, action: 'SANDBOX_RESET' } })).toBe(1);
+    expect(
+      await prisma.userAccessGrant.count({ where: { sandboxId: one.id, userId: students[0]!.id } }),
+    ).toBe(1);
+    expect(
+      await prisma.auditLog.count({ where: { classroomId: classId, action: 'SANDBOX_RESET' } }),
+    ).toBe(1);
   }, 180_000);
 
   it('SIM-009: a forged request without the confirmation is refused and nothing changes', async () => {
     const before = await sandboxOf(students[0]!.id);
-    expect(await code(resetSandboxes(admin, { classId, scope: 'USER', userIds: [students[0]!.id] }))).toBe('SIM-009');
-    expect(await code(resetSandboxes(admin, { classId, scope: 'USER', userIds: [students[0]!.id], confirm: 'yes' }))).toBe('SIM-009');
+    expect(
+      await code(resetSandboxes(admin, { classId, scope: 'USER', userIds: [students[0]!.id] })),
+    ).toBe('SIM-009');
+    expect(
+      await code(
+        resetSandboxes(admin, {
+          classId,
+          scope: 'USER',
+          userIds: [students[0]!.id],
+          confirm: 'yes',
+        }),
+      ),
+    ).toBe('SIM-009');
     expect(await code(resetSandboxes(admin, { classId, scope: 'CLASS' }))).toBe('SIM-009');
-    expect(await code(resetSandboxes(admin, { classId, scope: 'CLASS', confirm: 'RESET' }))).toBe('SIM-009');
-    expect(await code(resetSandboxes(admin, { classId, scope: 'USER', userIds: [], confirm: 'RESET' }))).toBe('SIM-021');
+    expect(await code(resetSandboxes(admin, { classId, scope: 'CLASS', confirm: 'RESET' }))).toBe(
+      'SIM-009',
+    );
+    expect(
+      await code(resetSandboxes(admin, { classId, scope: 'USER', userIds: [], confirm: 'RESET' })),
+    ).toBe('SIM-021');
     expect((await sandboxOf(students[0]!.id)).resetCount).toBe(before.resetCount);
   });
 
   it('resets the whole class only when the class name is typed; a frozen sandbox stays frozen', async () => {
-    await prisma.sandbox.update({ where: { id: (await sandboxOf(students[1]!.id)).id }, data: { status: 'FROZEN', frozenReason: 'WINDOW', frozenAt: new Date(), clockStateBeforeFreeze: 'RUNNING' } });
-    const r = await resetSandboxes(admin, { classId, scope: 'CLASS', confirm: className.toUpperCase() });
+    await prisma.sandbox.update({
+      where: { id: (await sandboxOf(students[1]!.id)).id },
+      data: {
+        status: 'FROZEN',
+        frozenReason: 'WINDOW',
+        frozenAt: new Date(),
+        clockStateBeforeFreeze: 'RUNNING',
+      },
+    });
+    const r = await resetSandboxes(admin, {
+      classId,
+      scope: 'CLASS',
+      confirm: className.toUpperCase(),
+    });
     expect(r.outcomes.map((o) => o.ok)).toEqual([true, true]);
     const a = await sandboxOf(students[0]!.id);
     const b = await sandboxOf(students[1]!.id);
@@ -113,25 +167,57 @@ describe('create and reset (M18-AC12)', () => {
     expect(b.resetCount).toBe(1);
     expect(b.status).toBe('FROZEN');
     expect(b.clockStateBeforeFreeze).toBeNull();
-    expect(await prisma.auditLog.count({ where: { classroomId: classId, action: 'CLASS_RESET' } })).toBe(1);
+    expect(
+      await prisma.auditLog.count({ where: { classroomId: classId, action: 'CLASS_RESET' } }),
+    ).toBe(1);
   }, 240_000);
 
   it('a new market seed changes the seed value', async () => {
     const before = await sandboxOf(students[0]!.id);
-    await resetSandboxes(admin, { classId, scope: 'USER', userIds: [students[0]!.id], confirm: 'RESET', newMarketSeed: true });
+    await resetSandboxes(admin, {
+      classId,
+      scope: 'USER',
+      userIds: [students[0]!.id],
+      confirm: 'RESET',
+      newMarketSeed: true,
+    });
     expect((await sandboxOf(students[0]!.id)).seedValue).not.toBe(before.seedValue);
   }, 180_000);
 
   it('another instructor cannot reset or create sandboxes here (SIM-020)', async () => {
-    expect(await code(resetSandboxes(other, { classId, scope: 'CLASS', confirm: className }))).toBe('SIM-020');
-    expect(await code(resetSandboxes(other, { classId, scope: 'USER', userIds: [students[0]!.id], confirm: 'RESET' }))).toBe('SIM-020');
+    expect(await code(resetSandboxes(other, { classId, scope: 'CLASS', confirm: className }))).toBe(
+      'SIM-020',
+    );
+    expect(
+      await code(
+        resetSandboxes(other, {
+          classId,
+          scope: 'USER',
+          userIds: [students[0]!.id],
+          confirm: 'RESET',
+        }),
+      ),
+    ).toBe('SIM-020');
     expect(await code(createSandboxFor(other, classId, students[0]!.id))).toBe('SIM-020');
   });
 
   it('an instructor cannot name a student of another class in their own class', async () => {
-    const mine = await createClassroom(prisma, { tag: 'sbx-mine', ownerAdminId: other.id, windows: 'none' });
+    const mine = await createClassroom(prisma, {
+      tag: 'sbx-mine',
+      ownerAdminId: other.id,
+      windows: 'none',
+    });
     classroomIds.push(mine.id);
-    expect(await code(resetSandboxes(other, { classId: mine.id, scope: 'USER', userIds: [students[0]!.id], confirm: 'RESET' }))).toBe('SIM-021');
+    expect(
+      await code(
+        resetSandboxes(other, {
+          classId: mine.id,
+          scope: 'USER',
+          userIds: [students[0]!.id],
+          confirm: 'RESET',
+        }),
+      ),
+    ).toBe('SIM-021');
     expect((await sandboxOf(students[0]!.id)).status).toBe('ACTIVE');
   });
 });
@@ -141,20 +227,48 @@ describe('policy certificate requests (module 03 T09)', () => {
     const sb = await sandboxOf(students[0]!.id);
     const adv = await prisma.advertiser.findFirstOrThrow({ where: { sandboxId: sb.id } });
     const cert = await prisma.policyCertificate.create({
-      data: { sandboxId: sb.id, advertiserId: adv.id, kind: 'CRYPTOCURRENCY', status: 'REQUESTED', countryCode: 'IN', notes: uniq('why') },
+      data: {
+        sandboxId: sb.id,
+        advertiserId: adv.id,
+        kind: 'CRYPTOCURRENCY',
+        status: 'REQUESTED',
+        countryCode: 'IN',
+        notes: uniq('why'),
+      },
     });
     const list = await listCertificateRequests(admin);
     const row = list.find((r) => r.id === cert.id);
     expect(row).toMatchObject({ classId, studentName: students[0]!.name });
     expect(await listCertificateRequests(other)).toEqual([]);
 
-    expect(await code(decideCertificate(other, cert.id, 'APPROVED', undefined, 'Other', 'o@example.test'))).toBe('SIM-020');
-    await decideCertificate(admin, cert.id, 'REJECTED', 'Missing licence', 'Admin', 'a@example.test');
+    expect(
+      await code(
+        decideCertificate(other, cert.id, 'APPROVED', undefined, 'Other', 'o@example.test'),
+      ),
+    ).toBe('SIM-020');
+    await decideCertificate(
+      admin,
+      cert.id,
+      'REJECTED',
+      'Missing licence',
+      'Admin',
+      'a@example.test',
+    );
     const after = await prisma.policyCertificate.findUniqueOrThrow({ where: { id: cert.id } });
-    expect(after).toMatchObject({ status: 'REJECTED', rejectionReason: 'Missing licence', decidedById: admin.id });
-    expect(await prisma.auditLog.count({ where: { action: 'CERTIFICATE_DECIDED', targetId: cert.id } })).toBe(1);
+    expect(after).toMatchObject({
+      status: 'REJECTED',
+      rejectionReason: 'Missing licence',
+      decidedById: admin.id,
+    });
+    expect(
+      await prisma.auditLog.count({ where: { action: 'CERTIFICATE_DECIDED', targetId: cert.id } }),
+    ).toBe(1);
     // a decided request is gone from the list and cannot be decided twice
     expect((await listCertificateRequests(admin)).some((r) => r.id === cert.id)).toBe(false);
-    expect(await code(decideCertificate(admin, cert.id, 'APPROVED', undefined, 'Admin', 'a@example.test'))).toBe('SIM-018');
+    expect(
+      await code(
+        decideCertificate(admin, cert.id, 'APPROVED', undefined, 'Admin', 'a@example.test'),
+      ),
+    ).toBe('SIM-018');
   });
 });
