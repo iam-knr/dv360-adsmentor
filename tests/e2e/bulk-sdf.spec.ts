@@ -199,6 +199,8 @@ test('PW-11-12 custom charts: add a starter chart, save and it is still there af
     .getByLabel('Ask a performance question or describe metrics')
     .fill('Compare CPMs and CTRs');
   await page.getByRole('button', { name: 'Create' }).click();
+  // the prompt answers asynchronously: wait for the new card before saving
+  await expect(page.getByRole('heading', { name: /CPM and CTR by day/ })).toBeVisible();
   await page.getByRole('button', { name: 'Save charts' }).click();
   await expect(page.getByRole('region', { name: 'Customize charts' })).toHaveCount(0);
   await page.reload();
