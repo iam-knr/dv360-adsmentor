@@ -193,7 +193,7 @@ export function applyTargetingEdit(
         segments = [...d.segments, ...incoming.filter((s) => !have.has(segKey(s)))];
       }
       segments = [...segments].sort(
-        (a, b) => DAY_ORDER[a.day as Day] - DAY_ORDER[b.day as Day] || a.from.localeCompare(b.from),
+        (a, b) => DAY_ORDER[a.day] - DAY_ORDER[b.day] || a.from.localeCompare(b.from),
       );
       if (segments.length) c.dayAndTime = { segments, tz: value.tz ?? d.tz };
       else delete c.dayAndTime;

@@ -95,7 +95,7 @@ export async function runBulk(
         source: params.op === 'DUPLICATE' ? 'DUPLICATION' : 'BULK_EDIT',
         action: ACTION_OF[params.op],
         description,
-        payload: payload as unknown as Record<string, unknown>,
+        payload: payload,
         selectionCount: ids.length,
       }),
     );

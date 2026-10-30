@@ -19,7 +19,6 @@ import {
   liTypeAllowedByIoType,
   liTypeAllowedByObjective,
   LI_TYPE_LABEL,
-  type LiType,
 } from '@/lib/validation/constants/li-compat';
 import { BLK_013 } from './messages';
 import type { BulkEntityKey } from './entities';
@@ -345,7 +344,7 @@ export async function duplicateEntity(
         : await tx.insertionOrder.findUnique({ where: { id: src.ioId } });
       if (!parent || parent.status === 'ARCHIVED' || parent.advertiserId !== src.advertiserId)
         throw fail('BLK-014', "The target insertion order doesn't exist or is archived.");
-      const type = src.type as LiType;
+      const type = src.type;
       if (
         !liTypeAllowedByObjective(parent.objective, type) ||
         !liTypeAllowedByIoType(parent.type, type)

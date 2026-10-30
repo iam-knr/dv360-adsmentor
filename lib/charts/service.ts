@@ -1,5 +1,6 @@
 import 'server-only';
 // Chart views (module 11 K16): the card list of a scope and a person, as `ChartCard` rows. Save replaces the list.
+import type { Prisma } from '@prisma/client';
 import type { SessionUser } from '@/lib/auth/types';
 import { withSandbox } from '@/lib/db';
 import { assertRead, assertWrite, asResult, serviceCtx, ServiceFailure, type Result } from '@/lib/campaigns/service-kit';
@@ -86,7 +87,7 @@ export async function saveChartView(
             scopeId: target.id,
             kind: c.kind,
             viewKey,
-            definition: JSON.parse(JSON.stringify(c)),
+            definition: JSON.parse(JSON.stringify(c)) as Prisma.InputJsonValue,
             ordinal: i,
             sharedWithSandbox: !!opts.share,
           })),

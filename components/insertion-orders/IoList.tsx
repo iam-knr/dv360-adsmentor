@@ -16,6 +16,8 @@ import {
   type DvColumn,
   type EntityStatus,
 } from '@/components/dv';
+import { BulkActionBar } from '@/components/bulk/BulkActionBar';
+import { SdfMenu } from '@/components/bulk/SdfDialogs';
 import { useViewer } from '@/components/shell/ViewerProvider';
 import { patchIoBudgetAction, setIoStatusAction } from '@/lib/insertion-orders/actions';
 import { IO_TYPE_LABEL, type IoRow } from '@/lib/insertion-orders/wire';
@@ -60,6 +62,7 @@ export function IoList({
   const [filter, setFilter] = useState('ACTIVE');
   const [page, setPage] = useState({ page: 1, size: 20 });
   const [error, setError] = useState<string | null>(null);
+  const [selection, setSelection] = useState<Set<string>>(new Set());
   const [, startTransition] = useTransition();
   const shown = useMemo(
     () => (filter === '*' ? rows : rows.filter((r) => r.status === filter)),
@@ -162,6 +165,7 @@ export function IoList({
             }}
           />
         </Box>
+        {embedded ? null : <SdfMenu advertiserId={advertiserId} />}
         {campaignId ? (
           <Button
             variant="contained"
@@ -177,6 +181,14 @@ export function IoList({
           {error}
         </Typography>
       ) : null}
+      <BulkActionBar
+        entity="insertionOrder"
+        selection={selection}
+        rows={rows.map((r) => ({ id: r.publicId, status: r.status }))}
+        advertiserId={advertiserId}
+        onClear={() => setSelection(new Set())}
+        bulkStatusHref="/bulk-status"
+      />
       <DvGrid
         ariaLabel="Insertion orders"
         rows={shown.slice(start, start + page.size)}
@@ -186,6 +198,8 @@ export function IoList({
           { id: 'delivery', label: 'Delivery', collapsible: true },
         ]}
         getRowId={(r) => r.publicId}
+        selection={selection}
+        onSelectionChange={setSelection}
         page={page.page}
         pageSize={page.size}
         total={shown.length}

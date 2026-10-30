@@ -87,8 +87,8 @@ describe('chart data (V-11-17)', () => {
     if (!ctr.ok) throw new Error('ctr');
     expect(ctr.data.unit).toBe('%');
     expect(ctr.data.series[0]!.points.every((p) => p.y === 1)).toBe(true);
-    const [{ sum }] = await prisma.$queryRaw<{ sum: number }[]>`SELECT SUM(revenue)::float AS sum FROM "SimDailyMetric" WHERE "lineItemId" = ${w.lineItemId}`;
-    expect(sum).toBe(30);
+    const [sumRow] = await prisma.$queryRaw<{ sum: number }[]>`SELECT SUM(revenue)::float AS sum FROM "SimDailyMetric" WHERE "lineItemId" = ${w.lineItemId}`;
+    expect(sumRow!.sum).toBe(30);
   });
 
   it('bubble and top N shapes', async () => {

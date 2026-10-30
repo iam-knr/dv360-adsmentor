@@ -89,7 +89,7 @@ export const campaignMaps: ColMaps<CampaignModel> = {
       const rows = decTuples(v);
       const old = m.wire.budgets.filter((b) => !isEmptyBudgetRow(b));
       m.wire.budgets = rows.map((r, i): CampaignBudgetWire => ({
-        ...(old[i]?.id ? { id: old[i]!.id } : {}),
+        ...(old[i]?.id ? { id: old[i].id } : {}),
         amount: decNum(r[0] ?? '') ?? '',
         name: r[1] ?? '',
         startDate: decDate(r[2] ?? ''),

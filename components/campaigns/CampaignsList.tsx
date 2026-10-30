@@ -15,6 +15,8 @@ import {
   type DvColumn,
   type EntityStatus,
 } from '@/components/dv';
+import { BulkActionBar } from '@/components/bulk/BulkActionBar';
+import { SdfMenu } from '@/components/bulk/SdfDialogs';
 import { useViewer } from '@/components/shell/ViewerProvider';
 import { setCampaignStatusAction } from '@/lib/campaigns/actions';
 import type { CampaignRow, EntityStatusKey } from '@/lib/campaigns/wire';
@@ -53,6 +55,7 @@ export function CampaignsList({
   const [page, setPage] = useState({ page: 1, size: 20 });
   const [, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [selection, setSelection] = useState<Set<string>>(new Set());
 
   const shown = useMemo(
     () => (filter === '*' ? rows : rows.filter((r) => r.status === filter)),
@@ -99,13 +102,16 @@ export function CampaignsList({
         title="Campaigns"
         limitedAccess={viewer.limitedAccess}
         actions={
-          <Button
-            variant="contained"
-            disabled={viewer.readOnly}
-            href={advertiserPath(partnerId, advertiserId, 'cs', 'new')}
-          >
-            New campaign
-          </Button>
+          <>
+            <SdfMenu advertiserId={advertiserId} campaignsList />
+            <Button
+              variant="contained"
+              disabled={viewer.readOnly}
+              href={advertiserPath(partnerId, advertiserId, 'cs', 'new')}
+            >
+              New campaign
+            </Button>
+          </>
         }
       />
       <Box sx={{ mb: 2, maxWidth: 240 }}>
@@ -124,6 +130,14 @@ export function CampaignsList({
           {error}
         </Typography>
       ) : null}
+      <BulkActionBar
+        entity="campaign"
+        selection={selection}
+        rows={rows.map((r) => ({ id: r.publicId, status: r.status }))}
+        advertiserId={advertiserId}
+        onClear={() => setSelection(new Set())}
+        bulkStatusHref="/bulk-status"
+      />
       <DvGrid
         ariaLabel="Campaigns"
         rows={shown.slice(start, start + page.size)}
@@ -133,6 +147,8 @@ export function CampaignsList({
           { id: 'delivery', label: 'Delivery', collapsible: true },
         ]}
         getRowId={(r) => r.publicId}
+        selection={selection}
+        onSelectionChange={setSelection}
         page={page.page}
         pageSize={page.size}
         total={shown.length}

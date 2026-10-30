@@ -134,7 +134,7 @@ export const liMaps: ColMaps<LiModel> = {
     (m, v) => (m.value.bid = m.value.bid.mode === 'FIXED' ? { ...m.value.bid, fixedCpm: v } : { ...m.value.bid, targetValue: v }),
   ),
   'Bid Priority': enm(PRIORITY, 'Bid Priority', (m) => (m.value.bid.mode === 'AUTOMATED' ? m.value.bid.priority : null), (m, v) => (m.value.bid = { ...m.value.bid, priority: v })),
-  'Inventory Quality': enm(QUALITY, 'Inventory Quality', (m) => m.value.inventory.quality as keyof typeof QUALITY | null, (m, v) => (m.value.inventory = { ...m.value.inventory, quality: v as never })),
+  'Inventory Quality': enm(QUALITY, 'Inventory Quality', (m) => m.value.inventory.quality, (m, v) => (m.value.inventory = { ...m.value.inventory, quality: v })),
   'Target Curated CTV': bool((m) => m.value.inventory.targetCuratedCtv, (m, v) => (m.value.inventory = { ...m.value.inventory, targetCuratedCtv: !!v })),
   'Optimized Targeting': bool((m) => m.value.optimizedTargeting, (m, v) => (m.value.optimizedTargeting = !!v)),
   ...selPair('Geography Targeting - Include', 'Geography Targeting - Exclude', (c) => c.geography?.regions, (c, next) => {

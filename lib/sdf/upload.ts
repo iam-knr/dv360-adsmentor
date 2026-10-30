@@ -153,7 +153,7 @@ async function processRow(
   } else if (parentCol) {
     const raw = cells[parentCol] ?? '';
     const parentEntity = entity === 'INSERTION_ORDERS' ? 'CAMPAIGNS' : entity === 'LINE_ITEMS' ? 'INSERTION_ORDERS' : entity === 'AD_GROUPS' ? 'LINE_ITEMS' : 'AD_GROUPS';
-    const noun = { CAMPAIGNS: 'campaign', INSERTION_ORDERS: 'insertion order', LINE_ITEMS: 'line item', AD_GROUPS: 'ad group' }[parentEntity]!;
+    const noun = { CAMPAIGNS: 'campaign', INSERTION_ORDERS: 'insertion order', LINE_ITEMS: 'line item', AD_GROUPS: 'ad group' }[parentEntity];
     if (/^ext/i.test(raw)) {
       const k = extKey(parentEntity, raw);
       if (env.failedExt.has(k)) return done('BLK-029', BLK['BLK-029']);
@@ -198,9 +198,9 @@ async function findByPublicId(env: Env, entity: SdfEntity, publicId: string) {
 
 type AnyMaps = Record<string, { get?: (m: never) => string; set?: (m: never, v: string) => void }>;
 const MAPS: Record<string, AnyMaps> = {
-  CAMPAIGNS: campaignMaps as unknown as AnyMaps,
-  INSERTION_ORDERS: ioMaps as unknown as AnyMaps,
-  LINE_ITEMS: liMaps as unknown as AnyMaps,
+  CAMPAIGNS: campaignMaps,
+  INSERTION_ORDERS: ioMaps,
+  LINE_ITEMS: liMaps,
 };
 
 const SKIP_ON_APPLY = new Set(['Timestamp', 'Advertiser Id']);
@@ -228,7 +228,7 @@ async function createRow(env: Env, entity: SdfEntity, cells: Record<string, stri
     if (rawId !== '') env.created.set(extKey(entity, rawId), created);
   };
   if (entity === 'CAMPAIGNS') {
-    const model = { publicId: '', advertiserPublicId: env.advertiserPublicId, updatedAt: new Date(), wire: newCampaignValue(env.today) } as CampaignModel;
+    const model = { publicId: '', advertiserPublicId: env.advertiserPublicId, updatedAt: new Date(), wire: newCampaignValue(env.today) };
     model.wire.budgets = [];
     applyCells(env, entity, model, cells, null, out);
     setNewStatus(cells, (s) => (model.wire.status = s === 'PAUSED' ? 'PAUSED' : 'ACTIVE'));
@@ -241,7 +241,7 @@ async function createRow(env: Env, entity: SdfEntity, cells: Record<string, stri
     const type = new Map([['standard', 'STANDARD'], ['connected tv and ott streaming', 'CTV_OTT'], ['digital out of home', 'DOOH']]).get((cells['Io Type'] ?? '').toLowerCase()) as 'STANDARD' | 'CTV_OTT' | 'DOOH' | undefined;
     const probe = { wire: newIoValue(type ?? 'STANDARD', 'NONE', env.today) } as unknown as IoModel;
     ioMaps.Objective!.set!(probe, cells.Objective ?? '');
-    const model = { publicId: '', campaignPublicId: parent.publicId, updatedAt: new Date(), wire: newIoValue(probe.wire.type ?? type ?? 'STANDARD', probe.wire.objective ?? 'NONE', env.today) } as IoModel;
+    const model = { publicId: '', campaignPublicId: parent.publicId, updatedAt: new Date(), wire: newIoValue(probe.wire.type ?? type ?? 'STANDARD', probe.wire.objective ?? 'NONE', env.today) };
     applyCells(env, entity, model, cells, null, out);
     setNewStatus(cells, (s) => (model.wire.status = s === 'ACTIVE' ? 'ACTIVE' : 'DRAFT'));
     const res = await createInsertionOrder(user, parent.id, model.wire);
@@ -305,7 +305,7 @@ async function updateRow(env: Env, entity: SdfEntity, cells: Record<string, stri
   }
   const locks = LOCKED[entity] ?? {};
   for (const name of changed)
-    if (locks[name]) return { ...out, ruleId: 'BLK-033', message: blk033(locks[name]!) };
+    if (locks[name]) return { ...out, ruleId: 'BLK-033', message: blk033(locks[name]) };
   for (const name of [...changed]) {
     const col = columnsFor(entity, env.version).find((c) => c.name === name)!;
     if (col.readOnly) {
@@ -376,7 +376,7 @@ async function processYoutubeRow(env: Env, entity: SdfEntity, cells: Record<stri
       const user = env.user;
       const d = await getAdGroupDetail(user, found.id);
       if (!d) return { ...out, ruleId: 'BLK-025', message: blk025('ad group') };
-      const value = { ...d.value, name: cells.Name ?? g.name, ...(bidChanged ? { bid: String(decNum(bidCell!) ?? '') } : {}) };
+      const value = { ...d.value, name: cells.Name ?? g.name, ...(bidChanged ? { bid: String(decNum(bidCell) ?? '') } : {}) };
       const res = await updateAdGroup(user, found.id, value);
       if (!res.ok) return { ...out, ...resultFail(res) };
     } else {
@@ -537,7 +537,7 @@ export async function requestSdfUpload(user: SessionUser, req: SdfUploadRequest)
         jobId: job.id,
         entityType: ({ CAMPAIGNS: 'CAMPAIGN', INSERTION_ORDERS: 'INSERTION_ORDER', LINE_ITEMS: 'LINE_ITEM', AD_GROUPS: 'AD_GROUP', ADS: 'AD', MEDIA_PRODUCTS: 'DEAL' } as const)[entity],
         entityId: o.id ?? null,
-        status: (o.ok ? 'OK' : 'FAILED') as 'OK' | 'FAILED',
+        status: o.ok ? ('OK' as const) : ('FAILED' as const),
         message: o.message ?? o.warnings[0]?.message ?? null,
         ruleId: o.ruleId ?? o.warnings[0]?.ruleId ?? null,
         rowNumber: o.rowNumber,

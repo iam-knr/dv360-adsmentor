@@ -105,7 +105,7 @@ export async function loadRows(
             id: r.id,
             publicId: r.publicId.toString(),
             status: norm(r.status),
-            type: r.type as LiType,
+            type: r.type,
             name: r.name,
             advertiserId: r.advertiserId,
             parentPublicId: r.io.publicId.toString(),
@@ -178,7 +178,7 @@ async function editLiSettings(user: SessionUser, row: RowInfo, patch: LiSettings
       maxImpressions: patch.frequencyCap.maxImpressions === '' ? null : (patch.frequencyCap.maxImpressions ?? value.frequencyCap.maxImpressions),
       periodCount: patch.frequencyCap.periodCount === '' ? null : (patch.frequencyCap.periodCount ?? value.frequencyCap.periodCount),
       period: patch.frequencyCap.period ?? value.frequencyCap.period,
-    } as typeof value.frequencyCap;
+    };
   if (patch.fixedBid !== undefined) {
     if (value.bid.mode !== 'FIXED')
       return { ok: false as const, issues: [{ message: 'Fixed bid applies to line items on a fixed bid strategy.', ruleId: 'LI-040' }] };
@@ -219,7 +219,7 @@ async function editInventory(
         const own = await t.lineItemInventory.findMany({
           where: { lineItemId: li.id, kind: { in: [...kinds] } },
         });
-        const kindOf = (id: string) => (dimension === 'DEAL_GROUPS' ? 'GROUP' : 'DEAL') as 'GROUP' | 'DEAL';
+        const kindOf = () => (dimension === 'DEAL_GROUPS' ? 'GROUP' : 'DEAL');
         if (mode === 'REMOVE' || mode === 'REPLACE') {
           const drop = mode === 'REPLACE' ? own : own.filter((r) => ids.includes(r.refId));
           if (drop.length)
@@ -230,8 +230,8 @@ async function editInventory(
           const add = mode === 'REPLACE' ? ids : ids.filter((id) => !have.has(id));
           for (const refId of add)
             await t.lineItemInventory.upsert({
-              where: { lineItemId_kind_refId: { lineItemId: li.id, kind: kindOf(refId), refId } },
-              create: { sandboxId: ctx.sandboxId, lineItemId: li.id, kind: kindOf(refId), refId },
+              where: { lineItemId_kind_refId: { lineItemId: li.id, kind: kindOf(), refId } },
+              create: { sandboxId: ctx.sandboxId, lineItemId: li.id, kind: kindOf(), refId },
               update: {},
             });
         }
@@ -381,7 +381,7 @@ export async function executeItem(
       );
       let err: BulkItemOutcome | null = null;
       for (const li of lis) {
-        const info: RowInfo = { id: li.id, publicId: li.publicId.toString(), status: 'ACTIVE', type: li.type as LiType, name: li.name, advertiserId: li.advertiserId, parentPublicId: row.publicId };
+        const info: RowInfo = { id: li.id, publicId: li.publicId.toString(), status: 'ACTIVE', type: li.type, name: li.name, advertiserId: li.advertiserId, parentPublicId: row.publicId };
         const res = await applyTemplate(user, info, params.templateId);
         if (!res.ok && !err && res.issues?.[0]?.ruleId !== 'BLK-012') err = outcome(index, row, res);
       }
@@ -392,8 +392,8 @@ export async function executeItem(
         index,
         row,
         entity === 'insertionOrder'
-          ? await editIoSettings(user, row, params.patch as IoSettingsPatch)
-          : await editLiSettings(user, row, params.patch as LiSettingsPatch),
+          ? await editIoSettings(user, row, params.patch)
+          : await editLiSettings(user, row, params.patch),
       );
     case 'EDIT_TARGETING':
       return outcome(index, row, await editTargeting(user, row, params));

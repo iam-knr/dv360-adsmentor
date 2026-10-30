@@ -15,6 +15,8 @@ import {
   type DvColumn,
   type EntityStatus,
 } from '@/components/dv';
+import { BulkActionBar } from '@/components/bulk/BulkActionBar';
+import { SdfMenu } from '@/components/bulk/SdfDialogs';
 import { useViewer } from '@/components/shell/ViewerProvider';
 import { setLineItemStatusAction } from '@/lib/line-items/actions';
 import { LI_TYPE_LABEL } from '@/lib/line-items/type-config';
@@ -59,6 +61,7 @@ export function LiGrid({
   const [filter, setFilter] = useState(archived ? 'ARCHIVED' : 'ACTIVE');
   const [page, setPage] = useState({ page: 1, size: 50 });
   const [error, setError] = useState<string | null>(null);
+  const [selection, setSelection] = useState<Set<string>>(new Set());
   const [, startTransition] = useTransition();
   const { currency } = result;
   const shown = useMemo(
@@ -189,11 +192,16 @@ export function LiGrid({
           title={archived ? 'Archived line items' : 'Line items'}
           limitedAccess={viewer.limitedAccess}
           actions={
-            newLink && !archived ? (
-              <Button variant="contained" disabled={viewer.readOnly} href={newLink}>
-                New line item
-              </Button>
-            ) : undefined
+            archived ? undefined : (
+              <>
+                <SdfMenu advertiserId={advertiserId} />
+                {newLink ? (
+                  <Button variant="contained" disabled={viewer.readOnly} href={newLink}>
+                    New line item
+                  </Button>
+                ) : null}
+              </>
+            )
           }
         />
       )}
@@ -215,6 +223,14 @@ export function LiGrid({
           {error}
         </Typography>
       ) : null}
+      <BulkActionBar
+        entity="lineItem"
+        selection={selection}
+        rows={result.rows.map((r) => ({ id: r.publicId, status: r.status, type: r.type }))}
+        advertiserId={advertiserId}
+        onClear={() => setSelection(new Set())}
+        bulkStatusHref="/bulk-status"
+      />
       <DvGrid
         ariaLabel="Line items"
         rows={shown.slice(start, start + page.size)}
@@ -224,6 +240,8 @@ export function LiGrid({
           { id: 'delivery', label: 'Delivery', collapsible: true },
         ]}
         getRowId={(r) => r.publicId}
+        selection={selection}
+        onSelectionChange={setSelection}
         page={page.page}
         pageSize={page.size}
         total={shown.length}

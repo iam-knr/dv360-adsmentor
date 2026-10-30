@@ -70,7 +70,7 @@ export const ioMaps: ColMaps<IoModel> = {
     set: (m, v) => {
       const old = m.wire.budget.segments;
       const segments = decTuples(v).map((r, i): SegmentWire => ({
-        ...(old[i]?.id ? { id: old[i]!.id } : {}),
+        ...(old[i]?.id ? { id: old[i].id } : {}),
         amount: decNum(r[0] ?? '') ?? '',
         startDate: decDate(r[1] ?? ''),
         endDate: decDate(r[2] ?? ''),

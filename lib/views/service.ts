@@ -22,7 +22,7 @@ export async function listViews(user: SessionUser, grid: ViewGrid, advertiserId:
     return rows.map((r) => ({
       id: r.id,
       name: r.name,
-      columns: ((r.columns as { order?: string[] })?.order ?? []) as string[],
+      columns: ((r.columns as { order?: string[] })?.order ?? []),
       isPinned: r.isPinned,
     }));
   });
