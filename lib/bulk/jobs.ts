@@ -6,7 +6,12 @@ import type { SessionUser } from '@/lib/auth/types';
 import { fileStore } from '@/lib/creatives/storage';
 import { withSandbox, type Tx } from '@/lib/db';
 import { LIMITS } from '@/lib/validation/constants/limits';
-import { assertRead, serviceCtx, ServiceFailure, type ServiceCtx } from '@/lib/campaigns/service-kit';
+import {
+  assertRead,
+  serviceCtx,
+  ServiceFailure,
+  type ServiceCtx,
+} from '@/lib/campaigns/service-kit';
 import { SOURCE_LABEL } from './messages';
 import type { BulkJobDetail, BulkJobRow, BulkJobStatusKey } from './types';
 
@@ -99,7 +104,11 @@ export async function putResult(
   bytes: Uint8Array,
 ): Promise<string> {
   const key = resultKey(sandboxId, jobId, name);
-  await fileStore().put(key, bytes, CONTENT_TYPE[name.split('.').pop() ?? ''] ?? 'application/octet-stream');
+  await fileStore().put(
+    key,
+    bytes,
+    CONTENT_TYPE[name.split('.').pop() ?? ''] ?? 'application/octet-stream',
+  );
   return key;
 }
 
@@ -133,7 +142,9 @@ function rowOf(j: JobRowDb): BulkJobRow {
 }
 
 /** K13: the 100 most recent jobs of the sandbox (BLK-015). */
-export async function listJobs(user: SessionUser): Promise<{ rows: BulkJobRow[]; capped: boolean }> {
+export async function listJobs(
+  user: SessionUser,
+): Promise<{ rows: BulkJobRow[]; capped: boolean }> {
   const ctx = await serviceCtx(user);
   assertRead(ctx);
   return withSandbox(ctx.sandboxId, async (tx) => {

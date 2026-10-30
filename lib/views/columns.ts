@@ -56,7 +56,17 @@ const SETS: Record<PredefinedView, Record<ViewGrid, string[]>> = {
   performance: {
     CAMPAIGN: ['name', 'id', 'budget', 'spent', 'kpiGoal', 'kpiActual'],
     IO: ['name', 'id', 'type', 'budget', 'goal', 'impressions', 'revenue'],
-    LI: ['name', 'id', 'type', 'budget', 'goal', 'impressions', 'clicks', 'trueViewViews', 'revenue'],
+    LI: [
+      'name',
+      'id',
+      'type',
+      'budget',
+      'goal',
+      'impressions',
+      'clicks',
+      'trueViewViews',
+      'revenue',
+    ],
   },
   summary: {
     CAMPAIGN: ['name', 'id', 'budget', 'spent'],
@@ -77,7 +87,8 @@ const SETS: Record<PredefinedView, Record<ViewGrid, string[]>> = {
 
 export const DEFAULT_VIEW: PredefinedView = 'performance';
 
-export const predefinedColumns = (grid: ViewGrid, view: PredefinedView): string[] => SETS[view][grid];
+export const predefinedColumns = (grid: ViewGrid, view: PredefinedView): string[] =>
+  SETS[view][grid];
 
 export interface CustomView {
   id: string;
@@ -89,13 +100,19 @@ export interface CustomView {
 export const customKey = (id: string) => `custom:${id}`;
 
 /** The ordered column ids for a view key: `performance`, `custom:{id}`. Unknown keys fall back to Performance. */
-export function resolveView(grid: ViewGrid, key: string | undefined, custom: readonly CustomView[]): string[] {
+export function resolveView(
+  grid: ViewGrid,
+  key: string | undefined,
+  custom: readonly CustomView[],
+): string[] {
   const known = new Set(GRID_COLUMNS[grid].map((c) => c.id));
   if (key?.startsWith('custom:')) {
     const v = custom.find((c) => customKey(c.id) === key);
     if (v) return v.columns.filter((c) => known.has(c));
   }
-  const p = (PREDEFINED as readonly string[]).includes(key ?? '') ? (key as PredefinedView) : DEFAULT_VIEW;
+  const p = (PREDEFINED as readonly string[]).includes(key ?? '')
+    ? (key as PredefinedView)
+    : DEFAULT_VIEW;
   return SETS[p][grid];
 }
 

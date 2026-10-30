@@ -2,7 +2,13 @@
 // List dimensions merge by option id; single-value dimensions (Connection speed, Viewability, Environment,
 // Position) are overwritten, and Remove deletes the row. Dimensions the line item type does not offer (MX-10) are
 // skipped by the caller before this runs.
-import type { Day, DaySegment, Sel, TargetingCriteria, TargetingState } from '@/lib/targeting/types';
+import type {
+  Day,
+  DaySegment,
+  Sel,
+  TargetingCriteria,
+  TargetingState,
+} from '@/lib/targeting/types';
 import type { BulkTargetingDimension, EditMode } from './types';
 
 const mergeSels = (current: Sel[] | undefined, value: Sel[], mode: EditMode): Sel[] => {

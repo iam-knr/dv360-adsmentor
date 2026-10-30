@@ -16,7 +16,11 @@ const user = () => userFor(w);
 beforeAll(async () => {
   w = await createLiWorld('sdf');
   await prisma.advertiser.update({ where: { id: w.advertiserId }, data: { sdfVersion: 'V11' } });
-  const made = await createLineItem(user(), w.ioId, await validDraft(w, 'DISPLAY', 'SDF line item'));
+  const made = await createLineItem(
+    user(),
+    w.ioId,
+    await validDraft(w, 'DISPLAY', 'SDF line item'),
+  );
   if (!made.ok) throw new Error(JSON.stringify(made.issues));
 });
 afterAll(async () => {
@@ -24,22 +28,40 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-const ALL = { CAMPAIGNS: true, INSERTION_ORDERS: true, LINE_ITEMS: true, AD_GROUPS: true, ADS: true, MEDIA_PRODUCTS: true };
+const ALL = {
+  CAMPAIGNS: true,
+  INSERTION_ORDERS: true,
+  LINE_ITEMS: true,
+  AD_GROUPS: true,
+  ADS: true,
+  MEDIA_PRODUCTS: true,
+};
 
 async function download(include: Partial<typeof ALL> = ALL, extra: Record<string, unknown> = {}) {
-  const res = await requestSdfDownload(user(), { advertiserId: w.advertiserId, include, kind: 'DATA', ...extra });
+  const res = await requestSdfDownload(user(), {
+    advertiserId: w.advertiserId,
+    include,
+    kind: 'DATA',
+    ...extra,
+  });
   if (!res.ok) throw new Error(JSON.stringify(res.issues));
   const file = await getJobResult(user(), res.data.jobId);
   return { jobId: res.data.jobId, files: unzipSync(file!.bytes), name: file!.name };
 }
-const csvOf = (files: Record<string, Uint8Array>, name: string) => parseCsv(strFromU8(files[name]!))!;
+const csvOf = (files: Record<string, Uint8Array>, name: string) =>
+  parseCsv(strFromU8(files[name]!))!;
 const upload = async (files: { name: string; text: string }[]) => {
   const res = await requestSdfUpload(user(), { advertiserId: w.advertiserId, files });
   if (!res.ok) throw new Error(JSON.stringify(res));
   return res.data;
 };
 const textOf = (files: Record<string, Uint8Array>, name: string) => strFromU8(files[name]!);
-const setCell = (file: { headers: string[]; rows: string[][] }, row: number, col: string, value: string) => {
+const setCell = (
+  file: { headers: string[]; rows: string[][] },
+  row: number,
+  col: string,
+  value: string,
+) => {
   file.rows[row]![file.headers.indexOf(col)] = value;
 };
 const toText = (f: { headers: string[]; rows: string[][] }) => writeCsv(f.headers, f.rows);
@@ -47,12 +69,20 @@ const toText = (f: { headers: string[]; rows: string[][] }) => writeCsv(f.header
 describe('download (AC-11-01..03, AC-11-13)', () => {
   it('writes only the ticked entities and a zip name with the advertiser id', async () => {
     const { files, name } = await download({ CAMPAIGNS: true, LINE_ITEMS: true });
-    expect(Object.keys(files).sort()).toEqual(['README.txt', 'SDF-Campaigns.csv', 'SDF-LineItems.csv']);
+    expect(Object.keys(files).sort()).toEqual([
+      'README.txt',
+      'SDF-Campaigns.csv',
+      'SDF-LineItems.csv',
+    ]);
     expect(name).toMatch(/^SDF-\d+-\d{12}\.zip$/);
   });
 
   it('rejects an empty selection (BLK-001)', async () => {
-    const res = await requestSdfDownload(user(), { advertiserId: w.advertiserId, include: {}, kind: 'DATA' });
+    const res = await requestSdfDownload(user(), {
+      advertiserId: w.advertiserId,
+      include: {},
+      kind: 'DATA',
+    });
     expect(res.ok).toBe(false);
   });
 
@@ -68,15 +98,40 @@ describe('download (AC-11-01..03, AC-11-13)', () => {
   });
 
   it('metadata and QA files carry their header rows', async () => {
-    const meta = await requestSdfDownload(user(), { advertiserId: w.advertiserId, include: {}, kind: 'METADATA' });
+    const meta = await requestSdfDownload(user(), {
+      advertiserId: w.advertiserId,
+      include: {},
+      kind: 'METADATA',
+    });
     if (!meta.ok) throw new Error('meta');
     const m = parseCsv(strFromU8((await getJobResult(user(), meta.data.jobId))!.bytes))!;
-    expect(m.headers.slice(0, 5)).toEqual(['Entity Type', 'Id', 'Name', 'Parent Type', 'Parent Id']);
-    expect(m.rows.map((r) => r[0])).toEqual(expect.arrayContaining(['Campaign', 'Insertion order', 'Line item']));
-    const qa = await requestSdfDownload(user(), { advertiserId: w.advertiserId, include: {}, kind: 'QA' });
+    expect(m.headers.slice(0, 5)).toEqual([
+      'Entity Type',
+      'Id',
+      'Name',
+      'Parent Type',
+      'Parent Id',
+    ]);
+    expect(m.rows.map((r) => r[0])).toEqual(
+      expect.arrayContaining(['Campaign', 'Insertion order', 'Line item']),
+    );
+    const qa = await requestSdfDownload(user(), {
+      advertiserId: w.advertiserId,
+      include: {},
+      kind: 'QA',
+    });
     if (!qa.ok) throw new Error('qa');
     const q = parseCsv(strFromU8((await getJobResult(user(), qa.data.jobId))!.bytes))!;
-    expect(q.headers).toEqual(['Entity', 'Id', 'Name', 'Row Severity', 'Rule Id', 'Field', 'Message', 'Suggested Fix']);
+    expect(q.headers).toEqual([
+      'Entity',
+      'Id',
+      'Name',
+      'Row Severity',
+      'Rule Id',
+      'Field',
+      'Message',
+      'Suggested Fix',
+    ]);
   });
 });
 
@@ -85,10 +140,17 @@ describe('upload (AC-11-04..11)', () => {
     const { files } = await download({ CAMPAIGNS: true, INSERTION_ORDERS: true, LINE_ITEMS: true });
     const before = await prisma.changeGroup.count({ where: { sandboxId: w.sandboxId } });
     const out = await upload(
-      ['Campaigns', 'InsertionOrders', 'LineItems'].map((n) => ({ name: `SDF-${n}.csv`, text: textOf(files, `SDF-${n}.csv`) })),
+      ['Campaigns', 'InsertionOrders', 'LineItems'].map((n) => ({
+        name: `SDF-${n}.csv`,
+        text: textOf(files, `SDF-${n}.csv`),
+      })),
     );
     expect(out.status).toBe('COMPLETED');
-    expect(out.perFile.map((f) => [f.succeeded, f.failed])).toEqual([[1, 0], [1, 0], [2, 0]]);
+    expect(out.perFile.map((f) => [f.succeeded, f.failed])).toEqual([
+      [1, 0],
+      [1, 0],
+      [2, 0],
+    ]);
     expect(await prisma.changeGroup.count({ where: { sandboxId: w.sandboxId } })).toBe(before);
   });
 
@@ -98,14 +160,22 @@ describe('upload (AC-11-04..11)', () => {
     setCell(f, 0, 'Name', 'Renamed by SDF');
     const out = await upload([{ name: 'SDF-LineItems.csv', text: toText(f) }]);
     expect(out.perFile[0]).toMatchObject({ failed: 0 });
-    const li = await prisma.lineItem.findFirstOrThrow({ where: { publicId: BigInt(f.rows[0]![0]!) } });
+    const li = await prisma.lineItem.findFirstOrThrow({
+      where: { publicId: BigInt(f.rows[0]![0]!) },
+    });
     expect(li.name).toBe('Renamed by SDF');
     const g = await prisma.changeGroup.findMany({ where: { bulkJobId: out.jobId } });
-    expect((await prisma.changeEntry.findMany({ where: { groupId: g[0]!.id } })).map((e) => e.label)).toContain('Name');
+    expect(
+      (await prisma.changeEntry.findMany({ where: { groupId: g[0]!.id } })).map((e) => e.label),
+    ).toContain('Name');
     expect(g).toHaveLength(1);
     expect(g[0]!.source).toBe('SDF_UPLOAD');
     const zip = unzipSync((await getJobResult(user(), out.jobId))!.bytes);
-    expect(Object.keys(zip).sort()).toEqual(['SDF-LineItems-Failed.csv', 'SDF-LineItems-Successful.csv', 'Summary.txt']);
+    expect(Object.keys(zip).sort()).toEqual([
+      'SDF-LineItems-Failed.csv',
+      'SDF-LineItems-Successful.csv',
+      'Summary.txt',
+    ]);
     expect(csvOf(zip, 'SDF-LineItems-Successful.csv').rows).toHaveLength(2);
   });
 
@@ -153,7 +223,10 @@ describe('upload (AC-11-04..11)', () => {
   });
 
   it('a version 9 file is refused by a version 11 advertiser (BLK-021, AC-11-09)', async () => {
-    const legacy = writeCsv(['Campaign Id', 'Advertiser Id', 'Name', 'Inventory Source Targeting - Include'], [['ext1', '1', 'x', '']]);
+    const legacy = writeCsv(
+      ['Campaign Id', 'Advertiser Id', 'Name', 'Inventory Source Targeting - Include'],
+      [['ext1', '1', 'x', '']],
+    );
     const out = await upload([{ name: 'SDF-Campaigns.csv', text: legacy }]);
     expect(out.status).toBe('FAILED');
     expect(out.fileErrors[0]!.ruleId).toBe('BLK-021');
@@ -184,16 +257,28 @@ describe('upload (AC-11-04..11)', () => {
     li.rows.length = 1;
     const out = await upload([
       { name: 'SDF-Campaigns.csv', text: toText({ headers: c.headers, rows: [c.rows[0]!] }) },
-      { name: 'SDF-InsertionOrders.csv', text: toText({ headers: io.headers, rows: [io.rows[0]!] }) },
+      {
+        name: 'SDF-InsertionOrders.csv',
+        text: toText({ headers: io.headers, rows: [io.rows[0]!] }),
+      },
       { name: 'SDF-LineItems.csv', text: toText(li) },
     ]);
     const failed = out.perFile.filter((f) => f.failed > 0);
     if (failed.length) {
       const zip = unzipSync((await getJobResult(user(), out.jobId))!.bytes);
-      throw new Error(textOf(zip, 'Summary.txt') + Object.keys(zip).filter((k) => k.endsWith('Failed.csv')).map((k) => textOf(zip, k)).join('\n'));
+      throw new Error(
+        textOf(zip, 'Summary.txt') +
+          Object.keys(zip)
+            .filter((k) => k.endsWith('Failed.csv'))
+            .map((k) => textOf(zip, k))
+            .join('\n'),
+      );
     }
     expect(out.euDefaulted).toBe(1);
-    const newLi = await prisma.lineItem.findFirstOrThrow({ where: { name: 'SDF new LI' }, include: { io: { include: { campaign: true } } } });
+    const newLi = await prisma.lineItem.findFirstOrThrow({
+      where: { name: 'SDF new LI' },
+      include: { io: { include: { campaign: true } } },
+    });
     expect(newLi.io.name).toBe('SDF new IO');
     expect(newLi.io.campaign.name).toBe('SDF new campaign');
     expect(newLi.euPoliticalAds).toBe('DOES_NOT_CONTAIN_EU_POLITICAL_ADS');
@@ -201,14 +286,22 @@ describe('upload (AC-11-04..11)', () => {
 
   it('refuses a version 9 upload after the end date (BLK-022, AC-11-11)', async () => {
     await prisma.advertiser.update({ where: { id: w.advertiserId }, data: { sdfVersion: 'V9' } });
-    await prisma.simClock.update({ where: { sandboxId: w.sandboxId }, data: { simStart: new Date('2027-02-01T00:00:00Z') } });
-    const out = await upload([{ name: 'SDF-Campaigns.csv', text: writeCsv(['Campaign Id'], [['1']]) }]);
+    await prisma.simClock.update({
+      where: { sandboxId: w.sandboxId },
+      data: { simStart: new Date('2027-02-01T00:00:00Z') },
+    });
+    const out = await upload([
+      { name: 'SDF-Campaigns.csv', text: writeCsv(['Campaign Id'], [['1']]) },
+    ]);
     expect(out.status).toBe('FAILED');
     expect(out.fileErrors[0]!.ruleId).toBe('BLK-022');
   });
 
   it('refuses writes for read-only roles (BLK-035)', async () => {
-    const res = await requestSdfUpload({ ...user(), dvRole: 'READ_ONLY' }, { advertiserId: w.advertiserId, files: [] });
+    const res = await requestSdfUpload(
+      { ...user(), dvRole: 'READ_ONLY' },
+      { advertiserId: w.advertiserId, files: [] },
+    );
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.code).toBe('FORBIDDEN');
   });

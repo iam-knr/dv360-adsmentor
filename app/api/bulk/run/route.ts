@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
-  if (!isAuthorised(req.headers, process.env.CRON_SECRET)) return NextResponse.json({ error: 'UNAUTHENTICATED' }, { status: 401 });
+  if (!isAuthorised(req.headers, process.env.CRON_SECRET))
+    return NextResponse.json({ error: 'UNAUTHENTICATED' }, { status: 401 });
   return NextResponse.json({ ok: true, ...(await runDueJobs()) });
 }

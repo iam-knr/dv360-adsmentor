@@ -11,5 +11,7 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as { prompt?: unknown } | null;
   if (!body || typeof body.prompt !== 'string') return badRequest('prompt is required.');
   const r = parseChartPrompt(body.prompt);
-  return Response.json(r.ok ? { data: r.spec } : { error: 'UNPARSED', message: r.message }, { status: r.ok ? 200 : 422 });
+  return Response.json(r.ok ? { data: r.spec } : { error: 'UNPARSED', message: r.message }, {
+    status: r.ok ? 200 : 422,
+  });
 }

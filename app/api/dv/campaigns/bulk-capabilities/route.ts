@@ -8,7 +8,13 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   const user = await getSessionUser();
   if (!user) return unauthenticated();
-  const ids = (new URL(req.url).searchParams.get('ids') ?? '').split(',').filter(Boolean).slice(0, 500);
+  const ids = (new URL(req.url).searchParams.get('ids') ?? '')
+    .split(',')
+    .filter(Boolean)
+    .slice(0, 500);
   if (ids.length === 0) return badRequest('ids is required.');
-  return Response.json({ data: await bulkCapabilities(user, 'campaign', ids) }, { headers: NO_STORE });
+  return Response.json(
+    { data: await bulkCapabilities(user, 'campaign', ids) },
+    { headers: NO_STORE },
+  );
 }

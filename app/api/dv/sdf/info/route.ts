@@ -14,8 +14,20 @@ export async function GET(req: Request) {
   if (!id) return badRequest('advertiserId is required.');
   const ctx = await serviceCtx(user);
   const adv = await withSandbox(ctx.sandboxId, (tx) =>
-    tx.advertiser.findFirst({ where: /^\d+$/.test(id) ? { publicId: BigInt(id) } : { id }, select: { id: true, publicId: true, sdfVersion: true } }),
+    tx.advertiser.findFirst({
+      where: /^\d+$/.test(id) ? { publicId: BigInt(id) } : { id },
+      select: { id: true, publicId: true, sdfVersion: true },
+    }),
   );
   if (!adv) return Response.json({ error: 'NOT_FOUND' }, { status: 404 });
-  return Response.json({ data: { advertiserId: adv.id, publicId: adv.publicId.toString(), version: fromDbVersion(adv.sdfVersion) } }, { headers: NO_STORE });
+  return Response.json(
+    {
+      data: {
+        advertiserId: adv.id,
+        publicId: adv.publicId.toString(),
+        version: fromDbVersion(adv.sdfVersion),
+      },
+    },
+    { headers: NO_STORE },
+  );
 }

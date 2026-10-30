@@ -7,7 +7,13 @@ import { getJob, listJobs } from '@/lib/bulk/jobs';
 import { createLineItem, getLineItemDetail } from '@/lib/line-items/service';
 import { createCampaign } from '@/lib/campaigns/service';
 import { dropWorld } from '../db/helpers';
-import { addCreative, createLiWorld, userFor, validDraft, type World } from '../services/line-items/helpers';
+import {
+  addCreative,
+  createLiWorld,
+  userFor,
+  validDraft,
+  type World,
+} from '../services/line-items/helpers';
 import { validCampaignWire } from '../services/campaigns/fixtures';
 
 let w: World;
@@ -50,7 +56,11 @@ const mustRun = async (...args: Parameters<typeof runBulk>) => {
 
 describe('status (K2, AC-11-14)', () => {
   it('pauses an active campaign, skips the paused one and describes the job', async () => {
-    const other = await createCampaign(user(), w.advertiserId, validCampaignWire({ name: 'Paused one', status: 'PAUSED' }));
+    const other = await createCampaign(
+      user(),
+      w.advertiserId,
+      validCampaignWire({ name: 'Paused one', status: 'PAUSED' }),
+    );
     if (!other.ok) throw new Error('campaign');
     const out = await mustRun(user(), {
       entity: 'campaign',
@@ -69,12 +79,20 @@ describe('status (K2, AC-11-14)', () => {
     const groups = await prisma.changeGroup.findMany({ where: { bulkJobId: out.jobId } });
     expect(groups).toHaveLength(1);
     expect(groups[0]).toMatchObject({ source: 'BULK_EDIT', entityType: 'CAMPAIGN' });
-    const back = await mustRun(user(), { entity: 'campaign', ids: [campaignPublic], params: { op: 'ACTIVATE' } });
+    const back = await mustRun(user(), {
+      entity: 'campaign',
+      ids: [campaignPublic],
+      params: { op: 'ACTIVATE' },
+    });
     expect(back.ok).toBe(1);
   });
 
   it('reports ids that do not exist (BLK-025)', async () => {
-    const out = await mustRun(user(), { entity: 'lineItem', ids: ['999999991'], params: { op: 'PAUSE' } });
+    const out = await mustRun(user(), {
+      entity: 'lineItem',
+      ids: ['999999991'],
+      params: { op: 'PAUSE' },
+    });
     expect(out.items[0]).toMatchObject({ status: 'FAILED', ruleId: 'BLK-025' });
   });
 });
@@ -101,7 +119,10 @@ describe('capabilities (K1, V-11-11)', () => {
 
   it('rejects every bulk operation for read-only roles on the server (AC-11-26)', async () => {
     for (const dvRole of ['READ_ONLY', 'REPORTING_ONLY'] as const) {
-      const res = await runBulk({ ...user(), dvRole }, { entity: 'lineItem', ids: [li1], params: { op: 'ACTIVATE' } });
+      const res = await runBulk(
+        { ...user(), dvRole },
+        { entity: 'lineItem', ids: [li1], params: { op: 'ACTIVATE' } },
+      );
       expect(res.ok).toBe(false);
       if (!res.ok) expect(res.code).toBe('FORBIDDEN');
     }
@@ -110,41 +131,76 @@ describe('capabilities (K1, V-11-11)', () => {
 
 describe('duplicate (K4, AC-11-16, AC-11-17)', () => {
   it('copies a line item three times with the Copy of names and DRAFT status', async () => {
-    const out = await mustRun(user(), { entity: 'lineItem', ids: [li1], params: { op: 'DUPLICATE', copies: 3 } });
+    const out = await mustRun(user(), {
+      entity: 'lineItem',
+      ids: [li1],
+      params: { op: 'DUPLICATE', copies: 3 },
+    });
     expect(out.ok).toBe(1);
-    const copies = await prisma.lineItem.findMany({ where: { copiedFromId: { not: null }, ioId: w.ioId }, orderBy: { publicId: 'asc' } });
-    expect(copies.map((c) => c.name)).toEqual(['Copy of Bulk one', 'Copy of Bulk one (2)', 'Copy of Bulk one (3)']);
+    const copies = await prisma.lineItem.findMany({
+      where: { copiedFromId: { not: null }, ioId: w.ioId },
+      orderBy: { publicId: 'asc' },
+    });
+    expect(copies.map((c) => c.name)).toEqual([
+      'Copy of Bulk one',
+      'Copy of Bulk one (2)',
+      'Copy of Bulk one (3)',
+    ]);
     expect(copies.every((c) => c.status === 'DRAFT')).toBe(true);
     const job = await getJob(user(), out.jobId);
-    expect(job.description).toBe(`Duplicating 1 line item with 3 copies to insertion order ${ioPublic}`);
+    expect(job.description).toBe(
+      `Duplicating 1 line item with 3 copies to insertion order ${ioPublic}`,
+    );
     expect(job.action).toBe('VIEW');
   });
 
   it('rejects a copy count below 1 (BLK-013)', async () => {
-    const res = await runBulk(user(), { entity: 'lineItem', ids: [li1], params: { op: 'DUPLICATE', copies: 0 } });
+    const res = await runBulk(user(), {
+      entity: 'lineItem',
+      ids: [li1],
+      params: { op: 'DUPLICATE', copies: 0 },
+    });
     expect(res.ok).toBe(false);
   });
 
   it('duplicates a whole campaign tree with no metrics, PAUSED campaign and DRAFT children', async () => {
     const before = await prisma.lineItem.count({ where: { sandboxId: w.sandboxId } });
-    const out = await mustRun(user(), { entity: 'campaign', ids: [campaignPublic], params: { op: 'DUPLICATE', copies: 1 } });
+    const out = await mustRun(user(), {
+      entity: 'campaign',
+      ids: [campaignPublic],
+      params: { op: 'DUPLICATE', copies: 1 },
+    });
     expect(out.ok).toBe(1);
-    const copy = await prisma.campaign.findFirstOrThrow({ where: { copiedFromId: w.campaignId }, include: { insertionOrders: { include: { lineItems: true, segments: true } }, budgets: true } });
+    const copy = await prisma.campaign.findFirstOrThrow({
+      where: { copiedFromId: w.campaignId },
+      include: { insertionOrders: { include: { lineItems: true, segments: true } }, budgets: true },
+    });
     expect(copy.name).toMatch(/^Copy of /);
     expect(copy.status).toBe('PAUSED');
     expect(copy.budgets.length).toBeGreaterThan(0);
     expect(copy.insertionOrders[0]?.status).toBe('DRAFT');
     expect(copy.insertionOrders[0]?.segments.length).toBeGreaterThan(0);
-    const sourceLis = await prisma.lineItem.count({ where: { ioId: w.ioId, status: { not: 'ARCHIVED' } } });
+    const sourceLis = await prisma.lineItem.count({
+      where: { ioId: w.ioId, status: { not: 'ARCHIVED' } },
+    });
     expect(copy.insertionOrders[0]?.lineItems).toHaveLength(sourceLis);
-    expect(await prisma.lineItem.count({ where: { sandboxId: w.sandboxId } })).toBe(before + sourceLis);
+    expect(await prisma.lineItem.count({ where: { sandboxId: w.sandboxId } })).toBe(
+      before + sourceLis,
+    );
     // the copy has its own ids
     expect(copy.publicId.toString()).not.toBe(campaignPublic);
   });
 
   it('reports a line item whose type the target insertion order refuses (BLK-014)', async () => {
     const cta = await prisma.insertionOrder.create({
-      data: { sandboxId: w.sandboxId, campaignId: w.campaignId, advertiserId: w.advertiserId, name: 'DOOH target', type: 'DOOH', objective: 'NONE' },
+      data: {
+        sandboxId: w.sandboxId,
+        campaignId: w.campaignId,
+        advertiserId: w.advertiserId,
+        name: 'DOOH target',
+        type: 'DOOH',
+        objective: 'NONE',
+      },
     });
     const out = await mustRun(user(), {
       entity: 'lineItem',
@@ -168,7 +224,9 @@ describe('edits (K6..K8, AC-11-19)', () => {
     }
     const groups = await prisma.changeGroup.findMany({ where: { bulkJobId: out.jobId } });
     expect(groups).toHaveLength(2);
-    expect(groups.every((g) => g.source === 'BULK_EDIT' && g.entityType === 'LINE_ITEM')).toBe(true);
+    expect(groups.every((g) => g.source === 'BULK_EDIT' && g.entityType === 'LINE_ITEM')).toBe(
+      true,
+    );
   });
 
   it('adds, replaces and removes a language, and skips nothing that is available (V-11-15)', async () => {
@@ -176,7 +234,10 @@ describe('edits (K6..K8, AC-11-19)', () => {
     const add = await mustRun(user(), {
       entity: 'lineItem',
       ids: [li1, li2],
-      params: { op: 'EDIT_TARGETING', edit: { group: 'CONTENT', dimension: 'LANGUAGE', mode: 'ADD', value: { sels: [sel] } } },
+      params: {
+        op: 'EDIT_TARGETING',
+        edit: { group: 'CONTENT', dimension: 'LANGUAGE', mode: 'ADD', value: { sels: [sel] } },
+      },
     });
     expect(add.failed).toBe(0);
     let detail = await detailOf(li1);
@@ -184,7 +245,15 @@ describe('edits (K6..K8, AC-11-19)', () => {
     const replace = await mustRun(user(), {
       entity: 'lineItem',
       ids: [li1],
-      params: { op: 'EDIT_TARGETING', edit: { group: 'CONTENT', dimension: 'LANGUAGE', mode: 'REPLACE', value: { sels: [{ id: 'hi', mode: 'INCLUDE', label: 'Hindi' }] } } },
+      params: {
+        op: 'EDIT_TARGETING',
+        edit: {
+          group: 'CONTENT',
+          dimension: 'LANGUAGE',
+          mode: 'REPLACE',
+          value: { sels: [{ id: 'hi', mode: 'INCLUDE', label: 'Hindi' }] },
+        },
+      },
     });
     expect(replace.failed).toBe(0);
     detail = await detailOf(li1);
@@ -192,7 +261,15 @@ describe('edits (K6..K8, AC-11-19)', () => {
     const remove = await mustRun(user(), {
       entity: 'lineItem',
       ids: [li1],
-      params: { op: 'EDIT_TARGETING', edit: { group: 'CONTENT', dimension: 'LANGUAGE', mode: 'REMOVE', value: { sels: [{ id: 'hi', mode: 'INCLUDE' }] } } },
+      params: {
+        op: 'EDIT_TARGETING',
+        edit: {
+          group: 'CONTENT',
+          dimension: 'LANGUAGE',
+          mode: 'REMOVE',
+          value: { sels: [{ id: 'hi', mode: 'INCLUDE' }] },
+        },
+      },
     });
     expect(remove.failed).toBe(0);
     detail = await detailOf(li1);
@@ -201,10 +278,18 @@ describe('edits (K6..K8, AC-11-19)', () => {
 
   it('adds and removes a creative on line items and skips archived ones', async () => {
     const creative = await addCreative(w, 'Bulk banner', 'STANDARD_IMAGE');
-    const add = await mustRun(user(), { entity: 'lineItem', ids: [li1, li2], params: { op: 'EDIT_CREATIVE_ASSIGNMENT', add: [creative] } });
+    const add = await mustRun(user(), {
+      entity: 'lineItem',
+      ids: [li1, li2],
+      params: { op: 'EDIT_CREATIVE_ASSIGNMENT', add: [creative] },
+    });
     expect(add.ok).toBe(2);
     expect(await prisma.creativeAssignment.count({ where: { creativeId: creative } })).toBe(2);
-    const remove = await mustRun(user(), { entity: 'lineItem', ids: [li1], params: { op: 'EDIT_CREATIVE_ASSIGNMENT', remove: [creative] } });
+    const remove = await mustRun(user(), {
+      entity: 'lineItem',
+      ids: [li1],
+      params: { op: 'EDIT_CREATIVE_ASSIGNMENT', remove: [creative] },
+    });
     expect(remove.ok).toBe(1);
     expect(await prisma.creativeAssignment.count({ where: { creativeId: creative } })).toBe(1);
   });
@@ -212,21 +297,41 @@ describe('edits (K6..K8, AC-11-19)', () => {
 
 describe('archive and unarchive (K3, AC-11-15)', () => {
   it('archives an insertion order with its line items under one job and unarchives it to PAUSED', async () => {
-    const out = await mustRun(user(), { entity: 'insertionOrder', ids: [ioPublic], params: { op: 'ARCHIVE' } });
+    const out = await mustRun(user(), {
+      entity: 'insertionOrder',
+      ids: [ioPublic],
+      params: { op: 'ARCHIVE' },
+    });
     expect(out.ok).toBe(1);
-    expect(await prisma.lineItem.count({ where: { ioId: w.ioId, status: { not: 'ARCHIVED' } } })).toBe(0);
+    expect(
+      await prisma.lineItem.count({ where: { ioId: w.ioId, status: { not: 'ARCHIVED' } } }),
+    ).toBe(0);
     const groups = await prisma.changeGroup.findMany({ where: { bulkJobId: out.jobId } });
     expect(groups.length).toBeGreaterThan(1);
     expect(groups.every((g) => g.source === 'BULK_EDIT')).toBe(true);
-    const un = await mustRun(user(), { entity: 'insertionOrder', ids: [ioPublic], params: { op: 'UNARCHIVE' } });
+    const un = await mustRun(user(), {
+      entity: 'insertionOrder',
+      ids: [ioPublic],
+      params: { op: 'UNARCHIVE' },
+    });
     expect(un.ok).toBe(1);
-    expect((await prisma.insertionOrder.findUniqueOrThrow({ where: { id: w.ioId } })).status).toBe('PAUSED');
+    expect((await prisma.insertionOrder.findUniqueOrThrow({ where: { id: w.ioId } })).status).toBe(
+      'PAUSED',
+    );
   });
 });
 
 describe('worker (V-11-14, AC-11-21)', () => {
   it('resumes from the cursor and never repeats an item', async () => {
-    const first = await runBulk(user(), { entity: 'lineItem', ids: [li1, li2], params: { op: 'EDIT_SETTINGS', patch: { integrationCode: 'RESUME-1' } } }, { budgetMs: 0 });
+    const first = await runBulk(
+      user(),
+      {
+        entity: 'lineItem',
+        ids: [li1, li2],
+        params: { op: 'EDIT_SETTINGS', patch: { integrationCode: 'RESUME-1' } },
+      },
+      { budgetMs: 0 },
+    );
     if (!first.ok) throw new Error('job');
     expect(first.data.status).toBe('RUNNING');
     expect(first.data.items).toHaveLength(0);

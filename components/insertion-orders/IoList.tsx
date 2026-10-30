@@ -18,6 +18,7 @@ import {
 } from '@/components/dv';
 import { BulkActionBar } from '@/components/bulk/BulkActionBar';
 import { SdfMenu } from '@/components/bulk/SdfDialogs';
+import { orderBy, useColumnView } from '@/components/views/useColumnView';
 import { useViewer } from '@/components/shell/ViewerProvider';
 import { patchIoBudgetAction, setIoStatusAction } from '@/lib/insertion-orders/actions';
 import { IO_TYPE_LABEL, type IoRow } from '@/lib/insertion-orders/wire';
@@ -63,6 +64,7 @@ export function IoList({
   const [page, setPage] = useState({ page: 1, size: 20 });
   const [error, setError] = useState<string | null>(null);
   const [selection, setSelection] = useState<Set<string>>(new Set());
+  const view = useColumnView('IO', advertiserId);
   const [, startTransition] = useTransition();
   const shown = useMemo(
     () => (filter === '*' ? rows : rows.filter((r) => r.status === filter)),
@@ -165,6 +167,7 @@ export function IoList({
             }}
           />
         </Box>
+        {view.menu}
         {embedded ? null : <SdfMenu advertiserId={advertiserId} />}
         {campaignId ? (
           <Button
@@ -192,7 +195,7 @@ export function IoList({
       <DvGrid
         ariaLabel="Insertion orders"
         rows={shown.slice(start, start + page.size)}
-        columns={columns}
+        columns={orderBy(columns, view.visible)}
         groups={[
           { id: 'io', label: 'Insertion order' },
           { id: 'delivery', label: 'Delivery', collapsible: true },

@@ -12,7 +12,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ jobId: 
   try {
     return Response.json({ data: await getJob(user, (await params).jobId) }, { headers: NO_STORE });
   } catch (e) {
-    if (e instanceof ServiceFailure) return Response.json({ error: e.code }, { status: e.code === 'NOT_FOUND' ? 404 : 403 });
+    if (e instanceof ServiceFailure)
+      return Response.json({ error: e.code }, { status: e.code === 'NOT_FOUND' ? 404 : 403 });
     throw e;
   }
 }

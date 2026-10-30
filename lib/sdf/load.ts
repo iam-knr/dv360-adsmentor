@@ -20,16 +20,23 @@ export interface LoadOpts {
   liIds?: string[];
 }
 
-const live = (includeArchived: boolean) => (includeArchived ? {} : { status: { not: 'ARCHIVED' as const } });
+const live = (includeArchived: boolean) =>
+  includeArchived ? {} : { status: { not: 'ARCHIVED' as const } };
 
 export async function loadRefs(tx: Tx, advertiserId: string): Promise<LiRefs> {
   const refs = emptyRefs();
-  const creatives = await tx.creative.findMany({ where: { advertiserId }, select: { id: true, publicId: true } });
+  const creatives = await tx.creative.findMany({
+    where: { advertiserId },
+    select: { id: true, publicId: true },
+  });
   for (const c of creatives) {
     refs.creativeToPublic.set(c.id, c.publicId.toString());
     refs.creativeFromPublic.set(c.publicId.toString(), c.id);
   }
-  const acts = await tx.floodlightActivity.findMany({ where: { group: { advertiserId } }, select: { id: true, publicId: true } });
+  const acts = await tx.floodlightActivity.findMany({
+    where: { group: { advertiserId } },
+    select: { id: true, publicId: true },
+  });
   for (const a of acts) {
     refs.activityToPublic.set(a.id, a.publicId.toString());
     refs.activityFromPublic.set(a.publicId.toString(), a.id);
@@ -37,9 +44,17 @@ export async function loadRefs(tx: Tx, advertiserId: string): Promise<LiRefs> {
   return refs;
 }
 
-export async function loadCampaignModels(tx: Tx, advertiserId: string, o: LoadOpts): Promise<(CampaignModel & { id: string })[]> {
+export async function loadCampaignModels(
+  tx: Tx,
+  advertiserId: string,
+  o: LoadOpts,
+): Promise<(CampaignModel & { id: string })[]> {
   const rows = await tx.campaign.findMany({
-    where: { advertiserId, ...live(o.includeArchived), ...(o.campaignIds ? { id: { in: o.campaignIds } } : {}) },
+    where: {
+      advertiserId,
+      ...live(o.includeArchived),
+      ...(o.campaignIds ? { id: { in: o.campaignIds } } : {}),
+    },
     include: { budgets: { orderBy: { id: 'asc' } }, advertiser: { select: { publicId: true } } },
     orderBy: { publicId: 'asc' },
   });
@@ -52,9 +67,18 @@ export async function loadCampaignModels(tx: Tx, advertiserId: string, o: LoadOp
   }));
 }
 
-export async function loadIoModels(tx: Tx, advertiserId: string, o: LoadOpts): Promise<(IoModel & { id: string; campaignId: string })[]> {
+export async function loadIoModels(
+  tx: Tx,
+  advertiserId: string,
+  o: LoadOpts,
+): Promise<(IoModel & { id: string; campaignId: string })[]> {
   const rows = await tx.insertionOrder.findMany({
-    where: { advertiserId, ...live(o.includeArchived), ...(o.ioIds ? { id: { in: o.ioIds } } : {}), ...(o.campaignIds ? { campaignId: { in: o.campaignIds } } : {}) },
+    where: {
+      advertiserId,
+      ...live(o.includeArchived),
+      ...(o.ioIds ? { id: { in: o.ioIds } } : {}),
+      ...(o.campaignIds ? { campaignId: { in: o.campaignIds } } : {}),
+    },
     include: { segments: true, fees: true, campaign: { select: { publicId: true } } },
     orderBy: { publicId: 'asc' },
   });
@@ -68,8 +92,16 @@ export async function loadIoModels(tx: Tx, advertiserId: string, o: LoadOpts): P
   }));
 }
 
-export async function loadLiModels(tx: Tx, advertiserId: string, o: LoadOpts, refs?: LiRefs): Promise<(LiModel & { id: string; ioId: string })[]> {
-  const adv = await tx.advertiser.findUniqueOrThrow({ where: { id: advertiserId }, select: { partnerId: true } });
+export async function loadLiModels(
+  tx: Tx,
+  advertiserId: string,
+  o: LoadOpts,
+  refs?: LiRefs,
+): Promise<(LiModel & { id: string; ioId: string })[]> {
+  const adv = await tx.advertiser.findUniqueOrThrow({
+    where: { id: advertiserId },
+    select: { partnerId: true },
+  });
   const r = refs ?? (await loadRefs(tx, advertiserId));
   const rows = await tx.lineItem.findMany({
     where: {
@@ -97,13 +129,22 @@ export async function loadLiModels(tx: Tx, advertiserId: string, o: LoadOpts, re
   return out;
 }
 
-export const MAPS = { CAMPAIGNS: campaignMaps, INSERTION_ORDERS: ioMaps, LINE_ITEMS: liMaps } as Record<string, ColMaps<never>>;
+export const MAPS = {
+  CAMPAIGNS: campaignMaps,
+  INSERTION_ORDERS: ioMaps,
+  LINE_ITEMS: liMaps,
+} as Record<string, ColMaps<never>>;
 
 /** Cells of a model for one version: every column of the layout, blank where the simulator has no value. */
-export function cellsOf(entity: 'CAMPAIGNS' | 'INSERTION_ORDERS' | 'LINE_ITEMS', model: unknown, version: SdfVersion): Record<string, string> {
+export function cellsOf(
+  entity: 'CAMPAIGNS' | 'INSERTION_ORDERS' | 'LINE_ITEMS',
+  model: unknown,
+  version: SdfVersion,
+): Record<string, string> {
   const maps = MAPS[entity]!;
   const out: Record<string, string> = {};
-  for (const c of columnsFor(entity, version)) out[c.name] = (maps[c.name]?.get as ((m: unknown) => string) | undefined)?.(model) ?? '';
+  for (const c of columnsFor(entity, version))
+    out[c.name] = (maps[c.name]?.get as ((m: unknown) => string) | undefined)?.(model) ?? '';
   return out;
 }
 
@@ -114,30 +155,77 @@ export interface EntityTable {
 }
 
 /** One entity file as header plus cell rows, in Id order. */
-export async function exportTable(tx: Tx, advertiserId: string, entity: SdfEntity, version: SdfVersion, o: LoadOpts): Promise<EntityTable> {
+export async function exportTable(
+  tx: Tx,
+  advertiserId: string,
+  entity: SdfEntity,
+  version: SdfVersion,
+  o: LoadOpts,
+): Promise<EntityTable> {
   const headers = columnsFor(entity, version).map((c) => c.name);
   let rows: Record<string, string>[] = [];
-  if (entity === 'CAMPAIGNS') rows = (await loadCampaignModels(tx, advertiserId, o)).map((m) => cellsOf(entity, m, version));
-  else if (entity === 'INSERTION_ORDERS') rows = (await loadIoModels(tx, advertiserId, o)).map((m) => cellsOf(entity, m, version));
-  else if (entity === 'LINE_ITEMS') rows = (await loadLiModels(tx, advertiserId, o)).map((m) => cellsOf(entity, m, version));
+  if (entity === 'CAMPAIGNS')
+    rows = (await loadCampaignModels(tx, advertiserId, o)).map((m) => cellsOf(entity, m, version));
+  else if (entity === 'INSERTION_ORDERS')
+    rows = (await loadIoModels(tx, advertiserId, o)).map((m) => cellsOf(entity, m, version));
+  else if (entity === 'LINE_ITEMS')
+    rows = (await loadLiModels(tx, advertiserId, o)).map((m) => cellsOf(entity, m, version));
   else if (entity === 'AD_GROUPS') {
     const groups = await tx.adGroup.findMany({
-      where: { advertiserId, ...live(o.includeArchived), ...(o.liIds ? { lineItemId: { in: o.liIds } } : {}), ...(o.ioIds || o.campaignIds ? { lineItem: { ...(o.ioIds ? { ioId: { in: o.ioIds } } : {}), ...(o.campaignIds ? { campaignId: { in: o.campaignIds } } : {}) } } : {}) },
+      where: {
+        advertiserId,
+        ...live(o.includeArchived),
+        ...(o.liIds ? { lineItemId: { in: o.liIds } } : {}),
+        ...(o.ioIds || o.campaignIds
+          ? {
+              lineItem: {
+                ...(o.ioIds ? { ioId: { in: o.ioIds } } : {}),
+                ...(o.campaignIds ? { campaignId: { in: o.campaignIds } } : {}),
+              },
+            }
+          : {}),
+      },
       include: { lineItem: { select: { publicId: true } } },
       orderBy: { publicId: 'asc' },
     });
-    rows = groups.map((g) => ({ ...Object.fromEntries(headers.map((h) => [h, ''])), ...adGroupCells({ ...g, lineItemPublicId: g.lineItem.publicId }) }));
+    rows = groups.map((g) => ({
+      ...Object.fromEntries(headers.map((h) => [h, ''])),
+      ...adGroupCells({ ...g, lineItemPublicId: g.lineItem.publicId }),
+    }));
   } else if (entity === 'ADS') {
     const ads = await tx.ad.findMany({
-      where: { advertiserId, ...live(o.includeArchived), ...(o.liIds || o.ioIds || o.campaignIds ? { adGroup: { lineItem: { ...(o.liIds ? { id: { in: o.liIds } } : {}), ...(o.ioIds ? { ioId: { in: o.ioIds } } : {}), ...(o.campaignIds ? { campaignId: { in: o.campaignIds } } : {}) } } } : {}) },
+      where: {
+        advertiserId,
+        ...live(o.includeArchived),
+        ...(o.liIds || o.ioIds || o.campaignIds
+          ? {
+              adGroup: {
+                lineItem: {
+                  ...(o.liIds ? { id: { in: o.liIds } } : {}),
+                  ...(o.ioIds ? { ioId: { in: o.ioIds } } : {}),
+                  ...(o.campaignIds ? { campaignId: { in: o.campaignIds } } : {}),
+                },
+              },
+            }
+          : {}),
+      },
       include: { adGroup: { select: { publicId: true } } },
       orderBy: { publicId: 'asc' },
     });
-    rows = ads.map((a) => ({ ...Object.fromEntries(headers.map((h) => [h, ''])), ...adCells({ ...a, adGroupPublicId: a.adGroup.publicId }) }));
+    rows = ads.map((a) => ({
+      ...Object.fromEntries(headers.map((h) => [h, ''])),
+      ...adCells({ ...a, adGroupPublicId: a.adGroup.publicId }),
+    }));
   } else {
-    const adv = await tx.advertiser.findUniqueOrThrow({ where: { id: advertiserId }, select: { partnerId: true, publicId: true } });
+    const adv = await tx.advertiser.findUniqueOrThrow({
+      where: { id: advertiserId },
+      select: { partnerId: true, publicId: true },
+    });
     const deals = await tx.inventorySourceDeal.findMany({
-      where: { partnerId: adv.partnerId, OR: [{ allAdvertisers: true }, { access: { some: { advertiserId } } }] },
+      where: {
+        partnerId: adv.partnerId,
+        OR: [{ allAdvertisers: true }, { access: { some: { advertiserId } } }],
+      },
       include: { access: { include: { advertiser: { select: { publicId: true } } } } },
       orderBy: { publicId: 'asc' },
     });
@@ -156,7 +244,9 @@ export async function exportTable(tx: Tx, advertiserId: string, entity: SdfEntit
         rate: d.rate,
         startAt: d.startAt,
         endAt: d.endAt,
-        advertiserPublicIds: d.access.flatMap((a) => (a.advertiser ? [a.advertiser.publicId.toString()] : [])),
+        advertiserPublicIds: d.access.flatMap((a) =>
+          a.advertiser ? [a.advertiser.publicId.toString()] : [],
+        ),
       }),
     );
   }

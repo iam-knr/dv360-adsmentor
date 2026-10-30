@@ -4,16 +4,7 @@
 import { versionIndex, type SdfEntity, type SdfVersion } from './versions';
 
 export type ColumnKind =
-  | 'int'
-  | 'text'
-  | 'epoch'
-  | 'bool'
-  | 'date'
-  | 'money'
-  | 'pct'
-  | 'enum'
-  | 'list'
-  | 'tuple';
+  'int' | 'text' | 'epoch' | 'bool' | 'date' | 'money' | 'pct' | 'enum' | 'list' | 'tuple';
 
 export interface ColumnDef {
   name: string;
@@ -38,8 +29,10 @@ const col = (name: string, kind: ColumnKind, o: Opts = {}): ColumnDef => ({
   legacy: false,
   ...o,
 });
-const req = (name: string, kind: ColumnKind, o: Opts = {}) => col(name, kind, { required: true, ...o });
-const ro = (name: string, kind: ColumnKind, o: Opts = {}) => col(name, kind, { readOnly: true, ...o });
+const req = (name: string, kind: ColumnKind, o: Opts = {}) =>
+  col(name, kind, { required: true, ...o });
+const ro = (name: string, kind: ColumnKind, o: Opts = {}) =>
+  col(name, kind, { readOnly: true, ...o });
 const legacy = (name: string) => col(name, 'text', { legacy: true, until: '9.2' });
 
 const CAMPAIGNS: ColumnDef[] = [
@@ -296,7 +289,8 @@ export const LAYOUTS: Record<SdfEntity, readonly ColumnDef[]> = {
 };
 
 const inVersion = (c: ColumnDef, v: SdfVersion) =>
-  versionIndex(v) >= versionIndex(c.since) && (!c.until || versionIndex(v) <= versionIndex(c.until));
+  versionIndex(v) >= versionIndex(c.since) &&
+  (!c.until || versionIndex(v) <= versionIndex(c.until));
 
 /** The columns of one entity file in one version, in file order. */
 export function columnsFor(entity: SdfEntity, version: SdfVersion): ColumnDef[] {

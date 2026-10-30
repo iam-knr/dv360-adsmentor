@@ -48,7 +48,11 @@ export interface BulkTargetingEdit {
 
 /** Fields the Settings panels may overwrite, each behind an "Edit this setting" checkbox. */
 export interface IoSettingsPatch {
-  pacing?: { period: 'FLIGHT' | 'DAILY'; type: 'EVEN' | 'AHEAD' | 'ASAP'; dailyAmount?: number | '' };
+  pacing?: {
+    period: 'FLIGHT' | 'DAILY';
+    type: 'EVEN' | 'AHEAD' | 'ASAP';
+    dailyAmount?: number | '';
+  };
   frequencyCap?: {
     mode: 'UNLIMITED' | 'INHERIT' | 'LIMITED';
     maxImpressions?: number | '';
@@ -60,7 +64,11 @@ export interface IoSettingsPatch {
 }
 
 export interface LiSettingsPatch {
-  pacing?: { period: 'FLIGHT' | 'DAILY'; type: 'EVEN' | 'AHEAD' | 'ASAP'; dailyAmount?: number | '' };
+  pacing?: {
+    period: 'FLIGHT' | 'DAILY';
+    type: 'EVEN' | 'AHEAD' | 'ASAP';
+    dailyAmount?: number | '';
+  };
   frequencyCap?: IoSettingsPatch['frequencyCap'];
   fixedBid?: number;
   inventoryQuality?: string;

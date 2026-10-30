@@ -32,7 +32,13 @@ export interface DuplicateResult {
   /** Public ids of the new top-level entities, in order. */
   created: string[];
   /** Number of rows created per entity type, children included. */
-  counts: { campaigns: number; insertionOrders: number; lineItems: number; adGroups: number; ads: number };
+  counts: {
+    campaigns: number;
+    insertionOrders: number;
+    lineItems: number;
+    adGroups: number;
+    ads: number;
+  };
 }
 
 /** Rule ids carried in the failure so the Bulk status item shows them. */
@@ -55,7 +61,10 @@ export function copyName(name: string, index: number): string {
 }
 
 /** A row without identity columns, for `create`. Keeps relations as scalar foreign keys. */
-function clone<T extends Record<string, unknown>>(row: T, drop: string[] = []): Record<string, unknown> {
+function clone<T extends Record<string, unknown>>(
+  row: T,
+  drop: string[] = [],
+): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   const skip = new Set(['id', 'publicId', 'createdAt', 'updatedAt', 'version', ...drop]);
   for (const [k, v] of Object.entries(row)) if (!skip.has(k)) out[k] = v;
@@ -63,7 +72,13 @@ function clone<T extends Record<string, unknown>>(row: T, drop: string[] = []): 
 }
 
 type Counts = DuplicateResult['counts'];
-const emptyCounts = (): Counts => ({ campaigns: 0, insertionOrders: 0, lineItems: 0, adGroups: 0, ads: 0 });
+const emptyCounts = (): Counts => ({
+  campaigns: 0,
+  insertionOrders: 0,
+  lineItems: 0,
+  adGroups: 0,
+  ads: 0,
+});
 
 interface Env {
   tx: Tx;
@@ -92,7 +107,14 @@ async function copyLineItem(
   });
   const created = await withChangeLog(
     cctx(env),
-    { type: 'LINE_ITEM', chain: { advertiserId: target.advertiserId, campaignId: target.campaignId, ioId: target.ioId } },
+    {
+      type: 'LINE_ITEM',
+      chain: {
+        advertiserId: target.advertiserId,
+        campaignId: target.campaignId,
+        ioId: target.ioId,
+      },
+    },
     async (t) => {
       const row = await t.lineItem.create({
         data: {
@@ -115,21 +137,27 @@ async function copyLineItem(
       if (src.fees.length)
         await t.partnerCost.createMany({
           data: src.fees.map((f) => ({
-            ...(clone(f as unknown as Record<string, unknown>, ['ioId']) as Prisma.PartnerCostCreateManyInput),
+            ...(clone(f as unknown as Record<string, unknown>, [
+              'ioId',
+            ]) as Prisma.PartnerCostCreateManyInput),
             lineItemId: row.id,
           })),
         });
       if (src.lineItemInventories.length)
         await t.lineItemInventory.createMany({
           data: src.lineItemInventories.map((r) => ({
-            ...(clone(r as unknown as Record<string, unknown>) as Prisma.LineItemInventoryCreateManyInput),
+            ...(clone(
+              r as unknown as Record<string, unknown>,
+            ) as Prisma.LineItemInventoryCreateManyInput),
             lineItemId: row.id,
           })),
         });
       if (src.lineItemFloodlightActivities.length)
         await t.lineItemFloodlightActivity.createMany({
           data: src.lineItemFloodlightActivities.map((r) => ({
-            ...(clone(r as unknown as Record<string, unknown>) as Prisma.LineItemFloodlightActivityCreateManyInput),
+            ...(clone(
+              r as unknown as Record<string, unknown>,
+            ) as Prisma.LineItemFloodlightActivityCreateManyInput),
             lineItemId: row.id,
           })),
         });
@@ -149,7 +177,9 @@ async function copyLineItem(
       if (rows.length)
         await t.targetingAssignment.createMany({
           data: rows.map((r) => ({
-            ...(clone(r as unknown as Record<string, unknown>) as Prisma.TargetingAssignmentCreateManyInput),
+            ...(clone(
+              r as unknown as Record<string, unknown>,
+            ) as Prisma.TargetingAssignmentCreateManyInput),
             lineItemId: row.id,
           })),
         });
@@ -161,7 +191,9 @@ async function copyLineItem(
     if (ag.status === 'ARCHIVED') continue;
     const newGroup = await tx.adGroup.create({
       data: {
-        ...(clone(ag as unknown as Record<string, unknown>, ['ads']) as Prisma.AdGroupUncheckedCreateInput),
+        ...(clone(ag as unknown as Record<string, unknown>, [
+          'ads',
+        ]) as Prisma.AdGroupUncheckedCreateInput),
         lineItemId: created.id,
         status: 'PAUSED',
       },
@@ -174,7 +206,9 @@ async function copyLineItem(
     if (groupTargeting.length)
       await tx.targetingAssignment.createMany({
         data: groupTargeting.map((r) => ({
-          ...(clone(r as unknown as Record<string, unknown>) as Prisma.TargetingAssignmentCreateManyInput),
+          ...(clone(
+            r as unknown as Record<string, unknown>,
+          ) as Prisma.TargetingAssignmentCreateManyInput),
           adGroupId: newGroup.id,
         })),
       });
@@ -210,11 +244,18 @@ async function copyInsertionOrder(
   });
   const created = await withChangeLog(
     cctx(env),
-    { type: 'INSERTION_ORDER', chain: { advertiserId: target.advertiserId, campaignId: target.campaignId } },
+    {
+      type: 'INSERTION_ORDER',
+      chain: { advertiserId: target.advertiserId, campaignId: target.campaignId },
+    },
     async (t) => {
       const row = await t.insertionOrder.create({
         data: {
-          ...(clone(src as unknown as Record<string, unknown>, ['segments', 'fees', 'lineItems']) as Prisma.InsertionOrderUncheckedCreateInput),
+          ...(clone(src as unknown as Record<string, unknown>, [
+            'segments',
+            'fees',
+            'lineItems',
+          ]) as Prisma.InsertionOrderUncheckedCreateInput),
           name,
           status: 'DRAFT',
           campaignId: target.campaignId,
@@ -225,14 +266,18 @@ async function copyInsertionOrder(
       if (src.segments.length)
         await t.budgetSegment.createMany({
           data: src.segments.map((s) => ({
-            ...(clone(s as unknown as Record<string, unknown>) as Prisma.BudgetSegmentCreateManyInput),
+            ...(clone(
+              s as unknown as Record<string, unknown>,
+            ) as Prisma.BudgetSegmentCreateManyInput),
             ioId: row.id,
           })),
         });
       if (src.fees.length)
         await t.partnerCost.createMany({
           data: src.fees.map((f) => ({
-            ...(clone(f as unknown as Record<string, unknown>, ['lineItemId']) as Prisma.PartnerCostCreateManyInput),
+            ...(clone(f as unknown as Record<string, unknown>, [
+              'lineItemId',
+            ]) as Prisma.PartnerCostCreateManyInput),
             ioId: row.id,
           })),
         });
@@ -265,7 +310,10 @@ async function copyCampaign(env: Env, cid: string, name: string): Promise<string
     async (t) => {
       const row = await t.campaign.create({
         data: {
-          ...(clone(src as unknown as Record<string, unknown>, ['budgets', 'insertionOrders']) as Prisma.CampaignUncheckedCreateInput),
+          ...(clone(src as unknown as Record<string, unknown>, [
+            'budgets',
+            'insertionOrders',
+          ]) as Prisma.CampaignUncheckedCreateInput),
           name,
           status: 'PAUSED',
           copiedFromId: src.id,
@@ -275,7 +323,9 @@ async function copyCampaign(env: Env, cid: string, name: string): Promise<string
       if (src.budgets.length)
         await t.campaignBudget.createMany({
           data: src.budgets.map((b) => ({
-            ...(clone(b as unknown as Record<string, unknown>) as Prisma.CampaignBudgetCreateManyInput),
+            ...(clone(
+              b as unknown as Record<string, unknown>,
+            ) as Prisma.CampaignBudgetCreateManyInput),
             campaignId: row.id,
           })),
         });
@@ -285,7 +335,12 @@ async function copyCampaign(env: Env, cid: string, name: string): Promise<string
   env.counts.campaigns += 1;
   for (const io of src.insertionOrders) {
     if (io.status === 'ARCHIVED') continue;
-    await copyInsertionOrder(env, io.id, { campaignId: created.id, advertiserId: src.advertiserId }, io.name);
+    await copyInsertionOrder(
+      env,
+      io.id,
+      { campaignId: created.id, advertiserId: src.advertiserId },
+      io.name,
+    );
   }
   return created.id;
 }
@@ -312,29 +367,63 @@ export async function duplicateEntity(
     const env: Env = { tx, ctx, counts: emptyCounts() };
     const created: string[] = [];
     if (entity === 'campaign') {
-      const src = await tx.campaign.findFirst({ where: whereId(ref), select: { id: true, name: true } });
+      const src = await tx.campaign.findFirst({
+        where: whereId(ref),
+        select: { id: true, name: true },
+      });
       if (!src) throw new ServiceFailure('NOT_FOUND');
       for (let i = 0; i < opts.copies; i++) {
         const newId = await copyCampaign(env, src.id, copyName(src.name, i));
-        created.push((await tx.campaign.findUniqueOrThrow({ where: { id: newId }, select: { publicId: true } })).publicId.toString());
+        created.push(
+          (
+            await tx.campaign.findUniqueOrThrow({
+              where: { id: newId },
+              select: { publicId: true },
+            })
+          ).publicId.toString(),
+        );
       }
     } else if (entity === 'insertionOrder') {
-      const src = await tx.insertionOrder.findFirst({ where: whereId(ref), select: { id: true, name: true, campaignId: true, advertiserId: true } });
+      const src = await tx.insertionOrder.findFirst({
+        where: whereId(ref),
+        select: { id: true, name: true, campaignId: true, advertiserId: true },
+      });
       if (!src) throw new ServiceFailure('NOT_FOUND');
       const parentRef = opts.targetParentId ? parseIdRef(opts.targetParentId) : null;
       const parent = opts.targetParentId
         ? parentRef
-          ? await tx.campaign.findFirst({ where: whereId(parentRef), select: { id: true, status: true, advertiserId: true } })
+          ? await tx.campaign.findFirst({
+              where: whereId(parentRef),
+              select: { id: true, status: true, advertiserId: true },
+            })
           : null
-        : await tx.campaign.findUnique({ where: { id: src.campaignId }, select: { id: true, status: true, advertiserId: true } });
+        : await tx.campaign.findUnique({
+            where: { id: src.campaignId },
+            select: { id: true, status: true, advertiserId: true },
+          });
       if (!parent || parent.status === 'ARCHIVED' || parent.advertiserId !== src.advertiserId)
         throw fail('BLK-014', "The target campaign doesn't exist or is archived.");
       for (let i = 0; i < opts.copies; i++) {
-        const newId = await copyInsertionOrder(env, src.id, { campaignId: parent.id, advertiserId: parent.advertiserId }, copyName(src.name, i));
-        created.push((await tx.insertionOrder.findUniqueOrThrow({ where: { id: newId }, select: { publicId: true } })).publicId.toString());
+        const newId = await copyInsertionOrder(
+          env,
+          src.id,
+          { campaignId: parent.id, advertiserId: parent.advertiserId },
+          copyName(src.name, i),
+        );
+        created.push(
+          (
+            await tx.insertionOrder.findUniqueOrThrow({
+              where: { id: newId },
+              select: { publicId: true },
+            })
+          ).publicId.toString(),
+        );
       }
     } else {
-      const src = await tx.lineItem.findFirst({ where: whereId(ref), select: { id: true, name: true, ioId: true, type: true, advertiserId: true } });
+      const src = await tx.lineItem.findFirst({
+        where: whereId(ref),
+        select: { id: true, name: true, ioId: true, type: true, advertiserId: true },
+      });
       if (!src) throw new ServiceFailure('NOT_FOUND');
       const parentRef = opts.targetParentId ? parseIdRef(opts.targetParentId) : null;
       const parent = opts.targetParentId
@@ -360,7 +449,14 @@ export async function duplicateEntity(
           { ioId: parent.id, campaignId: parent.campaignId, advertiserId: parent.advertiserId },
           copyName(src.name, i),
         );
-        created.push((await tx.lineItem.findUniqueOrThrow({ where: { id: newId }, select: { publicId: true } })).publicId.toString());
+        created.push(
+          (
+            await tx.lineItem.findUniqueOrThrow({
+              where: { id: newId },
+              select: { publicId: true },
+            })
+          ).publicId.toString(),
+        );
       }
     }
     return { created, counts: env.counts };

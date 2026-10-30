@@ -123,7 +123,12 @@ type Loose = {
   code?: string;
 };
 
-function outcome(index: number, row: RowInfo, res: Loose, resultEntityId?: string): BulkItemOutcome {
+function outcome(
+  index: number,
+  row: RowInfo,
+  res: Loose,
+  resultEntityId?: string,
+): BulkItemOutcome {
   if (res.ok)
     return {
       index,
@@ -136,7 +141,11 @@ function outcome(index: number, row: RowInfo, res: Loose, resultEntityId?: strin
     index,
     entityId: row.publicId,
     status: 'FAILED',
-    message: first?.message ?? (res.code === 'FORBIDDEN' ? "You don't have permission to edit." : 'The change was not saved.'),
+    message:
+      first?.message ??
+      (res.code === 'FORBIDDEN'
+        ? "You don't have permission to edit."
+        : 'The change was not saved.'),
     ruleId: first?.ruleId ?? first?.code ?? res.code ?? 'BLK-005',
   };
 }
@@ -157,10 +166,17 @@ async function editIoSettings(user: SessionUser, row: RowInfo, patch: IoSettings
   const detail = await getInsertionOrder(user, row.id);
   const value = structuredClone(detail.value);
   if (patch.pacing)
-    value.pacing = { ...value.pacing, ...patch.pacing, dailyAmount: patch.pacing.dailyAmount ?? '' };
+    value.pacing = {
+      ...value.pacing,
+      ...patch.pacing,
+      dailyAmount: patch.pacing.dailyAmount ?? '',
+    };
   if (patch.frequencyCap) value.frequencyCap = { ...value.frequencyCap, ...patch.frequencyCap };
   if (patch.autoBudgetAllocation !== undefined)
-    value.optimization = { ...value.optimization, autoBudgetAllocation: patch.autoBudgetAllocation };
+    value.optimization = {
+      ...value.optimization,
+      autoBudgetAllocation: patch.autoBudgetAllocation,
+    };
   if (patch.integrationCode !== undefined) value.integrationCode = patch.integrationCode;
   return updateInsertionOrder(user, row.id, value, { expectedVersion: detail.version });
 }
@@ -170,24 +186,43 @@ async function editLiSettings(user: SessionUser, row: RowInfo, patch: LiSettings
   if (!detail) throw new ServiceFailure('NOT_FOUND');
   const value = structuredClone(detail.value);
   if (patch.pacing)
-    value.pacing = { ...value.pacing, ...patch.pacing, dailyAmount: patch.pacing.dailyAmount ?? null };
+    value.pacing = {
+      ...value.pacing,
+      ...patch.pacing,
+      dailyAmount: patch.pacing.dailyAmount ?? null,
+    };
   if (patch.frequencyCap)
     value.frequencyCap = {
       ...value.frequencyCap,
       ...patch.frequencyCap,
-      maxImpressions: patch.frequencyCap.maxImpressions === '' ? null : (patch.frequencyCap.maxImpressions ?? value.frequencyCap.maxImpressions),
-      periodCount: patch.frequencyCap.periodCount === '' ? null : (patch.frequencyCap.periodCount ?? value.frequencyCap.periodCount),
+      maxImpressions:
+        patch.frequencyCap.maxImpressions === ''
+          ? null
+          : (patch.frequencyCap.maxImpressions ?? value.frequencyCap.maxImpressions),
+      periodCount:
+        patch.frequencyCap.periodCount === ''
+          ? null
+          : (patch.frequencyCap.periodCount ?? value.frequencyCap.periodCount),
       period: patch.frequencyCap.period ?? value.frequencyCap.period,
     };
   if (patch.fixedBid !== undefined) {
     if (value.bid.mode !== 'FIXED')
-      return { ok: false as const, issues: [{ message: 'Fixed bid applies to line items on a fixed bid strategy.', ruleId: 'LI-040' }] };
+      return {
+        ok: false as const,
+        issues: [
+          { message: 'Fixed bid applies to line items on a fixed bid strategy.', ruleId: 'LI-040' },
+        ],
+      };
     value.bid = { ...value.bid, fixedCpm: patch.fixedBid };
   }
   if (patch.inventoryQuality !== undefined)
-    value.inventory = { ...value.inventory, quality: patch.inventoryQuality as typeof value.inventory.quality };
+    value.inventory = {
+      ...value.inventory,
+      quality: patch.inventoryQuality as typeof value.inventory.quality,
+    };
   if (patch.integrationCode !== undefined) value.integrationCode = patch.integrationCode;
-  if (patch.creativeOptimization !== undefined) value.creativeOptimization = patch.creativeOptimization;
+  if (patch.creativeOptimization !== undefined)
+    value.creativeOptimization = patch.creativeOptimization;
   if (patch.optimizedTargeting !== undefined) value.optimizedTargeting = patch.optimizedTargeting;
   return updateLineItem(user, row.id, value, { expectedVersion: detail.version });
 }
@@ -213,7 +248,12 @@ async function editInventory(
       {
         type: 'LINE_ITEM',
         id: li.id,
-        chain: { advertiserId: li.advertiserId, campaignId: li.campaignId, ioId: li.ioId, lineItemId: li.id },
+        chain: {
+          advertiserId: li.advertiserId,
+          campaignId: li.campaignId,
+          ioId: li.ioId,
+          lineItemId: li.id,
+        },
       },
       async (t) => {
         const own = await t.lineItemInventory.findMany({
@@ -242,7 +282,11 @@ async function editInventory(
   });
 }
 
-async function editTargeting(user: SessionUser, row: RowInfo, params: Extract<BulkParams, { op: 'EDIT_TARGETING' }>) {
+async function editTargeting(
+  user: SessionUser,
+  row: RowInfo,
+  params: Extract<BulkParams, { op: 'EDIT_TARGETING' }>,
+) {
   const { dimension, mode, value } = params.edit;
   if (dimension === 'DEALS' || dimension === 'DEAL_GROUPS')
     return editInventory(user, row, dimension, mode, (value as { ids?: string[] })?.ids ?? []);
@@ -250,11 +294,27 @@ async function editTargeting(user: SessionUser, row: RowInfo, params: Extract<Bu
   if (!detail) throw new ServiceFailure('NOT_FOUND');
   const next = structuredClone(detail.value);
   if (dimension === 'INVENTORY_QUALITY') {
-    next.inventory = { ...next.inventory, quality: (value as { quality: string }).quality as typeof next.inventory.quality };
+    next.inventory = {
+      ...next.inventory,
+      quality: (value as { quality: string }).quality as typeof next.inventory.quality,
+    };
   } else if (dimension === 'EXCHANGES') {
-    return { ok: false as const, issues: [{ message: 'Exchanges are set for the whole partner in this simulator.', ruleId: 'BLK-011' }] };
+    return {
+      ok: false as const,
+      issues: [
+        {
+          message: 'Exchanges are set for the whole partner in this simulator.',
+          ruleId: 'BLK-011',
+        },
+      ],
+    };
   } else {
-    next.targetingState = applyTargetingEdit(next.targetingState, dimension, mode, value as TargetingEditValue);
+    next.targetingState = applyTargetingEdit(
+      next.targetingState,
+      dimension,
+      mode,
+      value as TargetingEditValue,
+    );
   }
   return updateLineItem(user, row.id, next, { expectedVersion: detail.version });
 }
@@ -262,13 +322,23 @@ async function editTargeting(user: SessionUser, row: RowInfo, params: Extract<Bu
 async function applyTemplate(user: SessionUser, row: RowInfo, templateId: string) {
   const ctx = await serviceCtx(user);
   const tpl = await withSandbox(ctx.sandboxId, (tx) => loadTemplateState(tx, templateId));
-  if (!tpl) return { ok: false as const, issues: [{ message: 'The template was not found.', ruleId: 'TPL-007' }] };
+  if (!tpl)
+    return {
+      ok: false as const,
+      issues: [{ message: 'The template was not found.', ruleId: 'TPL-007' }],
+    };
   if (row.type !== tpl.lineItemType)
-    return { ok: false as const, issues: [{ message: BLK_012(1, tpl.lineItemType), ruleId: 'BLK-012' }] };
+    return {
+      ok: false as const,
+      issues: [{ message: BLK_012(1, tpl.lineItemType), ruleId: 'BLK-012' }],
+    };
   const detail = await getLineItemDetail(user, row.id);
   if (!detail) throw new ServiceFailure('NOT_FOUND');
   const next = structuredClone(detail.value);
-  const applied = applyTemplateToTargeting(next.targetingState, { id: templateId, criteria: tpl.state.criteria });
+  const applied = applyTemplateToTargeting(next.targetingState, {
+    id: templateId,
+    criteria: tpl.state.criteria,
+  });
   next.targetingState = applied.state;
   next.targeting = { ...next.targeting, templateId };
   next.optimizedTargeting = tpl.optimizedTargeting;
@@ -339,26 +409,42 @@ export async function executeItem(
   params: BulkParams,
 ): Promise<BulkItemOutcome> {
   if (!row)
-    return { index, entityId: idForMessage, status: 'FAILED', message: NOT_FOUND(entity), ruleId: 'BLK-025' };
+    return {
+      index,
+      entityId: idForMessage,
+      status: 'FAILED',
+      message: NOT_FOUND(entity),
+      ruleId: 'BLK-025',
+    };
   if (!eligibleForItem(entity, row, params)) return failed(index, row, NOT_ELIGIBLE, 'BLK-010');
 
   switch (params.op) {
     case 'ACTIVATE':
     case 'PAUSE': {
       const to = params.op === 'ACTIVATE' ? 'ACTIVE' : 'PAUSED';
-      if (entity === 'campaign') return outcome(index, row, await setCampaignStatus(user, row.id, to));
-      if (entity === 'insertionOrder') return outcome(index, row, await setIoStatus(user, row.id, to));
+      if (entity === 'campaign')
+        return outcome(index, row, await setCampaignStatus(user, row.id, to));
+      if (entity === 'insertionOrder')
+        return outcome(index, row, await setIoStatus(user, row.id, to));
       return outcome(index, row, await setLineItemStatus(user, { id: row.id, status: to }));
     }
     case 'UNARCHIVE':
-      if (entity === 'campaign') return outcome(index, row, await setCampaignStatus(user, row.id, 'PAUSED'));
-      if (entity === 'insertionOrder') return outcome(index, row, await setIoStatus(user, row.id, 'PAUSED'));
+      if (entity === 'campaign')
+        return outcome(index, row, await setCampaignStatus(user, row.id, 'PAUSED'));
+      if (entity === 'insertionOrder')
+        return outcome(index, row, await setIoStatus(user, row.id, 'PAUSED'));
       return outcome(index, row, await setLineItemStatus(user, { id: row.id, status: 'PAUSED' }));
     case 'ARCHIVE': {
       // the cascade functions take the bulk job id from the ambient context
       const jobId = ambientChange()?.bulkJobId;
-      if (entity === 'campaign') return outcome(index, row, await archiveCampaigns(user, [row.id], jobId ? { jobId } : {}));
-      if (entity === 'insertionOrder') return outcome(index, row, await archiveInsertionOrders(user, [row.id], jobId ? { jobId } : {}));
+      if (entity === 'campaign')
+        return outcome(index, row, await archiveCampaigns(user, [row.id], jobId ? { jobId } : {}));
+      if (entity === 'insertionOrder')
+        return outcome(
+          index,
+          row,
+          await archiveInsertionOrders(user, [row.id], jobId ? { jobId } : {}),
+        );
       return outcome(index, row, await setLineItemStatus(user, { id: row.id, status: 'ARCHIVED' }));
     }
     case 'DUPLICATE':
@@ -373,17 +459,37 @@ export async function executeItem(
         throw e;
       }
     case 'APPLY_TARGETING_TEMPLATE': {
-      if (entity === 'lineItem') return outcome(index, row, await applyTemplate(user, row, params.templateId));
+      if (entity === 'lineItem')
+        return outcome(index, row, await applyTemplate(user, row, params.templateId));
       // IO: every line item of the template's type
       const ctx = await serviceCtx(user);
       const lis = await withSandbox(ctx.sandboxId, (tx) =>
-        tx.lineItem.findMany({ where: { ioId: row.id, status: { not: 'ARCHIVED' } }, select: { id: true, publicId: true, type: true, name: true, status: true, advertiserId: true } }),
+        tx.lineItem.findMany({
+          where: { ioId: row.id, status: { not: 'ARCHIVED' } },
+          select: {
+            id: true,
+            publicId: true,
+            type: true,
+            name: true,
+            status: true,
+            advertiserId: true,
+          },
+        }),
       );
       let err: BulkItemOutcome | null = null;
       for (const li of lis) {
-        const info: RowInfo = { id: li.id, publicId: li.publicId.toString(), status: 'ACTIVE', type: li.type, name: li.name, advertiserId: li.advertiserId, parentPublicId: row.publicId };
+        const info: RowInfo = {
+          id: li.id,
+          publicId: li.publicId.toString(),
+          status: 'ACTIVE',
+          type: li.type,
+          name: li.name,
+          advertiserId: li.advertiserId,
+          parentPublicId: row.publicId,
+        };
         const res = await applyTemplate(user, info, params.templateId);
-        if (!res.ok && !err && res.issues?.[0]?.ruleId !== 'BLK-012') err = outcome(index, row, res);
+        if (!res.ok && !err && res.issues?.[0]?.ruleId !== 'BLK-012')
+          err = outcome(index, row, res);
       }
       return err ?? { index, entityId: row.publicId, status: 'OK' };
     }
@@ -398,6 +504,9 @@ export async function executeItem(
     case 'EDIT_TARGETING':
       return outcome(index, row, await editTargeting(user, row, params));
     case 'EDIT_CREATIVE_ASSIGNMENT':
-      return editCreativeAssignment(user, index, row, entity, { add: params.add ?? [], remove: params.remove ?? [] });
+      return editCreativeAssignment(user, index, row, entity, {
+        add: params.add ?? [],
+        remove: params.remove ?? [],
+      });
   }
 }

@@ -98,7 +98,7 @@ export function IoHeader({ children }: { children: ReactNode }) {
       ) : null}
       {active === 'explorerlis' ? (
         <Box sx={{ mb: 4 }}>
-          <CampaignChartStrip />
+          <CampaignChartStrip scope="IO" scopeId={io} />
         </Box>
       ) : null}
       {children}

@@ -8,13 +8,40 @@ import { zipSync, strToU8 } from 'fflate';
 import type { SessionUser } from '@/lib/auth/types';
 import { ambientChange, runWithAmbient } from '@/lib/changelog/ambient';
 import { withSandbox } from '@/lib/db';
-import { archiveCampaigns, createCampaign, setCampaignStatus, updateCampaign } from '@/lib/campaigns/service';
-import { assertWrite, asResult, serviceCtx, ServiceFailure, type Result, type ServiceCtx } from '@/lib/campaigns/service-kit';
+import {
+  archiveCampaigns,
+  createCampaign,
+  setCampaignStatus,
+  updateCampaign,
+} from '@/lib/campaigns/service';
+import {
+  assertWrite,
+  asResult,
+  serviceCtx,
+  ServiceFailure,
+  type Result,
+  type ServiceCtx,
+} from '@/lib/campaigns/service-kit';
 import { newCampaignValue } from '@/lib/campaigns/wire';
-import { archiveInsertionOrders, createInsertionOrder, setIoStatus, updateInsertionOrder } from '@/lib/insertion-orders/service';
+import {
+  archiveInsertionOrders,
+  createInsertionOrder,
+  setIoStatus,
+  updateInsertionOrder,
+} from '@/lib/insertion-orders/service';
 import { newIoValue } from '@/lib/insertion-orders/wire';
-import { createLineItem, getDraftInit, setLineItemStatus, updateLineItem } from '@/lib/line-items/service';
-import { getAdGroupDetail, setAdGroupStatus, setAdStatus, updateAdGroup } from '@/lib/youtube/service';
+import {
+  createLineItem,
+  getDraftInit,
+  setLineItemStatus,
+  updateLineItem,
+} from '@/lib/line-items/service';
+import {
+  getAdGroupDetail,
+  setAdGroupStatus,
+  setAdStatus,
+  updateAdGroup,
+} from '@/lib/youtube/service';
 import { createJob, finishJob, jobPayload, putResult } from '@/lib/bulk/jobs';
 import { todayIn } from '@/lib/validation/primitives';
 import { LIMITS } from '@/lib/validation/constants/limits';
@@ -26,7 +53,15 @@ import { campaignMaps, type CampaignModel } from './map-campaign';
 import { ioMaps, type IoModel } from './map-io';
 import { liMaps, type LiModel } from './map-li';
 import { BLK, blk021, blk025, blk026, blk033 } from './rules';
-import { ENTITY_FILE, ENTITY_LABEL, SDF9_END, UPLOAD_ORDER, fromDbVersion, type SdfEntity, type SdfVersion } from './versions';
+import {
+  ENTITY_FILE,
+  ENTITY_LABEL,
+  SDF9_END,
+  UPLOAD_ORDER,
+  fromDbVersion,
+  type SdfEntity,
+  type SdfVersion,
+} from './versions';
 import { parseIdRef, whereId } from '@/lib/routes/params';
 
 export interface UploadFileIn {
@@ -95,8 +130,19 @@ function sameCell(kind: ColumnDef['kind'], a: string, b: string): boolean {
     const ny = y === '' ? null : Number(y);
     return nx !== null && ny !== null && Number.isFinite(nx) && nx === ny;
   }
-  if (kind === 'bool' || kind === 'enum' || kind === 'text') return x.toLowerCase() === y.toLowerCase() && kind !== 'text';
-  if (kind === 'list') return x.split(';').map((s) => s.trim()).join(';') === y.split(';').map((s) => s.trim()).join(';');
+  if (kind === 'bool' || kind === 'enum' || kind === 'text')
+    return x.toLowerCase() === y.toLowerCase() && kind !== 'text';
+  if (kind === 'list')
+    return (
+      x
+        .split(';')
+        .map((s) => s.trim())
+        .join(';') ===
+      y
+        .split(';')
+        .map((s) => s.trim())
+        .join(';')
+    );
   return false;
 }
 
@@ -111,10 +157,23 @@ const LOCKED: Partial<Record<SdfEntity, Record<string, string>>> = {
   },
 };
 
-function resultFail(res: { ok: false; issues?: { message: string; code?: string; ruleId?: string; severity?: string; blocking?: boolean }[]; code?: string }) {
+function resultFail(res: {
+  ok: false;
+  issues?: {
+    message: string;
+    code?: string;
+    ruleId?: string;
+    severity?: string;
+    blocking?: boolean;
+  }[];
+  code?: string;
+}) {
   const issues = res.issues ?? [];
   const first = issues.find((i) => i.blocking !== false && i.severity !== 'warning') ?? issues[0];
-  return fail(first?.message ?? 'The row could not be saved.', first?.ruleId ?? first?.code ?? 'BLK-005');
+  return fail(
+    first?.message ?? 'The row could not be saved.',
+    first?.ruleId ?? first?.code ?? 'BLK-005',
+  );
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -152,8 +211,20 @@ async function processRow(
     if (adv !== env.advertiserPublicId) return done('BLK-026', blk026('advertiser'));
   } else if (parentCol) {
     const raw = cells[parentCol] ?? '';
-    const parentEntity = entity === 'INSERTION_ORDERS' ? 'CAMPAIGNS' : entity === 'LINE_ITEMS' ? 'INSERTION_ORDERS' : entity === 'AD_GROUPS' ? 'LINE_ITEMS' : 'AD_GROUPS';
-    const noun = { CAMPAIGNS: 'campaign', INSERTION_ORDERS: 'insertion order', LINE_ITEMS: 'line item', AD_GROUPS: 'ad group' }[parentEntity];
+    const parentEntity =
+      entity === 'INSERTION_ORDERS'
+        ? 'CAMPAIGNS'
+        : entity === 'LINE_ITEMS'
+          ? 'INSERTION_ORDERS'
+          : entity === 'AD_GROUPS'
+            ? 'LINE_ITEMS'
+            : 'AD_GROUPS';
+    const noun = {
+      CAMPAIGNS: 'campaign',
+      INSERTION_ORDERS: 'insertion order',
+      LINE_ITEMS: 'line item',
+      AD_GROUPS: 'ad group',
+    }[parentEntity];
     if (/^ext/i.test(raw)) {
       const k = extKey(parentEntity, raw);
       if (env.failedExt.has(k)) return done('BLK-029', BLK['BLK-029']);
@@ -167,14 +238,19 @@ async function processRow(
   const isNew = isExt(rawId);
   const noun = ENTITY_LABEL[entity].toLowerCase();
   try {
-    if (entity === 'AD_GROUPS' || entity === 'ADS') return await processYoutubeRow(env, entity, cells, out, isNew, rawId);
+    if (entity === 'AD_GROUPS' || entity === 'ADS')
+      return await processYoutubeRow(env, entity, cells, out, isNew, rawId);
     if (isNew) return await createRow(env, entity, cells, out, parent!, rawId);
     const found = await findByPublicId(env, entity, rawId);
     if (!found) return done('BLK-025', blk025(noun.replace(/s$/, '')));
     return await updateRow(env, entity, cells, out, found, parent);
   } catch (e) {
     if (e instanceof CellError) return done(e.ruleId, e.message);
-    if (e instanceof ServiceFailure) return done(e.issues[0]?.code ?? 'BLK-005', e.issues[0]?.message ?? 'The row could not be saved.');
+    if (e instanceof ServiceFailure)
+      return done(
+        e.issues[0]?.code ?? 'BLK-005',
+        e.issues[0]?.message ?? 'The row could not be saved.',
+      );
     throw e;
   }
 }
@@ -205,11 +281,24 @@ const MAPS: Record<string, AnyMaps> = {
 
 const SKIP_ON_APPLY = new Set(['Timestamp', 'Advertiser Id']);
 
-function applyCells(env: Env, entity: SdfEntity, model: unknown, cells: Record<string, string>, only: Set<string> | null, out: RowOutcome) {
+function applyCells(
+  env: Env,
+  entity: SdfEntity,
+  model: unknown,
+  cells: Record<string, string>,
+  only: Set<string> | null,
+  out: RowOutcome,
+) {
   const maps = MAPS[entity]!;
   for (const col of columnsFor(entity, env.version)) {
     const name = col.name;
-    if (SKIP_ON_APPLY.has(name) || name === ID_COLUMN[entity] || name === PARENT_COLUMN[entity] || name === 'Status') continue;
+    if (
+      SKIP_ON_APPLY.has(name) ||
+      name === ID_COLUMN[entity] ||
+      name === PARENT_COLUMN[entity] ||
+      name === 'Status'
+    )
+      continue;
     if (only && !only.has(name)) continue;
     const v = cells[name];
     if (v === undefined || (!only && v === '')) continue;
@@ -222,13 +311,25 @@ function applyCells(env: Env, entity: SdfEntity, model: unknown, cells: Record<s
   }
 }
 
-async function createRow(env: Env, entity: SdfEntity, cells: Record<string, string>, out: RowOutcome, parent: { id: string; publicId: string }, rawId: string): Promise<RowOutcome> {
+async function createRow(
+  env: Env,
+  entity: SdfEntity,
+  cells: Record<string, string>,
+  out: RowOutcome,
+  parent: { id: string; publicId: string },
+  rawId: string,
+): Promise<RowOutcome> {
   const { user } = env;
   const rememberExt = (created: { id: string; publicId: string }) => {
     if (rawId !== '') env.created.set(extKey(entity, rawId), created);
   };
   if (entity === 'CAMPAIGNS') {
-    const model = { publicId: '', advertiserPublicId: env.advertiserPublicId, updatedAt: new Date(), wire: newCampaignValue(env.today) };
+    const model = {
+      publicId: '',
+      advertiserPublicId: env.advertiserPublicId,
+      updatedAt: new Date(),
+      wire: newCampaignValue(env.today),
+    };
     model.wire.budgets = [];
     applyCells(env, entity, model, cells, null, out);
     setNewStatus(cells, (s) => (model.wire.status = s === 'PAUSED' ? 'PAUSED' : 'ACTIVE'));
@@ -238,10 +339,23 @@ async function createRow(env: Env, entity: SdfEntity, cells: Record<string, stri
     return { ...out, ok: true, id: res.data.publicId };
   }
   if (entity === 'INSERTION_ORDERS') {
-    const type = new Map([['standard', 'STANDARD'], ['connected tv and ott streaming', 'CTV_OTT'], ['digital out of home', 'DOOH']]).get((cells['Io Type'] ?? '').toLowerCase()) as 'STANDARD' | 'CTV_OTT' | 'DOOH' | undefined;
+    const type = new Map([
+      ['standard', 'STANDARD'],
+      ['connected tv and ott streaming', 'CTV_OTT'],
+      ['digital out of home', 'DOOH'],
+    ]).get((cells['Io Type'] ?? '').toLowerCase()) as 'STANDARD' | 'CTV_OTT' | 'DOOH' | undefined;
     const probe = { wire: newIoValue(type ?? 'STANDARD', 'NONE', env.today) } as unknown as IoModel;
     ioMaps.Objective!.set!(probe, cells.Objective ?? '');
-    const model = { publicId: '', campaignPublicId: parent.publicId, updatedAt: new Date(), wire: newIoValue(probe.wire.type ?? type ?? 'STANDARD', probe.wire.objective ?? 'NONE', env.today) };
+    const model = {
+      publicId: '',
+      campaignPublicId: parent.publicId,
+      updatedAt: new Date(),
+      wire: newIoValue(
+        probe.wire.type ?? type ?? 'STANDARD',
+        probe.wire.objective ?? 'NONE',
+        env.today,
+      ),
+    };
     applyCells(env, entity, model, cells, null, out);
     setNewStatus(cells, (s) => (model.wire.status = s === 'ACTIVE' ? 'ACTIVE' : 'DRAFT'));
     const res = await createInsertionOrder(user, parent.id, model.wire);
@@ -259,7 +373,13 @@ async function createRow(env: Env, entity: SdfEntity, cells: Record<string, stri
   const init = await getDraftInit(user, parent.id, typeKey, { name: cells.Name ?? '' });
   if (!init) return { ...out, ruleId: 'BLK-026', message: blk026('insertion order') };
   const refs = await withSandbox(env.ctx.sandboxId, (tx) => loadRefs(tx, env.advertiserId));
-  const model: LiModel = { publicId: '', ioPublicId: parent.publicId, updatedAt: new Date(), value: init.value, refs };
+  const model: LiModel = {
+    publicId: '',
+    ioPublicId: parent.publicId,
+    updatedAt: new Date(),
+    value: init.value,
+    refs,
+  };
   applyCells(env, entity, model, cells, null, out);
   // BLK-004: a blank EU political ads answer becomes No
   if (!model.value.euPoliticalAds) {
@@ -273,23 +393,41 @@ async function createRow(env: Env, entity: SdfEntity, cells: Record<string, stri
   return { ...out, ok: true, id: res.data.publicId };
 }
 
-function setNewStatus(cells: Record<string, string>, set: (s: 'ACTIVE' | 'PAUSED' | 'DRAFT' | 'ARCHIVED') => void) {
+function setNewStatus(
+  cells: Record<string, string>,
+  set: (s: 'ACTIVE' | 'PAUSED' | 'DRAFT' | 'ARCHIVED') => void,
+) {
   const s = (cells.Status ?? '').toUpperCase();
   if (s === 'ACTIVE' || s === 'PAUSED' || s === 'DRAFT' || s === 'ARCHIVED') set(s);
 }
 
-async function updateRow(env: Env, entity: SdfEntity, cells: Record<string, string>, out: RowOutcome, found: { id: string; publicId: string }, parent: { id: string; publicId: string } | null): Promise<RowOutcome> {
+async function updateRow(
+  env: Env,
+  entity: SdfEntity,
+  cells: Record<string, string>,
+  out: RowOutcome,
+  found: { id: string; publicId: string },
+  parent: { id: string; publicId: string } | null,
+): Promise<RowOutcome> {
   const { user } = env;
   const opts = { includeArchived: true } as const;
-  const refs = entity === 'LINE_ITEMS' ? await withSandbox(env.ctx.sandboxId, (tx) => loadRefs(tx, env.advertiserId)) : undefined;
+  const refs =
+    entity === 'LINE_ITEMS'
+      ? await withSandbox(env.ctx.sandboxId, (tx) => loadRefs(tx, env.advertiserId))
+      : undefined;
   const model = await withSandbox(env.ctx.sandboxId, async (tx) => {
-    if (entity === 'CAMPAIGNS') return (await loadCampaignModels(tx, env.advertiserId, { ...opts, campaignIds: [found.id] }))[0];
-    if (entity === 'INSERTION_ORDERS') return (await loadIoModels(tx, env.advertiserId, { ...opts, ioIds: [found.id] }))[0];
+    if (entity === 'CAMPAIGNS')
+      return (
+        await loadCampaignModels(tx, env.advertiserId, { ...opts, campaignIds: [found.id] })
+      )[0];
+    if (entity === 'INSERTION_ORDERS')
+      return (await loadIoModels(tx, env.advertiserId, { ...opts, ioIds: [found.id] }))[0];
     return (await loadLiModels(tx, env.advertiserId, { ...opts, liIds: [found.id] }, refs))[0];
   });
   if (!model) return { ...out, ruleId: 'BLK-025', message: blk025('row') };
   const e = entity as 'CAMPAIGNS' | 'INSERTION_ORDERS' | 'LINE_ITEMS';
-  if ((cells.Timestamp ?? '') !== String(model.updatedAt.getTime())) return { ...out, ruleId: 'BLK-024', message: BLK['BLK-024'] };
+  if ((cells.Timestamp ?? '') !== String(model.updatedAt.getTime()))
+    return { ...out, ruleId: 'BLK-024', message: BLK['BLK-024'] };
   // the parent cannot change in a file
   const parentCol = PARENT_COLUMN[entity];
   if (parentCol && parent && cellsOf(e, model, env.version)[parentCol] !== parent.publicId)
@@ -298,7 +436,8 @@ async function updateRow(env: Env, entity: SdfEntity, cells: Record<string, stri
   const current = cellsOf(e, model, env.version);
   const changed = new Set<string>();
   for (const col of columnsFor(entity, env.version)) {
-    if (SKIP_ON_APPLY.has(col.name) || col.name === ID_COLUMN[entity] || col.name === parentCol) continue;
+    if (SKIP_ON_APPLY.has(col.name) || col.name === ID_COLUMN[entity] || col.name === parentCol)
+      continue;
     const cell = cells[col.name];
     if (cell === undefined) continue;
     if (!sameCell(col.kind, cell, current[col.name] ?? '')) changed.add(col.name);
@@ -344,47 +483,95 @@ async function moveStatus(env: Env, entity: SdfEntity, id: string, target: strin
   if (target === 'ARCHIVED') {
     const jobId = ambientChange()?.bulkJobId;
     const o = jobId ? { jobId } : {};
-    if (entity === 'CAMPAIGNS') { const r = await archiveCampaigns(user, [id], o); return r.ok ? null : resultFail(r); }
-    if (entity === 'INSERTION_ORDERS') { const r = await archiveInsertionOrders(user, [id], o); return r.ok ? null : resultFail(r); }
+    if (entity === 'CAMPAIGNS') {
+      const r = await archiveCampaigns(user, [id], o);
+      return r.ok ? null : resultFail(r);
+    }
+    if (entity === 'INSERTION_ORDERS') {
+      const r = await archiveInsertionOrders(user, [id], o);
+      return r.ok ? null : resultFail(r);
+    }
     const r = await setLineItemStatus(user, { id, status: 'ARCHIVED' });
     return r.ok ? null : resultFail(r);
   }
-  if (target !== 'ACTIVE' && target !== 'PAUSED') return fail('Only Active, Paused and Archived can be set on an existing row.', 'BLK-031');
-  if (entity === 'CAMPAIGNS') { const r = await setCampaignStatus(user, id, target); return r.ok ? null : resultFail(r); }
-  if (entity === 'INSERTION_ORDERS') { const r = await setIoStatus(user, id, target); return r.ok ? null : resultFail(r); }
+  if (target !== 'ACTIVE' && target !== 'PAUSED')
+    return fail('Only Active, Paused and Archived can be set on an existing row.', 'BLK-031');
+  if (entity === 'CAMPAIGNS') {
+    const r = await setCampaignStatus(user, id, target);
+    return r.ok ? null : resultFail(r);
+  }
+  if (entity === 'INSERTION_ORDERS') {
+    const r = await setIoStatus(user, id, target);
+    return r.ok ? null : resultFail(r);
+  }
   const r = await setLineItemStatus(user, { id, status: target });
   return r.ok ? null : resultFail(r);
 }
 
 /** Ad groups and ads: existing rows only, Name / Status / Bid Value (ad groups) and Name / Status (ads). */
-async function processYoutubeRow(env: Env, entity: SdfEntity, cells: Record<string, string>, out: RowOutcome, isNew: boolean, rawId: string): Promise<RowOutcome> {
-  if (isNew) return { ...out, ruleId: 'BLK-005', message: 'The simulator creates ad groups and ads in the line item page. Upload changes to existing rows only.' };
+async function processYoutubeRow(
+  env: Env,
+  entity: SdfEntity,
+  cells: Record<string, string>,
+  out: RowOutcome,
+  isNew: boolean,
+  rawId: string,
+): Promise<RowOutcome> {
+  if (isNew)
+    return {
+      ...out,
+      ruleId: 'BLK-005',
+      message:
+        'The simulator creates ad groups and ads in the line item page. Upload changes to existing rows only.',
+    };
   const found = await findByPublicId(env, entity, rawId);
-  if (!found) return { ...out, ruleId: 'BLK-025', message: blk025(entity === 'AD_GROUPS' ? 'ad group' : 'ad') };
+  if (!found)
+    return {
+      ...out,
+      ruleId: 'BLK-025',
+      message: blk025(entity === 'AD_GROUPS' ? 'ad group' : 'ad'),
+    };
   const row = await withSandbox(env.ctx.sandboxId, async (tx) =>
-    entity === 'AD_GROUPS' ? tx.adGroup.findUnique({ where: { id: found.id } }) : tx.ad.findUnique({ where: { id: found.id } }),
+    entity === 'AD_GROUPS'
+      ? tx.adGroup.findUnique({ where: { id: found.id } })
+      : tx.ad.findUnique({ where: { id: found.id } }),
   );
   if (!row) return { ...out, ruleId: 'BLK-025', message: blk025('row') };
-  if ((cells.Timestamp ?? '') !== String(row.updatedAt.getTime())) return { ...out, ruleId: 'BLK-024', message: BLK['BLK-024'] };
+  if ((cells.Timestamp ?? '') !== String(row.updatedAt.getTime()))
+    return { ...out, ruleId: 'BLK-024', message: BLK['BLK-024'] };
   const status = (cells.Status ?? '').toUpperCase();
   const nameChanged = (cells.Name ?? '') !== row.name;
   const bidCell = cells['Bid Value'];
-  const bidChanged = entity === 'AD_GROUPS' && bidCell !== undefined && 'bidValue' in row && decNum(bidCell) !== (row.bidValue ? Number(row.bidValue.toString()) : null);
+  const bidChanged =
+    entity === 'AD_GROUPS' &&
+    bidCell !== undefined &&
+    'bidValue' in row &&
+    decNum(bidCell) !== (row.bidValue ? Number(row.bidValue.toString()) : null);
   if (nameChanged || bidChanged) {
     if (entity === 'AD_GROUPS') {
       const g = row as { name: string; status: string; bidValue: { toString(): string } | null };
       const user = env.user;
       const d = await getAdGroupDetail(user, found.id);
       if (!d) return { ...out, ruleId: 'BLK-025', message: blk025('ad group') };
-      const value = { ...d.value, name: cells.Name ?? g.name, ...(bidChanged ? { bid: String(decNum(bidCell) ?? '') } : {}) };
+      const value = {
+        ...d.value,
+        name: cells.Name ?? g.name,
+        ...(bidChanged ? { bid: String(decNum(bidCell) ?? '') } : {}),
+      };
       const res = await updateAdGroup(user, found.id, value);
       if (!res.ok) return { ...out, ...resultFail(res) };
     } else {
-      out.warnings.push({ ruleId: 'BLK-028', message: 'Ad names are changed on the ad page. The value was ignored.' });
+      out.warnings.push({
+        ruleId: 'BLK-028',
+        message: 'Ad names are changed on the ad page. The value was ignored.',
+      });
     }
   }
   if (status && status !== row.status && (status === 'ACTIVE' || status === 'PAUSED')) {
-    const res = entity === 'AD_GROUPS' ? await setAdGroupStatus(env.user, found.id, status) : await setAdStatus(env.user, found.id, status);
+    const res =
+      entity === 'AD_GROUPS'
+        ? await setAdGroupStatus(env.user, found.id, status)
+        : await setAdStatus(env.user, found.id, status);
     if (!res.ok) return { ...out, ...resultFail(res) };
   }
   return { ...out, ok: true, id: found.publicId };
@@ -394,13 +581,18 @@ async function processYoutubeRow(env: Env, entity: SdfEntity, cells: Record<stri
 // Whole upload
 // ---------------------------------------------------------------------------------------------
 
-export async function requestSdfUpload(user: SessionUser, req: SdfUploadRequest): Promise<Result<SdfUploadResult>> {
+export async function requestSdfUpload(
+  user: SessionUser,
+  req: SdfUploadRequest,
+): Promise<Result<SdfUploadResult>> {
   return asResult<SdfUploadResult>(async () => {
     const ctx = await serviceCtx(user);
     assertWrite(ctx); // BLK-035
     const ref = parseIdRef(req.advertiserId);
     if (!ref) throw new ServiceFailure('NOT_FOUND');
-    const adv = await withSandbox(ctx.sandboxId, (tx) => tx.advertiser.findFirst({ where: whereId(ref) }));
+    const adv = await withSandbox(ctx.sandboxId, (tx) =>
+      tx.advertiser.findFirst({ where: whereId(ref) }),
+    );
     if (!adv) throw new ServiceFailure('NOT_FOUND');
     const version = fromDbVersion(adv.sdfVersion);
     const today = todayIn(ctx.simNow, adv.timeZone);
@@ -418,10 +610,27 @@ export async function requestSdfUpload(user: SessionUser, req: SdfUploadRequest)
     );
     const finishFailed = async (message: string, ruleId: string) => {
       await withSandbox(ctx.sandboxId, async (tx) => {
-        await tx.bulkJobItem.create({ data: { sandboxId: ctx.sandboxId, jobId: job.id, entityType: 'CAMPAIGN', status: 'FAILED', message, ruleId } });
+        await tx.bulkJobItem.create({
+          data: {
+            sandboxId: ctx.sandboxId,
+            jobId: job.id,
+            entityType: 'CAMPAIGN',
+            status: 'FAILED',
+            message,
+            ruleId,
+          },
+        });
         await finishJob(tx, job.id, { status: 'FAILED', errorSummary: message });
       });
-      return { data: { jobId: job.id, status: 'FAILED' as const, perFile: [] as FileSummary[], fileErrors: [{ file: '', ruleId, message }], euDefaulted: 0 } };
+      return {
+        data: {
+          jobId: job.id,
+          status: 'FAILED' as const,
+          perFile: [] as FileSummary[],
+          fileErrors: [{ file: '', ruleId, message }],
+          euDefaulted: 0,
+        },
+      };
     };
 
     // BLK-022: version 9 is closed after the end date on the sim clock
@@ -508,13 +717,22 @@ export async function requestSdfUpload(user: SessionUser, req: SdfUploadRequest)
         files[`SDF-${label}-Successful.csv`] = strToU8(
           writeCsv(
             [...p.headers, 'Id'],
-            outcomes.filter((o) => o.ok).map((o) => [...padTo(o.cells, p.headers.length), o.id ?? o.cells[idIdx] ?? '']),
+            outcomes
+              .filter((o) => o.ok)
+              .map((o) => [...padTo(o.cells, p.headers.length), o.id ?? o.cells[idIdx] ?? '']),
           ),
         );
         files[`SDF-${label}-Failed.csv`] = strToU8(
           writeCsv(
             [...p.headers, 'Row Number', 'Error Rule Id', 'Error Message'],
-            outcomes.filter((o) => !o.ok).map((o) => [...padTo(o.cells, p.headers.length), String(o.rowNumber), o.ruleId ?? '', o.message ?? '']),
+            outcomes
+              .filter((o) => !o.ok)
+              .map((o) => [
+                ...padTo(o.cells, p.headers.length),
+                String(o.rowNumber),
+                o.ruleId ?? '',
+                o.message ?? '',
+              ]),
           ),
         );
         perFile.push({
@@ -527,7 +745,14 @@ export async function requestSdfUpload(user: SessionUser, req: SdfUploadRequest)
       }
     });
     files['Summary.txt'] = strToU8(
-      [`SDF version ${version}`, ...perFile.map((f) => `${f.entity}: ${f.rows} rows, ${f.succeeded} succeeded, ${f.failed} failed, ${f.warnings} warnings`), ...fileErrors.map((e) => `${e.file}: ${e.ruleId} ${e.message}`)].join('\r\n') + '\r\n',
+      [
+        `SDF version ${version}`,
+        ...perFile.map(
+          (f) =>
+            `${f.entity}: ${f.rows} rows, ${f.succeeded} succeeded, ${f.failed} failed, ${f.warnings} warnings`,
+        ),
+        ...fileErrors.map((e) => `${e.file}: ${e.ruleId} ${e.message}`),
+      ].join('\r\n') + '\r\n',
     );
     const key = await putResult(ctx.sandboxId, job.id, 'SDF-ResultFiles.zip', zipSync(files));
     const failedRows = perFile.reduce((n, f) => n + f.failed, 0);
@@ -535,7 +760,16 @@ export async function requestSdfUpload(user: SessionUser, req: SdfUploadRequest)
       const data = items.map(({ entity, o }) => ({
         sandboxId: ctx.sandboxId,
         jobId: job.id,
-        entityType: ({ CAMPAIGNS: 'CAMPAIGN', INSERTION_ORDERS: 'INSERTION_ORDER', LINE_ITEMS: 'LINE_ITEM', AD_GROUPS: 'AD_GROUP', ADS: 'AD', MEDIA_PRODUCTS: 'DEAL' } as const)[entity],
+        entityType: (
+          {
+            CAMPAIGNS: 'CAMPAIGN',
+            INSERTION_ORDERS: 'INSERTION_ORDER',
+            LINE_ITEMS: 'LINE_ITEM',
+            AD_GROUPS: 'AD_GROUP',
+            ADS: 'AD',
+            MEDIA_PRODUCTS: 'DEAL',
+          } as const
+        )[entity],
         entityId: o.id ?? null,
         status: o.ok ? ('OK' as const) : ('FAILED' as const),
         message: o.message ?? o.warnings[0]?.message ?? null,
@@ -550,16 +784,35 @@ export async function requestSdfUpload(user: SessionUser, req: SdfUploadRequest)
         resultStorageKey: key,
       });
     });
-    return { data: { jobId: job.id, status: 'COMPLETED' as const, perFile, fileErrors, euDefaulted: env.euDefaulted } };
+    return {
+      data: {
+        jobId: job.id,
+        status: 'COMPLETED' as const,
+        perFile,
+        fileErrors,
+        euDefaulted: env.euDefaulted,
+      },
+    };
   });
 }
 
 const padTo = (cells: string[], n: number) => Array.from({ length: n }, (_, i) => cells[i] ?? '');
 
-async function putFileErrors(ctx: ServiceCtx, jobId: string, errors: SdfUploadResult['fileErrors']) {
+async function putFileErrors(
+  ctx: ServiceCtx,
+  jobId: string,
+  errors: SdfUploadResult['fileErrors'],
+) {
   await withSandbox(ctx.sandboxId, (tx) =>
     tx.bulkJobItem.createMany({
-      data: errors.map((e) => ({ sandboxId: ctx.sandboxId, jobId, entityType: 'CAMPAIGN' as const, status: 'FAILED' as const, message: `${e.file}: ${e.message}`, ruleId: e.ruleId })),
+      data: errors.map((e) => ({
+        sandboxId: ctx.sandboxId,
+        jobId,
+        entityType: 'CAMPAIGN' as const,
+        status: 'FAILED' as const,
+        message: `${e.file}: ${e.message}`,
+        ruleId: e.ruleId,
+      })),
     }),
   );
 }

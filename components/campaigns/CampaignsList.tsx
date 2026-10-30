@@ -17,6 +17,7 @@ import {
 } from '@/components/dv';
 import { BulkActionBar } from '@/components/bulk/BulkActionBar';
 import { SdfMenu } from '@/components/bulk/SdfDialogs';
+import { orderBy, useColumnView } from '@/components/views/useColumnView';
 import { useViewer } from '@/components/shell/ViewerProvider';
 import { setCampaignStatusAction } from '@/lib/campaigns/actions';
 import type { CampaignRow, EntityStatusKey } from '@/lib/campaigns/wire';
@@ -56,6 +57,7 @@ export function CampaignsList({
   const [, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [selection, setSelection] = useState<Set<string>>(new Set());
+  const view = useColumnView('CAMPAIGN', advertiserId);
 
   const shown = useMemo(
     () => (filter === '*' ? rows : rows.filter((r) => r.status === filter)),
@@ -103,6 +105,7 @@ export function CampaignsList({
         limitedAccess={viewer.limitedAccess}
         actions={
           <>
+            {view.menu}
             <SdfMenu advertiserId={advertiserId} campaignsList />
             <Button
               variant="contained"
@@ -141,7 +144,7 @@ export function CampaignsList({
       <DvGrid
         ariaLabel="Campaigns"
         rows={shown.slice(start, start + page.size)}
-        columns={columns}
+        columns={orderBy(columns, view.visible)}
         groups={[
           { id: 'campaign', label: 'Campaign' },
           { id: 'delivery', label: 'Delivery', collapsible: true },

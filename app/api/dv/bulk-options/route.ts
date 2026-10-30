@@ -22,13 +22,35 @@ export async function GET(req: Request) {
     });
     if (!a) return [];
     if (kind === 'creatives')
-      return (await tx.creative.findMany({ where: { advertiserId: a.id, status: { not: 'ARCHIVED' } }, orderBy: { name: 'asc' }, take: 200 })).map((c) => ({ id: c.id, label: `${c.name} (${c.publicId})`, detail: c.kind }));
+      return (
+        await tx.creative.findMany({
+          where: { advertiserId: a.id, status: { not: 'ARCHIVED' } },
+          orderBy: { name: 'asc' },
+          take: 200,
+        })
+      ).map((c) => ({ id: c.id, label: `${c.name} (${c.publicId})`, detail: c.kind }));
     if (kind === 'templates')
-      return (await tx.targetingTemplate.findMany({ where: { advertiserId: a.id, status: { not: 'ARCHIVED' } }, orderBy: { name: 'asc' } })).map((t) => ({ id: t.id, label: t.name, detail: t.lineItemType }));
+      return (
+        await tx.targetingTemplate.findMany({
+          where: { advertiserId: a.id, status: { not: 'ARCHIVED' } },
+          orderBy: { name: 'asc' },
+        })
+      ).map((t) => ({ id: t.id, label: t.name, detail: t.lineItemType }));
     if (kind === 'deals')
-      return (await tx.inventorySourceDeal.findMany({ where: { partnerId: a.partnerId, status: { not: 'ARCHIVED' } }, orderBy: { name: 'asc' }, take: 200 })).map((d) => ({ id: d.id, label: d.name, detail: d.dealType }));
+      return (
+        await tx.inventorySourceDeal.findMany({
+          where: { partnerId: a.partnerId, status: { not: 'ARCHIVED' } },
+          orderBy: { name: 'asc' },
+          take: 200,
+        })
+      ).map((d) => ({ id: d.id, label: d.name, detail: d.dealType }));
     if (kind === 'dealGroups')
-      return (await tx.dealGroup.findMany({ where: { OR: [{ advertiserId: a.id }, { partnerId: a.partnerId }] }, orderBy: { name: 'asc' } })).map((g) => ({ id: g.id, label: g.name, detail: g.kind }));
+      return (
+        await tx.dealGroup.findMany({
+          where: { OR: [{ advertiserId: a.id }, { partnerId: a.partnerId }] },
+          orderBy: { name: 'asc' },
+        })
+      ).map((g) => ({ id: g.id, label: g.name, detail: g.kind }));
     return [];
   });
   return Response.json({ data: items }, { headers: NO_STORE });

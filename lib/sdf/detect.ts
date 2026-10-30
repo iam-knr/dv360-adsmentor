@@ -5,7 +5,14 @@ import { SDF_ENTITIES, SDF_VERSIONS, type SdfEntity, type SdfVersion } from './v
 /** The file's entity, from its identifying columns. Null when none matches. */
 export function detectEntity(headers: readonly string[]): SdfEntity | null {
   const set = new Set(headers);
-  const order: SdfEntity[] = ['ADS', 'AD_GROUPS', 'LINE_ITEMS', 'INSERTION_ORDERS', 'MEDIA_PRODUCTS', 'CAMPAIGNS'];
+  const order: SdfEntity[] = [
+    'ADS',
+    'AD_GROUPS',
+    'LINE_ITEMS',
+    'INSERTION_ORDERS',
+    'MEDIA_PRODUCTS',
+    'CAMPAIGNS',
+  ];
   return order.find((e) => set.has(ID_COLUMN[e])) ?? null;
 }
 

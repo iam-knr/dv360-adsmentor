@@ -13,10 +13,21 @@ export type Outcome<T> = { ok: true; data: T } | { ok: false; message: string };
 
 async function post<T>(url: string, body: unknown): Promise<Outcome<T>> {
   try {
-    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    const json = (await res.json().catch(() => ({}))) as { data?: T; issues?: { message: string }[]; message?: string };
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const json = (await res.json().catch(() => ({}))) as {
+      data?: T;
+      issues?: { message: string }[];
+      message?: string;
+    };
     if (res.ok && json.data !== undefined) return { ok: true, data: json.data };
-    return { ok: false, message: json.issues?.[0]?.message ?? json.message ?? 'Something went wrong. Try again.' };
+    return {
+      ok: false,
+      message: json.issues?.[0]?.message ?? json.message ?? 'Something went wrong. Try again.',
+    };
   } catch {
     return { ok: false, message: 'Something went wrong. Try again.' };
   }
@@ -31,23 +42,53 @@ export interface PickItem {
   detail?: string;
 }
 
-export async function fetchOptions(advertiserId: string, kind: 'creatives' | 'templates' | 'deals' | 'dealGroups'): Promise<PickItem[]> {
-  const res = await fetch(`/api/dv/bulk-options?advertiserId=${encodeURIComponent(advertiserId)}&kind=${kind}`);
+export async function fetchOptions(
+  advertiserId: string,
+  kind: 'creatives' | 'templates' | 'deals' | 'dealGroups',
+): Promise<PickItem[]> {
+  const res = await fetch(
+    `/api/dv/bulk-options?advertiserId=${encodeURIComponent(advertiserId)}&kind=${kind}`,
+  );
   const json = (await res.json().catch(() => ({}))) as { data?: PickItem[] };
   return json.data ?? [];
 }
 
-export const requestDownload = (body: unknown) => post<{ jobId: string }>('/api/dv/sdf/download', body);
+export const requestDownload = (body: unknown) =>
+  post<{ jobId: string }>('/api/dv/sdf/download', body);
 
-export async function uploadSdf(advertiserId: string, files: File[]): Promise<Outcome<{ jobId: string; status: string; perFile: { entity: string; rows: number; succeeded: number; failed: number; warnings: number }[]; fileErrors: { file: string; ruleId: string; message: string }[]; euDefaulted: number }>> {
+export async function uploadSdf(
+  advertiserId: string,
+  files: File[],
+): Promise<
+  Outcome<{
+    jobId: string;
+    status: string;
+    perFile: {
+      entity: string;
+      rows: number;
+      succeeded: number;
+      failed: number;
+      warnings: number;
+    }[];
+    fileErrors: { file: string; ruleId: string; message: string }[];
+    euDefaulted: number;
+  }>
+> {
   const form = new FormData();
   form.set('advertiserId', advertiserId);
   for (const f of files) form.append('files', f);
   try {
     const res = await fetch('/api/dv/sdf/upload', { method: 'POST', body: form });
-    const json = (await res.json().catch(() => ({}))) as { data?: never; issues?: { message: string }[]; message?: string };
+    const json = (await res.json().catch(() => ({}))) as {
+      data?: never;
+      issues?: { message: string }[];
+      message?: string;
+    };
     if (res.ok && json.data) return { ok: true, data: json.data };
-    return { ok: false, message: json.issues?.[0]?.message ?? json.message ?? 'Something went wrong. Try again.' };
+    return {
+      ok: false,
+      message: json.issues?.[0]?.message ?? json.message ?? 'Something went wrong. Try again.',
+    };
   } catch {
     return { ok: false, message: 'Something went wrong. Try again.' };
   }

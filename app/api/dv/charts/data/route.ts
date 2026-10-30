@@ -20,5 +20,7 @@ export async function POST(req: Request) {
   if (!user) return unauthenticated();
   const body = schema.safeParse(await req.json().catch(() => null));
   if (!body.success) return badRequest('scope, scopeId and spec are required.');
-  return respond(await chartData(user, { ...body.data, spec: body.data.spec as unknown as ChartCardSpec }));
+  return respond(
+    await chartData(user, { ...body.data, spec: body.data.spec as unknown as ChartCardSpec }),
+  );
 }

@@ -17,7 +17,10 @@ export interface CapRow {
 }
 
 /** Targeting dimensions of the three submenus (2.2), keyed by MX-10 label. */
-export const TARGETING_MENU: Record<'CONTENT' | 'AUDIENCE' | 'TECHNOLOGY', { dimension: BulkTargetingDimension; label: string }[]> = {
+export const TARGETING_MENU: Record<
+  'CONTENT' | 'AUDIENCE' | 'TECHNOLOGY',
+  { dimension: BulkTargetingDimension; label: string }[]
+> = {
   CONTENT: [
     { dimension: 'APPS_URLS', label: 'Apps & URLs' },
     { dimension: 'KEYWORDS', label: 'Keywords' },
@@ -41,7 +44,11 @@ export const TARGETING_MENU: Record<'CONTENT' | 'AUDIENCE' | 'TECHNOLOGY', { dim
   ],
 };
 
-export const INVENTORY_MENU: { dimension: BulkTargetingDimension; label: string; disabled?: string }[] = [
+export const INVENTORY_MENU: {
+  dimension: BulkTargetingDimension;
+  label: string;
+  disabled?: string;
+}[] = [
   {
     dimension: 'EXCHANGES',
     label: 'Public inventory',
@@ -144,10 +151,20 @@ export function computeCapabilities(
     put(op, eligible, REASON[op]);
   }
   if (entity === 'lineItem') {
-    const all = [...TARGETING_MENU.CONTENT, ...TARGETING_MENU.AUDIENCE, ...TARGETING_MENU.TECHNOLOGY];
+    const all = [
+      ...TARGETING_MENU.CONTENT,
+      ...TARGETING_MENU.AUDIENCE,
+      ...TARGETING_MENU.TECHNOLOGY,
+    ];
     for (const { dimension } of all) {
-      const eligible = rows.filter((r) => isEligibleFor('EDIT_TARGETING', entity, r, { dimension })).length;
-      put(`EDIT_TARGETING:${dimension}`, eligible, 'This setting is not available for the selected line item types.');
+      const eligible = rows.filter((r) =>
+        isEligibleFor('EDIT_TARGETING', entity, r, { dimension }),
+      ).length;
+      put(
+        `EDIT_TARGETING:${dimension}`,
+        eligible,
+        'This setting is not available for the selected line item types.',
+      );
     }
     const open = rows.filter((r) => r.status !== 'ARCHIVED').length;
     for (const { dimension, disabled } of INVENTORY_MENU)

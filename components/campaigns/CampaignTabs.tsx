@@ -99,7 +99,7 @@ export function CampaignTabs({
         </Box>
       </DvEntityHeader>
       <Box sx={{ mb: 4 }}>
-        <CampaignChartStrip />
+        <CampaignChartStrip scope="CAMPAIGN" scopeId={campaignId} />
       </Box>
       {children}
     </>

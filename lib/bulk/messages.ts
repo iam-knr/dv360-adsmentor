@@ -2,8 +2,7 @@
 import { nounFor, type BulkEntityKey } from './entities';
 import type { BulkOp } from './types';
 
-export const BLK_010 = (n: number, m: number) =>
-  `${n} of ${m} selected items couldn't be updated.`;
+export const BLK_010 = (n: number, m: number) => `${n} of ${m} selected items couldn't be updated.`;
 export const BLK_012 = (n: number, type: string) =>
   `${n} ${n === 1 ? 'line item was' : 'line items were'} skipped because the template is for ${type} line items.`;
 export const BLK_013 = 'Enter a number greater than 0';

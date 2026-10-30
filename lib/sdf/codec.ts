@@ -47,7 +47,8 @@ export const enumError = (value: string, column: string) =>
 export const refError = (value: string, column: string) =>
   new CellError('BLK-032', `"${value}" in ${column} wasn't found.`);
 
-export const encBool = (v: boolean | null | undefined) => (v === null || v === undefined ? '' : v ? 'TRUE' : 'FALSE');
+export const encBool = (v: boolean | null | undefined) =>
+  v === null || v === undefined ? '' : v ? 'TRUE' : 'FALSE';
 export function decBool(s: string): boolean | null {
   const v = s.trim().toUpperCase();
   if (v === '') return null;
@@ -114,7 +115,10 @@ export function decTuples(s: string): string[][] {
     out.push(m[1]!.split(';').map((x) => x.trim()));
     consumed += m[0].length;
   }
-  const rest = v.replace(/\(([^()]*)\)/g, '').replace(/;/g, '').trim();
+  const rest = v
+    .replace(/\(([^()]*)\)/g, '')
+    .replace(/;/g, '')
+    .trim();
   if (rest !== '' || consumed === 0) throw formatError('(value;value);(value;value)');
   return out;
 }

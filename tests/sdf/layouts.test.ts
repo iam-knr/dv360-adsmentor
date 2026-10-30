@@ -1,14 +1,29 @@
 // V-11-01..03, V-11-09: the layout registry, the version detector and the value codec.
 import { describe, expect, it } from 'vitest';
 import {
-  decBool, decDate, decList, decNum, decTuples, encBool, encDate, encList, encNum, encTuples, parseCsv, writeCsv,
+  decBool,
+  decDate,
+  decList,
+  decNum,
+  decTuples,
+  encBool,
+  encDate,
+  encList,
+  encNum,
+  encTuples,
+  parseCsv,
+  writeCsv,
 } from '@/lib/sdf/codec';
 import { detectEntity, detectVersion, headerProblems } from '@/lib/sdf/detect';
 import { columnsFor, headerFor } from '@/lib/sdf/layouts';
 import { SDF_VERSIONS } from '@/lib/sdf/versions';
 
 describe('layout registry (V-11-01)', () => {
-  const has = (e: Parameters<typeof headerFor>[0], v: (typeof SDF_VERSIONS)[number], name: string) => headerFor(e, v).includes(name);
+  const has = (
+    e: Parameters<typeof headerFor>[0],
+    v: (typeof SDF_VERSIONS)[number],
+    name: string,
+  ) => headerFor(e, v).includes(name);
 
   it('applies the version matrix of 4.4', () => {
     for (const v of ['9', '9.1', '9.2'] as const) {
@@ -38,7 +53,14 @@ describe('layout registry (V-11-01)', () => {
   });
 
   it('keeps every entity header unique per version and the id column first', () => {
-    for (const e of ['CAMPAIGNS', 'INSERTION_ORDERS', 'LINE_ITEMS', 'AD_GROUPS', 'ADS', 'MEDIA_PRODUCTS'] as const)
+    for (const e of [
+      'CAMPAIGNS',
+      'INSERTION_ORDERS',
+      'LINE_ITEMS',
+      'AD_GROUPS',
+      'ADS',
+      'MEDIA_PRODUCTS',
+    ] as const)
       for (const v of SDF_VERSIONS) {
         const h = headerFor(e, v);
         expect(new Set(h).size).toBe(h.length);
@@ -62,7 +84,11 @@ describe('detection (V-11-02)', () => {
     expect(detectVersion('CAMPAIGNS', [...headerFor('CAMPAIGNS', '10'), 'Extra'])).toBeNull();
   });
   it('reports unknown columns and missing required ones (BLK-021)', () => {
-    const p = headerProblems('CAMPAIGNS', '11', ['Campaign Id', 'Name', 'Geography Targeting - Include']);
+    const p = headerProblems('CAMPAIGNS', '11', [
+      'Campaign Id',
+      'Name',
+      'Geography Targeting - Include',
+    ]);
     expect(p.unknown).toEqual(['Geography Targeting - Include']);
     expect(p.missingRequired).toContain('Advertiser Id');
   });
@@ -82,14 +108,22 @@ describe('codec (V-11-03)', () => {
     expect(decNum('1500.50')).toBe(1500.5);
     expect(() => decNum('1,500')).toThrow();
     expect(decList(encList(['a', 'b']))).toEqual(['a', 'b']);
-    const t = [['5000.00', '10/01/2026', '10/31/2026', 'Diwali'], ['7000.00', '11/01/2026', '11/30/2026', '']];
-    expect(encTuples(t)).toBe('(5000.00;10/01/2026;10/31/2026;Diwali);(7000.00;11/01/2026;11/30/2026;)');
+    const t = [
+      ['5000.00', '10/01/2026', '10/31/2026', 'Diwali'],
+      ['7000.00', '11/01/2026', '11/30/2026', ''],
+    ];
+    expect(encTuples(t)).toBe(
+      '(5000.00;10/01/2026;10/31/2026;Diwali);(7000.00;11/01/2026;11/30/2026;)',
+    );
     expect(decTuples(encTuples(t))).toEqual(t);
     expect(() => decTuples('5000')).toThrow();
   });
 
   it('writes BOM, CRLF and RFC 4180 quoting and parses it back', () => {
-    const rows = [['a, b', 'say "hi"', 'line\nbreak'], ['', 'x', 'y']];
+    const rows = [
+      ['a, b', 'say "hi"', 'line\nbreak'],
+      ['', 'x', 'y'],
+    ];
     const text = writeCsv(['One', 'Two', 'Three'], rows);
     expect(text.startsWith('﻿')).toBe(true);
     expect(text).toContain('\r\n');

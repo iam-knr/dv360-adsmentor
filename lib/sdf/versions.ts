@@ -5,17 +5,14 @@ export type SdfVersion = (typeof SDF_VERSIONS)[number];
 export const DEFAULT_SDF_VERSION: SdfVersion = '11';
 
 export const versionIndex = (v: SdfVersion) => SDF_VERSIONS.indexOf(v);
-export const isVersionAtLeast = (v: SdfVersion, min: SdfVersion) => versionIndex(v) >= versionIndex(min);
+export const isVersionAtLeast = (v: SdfVersion, min: SdfVersion) =>
+  versionIndex(v) >= versionIndex(min);
 
 /** Prisma enum value `V9_1` to the wire string `9.1`, and back. */
-export const fromDbVersion = (v: string): SdfVersion => v.replace(/^V/, '').replace('_', '.') as SdfVersion;
-export const toDbVersion = (v: SdfVersion) => `V${v.replace('.', '_')}` as
-  | 'V9'
-  | 'V9_1'
-  | 'V9_2'
-  | 'V10'
-  | 'V10_1'
-  | 'V11';
+export const fromDbVersion = (v: string): SdfVersion =>
+  v.replace(/^V/, '').replace('_', '.') as SdfVersion;
+export const toDbVersion = (v: SdfVersion) =>
+  `V${v.replace('.', '_')}` as 'V9' | 'V9_1' | 'V9_2' | 'V10' | 'V10_1' | 'V11';
 
 /** Version 9 stops being supported on this sim date (BLK-022). */
 export const SDF9_END = '2027-01-28';

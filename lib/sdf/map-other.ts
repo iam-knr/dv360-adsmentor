@@ -3,8 +3,18 @@
 // ads (docs/gaps/p4-10a.md). Media products are read-only reference data.
 import { encDate, encEpoch, encNum } from './codec';
 
-const STATUS = { ACTIVE: 'Active', PAUSED: 'Paused', DRAFT: 'Draft', ARCHIVED: 'Archived' } as Record<string, string>;
-const REVIEW = { PENDING: 'Pending', APPROVED: 'Approved', REJECTED: 'Rejected', RESTRICTED: 'Restricted' } as Record<string, string>;
+const STATUS = {
+  ACTIVE: 'Active',
+  PAUSED: 'Paused',
+  DRAFT: 'Draft',
+  ARCHIVED: 'Archived',
+} as Record<string, string>;
+const REVIEW = {
+  PENDING: 'Pending',
+  APPROVED: 'Approved',
+  REJECTED: 'Rejected',
+  RESTRICTED: 'Restricted',
+} as Record<string, string>;
 const AD_FORMAT = {
   RESPONSIVE: 'Responsive (video)',
   DEMAND_GEN_VIDEO: 'Demand Gen video',

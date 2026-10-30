@@ -2,7 +2,14 @@ import 'server-only';
 // Saved column views (module 11 K15): SavedView rows per person and advertiser, pin in the user prefs.
 import type { SessionUser } from '@/lib/auth/types';
 import { withSandbox } from '@/lib/db';
-import { assertRead, assertWrite, asResult, serviceCtx, ServiceFailure, type Result } from '@/lib/campaigns/service-kit';
+import {
+  assertRead,
+  assertWrite,
+  asResult,
+  serviceCtx,
+  ServiceFailure,
+  type Result,
+} from '@/lib/campaigns/service-kit';
 import { savePrefs } from '@/lib/scope/prefs';
 import { customKey, GRID_COLUMNS, validateView, type CustomView, type ViewGrid } from './columns';
 
@@ -11,18 +18,26 @@ const invalid = (message: string) =>
 
 const owner = (user: SessionUser) => (user.actor ?? user).id;
 
-export async function listViews(user: SessionUser, grid: ViewGrid, advertiserId: string): Promise<CustomView[]> {
+export async function listViews(
+  user: SessionUser,
+  grid: ViewGrid,
+  advertiserId: string,
+): Promise<CustomView[]> {
   const ctx = await serviceCtx(user);
   assertRead(ctx);
   return withSandbox(ctx.sandboxId, async (tx) => {
     const rows = await tx.savedView.findMany({
-      where: { advertiserId, grid, OR: [{ ownerUserId: owner(user) }, { sharedWithSandbox: true }] },
+      where: {
+        advertiserId,
+        grid,
+        OR: [{ ownerUserId: owner(user) }, { sharedWithSandbox: true }],
+      },
       orderBy: { createdAt: 'asc' },
     });
     return rows.map((r) => ({
       id: r.id,
       name: r.name,
-      columns: ((r.columns as { order?: string[] })?.order ?? []),
+      columns: (r.columns as { order?: string[] })?.order ?? [],
       isPinned: r.isPinned,
     }));
   });
@@ -44,7 +59,9 @@ export async function saveView(
     if (problem) throw invalid(problem);
     const row = await withSandbox(ctx.sandboxId, async (tx) => {
       if (input.id) {
-        const mine = await tx.savedView.findFirst({ where: { id: input.id, ownerUserId: owner(user) } });
+        const mine = await tx.savedView.findFirst({
+          where: { id: input.id, ownerUserId: owner(user) },
+        });
         if (!mine) throw new ServiceFailure('NOT_FOUND');
         return tx.savedView.update({
           where: { id: input.id },
@@ -52,7 +69,14 @@ export async function saveView(
         });
       }
       return tx.savedView.create({
-        data: { sandboxId: ctx.sandboxId, advertiserId, ownerUserId: owner(user), grid, name: input.name.trim(), columns: { order: columns } },
+        data: {
+          sandboxId: ctx.sandboxId,
+          advertiserId,
+          ownerUserId: owner(user),
+          grid,
+          name: input.name.trim(),
+          columns: { order: columns },
+        },
       });
     });
     return { data: { id: row.id, name: row.name, columns, isPinned: row.isPinned } };
@@ -72,7 +96,12 @@ export async function deleteView(user: SessionUser, id: string): Promise<Result<
 }
 
 /** Pin a predefined key or `custom:{id}` for a grid; the choice lives in the user prefs (RT 6.2). */
-export async function pinView(user: SessionUser, grid: ViewGrid, key: string, current: Record<string, string> = {}) {
+export async function pinView(
+  user: SessionUser,
+  grid: ViewGrid,
+  key: string,
+  current: Record<string, string> = {},
+) {
   const next = { ...current, [grid]: key };
   return savePrefs(user, { pinnedColumnView: next });
 }

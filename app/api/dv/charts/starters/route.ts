@@ -8,5 +8,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   const user = await getSessionUser();
   if (!user) return unauthenticated();
-  return Response.json({ data: STARTERS.map((s) => ({ key: s.key, label: s.label, ...s.make() })) });
+  return Response.json({
+    data: STARTERS.map((s) => ({ key: s.key, label: s.label, ...s.make() })),
+  });
 }

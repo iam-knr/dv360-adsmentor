@@ -17,6 +17,7 @@ import {
 } from '@/components/dv';
 import { BulkActionBar } from '@/components/bulk/BulkActionBar';
 import { SdfMenu } from '@/components/bulk/SdfDialogs';
+import { orderBy, useColumnView } from '@/components/views/useColumnView';
 import { useViewer } from '@/components/shell/ViewerProvider';
 import { setLineItemStatusAction } from '@/lib/line-items/actions';
 import { LI_TYPE_LABEL } from '@/lib/line-items/type-config';
@@ -62,6 +63,7 @@ export function LiGrid({
   const [page, setPage] = useState({ page: 1, size: 50 });
   const [error, setError] = useState<string | null>(null);
   const [selection, setSelection] = useState<Set<string>>(new Set());
+  const view = useColumnView('LI', advertiserId);
   const [, startTransition] = useTransition();
   const { currency } = result;
   const shown = useMemo(
@@ -194,6 +196,7 @@ export function LiGrid({
           actions={
             archived ? undefined : (
               <>
+                {view.menu}
                 <SdfMenu advertiserId={advertiserId} />
                 {newLink ? (
                   <Button variant="contained" disabled={viewer.readOnly} href={newLink}>
@@ -234,7 +237,7 @@ export function LiGrid({
       <DvGrid
         ariaLabel="Line items"
         rows={shown.slice(start, start + page.size)}
-        columns={columns}
+        columns={orderBy(columns, view.visible)}
         groups={[
           { id: 'li', label: 'Line item' },
           { id: 'delivery', label: 'Delivery', collapsible: true },

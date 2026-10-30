@@ -5,7 +5,8 @@ import type { SdfVersion } from './versions';
 export const BLK = {
   'BLK-001': 'Select at least one entity type.',
   'BLK-002': 'Upload one CSV file per entity type.',
-  'BLK-003': 'Inventory source and targeting are managed at the line item level. Leave these columns empty.',
+  'BLK-003':
+    'Inventory source and targeting are managed at the line item level. Leave these columns empty.',
   'BLK-020': "This file isn't a valid CSV file.",
   'BLK-022': 'SDF version 9 is no longer supported. Upgrade to the latest version.',
   'BLK-023': 'This file is too large. Split it into smaller files.',

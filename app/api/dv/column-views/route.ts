@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import { getSessionUser } from '@/lib/auth/session';
 import { badRequest, NO_STORE, respond, unauthenticated } from '@/lib/bulk/api';
+import { getPrefs } from '@/lib/scope/prefs';
 import { deleteView, listViews, saveView } from '@/lib/views/service';
 import { serviceCtx } from '@/lib/campaigns/service-kit';
 import { withSandbox } from '@/lib/db';
@@ -20,7 +21,9 @@ const saveSchema = z.object({
 /** Advertiser public id or row id to the row id. */
 async function advertiserRowId(userSandbox: string, id: string): Promise<string | null> {
   return withSandbox(userSandbox, async (tx) => {
-    const row = /^\d+$/.test(id) ? await tx.advertiser.findFirst({ where: { publicId: BigInt(id) }, select: { id: true } }) : await tx.advertiser.findFirst({ where: { id }, select: { id: true } });
+    const row = /^\d+$/.test(id)
+      ? await tx.advertiser.findFirst({ where: { publicId: BigInt(id) }, select: { id: true } })
+      : await tx.advertiser.findFirst({ where: { id }, select: { id: true } });
     return row?.id ?? null;
   });
 }
@@ -34,7 +37,12 @@ export async function GET(req: Request) {
   if (!g.success || !adv) return badRequest('grid and advertiserId are required.');
   const rowId = await advertiserRowId((await serviceCtx(user)).sandboxId, adv);
   if (!rowId) return Response.json({ error: 'NOT_FOUND' }, { status: 404 });
-  return Response.json({ data: await listViews(user, g.data, rowId) }, { headers: NO_STORE });
+  const views = await listViews(user, g.data, rowId);
+  const all = (await getPrefs(user)).pinnedColumnView ?? {};
+  return Response.json(
+    { data: { views, pinned: all[g.data] ?? null, pinnedAll: all } },
+    { headers: NO_STORE },
+  );
 }
 
 export async function POST(req: Request) {

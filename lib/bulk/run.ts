@@ -65,7 +65,10 @@ export async function runBulk(
     if (ids.length === 0) throw invalidReq('ids', 'Select at least one row.');
     if (ids.length > LIMITS.BULK_MAX_ROWS)
       throw invalidReq('ids', `You can select up to ${LIMITS.BULK_MAX_ROWS} rows.`);
-    if (req.params.op === 'DUPLICATE' && (!Number.isInteger(req.params.copies) || req.params.copies < 1))
+    if (
+      req.params.op === 'DUPLICATE' &&
+      (!Number.isInteger(req.params.copies) || req.params.copies < 1)
+    )
       throw invalidReq('copies', BLK_013);
 
     const rows = await loadRows(user, req.entity, ids);
@@ -178,7 +181,10 @@ export async function processJob(
           index,
           entityId: row?.publicId ?? payload.ids[index]!,
           status: 'FAILED',
-          message: e instanceof ServiceFailure ? (e.issues[0]?.message ?? e.code) : 'The change was not saved.',
+          message:
+            e instanceof ServiceFailure
+              ? (e.issues[0]?.message ?? e.code)
+              : 'The change was not saved.',
           ruleId: 'BLK-005',
         };
       }
@@ -230,7 +236,10 @@ export async function runDueJobs(budgetMs = 8000): Promise<{ jobs: number; proce
   const deadline = Date.now() + budgetMs;
   const due = await withBypass((tx) =>
     tx.bulkJob.findMany({
-      where: { status: { in: ['QUEUED', 'RUNNING'] }, source: { in: ['BULK_EDIT', 'DUPLICATION'] } },
+      where: {
+        status: { in: ['QUEUED', 'RUNNING'] },
+        source: { in: ['BULK_EDIT', 'DUPLICATION'] },
+      },
       orderBy: { requestedAt: 'asc' },
       take: 20,
       select: { id: true, sandboxId: true },
@@ -252,7 +261,10 @@ export async function runDueJobs(budgetMs = 8000): Promise<{ jobs: number; proce
 export async function resumeSandboxJobs(sandboxId: string, budgetMs = 4000): Promise<void> {
   const open = await withSandbox(sandboxId, (tx) =>
     tx.bulkJob.findMany({
-      where: { status: { in: ['QUEUED', 'RUNNING'] }, source: { in: ['BULK_EDIT', 'DUPLICATION'] } },
+      where: {
+        status: { in: ['QUEUED', 'RUNNING'] },
+        source: { in: ['BULK_EDIT', 'DUPLICATION'] },
+      },
       orderBy: { requestedAt: 'asc' },
       take: 5,
       select: { id: true },

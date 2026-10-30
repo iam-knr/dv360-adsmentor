@@ -31,7 +31,8 @@ export async function GET(req: Request) {
     });
     return Response.json({ data: view }, { headers: NO_STORE });
   } catch (e) {
-    if (e instanceof ServiceFailure) return Response.json({ error: e.code }, { status: e.code === 'NOT_FOUND' ? 404 : 403 });
+    if (e instanceof ServiceFailure)
+      return Response.json({ error: e.code }, { status: e.code === 'NOT_FOUND' ? 404 : 403 });
     throw e;
   }
 }
@@ -42,9 +43,15 @@ export async function PUT(req: Request) {
   const body = putSchema.safeParse(await req.json().catch(() => null));
   if (!body.success) return badRequest('scope, scopeId and cards are required.');
   return respond(
-    await saveChartView(user, body.data.scope, body.data.scopeId, body.data.cards as unknown as ChartCardSpec[], {
-      ...(body.data.viewKey ? { viewKey: body.data.viewKey } : {}),
-      ...(body.data.share !== undefined ? { share: body.data.share } : {}),
-    }),
+    await saveChartView(
+      user,
+      body.data.scope,
+      body.data.scopeId,
+      body.data.cards as unknown as ChartCardSpec[],
+      {
+        ...(body.data.viewKey ? { viewKey: body.data.viewKey } : {}),
+        ...(body.data.share !== undefined ? { share: body.data.share } : {}),
+      },
+    ),
   );
 }
