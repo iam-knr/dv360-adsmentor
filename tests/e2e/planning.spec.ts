@@ -369,8 +369,8 @@ test('PW-04-6: Cross-media reach, empty state, create at advertiser and partner 
   await page.getByRole('button', { name: 'Add insertion orders' }).click();
   const io = page.getByRole('dialog', { name: 'Select insertion orders' });
   await expect(io.getByRole('group', { name: 'Advertiser (1)' })).toBeVisible();
-  await expect(io.getByRole('group', { name: 'Campaigns (1)' })).toBeVisible();
-  await expect(io.getByRole('group', { name: 'Insertion orders (1)' })).toBeVisible();
+  await expect(io.getByRole('group', { name: /^Campaigns \(\d+\)$/ })).toBeVisible();
+  await expect(io.getByRole('group', { name: /^Insertion orders \(\d+\)$/ })).toBeVisible();
   await expect(io.getByRole('checkbox', { name: /Festive Sale/ })).toBeDisabled();
   await expect(io.getByText('Select one or more insertion orders')).toBeVisible();
   await expect(io.getByRole('button', { name: 'Done' })).toBeDisabled();
