@@ -242,6 +242,6 @@ describe('worker (V-11-14, AC-11-21)', () => {
     const { rows, capped } = await listJobs(user());
     expect(rows.length).toBeGreaterThan(5);
     expect(capped).toBe(false);
-    expect(rows[0]?.requestedAt >= rows.at(-1)!.requestedAt).toBe(true);
+    expect(rows[0]!.requestedAt >= rows.at(-1)!.requestedAt).toBe(true);
   });
 });
