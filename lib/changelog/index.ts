@@ -2,6 +2,7 @@
 // Before image, mutation, after image, diff through the registry, group and entries: one transaction.
 import type { ChangeSource, EntityType, Prisma } from '@prisma/client';
 import { withBypass, withSandbox, rlsEnabled, type Tx } from '@/lib/db';
+import { ambientChange } from './ambient';
 import { actorLabel, isHiddenActor, type ChangeActorRef } from './actors';
 import { createEntries, deleteEntries, diffImages, type EntryDraft } from './diff';
 import { getRegistry } from './registries';
@@ -190,7 +191,7 @@ async function run<T>(
     entityName: name,
     summary,
     note: ctx.note ?? null,
-    bulkJobId: ctx.bulkJobId ?? null,
+    bulkJobId: ctx.bulkJobId ?? ambientChange()?.bulkJobId ?? null,
     schemaVersion: registry.version,
     occurredAt: now,
   } satisfies Partial<Prisma.ChangeGroupUncheckedCreateInput>;
@@ -202,7 +203,7 @@ async function run<T>(
       userId: actor.type === 'USER' ? actor.userId : null,
       actorLabel: actorLabel(actor) ?? null,
       systemActor: actor.type === 'SYSTEM' ? actor.systemActor : null,
-      source: ctx.source ?? 'UI',
+      source: ctx.source ?? ambientChange()?.source ?? 'UI',
       isHidden: isHiddenActor(actor),
       idempotencyKey: ctx.idempotencyKey ?? null,
     },

@@ -447,6 +447,7 @@ export async function setCampaignStatus(
 export async function archiveCampaigns(
   user: SessionUser,
   cids: string[],
+  opts: { jobId?: string } = {},
 ): Promise<Result<{ jobId: string; campaigns: number } & CascadeResult>> {
   return asResult(async () => {
     const ctx = await serviceCtx(user);
@@ -456,25 +457,10 @@ export async function archiveCampaigns(
       for (const cid of cids) campaigns.push(await loadCampaign(tx, cid));
       const first = campaigns[0];
       if (!first) throw notFound();
-      const partner = await tx.advertiser.findUnique({
-        where: { id: first.advertiserId },
-        select: { partnerId: true },
-      });
-      const actor = ctx.user.actor ?? ctx.user;
-      const job = await tx.bulkJob.create({
-        data: {
-          sandboxId: ctx.sandboxId,
-          advertiserId: first.advertiserId,
-          partnerId: partner?.partnerId ?? '',
-          requestedById: actor.id,
-          source: 'BULK_EDIT',
-          action: 'ARCHIVE',
-          description: `Archived ${campaigns.length} ${campaigns.length === 1 ? 'campaign' : 'campaigns'}`,
-          status: 'COMPLETED',
-          selectionCount: campaigns.length,
-        },
-        select: { id: true },
-      });
+      // A bulk job (module 11) passes its own id; the direct Archive dialog creates one here.
+      const job = opts.jobId
+        ? { id: opts.jobId }
+        : await createArchiveJob(tx, ctx, first.advertiserId, campaigns.length, 'campaign');
       const cctx = { ...changeCtx(ctx, tx, { source: 'BULK_EDIT', bulkJobId: job.id }), tx };
       const total: CascadeResult = { insertionOrders: 0, lineItems: 0 };
       let archived = 0;
@@ -500,6 +486,34 @@ export async function archiveCampaigns(
       }
       return { data: { jobId: job.id, campaigns: archived, ...total } };
     });
+  });
+}
+
+async function createArchiveJob(
+  tx: Tx,
+  ctx: ServiceCtx,
+  advertiserId: string,
+  n: number,
+  noun: string,
+): Promise<{ id: string }> {
+  const partner = await tx.advertiser.findUnique({
+    where: { id: advertiserId },
+    select: { partnerId: true },
+  });
+  const actor = ctx.user.actor ?? ctx.user;
+  return tx.bulkJob.create({
+    data: {
+      sandboxId: ctx.sandboxId,
+      advertiserId,
+      partnerId: partner?.partnerId ?? '',
+      requestedById: actor.id,
+      source: 'BULK_EDIT',
+      action: 'ARCHIVE',
+      description: `Archived ${n} ${n === 1 ? noun : `${noun}s`}`,
+      status: 'COMPLETED',
+      selectionCount: n,
+    },
+    select: { id: true },
   });
 }
 
