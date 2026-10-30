@@ -219,6 +219,9 @@ export interface HealthRow {
   text: string;
   onInvestigate: () => void;
   onHistory?: () => void;
+  /** Suggestion rows: Apply button (three types) and the ⋮ Dismiss action. */
+  onApply?: () => void;
+  onDismiss?: () => void;
 }
 
 export interface DvHealthListProps {
@@ -270,6 +273,18 @@ function HealthRowView({ row }: { row: HealthRow }) {
       <Button variant="outlined" size="small" onClick={row.onInvestigate}>
         Investigate
       </Button>
+      {row.onApply ? (
+        <Button variant="contained" size="small" onClick={row.onApply}>
+          Apply
+        </Button>
+      ) : null}
+      {row.onDismiss ? (
+        <DvTooltip title="Dismiss">
+          <IconButton size="small" aria-label="Dismiss" onClick={row.onDismiss}>
+            <DvIcon name="close" size={20} />
+          </IconButton>
+        </DvTooltip>
+      ) : null}
       {row.onHistory ? (
         <DvTooltip title="History">
           <IconButton size="small" aria-label="History" onClick={row.onHistory}>

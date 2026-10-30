@@ -252,3 +252,43 @@ describe('alerts over a run', () => {
     }
   }, 600_000);
 });
+
+describe('persistTick suggestions (module 11 4.9, T11-15)', () => {
+  it('writes Recommendation rows from the tick output and removes them when the condition ends', async () => {
+    const li = await prisma.lineItem.findFirstOrThrow({
+      where: { sandboxId: a, advertiserId: await worldAdvertiserId() },
+      orderBy: { id: 'asc' },
+    });
+    await prisma.recommendation.deleteMany({ where: { sandboxId: a, scopeId: li.id } });
+    const sug = (action: 'OPEN' | 'CLOSE') => ({
+      action,
+      type: 'RAISE_BID' as const,
+      scopeKind: 'LINE_ITEM' as const,
+      scopeId: li.id,
+      key: `RAISE_BID|LINE_ITEM|${li.id}`,
+      title: 'Raise bid, bids are below typical clearing price',
+    });
+    const run = (recommendations: ReturnType<typeof sug>[]) =>
+      withBypass(async (tx) => {
+        const clock = (await loadClock(tx, a))!;
+        const adv = (await loadWorlds(tx, clock, defaultParams())).worlds[0]!;
+        const out = {
+          ...emptyOutput(1, true, Date.parse(`${TODAY}T06:00:00Z`), TODAY, 6),
+          recommendations,
+        };
+        return persistTick(tx, { sandboxId: a, classroomId: clock.classroomId, adv }, out);
+      });
+    await run([sug('OPEN')]);
+    await run([sug('OPEN')]);
+    const rows = await prisma.recommendation.findMany({ where: { sandboxId: a, scopeId: li.id } });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      type: 'RAISE_BID',
+      scopeType: 'LINE_ITEM',
+      status: 'OPEN',
+      advertiserId: li.advertiserId,
+    });
+    await run([sug('CLOSE')]);
+    expect(await prisma.recommendation.count({ where: { sandboxId: a, scopeId: li.id } })).toBe(0);
+  });
+});
