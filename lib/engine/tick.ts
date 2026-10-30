@@ -148,11 +148,17 @@ interface LiRun {
 
 const MICROS = 1_000_000;
 
+export interface RunTickOptions {
+  /** Daily slice kinds to produce instead of `params.aggregation.dailySliceKinds` (fast-forward history mode). */
+  sliceKinds?: readonly string[];
+}
+
 export function runTick(
   world: World,
   state: SimStateData,
   loaded: LoadedParams,
   tick: number,
+  opts: RunTickOptions = {},
 ): RunTickResult {
   const params = loaded.params;
   const idx = indexWorld(world);
@@ -620,7 +626,8 @@ export function runTick(
   // ---- aggregation rows -----------------------------------------------------------------------
   const liIdsWithOutput = new Set<string>(runs.map((r) => r.li.id));
   for (const k of convBook.keys()) liIdsWithOutput.add(k);
-  const kinds = params.aggregation.dailySliceKinds;
+  // History mode asks for fewer slices on old days; the totals and the state do not depend on them.
+  const kinds = opts.sliceKinds ?? params.aggregation.dailySliceKinds;
   for (const id of [...liIdsWithOutput].sort()) {
     const r = runs.find((x) => x.li.id === id);
     const conv = convBook.get(id) ?? { total: {}, byActivity: new Map() };

@@ -145,6 +145,8 @@ describe('metrics fixtures', () => {
     });
     sgd = { advertiserId: adv.id, campaignId: camp.id, ioId: io.id, liId: sgLi.id };
 
+    // rates of other test files are global rows; the newest SGD to INR row wins, so start from none
+    await prisma.fxRate.deleteMany({ where: { fromCurrency: 'SGD', toCurrency: 'INR' } });
     await prisma.fxRate.upsert({
       where: {
         fromCurrency_toCurrency_validFrom: {

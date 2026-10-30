@@ -1,12 +1,10 @@
 // Provisioning of one seeded sandbox: plan, history stub and insert in a single transaction (data-model 3.1 step 2).
-import type { Prisma, PrismaClient } from '@prisma/client';
+import type { Prisma, PrismaClient, SandboxKind } from '@prisma/client';
 import { seedAudiences } from '../audiences/seed';
-import { seedBulk } from '../bulk/seed';
-import { seedExperiments } from '../experiments/seed';
-import { seedPlans } from '../planning/seed';
+import { fastForward } from '../engine/server';
 import { seedAppCatalog, seedResources } from '../resources/seed';
-import { seedReports } from '../reporting/seed';
 import { seedYoutube, seedYoutubeVideos } from '../youtube/seed';
+import { finishBackfill, seedPostHistory } from './after-history';
 import { isoDate } from './dates';
 import { buildHistory } from './history-stub';
 import type { SeedKnobs, TemplateKey } from './knobs';
@@ -38,7 +36,7 @@ export interface ProvisionInput {
   ownerUserId: string | null;
   name: string;
   template: TemplateKey;
-  kind: 'STUDENT' | 'DEMO' | 'TEMPLATE';
+  kind: SandboxKind;
   seedValue: number;
   /** Used for the partner name, "Sandbox {studentCode}" (data-model 3.3). */
   partnerName: string;
@@ -46,6 +44,8 @@ export interface ProvisionInput {
   knobs?: Partial<SeedKnobs>;
   /** Rebuild even when the sandbox is READY at the current seed version. */
   force?: boolean;
+  /** With knobs.engineDays > 0: epoch ms after which the history job stops and is continued by the runtime. */
+  deadlineMs?: number;
 }
 
 export interface ProvisionResult {
@@ -53,6 +53,8 @@ export interface ProvisionResult {
   built: boolean;
   rows?: Record<string, number>;
   ms?: number;
+  /** With engine days: DONE when the history is complete, PENDING when the runtime has to finish it. */
+  backfill?: 'DONE' | 'PENDING';
 }
 
 type Db = PrismaClient;
@@ -84,8 +86,10 @@ export async function provisionSandbox(db: Db, input: ProvisionInput): Promise<P
           seedTemplateKey: input.template,
           seedValue: input.seedValue,
           seedVersion: SEED_VERSION,
-          resetCount: { increment: 1 },
-          lastResetAt: new Date(),
+          // only a rebuild of a built sandbox is a reset; the first build, a retry and a stale claim are not
+          ...(existing.provisionState === 'READY'
+            ? { resetCount: { increment: 1 }, lastResetAt: new Date() }
+            : {}),
         },
       })
     : await db.sandbox.create({
@@ -136,49 +140,50 @@ export async function provisionSandbox(db: Db, input: ProvisionInput): Promise<P
           template: input.template,
           seedValue: input.seedValue,
         });
-        // Module 16 reports (P4-07): saved instant reports with runs, one scheduled offline report.
-        const partner = await tx.partner.findFirst({
-          where: { sandboxId: sandbox.id },
-          select: { id: true, publicId: true },
-        });
-        if (partner)
-          await seedReports(tx, {
+        // Reports, plans, bulk history and experiments read the metric history. With engine days they wait for it.
+        if (plan.meta.knobs.engineDays === 0)
+          await seedPostHistory(tx, {
             sandboxId: sandbox.id,
-            partnerId: partner.id,
-            partnerPublicId: partner.publicId.toString(),
-            ownerUserId: input.ownerUserId,
             template: input.template,
+            seedValue: input.seedValue,
+            ownerUserId: input.ownerUserId,
             today: input.today ?? simToday(),
           });
-        // Module 04 (P4-08): twelve plans per advertiser with forecast snapshots.
-        await seedPlans(tx, {
-          sandboxId: sandbox.id,
-          template: input.template,
-          seedValue: input.seedValue,
-          today: input.today ?? simToday(),
-        });
-        // Module 11 (P4-10a): bulk job history, saved column views and chart views.
-        await seedBulk(tx, {
-          sandboxId: sandbox.id,
-          ownerUserId: input.ownerUserId,
-          now: new Date(),
-        });
-        // Module 17 (P4-10b): two A/B tests and three lift studies per advertiser, built on the history above.
-        await seedExperiments(tx, {
-          sandboxId: sandbox.id,
-          template: input.template,
-          seedValue: input.seedValue,
-          today: input.today ?? simToday(),
-        });
         return inserted;
       },
       { timeout: 300_000, maxWait: 30_000 },
     );
+    const engineDays = plan.meta.knobs.engineDays;
+    if (engineDays === 0) {
+      await db.sandbox.update({
+        where: { id: sandbox.id },
+        data: { provisionState: 'READY', provisionError: null },
+      });
+      return { sandboxId: sandbox.id, built: true, rows: result.rows, ms: Date.now() - started };
+    }
+    // The engine simulates the last days in history mode (docs/gaps/eng-ff.md). The job is chunked: when the budget
+    // ends first, the job stays RUNNING, the sandbox stays BACKFILLING and the runtime finishes both (advanceJobs).
+    const today = input.today ?? simToday();
     await db.sandbox.update({
       where: { id: sandbox.id },
-      data: { provisionState: 'READY', provisionError: null },
+      data: { provisionState: 'BACKFILLING', provisionError: null },
     });
-    return { sandboxId: sandbox.id, built: true, rows: result.rows, ms: Date.now() - started };
+    const job = await fastForward(sandbox.id, engineDays * 24, {
+      history: {
+        hourlyDays: plan.meta.knobs.hourlyDays,
+        sliceDays: plan.meta.knobs.sliceDays,
+        today,
+      },
+      ...(input.deadlineMs !== undefined ? { deadline: input.deadlineMs } : {}),
+    });
+    if (job.status === 'DONE') await finishBackfill(db, sandbox.id, today);
+    return {
+      sandboxId: sandbox.id,
+      built: true,
+      rows: result.rows,
+      ms: Date.now() - started,
+      backfill: job.status === 'DONE' ? 'DONE' : 'PENDING',
+    };
   } catch (err) {
     await db.sandbox.update({
       where: { id: sandbox.id },

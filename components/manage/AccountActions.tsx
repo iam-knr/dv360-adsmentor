@@ -8,6 +8,7 @@ import { DvBanner } from '@/components/dv/DvBanner';
 import {
   deleteAccountAction,
   restoreAccountAction,
+  retrySandboxAction,
   resetPasswordAction,
   revokeSessionsAction,
   setAccountStatusAction,
@@ -26,6 +27,8 @@ export interface AccountActionsProps {
     revoke: boolean;
     remove: boolean;
     restore: boolean;
+    /** Create sandbox / Retry provisioning: only for a User whose sandbox is missing or FAILED. */
+    sandbox?: 'create' | 'retry';
   };
 }
 
@@ -46,6 +49,15 @@ export function AccountActions({ id, email, status, can }: AccountActionsProps) 
   return (
     <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
       {error ? <DvBanner kind="error">{error}</DvBanner> : null}
+      {can.sandbox && status !== 'ARCHIVED' ? (
+        <Button
+          variant="outlined"
+          disabled={pending}
+          onClick={() => run(() => retrySandboxAction(id))}
+        >
+          {can.sandbox === 'create' ? 'Create sandbox' : 'Retry provisioning'}
+        </Button>
+      ) : null}
       {can.reset && status !== 'ARCHIVED' ? (
         <Button
           variant="outlined"

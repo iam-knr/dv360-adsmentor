@@ -154,7 +154,7 @@ test('E2E-INS-03 roster: add students, the passwords show once, the student must
   await expect(page.getByText('1 not added')).toBeVisible();
   await expect(page.getByText('nope: Enter a valid email address.')).toBeVisible();
   await expect(page.getByRole('gridcell', { name: e1 })).toBeVisible();
-  await expect(page.getByRole('gridcell', { name: 'NOT CREATED' }).first()).toBeVisible();
+  await expect(page.getByRole('gridcell', { name: 'PREPARING' }).first()).toBeVisible();
   // gone from the page, the URL and browser storage
   const html = await page.content();
   for (const p of pws) expect(html).not.toContain(p);

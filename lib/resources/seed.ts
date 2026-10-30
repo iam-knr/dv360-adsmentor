@@ -4,7 +4,7 @@
 // Relative imports only: prisma/seed runs under tsx without the Next alias set.
 import type { Prisma, PrismaClient } from '@prisma/client';
 import appsJson from '../../data/reference/apps.json';
-import { hashString, Rng } from '../seed/prng';
+import { hashString, Rng, stableId } from '../seed/prng';
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -316,6 +316,8 @@ export async function seedResources(db: Db, input: ResourceSeedInput): Promise<n
     for (const d of defs) {
       const a = await db.floodlightActivity.create({
         data: {
+          // stable, so a rebuild of the sandbox simulates the same conversions (the engine orders and seeds by id)
+          id: stableId(sandboxId, `fl-activity:${adv.id}:${d.name}`),
           sandboxId,
           groupId: group.id,
           name: d.name,

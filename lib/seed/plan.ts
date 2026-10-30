@@ -1745,7 +1745,8 @@ export function buildSandboxPlan(input: PlanInput): SandboxPlan {
     },
     simClock: {
       simStart,
-      tickIndex: knobs.historyDays * 24,
+      // the engine runs the last `engineDays` days from here (history mode); without it the stub covers everything
+      tickIndex: (knobs.historyDays - knobs.engineDays) * 24,
       marketSeed: `market:${input.template}`,
       sandboxSeed: String(input.seedValue),
       paramsVersion: 'seed-stub-1',

@@ -3,10 +3,12 @@
 import type { Tx } from '@/lib/db';
 import { runDueReports } from '@/lib/reporting/due';
 import { runTick } from '../tick';
+import type { TickOutput } from '../output';
 import { dueTicks } from '../clock/clock';
 import { defaultParams } from '../params/load';
-import { MS_HOUR } from '../calendar';
-import { claimTick, finishTickLog, lockClock } from './locks';
+import { MS_HOUR, tickToLocal } from '../calendar';
+import { claimTick, claimTicks, finishTickLog, lockClock } from './locks';
+import { mergeOutputs } from './mergeOutputs';
 import { loadWorlds } from './loadWorld';
 import { persistTick } from './persistTick';
 import { trimHourly } from './retention';
@@ -38,6 +40,12 @@ export interface BatchOptions {
   stopAfterTick?: (info: { tick: number; simDate: string; raised: string[] }) => string | undefined;
   /** Stop before starting another tick when this returns true (time budget). */
   outOfTime?: () => boolean;
+  /**
+   * History mode (backfill of a new or reset sandbox): the batch writes once instead of once per tick. Hourly rows
+   * older than `hourlyFromMs` are not written, daily slices only from `sliceFromMs` on (totals are always written).
+   * Stop conditions and alert order inside the batch are not available in this mode.
+   */
+  history?: { hourlyFromMs: number; sliceFromDay: string };
 }
 
 export const BATCH_TICKS = 24;
@@ -93,8 +101,32 @@ export async function runBatch(
   const raised: string[] = [];
   let stoppedBy: string | undefined;
 
+  const hist = options.history;
+  const freshTicks = hist ? await claimTicks(tx, sandboxId, tick, n, clock.simStartMs) : null;
+  const pending = new Map<string, TickOutput[]>();
+
   for (let i = 0; i < n; i++) {
     if (i > 0 && options.outOfTime?.()) break;
+    if (hist && freshTicks) {
+      if (freshTicks.has(tick)) {
+        for (const w of world.worlds) {
+          // by advertiser date, so a day has all its slices or none (the slices of a day add up to its total)
+          const day = tickToLocal(clock.simStartMs, w.world.advertiser.tzOffsetMin, tick).date;
+          const sliceKinds =
+            day >= hist.sliceFromDay ? loaded.params.aggregation.dailySliceKinds : [];
+          const state = states.get(w.advertiserId);
+          if (!state) continue;
+          const r = runTick(w.world, state, loaded, tick, { sliceKinds });
+          states.set(w.advertiserId, r.state);
+          const list = pending.get(w.advertiserId) ?? [];
+          list.push(r.output);
+          pending.set(w.advertiserId, list);
+        }
+      }
+      tick++;
+      ticks++;
+      continue;
+    }
     const startedMs = Date.now();
     const simHourMs = clock.simStartMs + tick * MS_HOUR;
     const fresh = await claimTick(tx, sandboxId, tick, simHourMs);
@@ -143,6 +175,27 @@ export async function runBatch(
       stoppedBy = stop;
       break;
     }
+  }
+
+  if (hist) {
+    const endMs = clock.simStartMs + tick * MS_HOUR;
+    for (const w of world.worlds) {
+      const merged = mergeOutputs(pending.get(w.advertiserId) ?? [], {
+        hourlyFromMs: hist.hourlyFromMs,
+      });
+      if (!merged) continue;
+      const p = await persistTick(
+        tx,
+        { sandboxId, classroomId: clock.classroomId, adv: w },
+        merged,
+      );
+      rows += p.rows;
+      raised.push(...p.raised);
+    }
+    rows += await syncCreativeReviews(tx, { sandboxId, classroomId: clock.classroomId }, endMs);
+    const yt = await syncYoutube(tx, { sandboxId, classroomId: clock.classroomId }, endMs);
+    rows += yt.decided + yt.raised.length;
+    raised.push(...yt.raised);
   }
 
   await saveStates(tx, sandboxId, states);

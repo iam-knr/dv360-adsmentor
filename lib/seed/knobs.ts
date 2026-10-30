@@ -39,6 +39,12 @@ export interface SeedKnobs {
   sliceDays: number;
   /** Days of SimHourlyMetric totals (RC-024 caps this at 14). */
   hourlyDays: number;
+  /**
+   * Days before "today" that the engine simulates (fast-forward history mode) instead of the closed-form stub. 0 keeps
+   * the stub for the whole history. The stub then covers `historyDays - engineDays` days and the clock starts at the
+   * first engine day (docs/gaps/eng-ff.md).
+   */
+  engineDays: number;
   plantedProblems: PlantedProblem[];
 }
 
@@ -51,6 +57,7 @@ const LAYOUT = {
   historyDays: 90,
   sliceDays: 14,
   hourlyDays: 14,
+  engineDays: 0,
 } as const;
 
 export const TEMPLATE_DEFAULTS: Record<TemplateKey, SeedKnobs> = {
@@ -72,6 +79,7 @@ export const KNOB_LIMITS = {
   historyDays: [0, 180],
   sliceDays: [0, 180],
   hourlyDays: [0, 14],
+  engineDays: [0, 180],
 } as const satisfies Record<string, readonly [number, number]>;
 
 export class KnobError extends Error {
@@ -112,5 +120,6 @@ export function resolveKnobs(template: TemplateKey, overrides: Partial<SeedKnobs
   }
   if (knobs.sliceDays > knobs.historyDays) knobs.sliceDays = knobs.historyDays;
   if (knobs.hourlyDays > knobs.historyDays) knobs.hourlyDays = knobs.historyDays;
+  if (knobs.engineDays > knobs.historyDays) knobs.engineDays = knobs.historyDays;
   return knobs;
 }

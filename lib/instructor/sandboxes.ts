@@ -3,28 +3,25 @@ import type { Classroom } from '@prisma/client';
 import type { Actor } from '@/lib/accounts/permissions';
 import { scopedUsers } from '@/lib/accounts/scope';
 import { prisma } from '@/lib/db';
-import { isTemplateKey, type TemplateKey } from '@/lib/seed/knobs';
-import { partnerIdOf, provisionSandbox, seedValueFor } from '@/lib/seed/sandbox';
+import { enqueueProvisionSandbox, runProvisionStep } from '@/lib/sandbox/provision';
+import { seedValueFor } from '@/lib/seed/sandbox';
 import { writeInstructorAudit } from './audit';
 import { confirmsClassName, InstructorError } from './rules';
 import { loadClass, type Db } from './scope';
 
-// Sandbox create and reset for the console (module 18 4.4, 4.5, M18-09). Both go through the seed pipeline's
-// `provisionSandbox`; the engine backfill is added by the fast-forward session through `lib/sandbox/provision.ts`
-// (see docs/gaps/p5-01.md). `buildSandbox` is the one place to swap when that lands.
+// Sandbox create and reset for the console (module 18 4.4, 4.5, M18-09). Both queue the provisioning job of
+// `lib/sandbox/provision.ts` (seed plus engine history) and run its first step.
 
 export const RESET_CONFIRM = 'RESET';
 const CONCURRENCY = 3;
+/** One reset step; a longer build goes on in the background (see buildSandbox). */
+const RESET_STEP_BUDGET_MS = 15_000;
 
 interface Student {
   id: string;
   name: string;
   studentCode: string | null;
   status: string;
-}
-
-function templateOf(cls: Pick<Classroom, 'defaultSeedTemplate'>): TemplateKey {
-  return isTemplateKey(cls.defaultSeedTemplate) ? cls.defaultSeedTemplate : 'starter-agency';
 }
 
 async function studentsOf(
@@ -46,63 +43,55 @@ async function studentsOf(
   return rows as Student[];
 }
 
-/** Build (or rebuild) one student's sandbox and make sure the student is STANDARD on its partner (RC-047). */
+/**
+ * Build (or rebuild) one student's sandbox through the provisioning job (lib/sandbox/provision.ts, M18-05): the row is
+ * queued (PENDING) and one step runs within `budgetMs`; a build that needs more time ends BUILDING and is finished by
+ * the student's welcome page, the engine timer or the next step. The student is made STANDARD on the partner by the job.
+ */
 async function buildSandbox(
   db: Db,
   cls: Classroom,
   student: Student,
-  opts: { force: boolean; newMarketSeed: boolean },
+  opts: { force: boolean; newMarketSeed: boolean; budgetMs: number },
 ): Promise<{ sandboxId: string; built: boolean }> {
   const existing = await db.sandbox.findFirst({
     where: { classroomId: cls.id, ownerUserId: student.id },
-    select: { id: true, status: true, resetCount: true },
+    select: { id: true, provisionState: true, resetCount: true },
   });
-  const label = student.studentCode ?? student.name;
-  const seedLabel = opts.newMarketSeed
-    ? `${cls.id}:${student.id}:${(existing?.resetCount ?? 0) + 1}`
-    : `${cls.id}:${student.id}`;
   if (existing && opts.force) {
+    const seedLabel = opts.newMarketSeed
+      ? `${cls.id}:${student.id}:${existing.resetCount + 1}`
+      : `${cls.id}:${student.id}`;
+    // a reset: queue the rebuild; the job clears the old data when it claims the row
     await db.sandbox.update({
       where: { id: existing.id },
-      data: { status: 'RESETTING' },
+      data: {
+        provisionState: 'PENDING',
+        provisionError: null,
+        seedValue: seedValueFor(seedLabel),
+        resetCount: { increment: 1 },
+        lastResetAt: new Date(),
+      },
     });
-  }
-  try {
-    const result = await provisionSandbox(db, {
-      classroomId: cls.id,
-      ownerUserId: student.id,
-      name: `Sandbox ${label}`,
-      template: templateOf(cls),
-      kind: 'STUDENT',
-      seedValue: seedValueFor(seedLabel),
-      partnerName: `Sandbox ${label}`,
-      force: opts.force,
-    });
-    const partnerId = partnerIdOf(result.sandboxId);
-    const grant = await db.userAccessGrant.findFirst({
-      where: { userId: student.id, sandboxId: result.sandboxId, partnerId, advertiserId: null },
-      select: { id: true },
-    });
-    if (!grant) {
-      await db.userAccessGrant.create({
-        data: { userId: student.id, sandboxId: result.sandboxId, partnerId, role: 'STANDARD' },
-      });
-    }
-    // Back to what it was: a sandbox frozen by a closed window stays frozen; a rebuilt clock starts PAUSED.
-    const back = existing && existing.status !== 'RESETTING' ? existing.status : 'ACTIVE';
+  } else if (existing?.provisionState === 'FAILED') {
     await db.sandbox.update({
-      where: { id: result.sandboxId },
-      data: { status: back, clockStateBeforeFreeze: null },
+      where: { id: existing.id },
+      data: { provisionState: 'PENDING', provisionError: null },
     });
-    return { sandboxId: result.sandboxId, built: result.built };
-  } catch (err) {
-    if (existing) {
-      await db.sandbox
-        .update({ where: { id: existing.id }, data: { status: existing.status } })
-        .catch(() => undefined);
-    }
-    throw err;
   }
+  const queued = existing
+    ? { sandboxId: existing.id }
+    : await enqueueProvisionSandbox(cls.id, student.id, db);
+  if (!queued.sandboxId) throw new Error('The sandbox could not be created.');
+  const view = await runProvisionStep(queued.sandboxId, { db, budgetMs: opts.budgetMs });
+  if (view.state === 'FAILED') throw new Error(view.error ?? 'The sandbox could not be built.');
+  // a rebuilt clock starts PAUSED, so a remembered pre-freeze state no longer applies
+  if (existing && opts.force)
+    await db.sandbox.update({
+      where: { id: queued.sandboxId },
+      data: { clockStateBeforeFreeze: null },
+    });
+  return { sandboxId: queued.sandboxId, built: view.state === 'READY' };
 }
 
 export interface SandboxOutcome {
@@ -141,7 +130,7 @@ export async function createSandboxFor(
   if (!student) throw new InstructorError('SIM-020');
   let outcome: SandboxOutcome;
   try {
-    await buildSandbox(db, cls, student, { force: false, newMarketSeed: false });
+    await buildSandbox(db, cls, student, { force: false, newMarketSeed: false, budgetMs: 25_000 });
     outcome = { userId, name: student.name, ok: true };
   } catch (err) {
     outcome = { userId, name: student.name, ok: false, error: messageOf(err) };
@@ -184,7 +173,8 @@ export async function resetSandboxes(
     if (!confirmsClassName(req.confirm, cls.name)) throw new InstructorError('SIM-009');
   } else {
     if (!req.userIds?.length) throw new InstructorError('SIM-021');
-    if (req.confirm !== RESET_CONFIRM) throw new InstructorError('SIM-009', 'Type RESET to confirm.');
+    if (req.confirm !== RESET_CONFIRM)
+      throw new InstructorError('SIM-009', 'Type RESET to confirm.');
   }
   const students = await studentsOf(
     db,
@@ -196,7 +186,11 @@ export async function resetSandboxes(
 
   const outcomes = await pool(students, CONCURRENCY, async (s): Promise<SandboxOutcome> => {
     try {
-      await buildSandbox(db, cls, s, { force: true, newMarketSeed: req.newMarketSeed === true });
+      await buildSandbox(db, cls, s, {
+        force: true,
+        newMarketSeed: req.newMarketSeed === true,
+        budgetMs: RESET_STEP_BUDGET_MS,
+      });
       return { userId: s.id, name: s.name, ok: true };
     } catch (err) {
       return { userId: s.id, name: s.name, ok: false, error: messageOf(err) };

@@ -370,7 +370,8 @@ function plannedDailySpend(profile: LiProfile, impressions: number): number {
 export function buildHistory(plan: SandboxPlan): HistoryRows {
   const { sandboxId, classroomId, today, knobs } = plan.meta;
   const firstDay = addDays(today, -knobs.historyDays);
-  const lastDay = addDays(today, -1);
+  // the engine simulates the last `engineDays` days (history mode), the stub stops before them
+  const lastDay = addDays(today, -1 - knobs.engineDays);
   const sliceFrom = addDays(today, -knobs.sliceDays);
   const hourlyFrom = addDays(today, -knobs.hourlyDays);
   const diagFrom = addDays(today, -DIAGNOSTIC_DAYS);

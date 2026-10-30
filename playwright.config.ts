@@ -26,6 +26,7 @@ export default defineConfig({
           DATABASE_URL: process.env.DATABASE_URL_TEST ?? process.env.DATABASE_URL ?? '',
           DIRECT_URL: process.env.DATABASE_URL_TEST ?? process.env.DIRECT_URL ?? '',
           CRON_SECRET: process.env.CRON_SECRET ?? 'e2e-demo-cron-secret', // tests/e2e/demo-path.spec.ts (P3-INT), test only
+          SANDBOX_ENGINE_DAYS: process.env.SANDBOX_ENGINE_DAYS ?? '3', // tests/e2e/provision.spec.ts (M18-05): quick builds
           ENABLE_GALLERY: '1', // tests/e2e/gallery.spec.ts (P3-04); the gallery is 404 in production otherwise
         },
       },

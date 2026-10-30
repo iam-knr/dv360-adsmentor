@@ -11,6 +11,8 @@ import { pageActor } from '@/lib/accounts/session-actor';
 import { formatDateTime } from '@/lib/auth/messages';
 
 export const metadata: Metadata = { title: 'Account | DV360 Simulator by Adsmetor' };
+// the Create / Retry sandbox action runs a build step
+export const maxDuration = 60;
 
 const when = (d: Date | null | undefined) => (d ? formatDateTime(d) : 'Never');
 
@@ -32,6 +34,12 @@ export default async function AccountDetailPage({
   const target: Target = { id: a.id, role: a.appRole, ownerAdminId: null, cohortOwnerId: null };
   // Scope was checked by getAccount; for the buttons treat an in-scope User as own.
   const own: Target = a.appRole === 'USER' ? { ...target, ownerAdminId: actor.id } : target;
+  const sandboxAction =
+    data.sandbox?.state === 'NOT_CREATED'
+      ? ('create' as const)
+      : data.sandbox?.state === 'FAILED'
+        ? ('retry' as const)
+        : undefined;
   const perm = (action: Parameters<typeof can>[1]) =>
     can(actor, action, actor.role === 'SUPER_ADMIN' ? target : own);
   return (
@@ -50,6 +58,9 @@ export default async function AccountDetailPage({
           revoke: perm('account.revokeSessions'),
           remove: perm('account.delete'),
           restore: perm('account.restore'),
+          ...(a.appRole === 'USER' && perm('account.edit') && sandboxAction
+            ? { sandbox: sandboxAction }
+            : {}),
         }}
       />
       <DvSectionCard title="Profile">
@@ -76,7 +87,12 @@ export default async function AccountDetailPage({
       </DvSectionCard>
       {a.appRole === 'USER' ? (
         <DvSectionCard title="Sandbox">
-          <Typography>NOT CREATED until the provisioning job (module 18) is merged.</Typography>
+          <Typography>
+            State:{' '}
+            {data.sandbox?.state === 'NOT_CREATED' ? 'NOT CREATED' : (data.sandbox?.state ?? '-')}
+            {data.sandbox?.state === 'BUILDING' ? ` (${data.sandbox.percent}%)` : ''}
+          </Typography>
+          {data.sandbox?.error ? <Typography>Error: {data.sandbox.error}</Typography> : null}
         </DvSectionCard>
       ) : null}
       <DvSectionCard title="Activity">
