@@ -105,7 +105,23 @@ describe('0002_extended: introspection', () => {
       expect(r?.rls, `${t} RLS`).toBe(true);
       expect(r?.names, `${t} policies`).toEqual(['engine_access', 'tenant_isolation']);
     }
-    for (const t of GLOBAL) expect(byTable.get(t)?.rls, `${t} has no RLS`).toBe(false);
+    // A global table a student session may read has RLS on with a read policy (0011_rls_read_policies: Supabase turns
+    // RLS on for every table, and without a policy the student would see no rows). The others have no RLS.
+    const readable = new Set(
+      (
+        await prisma.$queryRaw<{ t: string }[]>`
+          SELECT table_name AS t FROM information_schema.role_table_grants
+          WHERE grantee = 'app_tenant' AND table_schema = 'public' AND privilege_type = 'SELECT'`
+      ).map((x) => x.t),
+    );
+    for (const t of GLOBAL) {
+      if (readable.has(t)) {
+        expect(byTable.get(t)?.rls, `${t} RLS`).toBe(true);
+        expect(byTable.get(t)?.names, `${t} policies`).toEqual(['engine_access', 'tenant_read']);
+      } else {
+        expect(byTable.get(t)?.rls, `${t} has no RLS`).toBe(false);
+      }
+    }
   });
 
   it('every tenant table is tied to a sandbox by a foreign key that carries sandboxId', async () => {

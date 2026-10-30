@@ -20,13 +20,19 @@ import { toWireIssues, type ServiceError, type WireIssue } from './wire';
 
 export type { WireIssue } from './wire';
 
+/** Next.js turns an error with this digest into the 403 page (app/forbidden.tsx) instead of the error boundary. */
+const HTTP_403_DIGEST = 'NEXT_HTTP_ERROR_FALLBACK;403';
+
 export class ServiceFailure extends Error {
+  /** Read by Next.js when the failure escapes a page: a FORBIDDEN one renders "You do not have access" with HTTP 403. */
+  readonly digest?: string;
   constructor(
     readonly code: ServiceError,
     readonly issues: WireIssue[] = [],
   ) {
     super(code);
     this.name = 'ServiceFailure';
+    if (code === 'FORBIDDEN') this.digest = HTTP_403_DIGEST;
   }
 }
 

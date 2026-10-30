@@ -7,7 +7,7 @@ import Typography from '@mui/material/Typography';
 
 export const ERROR_TEXT = 'Something went wrong. Try again.';
 
-export function ErrorPage({ onRetry }: { onRetry?: () => void }) {
+export function ErrorPage({ onRetry, digest }: { onRetry?: () => void; digest?: string }) {
   return (
     <Box
       component="main"
@@ -25,6 +25,11 @@ export function ErrorPage({ onRetry }: { onRetry?: () => void }) {
       <Typography variant="h5" component="h1">
         {ERROR_TEXT}
       </Typography>
+      {digest ? (
+        <Typography variant="body2" color="text.secondary" data-testid="error-digest">
+          Error reference: {digest}
+        </Typography>
+      ) : null}
       <Button variant="contained" onClick={() => (onRetry ? onRetry() : window.location.reload())}>
         Reload
       </Button>

@@ -77,3 +77,36 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: failure()
         with: { name: playwright-report, path: playwright-report }
+  # PROD-CRASH: a database prepared exactly like production (migrations + bootstrap under NODE_ENV=production, no
+  # db:seed), RLS on for every table, two students provisioned by the real job, every linked page opened as the second.
+  prod-like:
+    needs: [check, db-tests]
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env: { POSTGRES_PASSWORD: postgres, POSTGRES_DB: postgres }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 10
+    env:
+      DATABASE_URL_PRODLIKE: postgresql://postgres:postgres@127.0.0.1:5432/dv360_prodlike
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/dv360_prodlike
+      DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:5432/dv360_prodlike
+      AUTH_SECRET: ci-only-secret-ci-only-secret-ci-only
+      AUTH_TRUST_HOST: 'true'
+      CRON_SECRET: ci-cron-secret
+      SEED_SUPER_ADMIN_EMAIL: admin@example.test
+      SEED_SUPER_ADMIN_PASSWORD: ci-admin-password
+      PROD_LIKE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: bash scripts/prod-like-db.sh
+      - run: npx playwright test --project=prod-like
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with: { name: playwright-report-prod-like, path: playwright-report }

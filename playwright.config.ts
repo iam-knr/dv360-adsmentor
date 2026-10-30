@@ -1,6 +1,10 @@
 import { defineConfig } from '@playwright/test';
 
-const baseURL = process.env.E2E_BASE_URL ?? 'http://127.0.0.1:3100';
+// PROD_LIKE=1 runs only tests/e2e/prod-like-crawler.spec.ts, against a database prepared like production (migrations +
+// bootstrap only, see .github/workflows/ci.yml job `prod-like`) on its own port. The default run skips that spec.
+const prodLike = process.env.PROD_LIKE === '1';
+const port = prodLike ? 3101 : 3100;
+const baseURL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${port}`;
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined;
 const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
 
@@ -14,17 +18,25 @@ export default defineConfig({
     extraHTTPHeaders: bypass ? { 'x-vercel-protection-bypass': bypass } : {},
     launchOptions: executablePath ? { executablePath } : {},
   },
-  projects: [{ name: 'chromium' }],
+  projects: [
+    prodLike
+      ? { name: 'prod-like', testMatch: /prod-like-crawler\.spec\.ts/ }
+      : { name: 'chromium', testIgnore: /prod-like-crawler\.spec\.ts/ },
+  ],
   webServer: process.env.E2E_BASE_URL
     ? undefined
     : {
-        command: 'npm run build && npm run start -- -p 3100',
-        url: 'http://127.0.0.1:3100/api/health',
+        command: `npm run build && npm run start -- -p ${port}`,
+        url: `http://127.0.0.1:${port}/api/health`,
         timeout: 240_000,
         reuseExistingServer: !process.env.CI,
         env: {
-          DATABASE_URL: process.env.DATABASE_URL_TEST ?? process.env.DATABASE_URL ?? '',
-          DIRECT_URL: process.env.DATABASE_URL_TEST ?? process.env.DIRECT_URL ?? '',
+          DATABASE_URL: prodLike
+            ? (process.env.DATABASE_URL_PRODLIKE ?? '')
+            : (process.env.DATABASE_URL_TEST ?? process.env.DATABASE_URL ?? ''),
+          DIRECT_URL: prodLike
+            ? (process.env.DATABASE_URL_PRODLIKE ?? '')
+            : (process.env.DATABASE_URL_TEST ?? process.env.DIRECT_URL ?? ''),
           CRON_SECRET: process.env.CRON_SECRET ?? 'e2e-demo-cron-secret', // tests/e2e/demo-path.spec.ts (P3-INT), test only
           SANDBOX_ENGINE_DAYS: process.env.SANDBOX_ENGINE_DAYS ?? '3', // tests/e2e/provision.spec.ts (M18-05): quick builds
           ENABLE_GALLERY: '1', // tests/e2e/gallery.spec.ts (P3-04); the gallery is 404 in production otherwise

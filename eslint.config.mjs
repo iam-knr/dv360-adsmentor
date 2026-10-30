@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const compat = new FlatCompat({ baseDirectory: dirname(fileURLToPath(import.meta.url)) });
 
 const NEXT_SPECIAL_FILES = [
-  'app/**/{page,layout,not-found,error,global-error,loading,template,default,route}.{ts,tsx}',
+  'app/**/{page,layout,not-found,forbidden,error,global-error,loading,template,default,route}.{ts,tsx}',
   'middleware.ts',
   '*.config.{ts,mjs,js}',
   '.dependency-cruiser.cjs',
