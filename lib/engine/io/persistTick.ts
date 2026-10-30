@@ -10,6 +10,7 @@ import type { AlertCode } from '../world';
 import { alertTypeOf } from './map';
 import type { AdvertiserWorld } from './types';
 import { advanceAudiences } from '@/lib/audiences/lifecycle';
+import { advanceExperiments, advanceLiftStudies } from '@/lib/experiments/advance';
 import { advanceCustomBidding } from '@/lib/resources/custom-bidding-training';
 
 export interface PersistCtx {
@@ -340,5 +341,8 @@ export async function persistTick(
 
   // 8. audiences whose 4 sim hours are over become ACTIVE and get their sizes (module 14 4.3)
   rows += await advanceAudiences(tx, sandboxId, ctx.adv.advertiserId, out.hourStartMs + 3_600_000);
+  // 9. A/B tests start and end on their dates; lift flights progress with spend (module 17, Δ17-14)
+  rows += await advanceExperiments(tx, sandboxId, ctx.adv.advertiserId, out.hourStartMs + 3_600_000);
+  rows += await advanceLiftStudies(tx, sandboxId, ctx.adv.advertiserId, out.hourStartMs + 3_600_000);
   return { rows: rows + alerts.rows, raised: alerts.raised };
 }

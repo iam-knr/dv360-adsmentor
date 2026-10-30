@@ -156,6 +156,8 @@ export interface LineItemEntity {
   partnerCosts?: PartnerCost[];
   optimizedTargeting: boolean;
   creativeOptimization: boolean;
+  /** Share of the supply an A/B test arm sees (module 17, engine 6.7). Undefined: not in an active test. */
+  supplyShare?: number;
 }
 
 export type ApprovalState = 'APPROVED' | 'PENDING' | 'DISAPPROVED';

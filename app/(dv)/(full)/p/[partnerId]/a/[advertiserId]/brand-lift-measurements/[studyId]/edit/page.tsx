@@ -1,7 +1,11 @@
-import { StubPage } from '@/components/shell/StubPage';
+import { LiftEditRoute } from '@/components/experiments/pages/ExperimentRoutes';
 
 export const metadata = { title: 'Review and fix' };
 
-export default function Page() {
-  return <StubPage module="17" title="Review and fix" view="STD" frame="form" />;
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ partnerId: string; advertiserId: string; studyId: string }>;
+}) {
+  return <LiftEditRoute params={await params} />;
 }
