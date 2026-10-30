@@ -3,6 +3,8 @@ import { CreativeHeader } from '@/components/creatives/CreativeHeader';
 import { CreativeHistory } from '@/components/creatives/CreativeHistory';
 import { FormFrame } from '@/components/shell/Frames';
 import { orNotFound } from '@/lib/creatives/page';
+import { addDaysIso } from '@/lib/metrics/date-range';
+import { dayIn } from '@/lib/history/zone';
 import { getCreativeHistory } from '@/lib/creatives/review-service';
 import { getCreativeDetail } from '@/lib/creatives/service';
 import { requireView } from '@/lib/scope/guard';
@@ -30,9 +32,17 @@ export default async function Page({
   const page = Math.max(1, Number(one(q.page)) || 1);
   const userFilter = one(q.user);
   const fieldFilter = one(q.field);
+  // the chip defaults to the last 90 days; removing it (range=all) shows every change
+  const zone = chain.advertiser.timeZone;
+  const today = dayIn(zone, new Date());
+  const range =
+    one(q.range) === 'all'
+      ? null
+      : { from: one(q.from) ?? addDaysIso(today, -89), to: one(q.to) ?? today };
   const history = await orNotFound(() =>
     getCreativeHistory(user, aid, creativeId, {
       page,
+      ...(range ? { from: range.from, to: range.to } : {}),
       ...(userFilter ? { user: userFilter } : {}),
       ...(fieldFilter ? { field: fieldFilter } : {}),
     }),
@@ -45,6 +55,8 @@ export default async function Page({
         total={history.total}
         page={history.page}
         pageSize={history.pageSize}
+        timeZone={zone}
+        range={range}
         initialFilters={[
           ...(userFilter ? [{ fieldId: 'user', values: [userFilter] }] : []),
           ...(fieldFilter ? [{ fieldId: 'field', values: [fieldFilter] }] : []),

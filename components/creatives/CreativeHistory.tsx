@@ -6,18 +6,24 @@ import { useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import { DvFilterBar, type FilterField, type FilterValue } from '@/components/dv/DvFilterBar';
 import { DvIcon } from '@/components/icons';
 import type { HistoryRow } from '@/lib/creatives/types';
+import { dayIn, timeIn } from '@/lib/history/zone';
 
 const FIELDS: FilterField[] = [
   { id: 'user', label: 'User', type: 'text' },
   { id: 'field', label: 'Field', type: 'text' },
 ];
 
-const when = (iso: string) => new Date(iso).toLocaleString('en-GB');
+/** dd/mm/yyyy (module 05 2.4). */
+const dmy = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
+/** "dd/mm/yyyy hh:mm" in the advertiser zone (module 05 2.4). */
+const when = (iso: string, zone: string) =>
+  `${dmy(dayIn(zone, new Date(iso)))} ${timeIn(zone, new Date(iso)).slice(0, 5)}`;
 
 export function CreativeHistory({
   rows,
@@ -25,12 +31,18 @@ export function CreativeHistory({
   page,
   pageSize,
   initialFilters,
+  timeZone,
+  range,
 }: {
   rows: HistoryRow[];
   total: number;
   page: number;
   pageSize: number;
   initialFilters: FilterValue[];
+  /** Advertiser zone the dates are shown in. */
+  timeZone: string;
+  /** The date range chip; null once it was removed (all changes). */
+  range: { from: string; to: string } | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -47,11 +59,27 @@ export function CreativeHistory({
     router.replace(`${pathname}?${qs.toString()}`, { scroll: false });
   };
 
+  const clearRange = () => {
+    const qs = new URLSearchParams(search.toString());
+    qs.delete('from');
+    qs.delete('to');
+    qs.set('range', 'all');
+    qs.set('page', '1');
+    router.replace(`${pathname}?${qs.toString()}`, { scroll: false });
+  };
+
   const first = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const last = Math.min(total, page * pageSize);
   return (
     <Box>
-      <Box sx={{ mb: 2 }}>
+      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+        {range ? (
+          <Chip
+            label={`Date range: ${dmy(range.from)} to ${dmy(range.to)}`}
+            onDelete={clearRange}
+            data-testid="history-range-chip"
+          />
+        ) : null}
         <DvFilterBar
           fields={FIELDS}
           value={filters}
@@ -90,7 +118,7 @@ export function CreativeHistory({
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={4}>No changes found.</td>
+              <td colSpan={4}>No history for this date range.</td>
             </tr>
           ) : (
             rows.map((r) => {
@@ -114,7 +142,7 @@ export function CreativeHistory({
                       <DvIcon name={expanded ? 'expand_less' : 'expand_more'} size={18} />
                     </IconButton>
                   </td>
-                  <td>{when(r.date)}</td>
+                  <td>{when(r.date, timeZone)}</td>
                   <td>{r.user}</td>
                   <td>
                     <Typography variant="body2">{r.summary}</Typography>
@@ -135,6 +163,7 @@ export function CreativeHistory({
       <Box
         sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 2, mt: 2 }}
       >
+        <Typography variant="body2">Items per page: {pageSize}</Typography>
         <Typography variant="body2">
           {first} - {last} of {total}
         </Typography>

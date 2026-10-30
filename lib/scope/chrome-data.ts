@@ -3,6 +3,8 @@ import 'server-only';
 // clock and the class window warning (P3-02 helpers). Nothing here writes.
 import { withSandbox } from '@/lib/db';
 import type { SessionUser } from '@/lib/auth/types';
+import { listNotifications } from '@/lib/history/notifications';
+import type { NotificationDto } from '@/lib/history/types';
 import { loadInbox, type InboxEntry } from '@/lib/reporting/inbox';
 import { bypassesWindow, getClassAccessState, getWindowBanner } from '@/lib/access/windows';
 
@@ -22,6 +24,8 @@ export interface ChromeData {
   closesAt: string | null;
   /** Bell entries: scheduled report runs (module 16). Absent in tests. */
   inbox?: InboxEntry[];
+  /** Bell entries: instructor and platform announcements (module 05 4.7). Absent in tests. */
+  announcements?: NotificationDto[];
 }
 
 const HOUR_MS = 3_600_000;
@@ -48,7 +52,7 @@ export async function getChromeData(
   now: Date = new Date(),
 ): Promise<ChromeData> {
   const timeZone = user.timeZone ?? 'Asia/Kolkata';
-  const [clockRow, windowBanner, access, inbox] = await Promise.all([
+  const [clockRow, windowBanner, access, inbox, announcements] = await Promise.all([
     user.sandboxId
       ? withSandbox(user.sandboxId, (tx) =>
           tx.simClock.findUnique({
@@ -60,11 +64,13 @@ export async function getChromeData(
     getWindowBanner(user, now),
     !bypassesWindow(user) && user.classroomId ? getClassAccessState(user.classroomId, now) : null,
     loadInbox(user).catch(() => [] as InboxEntry[]),
+    listNotifications(user).catch(() => [] as NotificationDto[]),
   ]);
   return {
     clock: clockRow ? simClockView(clockRow, timeZone) : null,
     windowBanner,
     closesAt: access?.closesAt?.toISOString() ?? null,
     inbox,
+    announcements,
   };
 }
