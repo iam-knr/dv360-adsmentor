@@ -314,6 +314,7 @@ Outline of waves and module tasks: `docs/specs/build-plan.md` section 3.7. Modul
 ### Phase 5 — Training layer
 Outline: `docs/specs/build-plan.md` section 3.8. Module 18 holds the tasks.
 - ✅ P5-01 Instructor console (built on branch `p5-01-instructor`, no migration: dashboard, classes, roster with one-time passwords, access windows with weekly series, Open now and Close now, sandbox create and reset, announcements, certificate requests (module 03 T09), Super admin classes, audit log and engine pages; not done: clock page (P5-03), snapshots (M18-17), scenarios and progress, see `docs/gaps/p5-01.md`)
+- ✅ PROD-SEED Global reference data in production (branch `prod-seed`; `ensureReferenceData` runs from the Vercel build bootstrap and self-heals sandbox provisioning; no migration; see `docs/gaps/prod-seed.md`)
 - ⬜ P5-02 Scenario engine + 10 starter exercises with auto-checks
 - ⬜ P5-03 Time-acceleration controls (instructor)
 - ⬜ P5-04 Student progress dashboard

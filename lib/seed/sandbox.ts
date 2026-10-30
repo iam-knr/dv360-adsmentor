@@ -10,6 +10,7 @@ import { buildHistory } from './history-stub';
 import type { SeedKnobs, TemplateKey } from './knobs';
 import { buildSandboxPlan } from './plan';
 import { hashString, stableId } from './prng';
+import { ensureReferenceData, referenceDataMissing } from './ensure';
 import { seedReferenceData } from './reference-db';
 import type { SandboxPlan } from './types';
 import { clearSandboxData, insertPlan } from './write';
@@ -116,6 +117,8 @@ export async function provisionSandbox(db: Db, input: ProvisionInput): Promise<P
       knobs: input.knobs,
     });
     const history = buildHistory(plan);
+    // Self-heal: a database that never got the global reference data (production before bootstrap ran it).
+    if (await referenceDataMissing(db)) await ensureReferenceData(db);
     const result = await db.$transaction(
       async (tx: Prisma.TransactionClient) => {
         await clearSandboxData(tx, sandbox.id);
