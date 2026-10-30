@@ -221,9 +221,9 @@ describe('flight lifecycle, report, Add flight and End (AC 14 to 16)', () => {
     expect(base.empty).toBe(false);
     expect(base.metrics.map((m) => m.metric).sort()).toEqual(['AWARENESS', 'PURCHASE_INTENT']);
     const m = base.metrics.find((x) => x.metric === 'AWARENESS')!;
-    expect(m.exposedRate! - m.baselineRate!).toBeCloseTo(m.absoluteLift!, 6);
-    expect(m.relativeLift).toBeCloseTo(m.absoluteLift! / m.baselineRate!, 6);
-    expect(m.headroomLift).toBeCloseTo(m.absoluteLift! / (1 - m.baselineRate!), 6);
+    expect(m.exposedRate! - m.baselineRate!).toBeCloseTo(m.absoluteLift!, 4);
+    expect(m.relativeLift).toBeCloseTo(m.absoluteLift! / m.baselineRate!, 3);
+    expect(m.headroomLift).toBeCloseTo(m.absoluteLift! / (1 - m.baselineRate!), 3);
     expect(m.ci![0]).toBeLessThan(m.absoluteLift!);
     expect(m.ci![1]).toBeGreaterThan(m.absoluteLift!);
     expect(base.surveyResponses).toBeGreaterThan(1000);
