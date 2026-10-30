@@ -1,5 +1,5 @@
 // Display helpers of the experiment pages.
-import type { LiftStatus } from '@prisma/client';
+type LiftStatus = 'ELIGIBLE' | 'NOT_ELIGIBLE' | 'IN_PROGRESS' | 'COMPLETE' | 'PAUSED' | 'ENDED';
 
 export const fmtDay = (iso: string): string =>
   new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
