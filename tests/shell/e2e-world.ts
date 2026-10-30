@@ -1,7 +1,7 @@
 // Fixtures for tests/e2e/shell.spec.ts: a signed-in student whose sandbox holds one partner, advertiser, campaign,
 // IO, line item and audience, built with the plain client (table owner, not subject to RLS). Synthetic data only.
 import type { DvRole, PrismaClient } from '@prisma/client';
-import { createAccount, createClassroom, createStudent, type WindowKind } from '../auth/fixtures';
+import { createAccount, createClassroom, createStudent } from '../auth/fixtures';
 
 export interface ShellWorld {
   email: string;
@@ -29,13 +29,13 @@ export interface ShellWorld {
 
 export async function createShellWorld(
   db: PrismaClient,
-  opts: { tag: string; role?: DvRole; windows?: WindowKind; paused?: boolean },
+  opts: { tag: string; role?: DvRole; paused?: boolean },
 ): Promise<ShellWorld> {
-  const admin = await createAccount(db, { tag: `${opts.tag}-admin`, role: 'ADMIN' });
+  const admin = await createAccount(db, { tag: `${opts.tag}-admin`, role: 'SUPER_ADMIN' });
   const classroom = await createClassroom(db, {
     tag: opts.tag,
     ownerAdminId: admin.user.id,
-    windows: opts.windows ?? 'open',
+    windows: 'none',
   });
   const student = await createStudent(db, {
     tag: `${opts.tag}-stu`,

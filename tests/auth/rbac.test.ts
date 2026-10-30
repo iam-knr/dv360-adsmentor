@@ -110,7 +110,9 @@ describe('can(): DV360 level x action class', () => {
     expect(can(user('STANDARD'), 'view', { sandboxId: 'sb2' })).toBe(false);
     expect(can(user('ADMIN', { sandboxId: undefined }), 'view', { sandboxId: 'sb2' })).toBe(false);
     expect(
-      can(user('ADMIN', { appRole: 'admin', sandboxId: undefined }), 'view', { sandboxId: 'sb2' }),
+      can(user('ADMIN', { appRole: 'super_admin', sandboxId: undefined }), 'view', {
+        sandboxId: 'sb2',
+      }),
     ).toBe(true);
   });
 
@@ -161,34 +163,24 @@ describe('view-as is read only until "Act as student" (M18-AC13)', () => {
 
 describe('simulator areas (routes.md 5.3 rule 4)', () => {
   it.each([
-    ['/sim/instructor', 'instructor'],
-    ['/sim/instructor/classes/1', 'instructor'],
-    ['/sim/admin', 'admin'],
-    ['/sim/admin/seed', 'admin'],
     ['/manage', 'manage'],
     ['/manage/accounts/new', 'manage'],
+    ['/manage/cohorts/c1', 'manage'],
     ['/manage/settings', 'manage_settings'],
     ['/sim/me', null],
-    ['/sim/instructors-lounge', null],
+    ['/sim/instructor', null], // the instructor and admin areas are gone (ADM-FIX)
+    ['/sim/admin', null],
     ['/p/1/home_v3', null],
   ] as const)('%s is area %s', (path, area) => {
     expect(areaForPath(path)).toBe(area);
   });
 
-  it('role x area table', () => {
+  it('role x area table: only the Super admin opens /manage', () => {
     const rows: Array<
       [Parameters<typeof canOpenArea>[0], Parameters<typeof canOpenArea>[1], boolean]
     > = [
-      ['user', 'instructor', false],
-      ['user', 'admin', false],
       ['user', 'manage', false],
       ['user', 'manage_settings', false],
-      ['admin', 'instructor', true],
-      ['admin', 'admin', false],
-      ['admin', 'manage', true],
-      ['admin', 'manage_settings', false],
-      ['super_admin', 'instructor', true],
-      ['super_admin', 'admin', true],
       ['super_admin', 'manage', true],
       ['super_admin', 'manage_settings', true],
     ];

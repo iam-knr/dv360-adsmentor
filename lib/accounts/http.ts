@@ -10,7 +10,7 @@ export async function actorOrResponse(): Promise<Actor | NextResponse> {
     const user = await requireUser();
     const who = user.actor ?? user;
     const role = toDbRole(who.appRole);
-    if (role === 'USER') return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
+    if (role !== 'SUPER_ADMIN') return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
     return { id: who.id, role };
   } catch (err) {
     if (err instanceof UnauthenticatedError)

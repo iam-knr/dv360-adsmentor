@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Link from '@mui/material/Link';
 import Typography from '@mui/material/Typography';
 import { DvEmptyState } from '@/components/dv/DvEmptyState';
 import { DvPageHeader } from '@/components/dv/DvPageHeader';
@@ -22,6 +23,9 @@ export default async function CohortsPage() {
           </Button>
         }
       />
+      <Typography variant="body2" sx={{ mb: 3, color: 'text.secondary' }}>
+        A cohort is an optional group of students. Students do not need one.
+      </Typography>
       {cohorts.length === 0 ? (
         <DvEmptyState variant="inline" message="No cohorts yet." />
       ) : (
@@ -36,16 +40,18 @@ export default async function CohortsPage() {
           <thead>
             <tr>
               <th>Name</th>
-              <th>Owner admin</th>
-              <th>Users</th>
+              <th>Students</th>
               <th>Created</th>
             </tr>
           </thead>
           <tbody>
             {cohorts.map((c) => (
               <tr key={c.id}>
-                <td>{c.name}</td>
-                <td>{c.ownerAdmin.name}</td>
+                <td>
+                  <Link href={`/manage/cohorts/${c.id}`} underline="hover">
+                    {c.name}
+                  </Link>
+                </td>
                 <td>
                   <Typography component="span">
                     {c.used} of {c.capacity}

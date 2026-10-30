@@ -3,7 +3,6 @@
 // Global shortcuts of routes.md 4.7 (behaviour per design-system 5.4). `?` opens the shortcuts dialog, `/` the search
 // overlay, Shift+N the create page of the current list (none on other pages, and none without write access).
 // The grid shortcuts (Download SDF, CSV, Duplicate) belong to the grids; here they let the browser have the key.
-import { useEffect, useRef } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useHotkeys } from '@/lib/hooks/useHotkeys';
 import { confirmLeave } from '@/lib/hooks/useUnsavedGuard';
@@ -38,26 +37,5 @@ export function ShellHotkeys() {
     { key: 'L', mod: true, shift: true, handler: () => false },
     { key: 'D', mod: true, handler: () => false },
   ]);
-  return null;
-}
-
-/**
- * Hard stop at the end of the class window (routes.md 5.3 rule 3, 7.4): once the window has closed, the next
- * navigation goes to /sim/closed. Middleware and the (dv) layout catch full loads; this catches client navigation
- * that reuses the layouts.
- */
-export function WindowWatch() {
-  const { chrome } = useViewer();
-  const pathname = usePathname();
-  const first = useRef(true);
-  useEffect(() => {
-    if (first.current) {
-      first.current = false;
-      return;
-    }
-    if (chrome.closesAt && Date.parse(chrome.closesAt) <= Date.now()) {
-      window.location.assign('/sim/closed');
-    }
-  }, [pathname, chrome.closesAt]);
   return null;
 }

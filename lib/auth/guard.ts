@@ -12,11 +12,10 @@ export type GuardDecision =
   | { type: 'next' }
   | { type: 'redirect'; to: string; status: 307 | 308 }
   | { type: 'unauthorized' }
-  | { type: 'password-change-required' }
-  | { type: 'window-check' };
+  | { type: 'password-change-required' };
 
 const PUBLIC_EXACT = new Set(['/', '/sim/login', '/sim/session-expired', '/api/health']);
-const PUBLIC_PREFIXES = ['/api/auth', '/api/sim/engine', '/api/sim/access/tick', '/components'];
+const PUBLIC_PREFIXES = ['/api/auth', '/api/sim/engine', '/components'];
 
 /** Paths a person who must change the password may still reach. */
 const ALLOWED_WHILE_MUST_CHANGE = [
@@ -25,9 +24,6 @@ const ALLOWED_WHILE_MUST_CHANGE = [
   '/sim/session-expired',
   '/api/auth',
 ];
-
-/** Student pages (outside the DV360 routes) that need an open class window. */
-const WINDOW_GUARDED_SIM = ['/sim/welcome', '/sim/scenarios', '/sim/attempts', '/sim/progress'];
 
 function under(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
@@ -45,10 +41,6 @@ export function isApiPath(pathname: string): boolean {
 export function isDvPath(pathname: string): boolean {
   if (pathname === '/') return false;
   return !['/sim', '/manage', '/api', '/components', '/_next'].some((p) => under(pathname, p));
-}
-
-export function needsWindowCheck(pathname: string): boolean {
-  return isDvPath(pathname) || WINDOW_GUARDED_SIM.some((p) => under(pathname, p));
 }
 
 /** Accept only same-site relative paths for `?next=`. */
@@ -88,7 +80,6 @@ export function decide({ pathname, search, session }: GuardInput): GuardDecision
     return { type: 'redirect', to: '/sim/forbidden', status: 307 };
   }
 
-  // 5. students need an open class window (admins and super admins skip this, and so does /manage)
-  if (session.appRole === 'user' && needsWindowCheck(pathname)) return { type: 'window-check' };
+  // There are no class windows (ADM-FIX): a student with a session always gets through.
   return { type: 'next' };
 }

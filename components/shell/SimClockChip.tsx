@@ -61,7 +61,7 @@ export function SimClockChip() {
           <Typography variant="body2">{paused ? 'Paused' : 'Running'}</Typography>
         </Box>
         <Typography variant="caption" sx={{ display: 'block', mt: 2 }}>
-          Your instructor controls the clock.
+          The clock runs on its own; you cannot change it.
         </Typography>
       </Popover>
     </>

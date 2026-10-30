@@ -56,6 +56,11 @@ export function ProvisionProgress({ initial }: { initial: View }) {
     };
   }, [view.state, call]);
 
+  useEffect(() => {
+    // the build finished while the student watched: open the sandbox home
+    if (view.state === 'READY' && view.overview) window.location.assign(view.overview);
+  }, [view.state, view.overview]);
+
   if (view.state === 'READY') {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>

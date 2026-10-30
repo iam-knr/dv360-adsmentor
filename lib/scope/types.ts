@@ -43,7 +43,7 @@ export interface ScopeInfo {
 export interface ViewerInfo {
   name: string;
   initials: string;
-  appRole: 'user' | 'admin' | 'super_admin';
+  appRole: 'user' | 'super_admin';
   dvRole: DvRole;
   /** READ_ONLY and PARTNER_CLIENT: the grey "Limited Access" chip (routes.md 2). */
   limitedAccess: boolean;

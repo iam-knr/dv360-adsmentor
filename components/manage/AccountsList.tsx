@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
@@ -24,14 +25,12 @@ export interface AccountListRow {
   appRole: 'USER' | 'ADMIN' | 'SUPER_ADMIN';
   status: 'ACTIVE' | 'DISABLED' | 'LOCKED' | 'ARCHIVED';
   cohortName: string | null;
-  ownerAdminName: string | null;
-  period: string;
   lastLogin: string;
   sandbox: string;
   isSelf: boolean;
 }
 
-const ROLE = { USER: 'User', ADMIN: 'Admin', SUPER_ADMIN: 'Super admin' } as const;
+const ROLE = { USER: 'Student', ADMIN: 'Retired', SUPER_ADMIN: 'Super admin' } as const;
 const STATUS = {
   ACTIVE: 'Active',
   DISABLED: 'Disabled',
@@ -48,7 +47,6 @@ export interface AccountsListProps {
   pageSize: number;
   search: string;
   showArchived: boolean;
-  isSuper: boolean;
 }
 
 export function AccountsList({
@@ -58,7 +56,6 @@ export function AccountsList({
   pageSize,
   search,
   showArchived,
-  isSuper,
 }: AccountsListProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -74,10 +71,11 @@ export function AccountsList({
     skipped: { id: string; message: string }[];
   } | null>(null);
   const [secrets, setSecrets] = useState<{ email: string; password: string }[] | null>(null);
+  const wide = useMediaQuery('(min-width:1380px)', { noSsr: true });
 
   const go = (next: Record<string, string | undefined>) => {
     const p = new URLSearchParams({
-      ...(q ? { search: q } : {}),
+      ...(q ? { q } : {}),
       ...(showArchived ? { archived: '1' } : {}),
       page: String(page),
       pageSize: String(pageSize),
@@ -94,7 +92,7 @@ export function AccountsList({
       id: 'name',
       header: 'Name',
       type: 'custom',
-      width: 200,
+      width: 180,
       sticky: true,
       cell: (r) => (
         <Link href={`/manage/accounts/${r.id}`} underline="hover">
@@ -102,16 +100,17 @@ export function AccountsList({
         </Link>
       ),
     },
-    { id: 'email', header: 'Email', width: 260 },
-    { id: 'appRole', header: 'Role', width: 110, accessor: (r) => ROLE[r.appRole] },
-    { id: 'status', header: 'Status', width: 100, accessor: (r) => STATUS[r.status] },
-    { id: 'cohortName', header: 'Cohort', width: 160 },
-    ...(isSuper
-      ? [{ id: 'ownerAdminName', header: 'Owner admin', width: 160 } as DvColumn<AccountListRow>]
+    { id: 'email', header: 'Email', width: 250 },
+    { id: 'appRole', header: 'Level', width: 100, accessor: (r) => ROLE[r.appRole] },
+    { id: 'status', header: 'Status', width: 90, accessor: (r) => STATUS[r.status] },
+    { id: 'sandbox', header: 'Sandbox', width: 110 },
+    // secondary columns only when there is room: below about 1280 px the table fits without a sideways scroll
+    ...(wide
+      ? [
+          { id: 'cohortName', header: 'Cohort', width: 150 },
+          { id: 'lastLogin', header: 'Last sign in', width: 120 },
+        ]
       : []),
-    { id: 'period', header: 'Access period', width: 170 },
-    { id: 'lastLogin', header: 'Last sign in', width: 130 },
-    { id: 'sandbox', header: 'Sandbox', width: 120 },
   ];
 
   const ids = [...selection];
@@ -178,7 +177,7 @@ export function AccountsList({
           component="form"
           onSubmit={(e) => {
             e.preventDefault();
-            go({ search: q || undefined, page: '1' });
+            go({ q: q || undefined, page: '1' });
           }}
           sx={{ width: 320 }}
         >

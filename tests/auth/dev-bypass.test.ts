@@ -25,9 +25,9 @@ describe('AUTH_DEV_BYPASS can never be on in production', () => {
     expect(isDevBypassEnabled({ NODE_ENV: 'development', AUTH_DEV_BYPASS: '0' })).toBe(false);
     expect(isDevBypassEnabled({ NODE_ENV: 'development' })).toBe(false);
   });
-  it('the bypass user is a Super admin only under test', () => {
+  it('the bypass user is a Super admin (there is no Admin level)', () => {
     expect(devBypassUser({ NODE_ENV: 'test' }).appRole).toBe('super_admin');
-    expect(devBypassUser({ NODE_ENV: 'development' }).appRole).toBe('admin');
+    expect(devBypassUser({ NODE_ENV: 'development' }).appRole).toBe('super_admin');
   });
   it('without a session the middleware logic still redirects (it never sees a bypass user in production)', () => {
     expect(decide({ pathname: '/sim/me', search: '', session: null }).type).toBe('redirect');

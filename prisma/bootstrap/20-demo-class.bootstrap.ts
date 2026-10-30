@@ -1,5 +1,5 @@
-// Demo class for local work and CI (build-plan P3-05b item 5): classroom "Demo class", one ADMIN (instructor level),
-// three USER accounts, a sandbox per student built from `starter-agency`, and a window that stays open for 30 days.
+// Demo cohort for local work and CI (build-plan P3-05b item 5): cohort "Demo class" owned by the Super admin, three
+// student accounts and a sandbox per student built from `starter-agency`. There are no class windows (ADM-FIX).
 // Idempotent. Skipped when NODE_ENV=production (or on Vercel) unless SEED_DEMO=1. Passwords come from SEED_STUDENT_PASSWORD;
 // without it a random value is printed once to the terminal of a non-production run and never to production logs (module 19 4.4).
 import { randomBytes } from 'node:crypto';
@@ -10,17 +10,11 @@ import { seedReferenceData } from '../../lib/seed/reference-db';
 import { partnerIdOf, provisionSandbox, seedValueFor } from '../../lib/seed/sandbox';
 
 export const DEMO_CLASS = { name: 'Demo class', code: 'DEMO' } as const;
-export const DEMO_INSTRUCTOR = {
-  email: 'instructor@example.test',
-  name: 'Demo Instructor',
-} as const;
 export const DEMO_STUDENTS = [1, 2, 3].map((n) => ({
   email: `student${n}@example.test`,
   name: `Demo Student ${n}`,
   studentCode: `ST-00${n}`,
 }));
-export const WINDOW_LABEL = 'Demo class: always open';
-const WINDOW_DAYS = 30;
 
 type Env = Record<string, string | undefined>;
 
@@ -70,7 +64,7 @@ export async function runDemoClass(
   const ensureUser = async (data: {
     email: string;
     name: string;
-    appRole: 'ADMIN' | 'USER';
+    appRole: 'USER';
     studentCode?: string;
     cohortId?: string;
     ownerAdminId?: string;
@@ -98,47 +92,24 @@ export async function runDemoClass(
     });
   };
 
-  const instructor = await ensureUser({ ...DEMO_INSTRUCTOR, appRole: 'ADMIN' });
+  // The Super admin owns the cohort; the first one is used (db:bootstrap creates it before this step).
+  const owner = await db.user.findFirst({
+    where: { appRole: 'SUPER_ADMIN', status: 'ACTIVE' },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true },
+  });
+  if (!owner) throw new Error('The demo cohort needs a Super admin. Run `npm run db:bootstrap` first.');
   const classroom = await db.classroom.upsert({
     where: { code: DEMO_CLASS.code },
-    update: { name: DEMO_CLASS.name, ownerAdminId: instructor.id },
+    update: { name: DEMO_CLASS.name, ownerAdminId: owner.id },
     create: {
       name: DEMO_CLASS.name,
       code: DEMO_CLASS.code,
-      ownerAdminId: instructor.id,
+      ownerAdminId: owner.id,
       defaultSeedTemplate: 'starter-agency',
       capacity: 25,
     },
   });
-  await db.classroomMember.upsert({
-    where: { classroomId_userId: { classroomId: classroom.id, userId: instructor.id } },
-    update: {},
-    create: { classroomId: classroom.id, userId: instructor.id, appRole: 'ADMIN' },
-  });
-
-  // Window: always open for the next 30 days; every run moves the end forward.
-  const now = new Date();
-  const opensAt = new Date(now.getTime() - 86_400_000);
-  const closesAt = new Date(now.getTime() + WINDOW_DAYS * 86_400_000);
-  const window = await db.accessWindow.findFirst({
-    where: { classroomId: classroom.id, label: WINDOW_LABEL },
-  });
-  if (window)
-    await db.accessWindow.update({
-      where: { id: window.id },
-      data: { opensAt, closesAt, status: 'OPEN', closedBy: null },
-    });
-  else
-    await db.accessWindow.create({
-      data: {
-        classroomId: classroom.id,
-        label: WINDOW_LABEL,
-        opensAt,
-        closesAt,
-        status: 'OPEN',
-        note: 'Created by the demo class bootstrap',
-      },
-    });
 
   const sandboxes: NonNullable<DemoBootstrapResult['sandboxes']> = [];
   for (const s of DEMO_STUDENTS) {
@@ -148,7 +119,7 @@ export async function runDemoClass(
       appRole: 'USER',
       studentCode: s.studentCode,
       cohortId: classroom.id,
-      ownerAdminId: instructor.id,
+      ownerAdminId: owner.id,
     });
     await db.classroomMember.upsert({
       where: { classroomId_userId: { classroomId: classroom.id, userId: student.id } },

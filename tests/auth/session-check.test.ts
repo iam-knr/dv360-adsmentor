@@ -58,8 +58,8 @@ describe('evaluateSession', () => {
     ).toBe('other-device');
   });
 
-  it('single session is off for Admins and Super admins by default', () => {
-    for (const appRole of ['admin', 'super_admin'] as AppRole[]) {
+  it('single session is off for Super admins by default', () => {
+    for (const appRole of ['super_admin'] as AppRole[]) {
       expect(
         evaluateSession(
           claims,
@@ -71,12 +71,12 @@ describe('evaluateSession', () => {
     }
   });
 
-  it('single session can be switched on for admins in the policy', () => {
-    const policy = { ...DEFAULT_POLICY, singleSessionAdmin: true };
+  it('single session can be switched on for Super admins in the policy', () => {
+    const policy = { ...DEFAULT_POLICY, singleSessionSuper: true };
     expect(
       evaluateSession(
         claims,
-        user({ appRole: 'admin', activeSessionId: 'sid-2' }),
+        user({ appRole: 'super_admin', activeSessionId: 'sid-2' }),
         policy,
         after(1),
       ),
@@ -85,7 +85,6 @@ describe('evaluateSession', () => {
 
   describe.each<[AppRole, number, number]>([
     ['user', 480, 12],
-    ['admin', 480, 24],
     ['super_admin', 120, 8],
   ])('%s: idle %i minutes, absolute %i hours', (appRole, idle, absolute) => {
     it('ends after the idle limit', () => {

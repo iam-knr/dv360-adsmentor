@@ -1,7 +1,7 @@
 'use client';
 
 // Page banner slot (routes.md 4.5, design-system 4.1): the DV360 banner first (advertiser paused or scheduled for
-// deletion), then the simulator banners below it (view-as, class window ending). None of them can be dismissed.
+// deletion), then the simulator banner below it (view-as). None of them can be dismissed.
 import Box from '@mui/material/Box';
 import { DvBanner } from '@/components/dv';
 import { ViewAsBanner } from '@/components/sim/ViewAsBanner';
@@ -17,14 +17,14 @@ export const ADV_DELETION_BANNER =
 
 export function BannerStack() {
   const { scope } = usePageScope();
-  const { viewer, chrome } = useViewer();
+  const { viewer } = useViewer();
   const adv = scope.advertiser;
   const dvText = adv?.paused
     ? ADV_PAUSED_BANNER
     : adv?.scheduledForDeletion
       ? ADV_DELETION_BANNER
       : null;
-  if (!dvText && !viewer.viewAs && !chrome.windowBanner) return null;
+  if (!dvText && !viewer.viewAs) return null;
   return (
     <Box
       data-testid="banner-stack"
@@ -37,11 +37,6 @@ export function BannerStack() {
       ) : null}
       {viewer.viewAs ? (
         <ViewAsBanner name={viewer.viewAs.name} actAs={viewer.viewAs.actAs} />
-      ) : null}
-      {chrome.windowBanner ? (
-        <DvBanner kind="info" level="page">
-          {chrome.windowBanner}
-        </DvBanner>
       ) : null}
     </Box>
   );

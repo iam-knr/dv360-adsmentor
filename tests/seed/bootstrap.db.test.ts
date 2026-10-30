@@ -4,17 +4,22 @@ import { prisma } from '@/lib/db';
 import { clearSandboxData } from '@/lib/seed/write';
 import {
   DEMO_CLASS,
-  DEMO_INSTRUCTOR,
   DEMO_STUDENTS,
-  WINDOW_LABEL,
   runDemoClass,
 } from '../../prisma/bootstrap/20-demo-class.bootstrap';
+import { createAccount } from '../auth/fixtures';
 
 const PASSWORD = 'demo-class-pass-1234';
 const quiet = () => {};
 
 describe('demo class bootstrap', () => {
+  let ownerId: string | undefined;
+
   beforeAll(async () => {
+    // the Super admin owns the cohort; create one when the database has none (CI runs db:bootstrap only before e2e)
+    if ((await prisma.user.count({ where: { appRole: 'SUPER_ADMIN', status: 'ACTIVE' } })) === 0) {
+      ownerId = (await createAccount(prisma, { tag: 'demo-owner', role: 'SUPER_ADMIN' })).user.id;
+    }
     await runDemoClass(prisma, { NODE_ENV: 'test', SEED_STUDENT_PASSWORD: PASSWORD }, quiet);
   }, 240_000);
 
@@ -33,25 +38,20 @@ describe('demo class bootstrap', () => {
       await prisma.user.deleteMany({ where: { cohortId: classroom.id } });
       await prisma.classroom.delete({ where: { id: classroom.id } });
     }
-    await prisma.user.deleteMany({ where: { email: DEMO_INSTRUCTOR.email } });
+    if (ownerId) await prisma.user.deleteMany({ where: { id: ownerId } });
     await prisma.$disconnect();
   }, 120_000);
 
-  it('creates the classroom, one ADMIN and three USER accounts', async () => {
+  it('creates the cohort, owned by a Super admin, and three student accounts', async () => {
     const classroom = await prisma.classroom.findUniqueOrThrow({
       where: { code: DEMO_CLASS.code },
-      include: { members: { include: { user: true } } },
+      include: { members: { include: { user: true } }, ownerAdmin: true },
     });
     expect(classroom.name).toBe('Demo class');
-    expect(classroom.members).toHaveLength(4);
-    const instructor = classroom.members.find((m) => m.user.email === 'instructor@example.test')!;
-    expect(instructor.user.appRole).toBe('ADMIN');
-    expect(classroom.ownerAdminId).toBe(instructor.userId);
-    const students = classroom.members
-      .filter((m) => m.user.appRole === 'USER')
-      .map((m) => m.user.email)
-      .sort();
-    expect(students).toEqual([
+    expect(classroom.ownerAdmin.appRole).toBe('SUPER_ADMIN');
+    expect(classroom.members).toHaveLength(3);
+    expect(classroom.members.every((m) => m.user.appRole === 'USER')).toBe(true);
+    expect(classroom.members.map((m) => m.user.email).sort()).toEqual([
       'student1@example.test',
       'student2@example.test',
       'student3@example.test',
@@ -95,18 +95,11 @@ describe('demo class bootstrap', () => {
     expect(DEMO_STUDENTS.map((s) => s.studentCode)).toEqual(['ST-001', 'ST-002', 'ST-003']);
   });
 
-  it('opens a window for the next 30 days', async () => {
+  it('creates no access window: there are no class windows', async () => {
     const classroom = await prisma.classroom.findUniqueOrThrow({
       where: { code: DEMO_CLASS.code },
     });
-    const w = await prisma.accessWindow.findFirstOrThrow({
-      where: { classroomId: classroom.id, label: WINDOW_LABEL },
-    });
-    const now = Date.now();
-    expect(w.status).toBe('OPEN');
-    expect(w.opensAt.getTime()).toBeLessThan(now);
-    expect(w.closesAt.getTime() - now).toBeGreaterThan(29 * 86_400_000);
-    expect(w.closesAt.getTime() - now).toBeLessThanOrEqual(30 * 86_400_000);
+    expect(await prisma.accessWindow.count({ where: { classroomId: classroom.id } })).toBe(0);
   });
 
   it('is idempotent: a second run adds no rows, rebuilds nothing and keeps the passwords', async () => {

@@ -20,7 +20,7 @@ const FALLBACK: ViewerValue = {
     readOnly: true,
     viewAs: null,
   },
-  chrome: { clock: null, windowBanner: null, closesAt: null },
+  chrome: { clock: null },
 };
 
 const Ctx = createContext<ViewerValue>(FALLBACK);

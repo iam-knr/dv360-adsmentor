@@ -2,7 +2,7 @@ import 'server-only';
 import type { PrismaClient } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { resolveClassContext, type ClassContext } from '@/lib/access/class-context';
-import { defaultDvRole, toSessionRole } from './roles';
+import { defaultDvRole, isRetiredRole, toSessionRole } from './roles';
 import { getAccountPolicy } from './policy';
 import { evaluateSession, type SessionClaimsIn } from './session-check';
 import type { DvRole, SessionFailureReason, SessionUser } from './types';
@@ -19,7 +19,6 @@ export interface ResolveInput {
   claims: SessionClaimsIn;
   now: Date;
   viewAs?: ViewAsRequest | null;
-  simClass?: string | null;
 }
 
 type UserRow = NonNullable<Awaited<ReturnType<PrismaClient['user']['findUnique']>>>;
@@ -68,6 +67,8 @@ export async function resolveSessionUser(
 ): Promise<ResolvedSession> {
   const { userId, claims, now } = input;
   const row = await db.user.findUnique({ where: { id: userId } });
+  // The retired ADMIN level has no session: an old cookie of one is refused like a revoked one (ADM-FIX).
+  if (row && isRetiredRole(row.appRole)) return { ok: false, reason: 'revoked' };
   const policy = await getAccountPolicy(db);
   const reason = evaluateSession(
     claims,
@@ -93,12 +94,7 @@ export async function resolveSessionUser(
   if (input.viewAs && (await canViewAs({ id: row.id, appRole }, input.viewAs.userId, db))) {
     const target = await db.user.findUnique({ where: { id: input.viewAs.userId } });
     if (target) {
-      const ctx = await resolveClassContext(
-        target.id,
-        now,
-        { override: input.simClass, actorId: row.id, actorRole: appRole },
-        db,
-      );
+      const ctx = await resolveClassContext(target.id, db);
       return {
         ok: true,
         user: {
@@ -111,11 +107,6 @@ export async function resolveSessionUser(
     }
   }
 
-  const ctx = await resolveClassContext(
-    row.id,
-    now,
-    { override: input.simClass, actorId: row.id, actorRole: appRole },
-    db,
-  );
+  const ctx = await resolveClassContext(row.id, db);
   return { ok: true, user: { ...build(row, ctx, await dvRoleFor(db, row, ctx)), actor } };
 }

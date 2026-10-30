@@ -530,7 +530,7 @@ describe('policy center', () => {
       ok: false,
       code: 'FORBIDDEN',
     });
-    const instructor = { ...userFor(w), appRole: 'admin' as const };
+    const instructor = { ...userFor(w), appRole: 'super_admin' as const };
     expect((await decidePolicyCertificate(instructor, cert.id, 'APPROVED')).ok).toBe(true);
     const center = await getPolicyCenter(userFor(w), w.advertiserId);
     expect(center.ok && center.data.certificates.find((c) => c.kind === 'GAMBLING')?.status).toBe(

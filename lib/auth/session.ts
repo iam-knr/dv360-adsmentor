@@ -6,7 +6,7 @@ import { auth } from './index';
 import { devBypassUser, isDevBypassEnabled } from './dev-bypass';
 import { resolveSessionUser, type ResolvedSession } from './session-core';
 import type { SessionFailureReason, SessionUser } from './types';
-import { SIM_CLASS_HEADER, VIEW_AS_ACT_HEADER, VIEW_AS_HEADER } from './view-as-headers';
+import { VIEW_AS_ACT_HEADER, VIEW_AS_HEADER } from './view-as-headers';
 import { parseViewAs } from './view-as';
 
 export class UnauthenticatedError extends Error {
@@ -40,7 +40,6 @@ async function resolve(): Promise<ResolvedSession> {
     claims: { sv, sid, loginAt },
     now: new Date(),
     viewAs: h ? parseViewAs((n) => h.get(n)) : null,
-    simClass: h?.get(SIM_CLASS_HEADER) ?? null,
   });
 }
 

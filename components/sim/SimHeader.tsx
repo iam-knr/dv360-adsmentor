@@ -9,8 +9,7 @@ export interface SimHeaderProps {
 }
 
 const ROLE_LABEL: Record<AppRole, string> = {
-  user: 'User',
-  admin: 'Admin',
+  user: 'Student',
   super_admin: 'Super admin',
 };
 

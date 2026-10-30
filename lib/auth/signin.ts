@@ -98,7 +98,11 @@ export async function authenticate(
     email.length > 0 && email.length <= MAX_EMAIL
       ? await db.user.findUnique({ where: { email } })
       : null;
-  let user = found && found.status !== 'ARCHIVED' && found.passwordHash ? found : null;
+  // The retired ADMIN level cannot sign in: it answers like an unknown account (ADM-FIX).
+  let user =
+    found && found.status !== 'ARCHIVED' && found.passwordHash && found.appRole !== 'ADMIN'
+      ? found
+      : null;
 
   if (user) {
     if (user.lockedUntil && user.lockedUntil > now)
@@ -149,35 +153,10 @@ export async function authenticate(
       ? { failedLoginCount: 0, lockedUntil: null }
       : {};
 
-  const timeZone = async () =>
-    account.cohortId
-      ? (
-          await db.classroom.findUnique({
-            where: { id: account.cohortId },
-            select: { timeZone: true },
-          })
-        )?.timeZone
-      : undefined;
-
   if (account.status === 'DISABLED') {
     if (Object.keys(reset).length) await db.user.update({ where: { id: account.id }, data: reset });
     return { ok: false, code: 'disabled' };
   }
-  // The access period applies to Users only; Admins and Super admins ignore it.
-  if (account.appRole === 'USER') {
-    if (account.accessStartsAt && account.accessStartsAt > now) {
-      return {
-        ok: false,
-        code: 'not_started',
-        at: account.accessStartsAt,
-        timeZone: await timeZone(),
-      };
-    }
-    if (account.accessEndsAt && account.accessEndsAt <= now) {
-      return { ok: false, code: 'ended', at: account.accessEndsAt, timeZone: await timeZone() };
-    }
-  }
-
   const sid = randomUUID();
   const rehash =
     account.passwordHash && needsRehash(account.passwordHash) ? await hashPassword(password) : null;

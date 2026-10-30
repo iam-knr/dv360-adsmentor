@@ -259,42 +259,22 @@ describe('sign in', () => {
       });
     });
 
-    it('access period not started: ACC-071 with the date in the cohort time zone', async () => {
-      const owner = await account({ tag: 'own', role: 'ADMIN' });
-      const cls = await createClassroom(prisma, {
-        tag: 'tz',
-        ownerAdminId: owner.user.id,
-        timeZone: 'Pacific/Auckland',
-        windows: 'none',
-      });
-      classroomIds.push(cls.id);
-      const a = await account({
-        tag: 'ns',
-        cohortId: cls.id,
-        accessStartsAt: new Date('2026-11-12T20:00:00Z'),
-      });
-      const r = await authenticate({ email: a.user.email, password: a.password }, { now: T0 });
-      expect(r.ok).toBe(false);
-      expect(msg(r)).toBe('Your access starts on 13 Nov 2026.'); // 20:00 UTC is already the 13th in Auckland
-    });
-
-    it('access period ended: ACC-072', async () => {
-      const a = await account({ tag: 'end', accessEndsAt: new Date('2026-10-30T10:00:00Z') });
-      const r = await authenticate({ email: a.user.email, password: a.password }, { now: T0 });
-      expect(msg(r)).toBe('Your access ended on 30 Oct 2026. Contact your admin.');
-    });
-
-    it('an access period never applies to Admins and Super admins', async () => {
-      for (const role of ['ADMIN', 'SUPER_ADMIN'] as const) {
-        const a = await account({
-          tag: 'adm',
-          role,
-          accessEndsAt: new Date('2026-10-30T10:00:00Z'),
-        });
+    it('an access period on an account is ignored: there are no time controls (ADM-FIX)', async () => {
+      const notStarted = await account({ tag: 'ns', accessStartsAt: new Date('2026-11-12T20:00:00Z') });
+      const ended = await account({ tag: 'end', accessEndsAt: new Date('2026-10-30T10:00:00Z') });
+      for (const a of [notStarted, ended]) {
         expect(
           (await authenticate({ email: a.user.email, password: a.password }, { now: T0 })).ok,
         ).toBe(true);
       }
+    });
+
+    it('the retired ADMIN level cannot sign in and looks like an unknown account', async () => {
+      const a = await account({ tag: 'retired', role: 'ADMIN' });
+      const r = await authenticate({ email: a.user.email, password: a.password }, { now: T0 });
+      expect(r).toEqual({ ok: false, code: 'invalid' });
+      const unknown = await authenticate({ email: 'nobody-here@example.test', password: 'x' }, { now: T0 });
+      expect(unknown).toEqual({ ok: false, code: 'invalid' });
     });
   });
 

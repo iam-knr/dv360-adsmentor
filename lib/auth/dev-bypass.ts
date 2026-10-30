@@ -13,9 +13,9 @@ export function isDevBypassEnabled(env: EnvLike = process.env): boolean {
   return true;
 }
 
-/** The fixed local user. A Super admin only under test; an Admin when developing by hand. */
-export function devBypassUser(env: EnvLike = process.env): SessionUser {
-  const appRole = env.NODE_ENV === 'test' ? 'super_admin' : 'admin';
+/** The fixed local user: a Super admin. */
+export function devBypassUser(_env: EnvLike = process.env): SessionUser {
+  const appRole = 'super_admin' as const;
   const user: SessionUser = {
     id: 'dev-user',
     email: 'dev@example.test',

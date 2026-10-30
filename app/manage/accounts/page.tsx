@@ -9,15 +9,24 @@ export const metadata: Metadata = { title: 'Accounts | DV360 Simulator by Adsmet
 export default async function AccountsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; page?: string; pageSize?: string; archived?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    /** the old name of `q`, kept so that bookmarks keep working */
+    search?: string;
+    page?: string;
+    pageSize?: string;
+    archived?: string;
+  }>;
 }) {
   const actor = await pageActor();
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page) || 1);
   const pageSize = [20, 50, 100].includes(Number(sp.pageSize)) ? Number(sp.pageSize) : 20;
   const showArchived = sp.archived === '1';
+  // the search lives in the URL (?q=) so that a search can be bookmarked and shared
+  const q = (sp.q ?? sp.search ?? '').trim().slice(0, 100);
   const { rows, total } = await listAccounts(actor, {
-    search: sp.search,
+    search: q || undefined,
     page,
     pageSize,
     status: showArchived ? ['ACTIVE', 'DISABLED', 'LOCKED', 'ARCHIVED'] : undefined,
@@ -29,11 +38,6 @@ export default async function AccountsPage({
     appRole: r.appRole,
     status: r.status,
     cohortName: r.cohortName,
-    ownerAdminName: r.ownerAdminName,
-    period:
-      r.appRole === 'USER' && (r.accessStartsAt || r.accessEndsAt)
-        ? `${r.accessStartsAt ? formatDate(r.accessStartsAt) : '…'} to ${r.accessEndsAt ? formatDate(r.accessEndsAt) : '…'}`
-        : 'No limit',
     lastLogin: r.lastLoginAt ? formatDate(r.lastLoginAt) : 'Never',
     sandbox: r.sandbox,
     isSelf: r.id === actor.id,
@@ -44,9 +48,8 @@ export default async function AccountsPage({
       total={total}
       page={page}
       pageSize={pageSize}
-      search={sp.search ?? ''}
+      search={q}
       showArchived={showArchived}
-      isSuper={actor.role === 'SUPER_ADMIN'}
     />
   );
 }

@@ -286,11 +286,10 @@ test.describe('RT 9 smoke over routes.md section 3', () => {
     '/e/{x}/report/diff',
     '/brand-lift-measurements/{x}/report',
     '/brand-lift-measurements/{x}/edit',
-    // Instructor console pages look a class or student up by id (P5-01); they are /sim routes, listed so a future
-    // routes.md row for them is not smoked with a placeholder id.
-    '/sim/instructor/classes/{x}',
-    '/sim/instructor/classes/{x}/access',
-    '/sim/instructor/classes/{x}/students/{y}',
+    // The Super admin console looks a cohort or an account up by id (ADM-FIX); they are /manage routes, listed so a
+    // future routes.md row for them is not smoked with a placeholder id.
+    '/manage/cohorts/{x}',
+    '/manage/accounts/{x}',
   ];
   const pages = ROUTE_TABLE.filter(
     (r) => !r.redirectTo && r.frame !== '404' && !LOOKUP_PAGES.some((p) => r.path.endsWith(p)),
@@ -426,9 +425,10 @@ test.describe('banners, chip and 404 pages', () => {
     await page.goto('/no/such/page?x=1');
     await expect(page).toHaveURL(`/404?url=${encodeURIComponent('/no/such/page?x=1')}`);
     await expect(page.getByText(notFoundText)).toBeVisible();
+    // the link goes to the person's own landing: a student's sandbox home (ADM-FIX)
     await expect(page.getByRole('link', { name: 'Return to home page' })).toHaveAttribute(
       'href',
-      '/',
+      P(w, '/home_v3'),
     );
     await expect(page.getByRole('toolbar', { name: 'Top bar tools' })).toHaveCount(0);
     await expect(page.getByRole('navigation', { name: 'Main' })).toHaveCount(0);
@@ -444,21 +444,5 @@ test.describe('banners, chip and 404 pages', () => {
     await expect(page).toHaveURL(foreign);
     await expect(page.getByText(notFoundText)).toBeVisible();
     await expect(page.getByRole('toolbar', { name: 'Top bar tools' })).toHaveCount(0);
-  });
-
-  test('the class window: 5-minute warning, then /sim/closed on the next navigation (AC-01-30)', async ({
-    page,
-  }) => {
-    test.setTimeout(120_000);
-    const w = await world({ tag: 'shell-window', windows: 'closing-soon' });
-    // the class really ends 40 seconds from now (the middleware may trust an open gate up to the class end)
-    const closesAt = new Date(Date.now() + 40_000);
-    await db.accessWindow.updateMany({ where: { classroomId: w.classroomId }, data: { closesAt } });
-    await signIn(page, w);
-    await page.goto(P(w, '/home_v3'));
-    await expect(page.getByTestId('banner-stack')).toContainText(/Class ends at .*Save your work/);
-    await page.waitForTimeout(Math.max(0, closesAt.getTime() - Date.now()) + 1_000);
-    await mainNav(page).getByRole('link', { name: 'Advertisers' }).click();
-    await page.waitForURL(/\/sim\/closed/);
   });
 });

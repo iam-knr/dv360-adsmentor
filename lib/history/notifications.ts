@@ -77,13 +77,12 @@ export interface AnnouncementInput {
   severity?: 'INFO' | 'WARNING';
 }
 
-/** Which classrooms this person may announce to: any for a Super admin, the cohorts in their scope for an Admin. */
+/** Only the Super admin announces (ADM-FIX): to any cohort, or platform-wide. */
 async function canAnnounceTo(user: SessionUser, classId: string | undefined): Promise<boolean> {
   const actor = user.actor ?? user;
-  if (actor.appRole === 'user') return false;
-  if (!classId) return actor.appRole === 'super_admin';
-  const role = actor.appRole === 'super_admin' ? 'SUPER_ADMIN' : 'ADMIN';
-  return !!(await scopedCohorts(prisma, { id: actor.id, role }).findById(classId));
+  if (actor.appRole !== 'super_admin') return false;
+  if (!classId) return true;
+  return !!(await scopedCohorts(prisma, { id: actor.id, role: 'SUPER_ADMIN' }).findById(classId));
 }
 
 export async function createAnnouncement(

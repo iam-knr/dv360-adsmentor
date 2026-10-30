@@ -83,7 +83,7 @@ describe('tick endpoint authentication', () => {
         'failed',
         'busy',
         'stillDue',
-        'windows',
+        'thawed',
         'elapsedMs',
       ]) {
         expect(body, k).toHaveProperty(k);

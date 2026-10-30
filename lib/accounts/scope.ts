@@ -1,12 +1,13 @@
 import 'server-only';
 import type { Prisma } from '@prisma/client';
 import type { Actor } from './permissions';
+import { AccountError } from './rules';
 
 /**
  * Row scope of module 19 3.4. Pure builders return a Prisma `where`; the only callers of `db.user` / `db.classroom`
- * outside lib/auth are in this folder (ESLint). USER gets nothing: the builders throw.
+ * outside lib/auth are in this folder (ESLint). Only a Super admin has a scope (ADM-FIX); every other level gets nothing and the builders throw.
  */
-export class ScopeError extends Error {
+export class ScopeError extends AccountError {
   constructor() {
     super('FORBIDDEN');
     this.name = 'ScopeError';
@@ -15,34 +16,11 @@ export class ScopeError extends Error {
 
 export function userScopeWhere(actor: Actor): Prisma.UserWhereInput {
   if (actor.role === 'SUPER_ADMIN') return {};
-  if (actor.role === 'ADMIN') {
-    return {
-      OR: [
-        { id: actor.id },
-        {
-          appRole: 'USER',
-          OR: [
-            { ownerAdminId: actor.id },
-            { cohort: { ownerAdminId: actor.id } },
-            { cohort: { members: { some: { userId: actor.id, appRole: 'ADMIN' } } } },
-          ],
-        },
-      ],
-    };
-  }
   throw new ScopeError();
 }
 
 export function cohortScopeWhere(actor: Actor): Prisma.ClassroomWhereInput {
   if (actor.role === 'SUPER_ADMIN') return {};
-  if (actor.role === 'ADMIN') {
-    return {
-      OR: [
-        { ownerAdminId: actor.id },
-        { members: { some: { userId: actor.id, appRole: 'ADMIN' } } },
-      ],
-    };
-  }
   throw new ScopeError();
 }
 

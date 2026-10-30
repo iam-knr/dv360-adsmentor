@@ -1,6 +1,6 @@
 import 'server-only';
 // Where `/` sends a signed in person (routes.md 3.1, AC-01-1): a student to the Overview of their sandbox partner,
-// an admin and a super admin to their landing page (P3-02 `landingFor`).
+// a Super admin to their landing page (`landingFor`).
 import type { SessionUser } from '@/lib/auth/types';
 import { landingFor } from '@/lib/auth/roles';
 import { withSandbox } from '@/lib/db';
