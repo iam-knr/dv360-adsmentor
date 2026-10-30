@@ -189,7 +189,7 @@ describe('timer', () => {
   it('starts students who have an account but no sandbox and builds queued ones', async () => {
     const id = await student('prov-g');
     expect(await prisma.sandbox.count({ where: { ownerUserId: id } })).toBe(0);
-    const r = await advanceProvisioning(Date.now() + 120_000, { limit: 50 });
+    const r = await advanceProvisioning(Date.now() + 120_000, { limit: 50, classroomId });
     expect(r.started).toBeGreaterThan(0);
     const sb = await prisma.sandbox.findFirstOrThrow({ where: { ownerUserId: id } });
     sandboxIds.push(sb.id);
@@ -198,7 +198,7 @@ describe('timer', () => {
       i < 5 && sb && (await getProvisionView(id, classroomId)).state !== 'READY';
       i++
     ) {
-      await advanceProvisioning(Date.now() + 120_000, { limit: 50 });
+      await advanceProvisioning(Date.now() + 120_000, { limit: 50, classroomId });
     }
     expect((await getProvisionView(id, classroomId)).state).toBe('READY');
   }, 900_000);

@@ -39,12 +39,13 @@ export async function getProvisionSource(
 export async function findStudentsWithoutSandbox(
   db: Db,
   limit: number,
+  cohortId?: string,
 ): Promise<{ id: string; cohortId: string }[]> {
   const rows = await db.user.findMany({
     where: {
       appRole: 'USER',
       status: 'ACTIVE',
-      cohortId: { not: null },
+      cohortId: cohortId ?? { not: null },
       sandboxes: { none: {} },
     },
     select: { id: true, cohortId: true },

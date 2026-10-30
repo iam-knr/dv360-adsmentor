@@ -568,7 +568,7 @@ export async function getLiftReport(
       sliceOptions: options,
     };
     if (brand) {
-      const rows = await tx.liftResult.findMany({ where: { flightId: brand.id, scope, slice: { in: ['OVERALL', slice] } } });
+      const rows = await tx.liftResult.findMany({ where: { flightId: brand.id, scope, slice: { in: ['OVERALL', slice] } }, orderBy: [{ metric: 'asc' }, { slice: 'asc' }, { sliceValue: 'asc' }] }); // heap order is not stable
       for (const metric of s.brandLiftMetrics) {
         const overall = rows.find((r) => r.metric === metric && r.slice === 'OVERALL');
         if (!overall) continue;

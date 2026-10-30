@@ -335,12 +335,12 @@ export async function retryProvisionSandbox(
  */
 export async function advanceProvisioning(
   deadline: number,
-  opts: { db?: Db; limit?: number } = {},
+  opts: { db?: Db; limit?: number; classroomId?: string } = {},
 ): Promise<{ started: number; stepped: number }> {
   const db = opts.db ?? prisma;
   const limit = opts.limit ?? 3;
   let started = 0;
-  const orphans = await findStudentsWithoutSandbox(db, limit);
+  const orphans = await findStudentsWithoutSandbox(db, limit, opts.classroomId);
   for (const u of orphans) {
     const v = await enqueueProvisionSandbox(u.cohortId, u.id, db).catch(() => undefined);
     if (v?.sandboxId) started++;
@@ -349,6 +349,7 @@ export async function advanceProvisioning(
     where: {
       kind: 'STUDENT',
       status: { not: 'ARCHIVED' },
+      ...(opts.classroomId ? { classroomId: opts.classroomId } : {}),
       OR: [
         { provisionState: 'PENDING' },
         { provisionState: 'SEEDING', updatedAt: { lt: new Date(Date.now() - STALE_MS) } },
