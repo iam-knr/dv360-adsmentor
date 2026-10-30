@@ -12,7 +12,7 @@ const day: HistoryDay = {
   count: 2,
   notesCount: 2,
   changes: [
-    { groupId: 'g1', time: '10:55:08', tzLabel: 'IST', user: 'a@b.test', system: false, summary: '1 change to insertion order', lines: ['Budget segment 1: Budget changed from "5,000.00" to "7,000.00"'] },
+    { groupId: 'g1', time: '10:55:08', tzLabel: 'IST', user: 'a@example.test', system: false, summary: '1 change to insertion order', lines: ['Budget segment 1: Budget changed from "5,000.00" to "7,000.00"'] },
     { groupId: 'g2', time: '09:00:00', tzLabel: 'IST', user: 'CREATIVE_APPROVAL_SYNC', system: true, summary: '1 change to insertion order', lines: ['Status changed from "Active" to "Paused"'] },
   ],
 };

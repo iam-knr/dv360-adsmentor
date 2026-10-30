@@ -9,7 +9,7 @@ describe('history CSV (module 05 4.8)', () => {
     ]);
   });
   it('starts with a BOM and uses CRLF line ends', () => {
-    const csv = buildCsv([['2026-03-26 10:55:08', 'IST', 'insertion order', '1', 'IO', 'a@b.test', 'UI', 'Name', 'A', 'B', null]]);
+    const csv = buildCsv([['2026-03-26 10:55:08', 'IST', 'insertion order', '1', 'IO', 'a@example.test', 'UI', 'Name', 'A', 'B', null]]);
     expect(csv.startsWith('﻿Time,Time zone,')).toBe(true);
     expect(csv.split('\r\n')).toHaveLength(3);
     expect(csv.endsWith('\r\n')).toBe(true);

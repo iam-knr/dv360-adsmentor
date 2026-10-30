@@ -21,7 +21,7 @@ describe('history lines', () => {
     expect(lines[2]).toBe('Budget segment 1: Budget changed from "5000.00" to "7000.00"');
   });
   it('labels actors: users by email, system actors by their label', () => {
-    expect(actorText({ actorType: 'USER', actorLabel: 'a@b.test', systemActor: null })).toBe('a@b.test');
+    expect(actorText({ actorType: 'USER', actorLabel: 'a@example.test', systemActor: null })).toBe('a@example.test');
     expect(actorText({ actorType: 'SYSTEM', actorLabel: null, systemActor: 'SIM_ENGINE' })).toBe('Simulator engine');
     expect(actorText({ actorType: 'SYSTEM', actorLabel: null, systemActor: 'CREATIVE_APPROVAL_SYNC' })).toBe('CREATIVE_APPROVAL_SYNC');
     expect(actorText({ actorType: 'SYSTEM', actorLabel: null, systemActor: 'SIM_INSTRUCTOR' })).toBe('Instructor');
