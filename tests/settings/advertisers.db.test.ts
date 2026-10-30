@@ -11,6 +11,10 @@ beforeAll(async () => {
   w = await settingsWorld('setadv');
 });
 afterAll(async () => {
+  // the SGD to INR rate this file adds is global: leave none behind for tests/metrics/fixtures.db.test.ts
+  await prisma.fxRate.deleteMany({
+    where: { fromCurrency: 'SGD', toCurrency: 'INR', validFrom: new Date('2020-01-01T00:00:00Z') },
+  });
   await dropWorld(w);
   await prisma.$disconnect();
 });
