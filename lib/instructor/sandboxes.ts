@@ -33,7 +33,7 @@ async function studentsOf(
   classId: string,
   userIds?: string[],
 ): Promise<Student[]> {
-  return (await scopedUsers(db, actor).findMany({
+  const rows: unknown = await scopedUsers(db, actor).findMany({
     where: {
       cohortId: classId,
       appRole: 'USER',
@@ -42,7 +42,8 @@ async function studentsOf(
     },
     select: { id: true, name: true, studentCode: true, status: true },
     orderBy: { name: 'asc' },
-  })) as Student[];
+  });
+  return rows as Student[];
 }
 
 /** Build (or rebuild) one student's sandbox and make sure the student is STANDARD on its partner (RC-047). */

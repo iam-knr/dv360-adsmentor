@@ -41,7 +41,10 @@ export default async function AdminAuditPage({ searchParams }: { searchParams: P
   const pages = Math.max(1, Math.ceil(total / AUDIT_PAGE));
   const qs = (p: number) => {
     const q = new URLSearchParams();
-    for (const [k, v] of Object.entries(sp)) if (v && k !== 'page') q.set(k, v);
+    for (const k of ['actor', 'class', 'action', 'from', 'to'] as const) {
+      const v = sp[k];
+      if (v) q.set(k, v);
+    }
     q.set('page', String(p));
     return `?${q.toString()}`;
   };

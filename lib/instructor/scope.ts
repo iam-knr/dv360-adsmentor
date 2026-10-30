@@ -11,7 +11,8 @@ export type Db = PrismaClient;
  * a class of someone else look the same (SIM-020), so an id cannot be probed. Archived classes are not returned.
  */
 export async function loadClass(db: Db, actor: Actor, classId: string): Promise<Classroom> {
-  const row = (await scopedCohorts(db, actor).findById(classId)) as Classroom | null;
+  const found: unknown = await scopedCohorts(db, actor).findById(classId);
+  const row = found as Classroom | null;
   if (!row || row.archivedAt) throw new InstructorError('SIM-020');
   return row;
 }

@@ -286,6 +286,11 @@ test.describe('RT 9 smoke over routes.md section 3', () => {
     '/e/{x}/report/diff',
     '/brand-lift-measurements/{x}/report',
     '/brand-lift-measurements/{x}/edit',
+    // Instructor console pages look a class or student up by id (P5-01); they are /sim routes, listed so a future
+    // routes.md row for them is not smoked with a placeholder id.
+    '/sim/instructor/classes/{x}',
+    '/sim/instructor/classes/{x}/access',
+    '/sim/instructor/classes/{x}/students/{y}',
   ];
   const pages = ROUTE_TABLE.filter(
     (r) => !r.redirectTo && r.frame !== '404' && !LOOKUP_PAGES.some((p) => r.path.endsWith(p)),

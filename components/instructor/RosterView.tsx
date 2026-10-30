@@ -251,8 +251,7 @@ export function RosterView({
             does not send email: give the email and password to the student yourself.
           </Typography>
           <DvTextField
-            label="Students"
-            ariaLabel="Students, one per line as name,email"
+            label="Students, one per line as name,email"
             multiline
             rows={6}
             value={pasted}
