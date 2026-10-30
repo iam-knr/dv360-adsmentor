@@ -1,7 +1,11 @@
-import { StubPage } from '@/components/shell/StubPage';
+import { LiftListRoute } from '@/components/experiments/pages/ExperimentRoutes';
 
 export const metadata = { title: 'Lift studies' };
 
-export default function Page() {
-  return <StubPage module="17" title="Lift studies" view="RO" />;
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ partnerId: string; advertiserId: string }>;
+}) {
+  return <LiftListRoute params={await params} />;
 }

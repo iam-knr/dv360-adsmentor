@@ -102,7 +102,7 @@ export function runFunnel(inp: FunnelInput): LiElig {
   const shares = scopes.map((s) => cappedShare(inp.freq[s.key]));
 
   for (const cell of inp.cells) {
-    const nA = cell.requests;
+    const nA = li.supplyShare !== undefined ? Math.round(cell.requests * li.supplyShare) : cell.requests;
     // expected cuts, first failing dimension takes the blame (3.4)
     const labels: string[] = [];
     const exp: number[] = [];

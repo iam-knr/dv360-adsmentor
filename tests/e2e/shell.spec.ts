@@ -281,6 +281,11 @@ test.describe('RT 9 smoke over routes.md section 3', () => {
     '/reporting/instant/{x}/runs',
     '/reporting/offline/{x}',
     '/reporting/{kind}/{x}/runs',
+    '/e/{x}',
+    '/e/{x}/report/settings',
+    '/e/{x}/report/diff',
+    '/brand-lift-measurements/{x}/report',
+    '/brand-lift-measurements/{x}/edit',
   ];
   const pages = ROUTE_TABLE.filter(
     (r) => !r.redirectTo && r.frame !== '404' && !LOOKUP_PAGES.some((p) => r.path.endsWith(p)),

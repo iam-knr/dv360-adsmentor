@@ -1,6 +1,7 @@
 // Database to World (engine.md 1.1, 1.4). One World per advertiser: the pure core prices one advertiser's currency,
 // time zone and market at a time, so a sandbox with two advertisers runs two Worlds that share the tick index.
 import { exchangeSimClass } from '@/lib/seed/reference';
+import { experimentSupplyShares } from '@/lib/experiments/advance';
 import type { Tx } from '@/lib/db';
 import type { LoadedParams } from '../params/load';
 import type {
@@ -224,6 +225,7 @@ export async function loadWorlds(
       } satisfies IoEntity;
     });
 
+    const armShares = await experimentSupplyShares(tx, sandboxId, adv.id, loaded.params.experiments);
     const worldLis: LineItemEntity[] = advLis.map((li) => {
       const ownFees = feesByLi.get(li.id);
       const daily = num(li.dailyMaxAmount, 0) || num(li.dailyMaxImpressions, 0);
@@ -309,6 +311,7 @@ export async function loadWorlds(
           : {}),
         optimizedTargeting: li.optimizedTargeting,
         creativeOptimization: li.creativeOptimization,
+        ...(armShares.has(li.id) ? { supplyShare: armShares.get(li.id) } : {}),
       } satisfies LineItemEntity;
     });
 

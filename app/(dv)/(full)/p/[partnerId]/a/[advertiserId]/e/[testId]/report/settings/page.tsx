@@ -1,7 +1,11 @@
-import { StubPage } from '@/components/shell/StubPage';
+import { AbSettingsPageRoute } from '@/components/experiments/pages/ExperimentRoutes';
 
 export const metadata = { title: 'A/B test settings' };
 
-export default function Page() {
-  return <StubPage module="17" title="A/B test settings" view="RO" frame="form" />;
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ partnerId: string; advertiserId: string; testId: string }>;
+}) {
+  return <AbSettingsPageRoute params={await params} tab="settings" />;
 }

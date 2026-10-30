@@ -7,6 +7,7 @@ import { audienceRegistry } from './audience';
 import { campaignRegistry } from './campaign';
 import { creativeRegistry } from './creative';
 import { dealRegistry } from './deal';
+import { experimentRegistry, liftStudyRegistry } from './experiment';
 import { insertionOrderRegistry } from './insertion-order';
 import { lineItemRegistry } from './line-item';
 import {
@@ -37,6 +38,8 @@ export const REGISTRIES: Partial<Record<EntityType, EntityRegistry>> = {
   DEAL: dealRegistry,
   PARTNER: partnerRegistry,
   PLAN: planRegistry,
+  EXPERIMENT: experimentRegistry,
+  LIFT_STUDY: liftStudyRegistry,
   AD_GROUP: adGroupRegistry,
   AD: adRegistry,
 };
