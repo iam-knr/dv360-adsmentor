@@ -8,7 +8,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import Typography from '@mui/material/Typography';
-import { DvHealthList, DvPanel, DvRightRail, type RailPanelId } from '@/components/dv';
+import { DvPanel, DvRightRail, type RailPanelId } from '@/components/dv';
+import { IntelligencePanelBody } from './IntelligencePanel';
 import { sizes } from '@/lib/theme/tokens';
 import { advertiserPath } from '@/lib/routes/paths';
 import { usePageScope } from '@/lib/scope/context';
@@ -74,6 +75,15 @@ export function RailHost() {
   };
 
   const shown = open && available.includes(open) ? open : null;
+  const intelligenceScope = scope.li
+    ? { level: 'li' as const, id: scope.li.id }
+    : scope.io
+      ? { level: 'io' as const, id: scope.io.id }
+      : scope.campaign
+        ? { level: 'campaign' as const, id: scope.campaign.id }
+        : scope.advertiser
+          ? { level: 'advertiser' as const, id: scope.advertiser.id }
+          : null;
   const first = viewer.name.split(/\s+/)[0] ?? '';
   const scopeName =
     scope.li?.name ?? scope.io?.name ?? scope.campaign?.name ?? scope.advertiser?.name;
@@ -111,11 +121,13 @@ export function RailHost() {
           tone="primary"
           onClose={() => change(null)}
         >
-          <DvHealthList
-            healthTitle={level === 'advertiser' ? 'ADVERTISER HEALTH' : 'CAMPAIGN HEALTH'}
-            alerts={[]}
-            suggestions={[]}
-          />
+          {intelligenceScope ? (
+            <IntelligencePanelBody
+              key={`${intelligenceScope.level}:${intelligenceScope.id}`}
+              level={intelligenceScope.level}
+              scopeId={intelligenceScope.id}
+            />
+          ) : null}
         </DvPanel>
       ) : null}
       <DvRightRail available={available} open={shown} onChange={change} />
