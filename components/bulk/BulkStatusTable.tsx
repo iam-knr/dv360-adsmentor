@@ -10,6 +10,8 @@ import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
+import { DvPageHeader } from '@/components/dv';
+import { useViewer } from '@/components/shell/ViewerProvider';
 import { BLK_015 } from '@/lib/bulk/messages';
 import type { BulkJobRow } from '@/lib/bulk/types';
 
@@ -21,6 +23,7 @@ const STATUS_TEXT: Record<string, string> = {
 };
 
 export function BulkStatusTable({ initial, capped }: { initial: BulkJobRow[]; capped: boolean }) {
+  const { viewer } = useViewer();
   const [rows, setRows] = useState(initial);
   const open = rows.some((r) => r.status === 'QUEUED' || r.status === 'RUNNING');
 
@@ -37,6 +40,7 @@ export function BulkStatusTable({ initial, capped }: { initial: BulkJobRow[]; ca
 
   return (
     <Box>
+      <DvPageHeader title="Bulk status" limitedAccess={viewer.limitedAccess} />
       <Table size="small" aria-label="Bulk actions">
         <TableHead>
           <TableRow>
