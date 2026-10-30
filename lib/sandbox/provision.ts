@@ -46,6 +46,12 @@ export interface ProvisionView {
 
 /** Days before "today" that the engine simulates for a student sandbox (the rest of the 90 days would be the stub). */
 export const DEFAULT_ENGINE_DAYS = 90;
+/**
+ * Days of daily slices (device, exchange, region, creative, ...) a student sandbox keeps from the history. Measured: 14
+ * days is about 20 MB per sandbox, 3 days about 10 MB; 25 students on the 500 MB free tier need the small value
+ * (RC-057, docs/gaps/eng-ff.md). Day totals and hourly rows (14 days) are kept in full.
+ */
+export const STUDENT_SLICE_DAYS = 3;
 /** Time one step may take: the 60 s function limit minus the seed, the response and a safety margin. */
 export const STEP_BUDGET_MS = 40_000;
 /** A SEEDING claim older than this is taken over (the function that made it was cut off). */
@@ -256,13 +262,11 @@ export async function runProvisionStep(
           classroomId: sb.classroomId,
           ownerUserId: sb.ownerUserId,
           name: sb.name,
-          template: (isTemplateKey(sb.seedTemplateKey)
-            ? sb.seedTemplateKey
-            : FALLBACK_TEMPLATE),
+          template: isTemplateKey(sb.seedTemplateKey) ? sb.seedTemplateKey : FALLBACK_TEMPLATE,
           kind: sb.kind,
           seedValue: sb.seedValue,
           partnerName: sb.name,
-          knobs: { engineDays: engineDays() },
+          knobs: { engineDays: engineDays(), sliceDays: STUDENT_SLICE_DAYS },
           deadlineMs: deadline,
           force: true,
         });
