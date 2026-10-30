@@ -206,11 +206,7 @@ test('E2E-INS-04 sandboxes: reset one student with RESET, the whole class with i
   for (const name of ['Alpha Student', 'Bravo Student']) {
     await page.getByRole('row', { name: new RegExp(name) }).getByRole('checkbox').check();
     await page.getByRole('button', { name: 'Create sandbox' }).click();
-    // the job builds in steps: a slow machine leaves BUILDING after the click, so reload until it is READY
-    await expect(async () => {
-      await page.reload();
-      await expect(page.getByRole('row', { name: new RegExp(name) }).getByRole('gridcell', { name: 'READY' })).toBeVisible({ timeout: 4_000 });
-    }).toPass({ timeout: 120_000, intervals: [3_000] });
+    await expect(page.getByRole('row', { name: new RegExp(name) }).getByRole('gridcell', { name: 'READY' })).toBeVisible({ timeout: 90_000 });
   }
   const sb = async (uid: string) => db.sandbox.findFirstOrThrow({ where: { classroomId: cohort.id, ownerUserId: uid } });
 
