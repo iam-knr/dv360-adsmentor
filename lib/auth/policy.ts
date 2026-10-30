@@ -48,18 +48,15 @@ export async function getAccountPolicy(
 
 export function idleMinutesFor(policy: PolicyValues, role: AppRole): number {
   if (role === 'super_admin') return policy.idleMinutesSuper;
-  if (role === 'admin') return policy.idleMinutesAdmin;
   return policy.idleMinutesUser;
 }
 
 export function absoluteHoursFor(policy: PolicyValues, role: AppRole): number {
   if (role === 'super_admin') return policy.absoluteHoursSuper;
-  if (role === 'admin') return policy.absoluteHoursAdmin;
   return policy.absoluteHoursUser;
 }
 
 export function singleSessionFor(policy: PolicyValues, role: AppRole): boolean {
   if (role === 'super_admin') return policy.singleSessionSuper;
-  if (role === 'admin') return policy.singleSessionAdmin;
   return policy.singleSessionUser;
 }

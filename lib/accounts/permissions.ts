@@ -37,11 +37,7 @@ export interface Target {
 type Rule = (actor: Actor, target: Target | undefined) => boolean;
 
 const isSelf = (a: Actor, t?: Target) => !!t?.id && t.id === a.id;
-const isOwn = (a: Actor, t?: Target) =>
-  !!t && t.role === 'USER' && (t.ownerAdminId === a.id || t.cohortOwnerId === a.id);
-
-const SA_ONLY: Rule = () => false;
-// "Never on self" actions for a Super admin; Admin only on own Users.
+// "Never on self" actions for a Super admin.
 const notSelf: Rule = (a, t) => !isSelf(a, t);
 
 const SUPER: Record<AccountAction, Rule> = {
@@ -66,29 +62,10 @@ const SUPER: Record<AccountAction, Rule> = {
   'audit.view': () => true,
 };
 
-const ADMIN: Record<AccountAction, Rule> = {
-  'manage.open': () => true,
-  'policy.edit': SA_ONLY,
-  'account.view': (a, t) => isSelf(a, t) || isOwn(a, t),
-  'account.create': (_a, t) => t?.role === 'USER',
-  'account.edit': (a, t) => isOwn(a, t),
-  'account.disable': (a, t) => isOwn(a, t),
-  'account.enable': (a, t) => isOwn(a, t),
-  'account.unlock': (a, t) => isOwn(a, t),
-  'account.resetPassword': (a, t) => isOwn(a, t),
-  'account.revokeSessions': (a, t) => isSelf(a, t) || isOwn(a, t),
-  'account.delete': (a, t) => isOwn(a, t),
-  'account.restore': (a, t) => isOwn(a, t),
-  'account.changeRole': SA_ONLY,
-  'account.transfer': SA_ONLY,
-  'cohort.create': () => true,
-  'cohort.edit': (a, t) => !!t && t.ownerAdminId === a.id,
-  'audit.view': () => true,
-};
-
 const TABLES: Record<Level, Record<AccountAction, Rule> | null> = {
   SUPER_ADMIN: SUPER,
-  ADMIN: ADMIN,
+  // The ADMIN level is retired (ADM-FIX): it keeps its database value but can do nothing.
+  ADMIN: null,
   USER: null,
 };
 

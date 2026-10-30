@@ -1,6 +1,6 @@
 // Edge middleware (routes.md 5.3, module 18 4.3 rule 2, module 19 4.6.1). It only reads the signed session cookie
 // and the role claim. Status, sessionVersion, single session and idle limits are checked by requireUser() in every
-// page, action and handler. The class window check asks /api/sim/access/gate, because the edge has no database.
+// page, action and handler. There are no class windows (ADM-FIX).
 import NextAuth from 'next-auth';
 import { NextResponse, type NextFetchEvent, type NextRequest } from 'next/server';
 import { authConfig } from '@/lib/auth/config';
@@ -8,8 +8,6 @@ import { devBypassUser, isDevBypassEnabled } from '@/lib/auth/dev-bypass';
 import { decide, isApiPath, isPublicPath } from '@/lib/auth/guard';
 import type { SessionClaims } from '@/lib/auth/types';
 import {
-  SIM_CLASS_HEADER,
-  SIM_CLASS_PARAM,
   VIEW_AS_ACT_HEADER,
   VIEW_AS_ACT_PARAM,
   VIEW_AS_HEADER,
@@ -17,9 +15,6 @@ import {
 } from '@/lib/auth/view-as-headers';
 
 const { auth } = NextAuth(authConfig);
-
-const GATE_TTL_MS = 30_000;
-const gateCache = new Map<string, number>(); // user id -> open until (epoch ms), never past the class end
 
 function withSecurityHeaders(res: NextResponse, pathname: string): NextResponse {
   if (
@@ -41,7 +36,6 @@ function cleanHeaders(req: NextRequest): Headers {
   const headers = new Headers(req.headers);
   headers.delete(VIEW_AS_HEADER);
   headers.delete(VIEW_AS_ACT_HEADER);
-  headers.delete(SIM_CLASS_HEADER);
   return headers;
 }
 
@@ -49,40 +43,12 @@ function json(status: number, body: Record<string, unknown>): NextResponse {
   return NextResponse.json(body, { status });
 }
 
-/** Ask the Node runtime whether the student's class is open. Fails closed. */
-async function classGate(
-  req: NextRequest,
-  userId: string,
-): Promise<{ open: boolean; redirect?: string }> {
-  const until = gateCache.get(userId);
-  if (until && until > Date.now()) return { open: true };
-  try {
-    const res = await fetch(new URL('/api/sim/access/gate', req.nextUrl.origin), {
-      headers: { cookie: req.headers.get('cookie') ?? '' },
-      cache: 'no-store',
-    });
-    if (!res.ok) return { open: false };
-    const body = (await res.json()) as { open?: boolean; redirect?: string; until?: number | null };
-    if (body.open) {
-      // cached for 30 seconds at most, and never beyond the end of the class (hard stop, routes 7.4)
-      const limit = typeof body.until === 'number' ? body.until : Infinity;
-      gateCache.set(userId, Math.min(Date.now() + GATE_TTL_MS, limit));
-      if (gateCache.size > 5000) gateCache.clear();
-    } else {
-      gateCache.delete(userId);
-    }
-    return { open: body.open === true, redirect: body.redirect };
-  } catch {
-    return { open: false };
-  }
-}
-
 type NextMiddlewareFn = (
   req: NextRequest,
   event: NextFetchEvent,
 ) => Promise<Response | void> | Response | void;
 
-const authenticated = auth(async (req) => {
+const authenticated = auth((req) => {
   const { pathname, search } = req.nextUrl;
   const sessionUser = req.auth?.user;
   let session: SessionClaims | null = sessionUser
@@ -103,16 +69,6 @@ const authenticated = auth(async (req) => {
       return json(401, { error: 'UNAUTHENTICATED' });
     case 'password-change-required':
       return json(403, { error: 'PASSWORD_CHANGE_REQUIRED' });
-    case 'window-check': {
-      const gate = await classGate(req, session?.id ?? '');
-      if (gate.redirect) return NextResponse.redirect(new URL(gate.redirect, req.nextUrl.origin));
-      if (!gate.open)
-        return withSecurityHeaders(
-          NextResponse.redirect(new URL('/sim/closed', req.nextUrl.origin)),
-          pathname,
-        );
-      break;
-    }
     case 'next':
       break;
   }
@@ -125,8 +81,6 @@ const authenticated = auth(async (req) => {
       headers.set(VIEW_AS_HEADER, as);
       if (params.get(VIEW_AS_ACT_PARAM) === '1') headers.set(VIEW_AS_ACT_HEADER, '1');
     }
-    const cls = params.get(SIM_CLASS_PARAM);
-    if (cls) headers.set(SIM_CLASS_HEADER, cls);
   }
   return withSecurityHeaders(NextResponse.next({ request: { headers } }), pathname);
 });

@@ -39,6 +39,8 @@ export default defineConfig({
             'tests/history/**/*.test.tsx',
           ],
           setupFiles: ['./vitest.setup.ts'],
+          // the gallery axe checks of the chart cards take about 5 s on a busy runner
+          testTimeout: 20_000,
         },
       },
       {

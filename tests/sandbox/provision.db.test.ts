@@ -5,6 +5,9 @@ import { prisma } from '@/lib/db';
 import {
   advanceProvisioning,
   enqueueProvisionSandbox,
+  FORCE_RESTART_AFTER_MS,
+  HEARTBEAT_MS,
+  STALE_MS,
   getProvisionView,
   retryProvisionSandbox,
   runProvisionStep,
@@ -47,7 +50,7 @@ async function student(tag: string) {
 beforeAll(async () => {
   process.env.SANDBOX_ENGINE_DAYS = '3';
   await seedReferenceData(prisma);
-  const a = await createAccount(prisma, { tag: uniq('prov-admin'), role: 'ADMIN' });
+  const a = await createAccount(prisma, { tag: uniq('prov-admin'), role: 'SUPER_ADMIN' });
   admin = a.user;
   userIds.push(admin.id);
   const c = await createClassroom(prisma, { tag: 'prov', ownerAdminId: admin.id });
@@ -88,9 +91,9 @@ describe('enqueue', () => {
     expect(rows[0]?.name).toMatch(/^Sandbox /);
   });
 
-  it('gives an Admin no sandbox and an unknown id none either', async () => {
+  it('gives a Super admin no sandbox and an unknown id none either', async () => {
     expect((await enqueueProvisionSandbox(classroomId, admin.id)).state).toBe('NOT_CREATED');
-    expect((await getProvisionView('nobody', classroomId)).state).toBe('NOT_CREATED');
+    expect((await getProvisionView('nobody')).state).toBe('NOT_CREATED');
   });
 });
 
@@ -185,6 +188,71 @@ describe('failure and retry', () => {
   }, 600_000);
 });
 
+describe('stuck builds (docs/gaps/eng-ff.md gap 10)', () => {
+  const ago = (ms: number) => new Date(Date.now() - ms);
+  // updatedAt is bumped by every write, so a test that wants an old heartbeat writes it last, with raw SQL
+  const backdate = (id: string, ms: number) =>
+    prisma.$executeRaw`UPDATE "Sandbox" SET "updatedAt" = ${ago(ms)} WHERE "id" = ${id}`;
+
+  it('uses a short stale window and a heartbeat well inside it', () => {
+    expect(STALE_MS).toBeLessThanOrEqual(60_000);
+    expect(HEARTBEAT_MS * 3).toBeLessThanOrEqual(STALE_MS);
+    expect(FORCE_RESTART_AFTER_MS).toBeLessThan(STALE_MS);
+  });
+
+  it('a SEEDING row nobody works on is retaken after the stale window, by a plain step', async () => {
+    const id = await student('prov-stale');
+    const sandboxId = (await enqueueProvisionSandbox(classroomId, id)).sandboxId as string;
+    sandboxIds.push(sandboxId);
+    await prisma.sandbox.update({ where: { id: sandboxId }, data: { provisionState: 'SEEDING' } });
+    await backdate(sandboxId, 10_000);
+    // a live-looking claim is left alone: the step does not touch it
+    expect((await runProvisionStep(sandboxId)).state).toBe('BUILDING');
+    expect((await prisma.sandbox.findUniqueOrThrow({ where: { id: sandboxId } })).provisionState).toBe(
+      'SEEDING',
+    );
+    await backdate(sandboxId, STALE_MS + 5_000);
+    expect((await runProvisionStep(sandboxId)).state).toBe('READY');
+  }, 600_000);
+
+  it('"Create / Retry sandbox" recovers a SEEDING row whose heartbeat stopped, without waiting for the stale window', async () => {
+    const id = await student('prov-force');
+    const sandboxId = (await enqueueProvisionSandbox(classroomId, id)).sandboxId as string;
+    sandboxIds.push(sandboxId);
+    await prisma.sandbox.update({ where: { id: sandboxId }, data: { provisionState: 'SEEDING' } });
+    await backdate(sandboxId, FORCE_RESTART_AFTER_MS + 5_000);
+    expect(FORCE_RESTART_AFTER_MS + 5_000).toBeLessThan(STALE_MS);
+    const view = await retryProvisionSandbox(classroomId, id);
+    expect(view.state).toBe('READY');
+  }, 600_000);
+
+  it('a retry leaves a build that is alive alone, and a READY sandbox too', async () => {
+    const id = await student('prov-alive');
+    const sandboxId = (await enqueueProvisionSandbox(classroomId, id)).sandboxId as string;
+    sandboxIds.push(sandboxId);
+    await prisma.sandbox.update({ where: { id: sandboxId }, data: { provisionState: 'SEEDING' } });
+    expect((await retryProvisionSandbox(classroomId, id)).state).toBe('BUILDING');
+    expect((await prisma.sandbox.findUniqueOrThrow({ where: { id: sandboxId } })).provisionState).toBe(
+      'SEEDING',
+    );
+    await prisma.sandbox.update({ where: { id: sandboxId }, data: { provisionState: 'PENDING' } });
+    expect((await retryProvisionSandbox(classroomId, id)).state).toBe('READY');
+    expect((await retryProvisionSandbox(classroomId, id)).state).toBe('READY');
+  }, 600_000);
+
+  it('a student moved to another cohort keeps the one sandbox: lookups go by owner', async () => {
+    const id = await student('prov-moved');
+    const first = await enqueueProvisionSandbox(classroomId, id);
+    sandboxIds.push(first.sandboxId as string);
+    const other = await createClassroom(prisma, { tag: 'prov2', ownerAdminId: admin.id });
+    classroomIds.push(other.id);
+    await prisma.user.update({ where: { id }, data: { cohortId: other.id } });
+    expect((await enqueueProvisionSandbox(other.id, id)).sandboxId).toBe(first.sandboxId);
+    expect((await getProvisionView(id)).sandboxId).toBe(first.sandboxId);
+    expect(await prisma.sandbox.count({ where: { ownerUserId: id } })).toBe(1);
+  });
+});
+
 describe('timer', () => {
   it('starts students who have an account but no sandbox and builds queued ones', async () => {
     const id = await student('prov-g');
@@ -193,13 +261,9 @@ describe('timer', () => {
     expect(r.started).toBeGreaterThan(0);
     const sb = await prisma.sandbox.findFirstOrThrow({ where: { ownerUserId: id } });
     sandboxIds.push(sb.id);
-    for (
-      let i = 0;
-      i < 5 && sb && (await getProvisionView(id, classroomId)).state !== 'READY';
-      i++
-    ) {
+    for (let i = 0; i < 5 && sb && (await getProvisionView(id)).state !== 'READY'; i++) {
       await advanceProvisioning(Date.now() + 120_000, { limit: 50, classroomId });
     }
-    expect((await getProvisionView(id, classroomId)).state).toBe('READY');
+    expect((await getProvisionView(id)).state).toBe('READY');
   }, 900_000);
 });

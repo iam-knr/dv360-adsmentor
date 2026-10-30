@@ -48,7 +48,7 @@ function viewer(readOnly = false): ViewerValue {
       readOnly,
       viewAs: null,
     },
-    chrome: { clock: null, windowBanner: null, closesAt: null },
+    chrome: { clock: null },
   };
 }
 

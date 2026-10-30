@@ -1,10 +1,10 @@
 // P3-INT: the classroom demo path of docs/demo-script.md, run end to end against the seeded test database.
-// Steps 1 to 2 use an instructor (admin) and a student created with the shared fixtures (synthetic data only); the
+// Steps 1 to 2 use a Super admin and a student created with the shared fixtures (synthetic data only); the
 // student then walks Overview -> advertiser -> campaign -> IO (validation error, then success) -> Display line item
 // with a creative -> activate -> engine ticks through POST /api/sim/engine/tick -> Performance columns show numbers.
 import { PrismaClient } from '@prisma/client';
 import { expect, test, type Page } from '@playwright/test';
-import { cleanup, createAccount, createClassroom, createStudent } from '../auth/fixtures';
+import { cleanup, createAccount } from '../auth/fixtures';
 import { createShellWorld, type ShellWorld } from '../shell/e2e-world';
 
 const db = new PrismaClient({
@@ -66,39 +66,23 @@ test.afterAll(async () => {
   await db.$disconnect();
 });
 
-test('demo path: instructor, student, campaign to metrics', async ({ page, browser }) => {
+test('demo path: Super admin, student, campaign to metrics', async ({ page, browser }) => {
   test.setTimeout(240_000);
   const base = `/p/${w.ids.pid}/a/${w.ids.aid}`;
 
-  await test.step('1. instructor signs in and the class window is open', async () => {
-    const admin = await createAccount(db, { tag: 'demo-instr', role: 'ADMIN' });
-    const classroom = await createClassroom(db, {
-      tag: 'demo-open',
-      ownerAdminId: admin.user.id,
-      windows: 'open',
-    });
+  await test.step('1. the Super admin signs in and lands on the console', async () => {
+    const admin = await createAccount(db, { tag: 'demo-super', role: 'SUPER_ADMIN' });
     created.userIds.push(admin.user.id);
-    created.classroomIds.push(classroom.id);
     const ctx = await browser.newContext();
-    const instructor = await ctx.newPage();
-    await signIn(instructor, admin.user.email, admin.password);
-    await expect(instructor).toHaveURL(/\/sim\/instructor$/);
+    const console_ = await ctx.newPage();
+    await signIn(console_, admin.user.email, admin.password);
+    await expect(console_).toHaveURL(/\/manage\/accounts$/);
     await ctx.close();
-    // a student of an open class exists too (created by the shell world)
-    const student = await createStudent(db, {
-      tag: 'demo-extra',
-      classroomId: classroom.id,
-      ownerAdminId: admin.user.id,
-      name: 'Extra Student',
-    });
-    created.userIds.push(student.user.id);
   });
 
   await test.step('2. student signs in and opens the Overview', async () => {
     await signIn(page, w.email, w.password);
-    // Users still land on the /sim/welcome interstitial (listed in docs/gaps/p3.md); its button opens the Overview.
-    await expect(page).toHaveURL(/\/sim\/welcome$/);
-    await page.getByRole('link', { name: 'Open Overview' }).click();
+    // A student lands on /sim/welcome, which opens the sandbox home as soon as the sandbox is ready (it is here).
     await expect(page).toHaveURL(/\/home_v3$/);
     await expect(page).toHaveTitle('Overview - DV360 Simulator by Adsmetor');
   });

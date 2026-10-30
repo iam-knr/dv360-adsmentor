@@ -19,8 +19,7 @@ const claimsFor = (
   loginAt: Math.floor(loginAt.getTime() / 1000),
 });
 
-let admin: Awaited<ReturnType<typeof createAccount>>;
-let otherAdmin: Awaited<ReturnType<typeof createAccount>>;
+let retired: Awaited<ReturnType<typeof createAccount>>;
 let superAdmin: Awaited<ReturnType<typeof createAccount>>;
 let cls: Awaited<ReturnType<typeof createClassroom>>;
 let student: Awaited<ReturnType<typeof createStudent>>;
@@ -33,20 +32,19 @@ async function signedIn(id: string, sid = 'sid-1') {
 }
 
 beforeAll(async () => {
-  admin = await createAccount(prisma, { tag: 'sc-admin', role: 'ADMIN' });
-  otherAdmin = await createAccount(prisma, { tag: 'sc-admin2', role: 'ADMIN' });
+  // a row of the retired ADMIN level, as old data may still hold one
+  retired = await createAccount(prisma, { tag: 'sc-retired', role: 'ADMIN' });
   superAdmin = await createAccount(prisma, { tag: 'sc-super', role: 'SUPER_ADMIN' });
-  userIds.push(admin.user.id, otherAdmin.user.id, superAdmin.user.id);
-  cls = await createClassroom(prisma, { tag: 'sc', ownerAdminId: admin.user.id, now: NOW });
+  userIds.push(retired.user.id, superAdmin.user.id);
+  cls = await createClassroom(prisma, { tag: 'sc', ownerAdminId: superAdmin.user.id, now: NOW });
   classroomIds.push(cls.id);
   student = await createStudent(prisma, {
     tag: 'sc-stu',
     classroomId: cls.id,
-    ownerAdminId: admin.user.id,
   });
   userIds.push(student.user.id);
   await signedIn(student.user.id);
-  await signedIn(admin.user.id);
+  await signedIn(superAdmin.user.id);
 });
 afterAll(() => cleanup(prisma, { userIds, classroomIds }));
 
@@ -197,16 +195,37 @@ describe('requireUser checks (M19-14)', () => {
     await prisma.userAccessGrant.deleteMany({ where: { userId: u.id } });
   });
 
-  it('admins and super admins are DV360 ADMIN with no sandbox of their own', async () => {
-    const a = await fresh(admin.user.id);
+  it('the Super admin is DV360 ADMIN with no sandbox of their own', async () => {
+    const a = await fresh(superAdmin.user.id);
     const r = await resolveSessionUser({ userId: a.id, claims: claimsFor(a), now: NOW });
-    expect(r.ok && r.user).toMatchObject({ appRole: 'admin', dvRole: 'ADMIN' });
+    expect(r.ok && r.user).toMatchObject({ appRole: 'super_admin', dvRole: 'ADMIN' });
+  });
+
+  it('the retired ADMIN level has no session at all', async () => {
+    await signedIn(retired.user.id);
+    const a = await fresh(retired.user.id);
+    const r = await resolveSessionUser({ userId: a.id, claims: claimsFor(a), now: NOW });
+    expect(r.ok).toBe(false);
+  });
+
+  it('a student with a sandbox that is still being built has no sandbox context yet', async () => {
+    const st = await createStudent(prisma, { tag: 'sc-build', classroomId: cls.id });
+    userIds.push(st.user.id);
+    await prisma.sandbox.update({ where: { id: st.sandbox.id }, data: { provisionState: 'SEEDING' } });
+    await signedIn(st.user.id);
+    const u = await fresh(st.user.id);
+    const r = await resolveSessionUser({ userId: u.id, claims: claimsFor(u), now: NOW });
+    expect(r.ok && r.user).toMatchObject({ classroomId: cls.id });
+    expect(r.ok && r.user.sandboxId).toBeUndefined();
+    await prisma.sandbox.update({ where: { id: st.sandbox.id }, data: { provisionState: 'READY' } });
+    const r2 = await resolveSessionUser({ userId: u.id, claims: claimsFor(u), now: NOW });
+    expect(r2.ok && r2.user.sandboxId).toBe(st.sandbox.id);
   });
 });
 
 describe('view-as (M18-AC13)', () => {
-  it('lets an admin view the students of their own cohort, read only', async () => {
-    const a = await fresh(admin.user.id);
+  it('lets the Super admin view a student, read only', async () => {
+    const a = await fresh(superAdmin.user.id);
     const r = await resolveSessionUser({
       userId: a.id,
       claims: claimsFor(a),
@@ -220,14 +239,14 @@ describe('view-as (M18-AC13)', () => {
       appRole: 'user',
       sandboxId: student.sandbox.id,
       viewAs: { userId: student.user.id, actAs: false },
-      actor: { id: a.id, appRole: 'admin' },
+      actor: { id: a.id, appRole: 'super_admin' },
     });
     expect(can(r.user, 'view')).toBe(true);
     expect(can(r.user, 'write')).toBe(false);
   });
 
-  it('allows writes once "Act as student" is on, and keeps the instructor as the actor', async () => {
-    const a = await fresh(admin.user.id);
+  it('allows writes once "Act as student" is on, and keeps the Super admin as the actor', async () => {
+    const a = await fresh(superAdmin.user.id);
     const r = await resolveSessionUser({
       userId: a.id,
       claims: claimsFor(a),
@@ -238,124 +257,59 @@ describe('view-as (M18-AC13)', () => {
     expect(r.ok && r.user.actor?.id).toBe(a.id);
   });
 
-  it('ignores view-as for a student and for an admin of another cohort', async () => {
+  it('ignores view-as for a student', async () => {
     const s = await fresh(student.user.id);
     const rs = await resolveSessionUser({
       userId: s.id,
       claims: claimsFor(s),
       now: NOW,
-      viewAs: { userId: admin.user.id, actAs: true },
+      viewAs: { userId: superAdmin.user.id, actAs: true },
     });
     expect(rs.ok && rs.user.viewAs).toBeUndefined();
     expect(rs.ok && rs.user.id).toBe(s.id);
-
-    await signedIn(otherAdmin.user.id);
-    const o = await fresh(otherAdmin.user.id);
-    const ro = await resolveSessionUser({
-      userId: o.id,
-      claims: claimsFor(o),
-      now: NOW,
-      viewAs: { userId: student.user.id, actAs: false },
-    });
-    expect(ro.ok && ro.user.viewAs).toBeUndefined();
-    expect(ro.ok && ro.user.id).toBe(o.id);
   });
 
-  it('a super admin may view any user; an admin may not view admins or themselves', async () => {
+  it('only a Super admin may view a student, never another Super admin or themselves', async () => {
     expect(
       await canViewAs({ id: superAdmin.user.id, appRole: 'super_admin' }, student.user.id),
     ).toBe(true);
-    expect(await canViewAs({ id: admin.user.id, appRole: 'admin' }, student.user.id)).toBe(true);
-    expect(await canViewAs({ id: otherAdmin.user.id, appRole: 'admin' }, student.user.id)).toBe(
-      false,
-    );
-    expect(await canViewAs({ id: admin.user.id, appRole: 'admin' }, otherAdmin.user.id)).toBe(
-      false,
-    );
-    expect(await canViewAs({ id: superAdmin.user.id, appRole: 'super_admin' }, admin.user.id)).toBe(
-      false,
-    );
-    expect(await canViewAs({ id: admin.user.id, appRole: 'admin' }, admin.user.id)).toBe(false);
+    expect(
+      await canViewAs({ id: superAdmin.user.id, appRole: 'super_admin' }, retired.user.id),
+    ).toBe(false);
+    expect(
+      await canViewAs({ id: superAdmin.user.id, appRole: 'super_admin' }, superAdmin.user.id),
+    ).toBe(false);
     expect(await canViewAs({ id: student.user.id, appRole: 'user' }, student.user.id)).toBe(false);
-    expect(await canViewAs({ id: admin.user.id, appRole: 'admin' }, 'nobody')).toBe(false);
-  });
-
-  it('a co-admin member of the cohort may view its students', async () => {
-    await prisma.classroomMember.create({
-      data: { classroomId: cls.id, userId: otherAdmin.user.id, appRole: 'ADMIN' },
-    });
-    expect(await canViewAs({ id: otherAdmin.user.id, appRole: 'admin' }, student.user.id)).toBe(
-      true,
+    expect(await canViewAs({ id: student.user.id, appRole: 'user' }, superAdmin.user.id)).toBe(
+      false,
     );
-    await prisma.classroomMember.deleteMany({
-      where: { classroomId: cls.id, userId: otherAdmin.user.id },
-    });
+    expect(await canViewAs({ id: superAdmin.user.id, appRole: 'super_admin' }, 'nobody')).toBe(
+      false,
+    );
   });
 });
 
-describe('class and sandbox resolution (RC-061)', () => {
-  it('chooses the class with an open window, else the most recent membership; ?sim_class= only for teachers', async () => {
-    const closedNewer = await createClassroom(prisma, {
-      tag: 'sc2',
-      ownerAdminId: otherAdmin.user.id,
-      windows: 'closed',
-      now: NOW,
+describe('sandbox resolution (no class windows)', () => {
+  it('finds the sandbox by its owner, whatever cohort the student is in', async () => {
+    const other = await createClassroom(prisma, { tag: 'sc2', ownerAdminId: superAdmin.user.id });
+    classroomIds.push(other.id);
+    const st = await createStudent(prisma, { tag: 'sc-move', classroomId: cls.id });
+    userIds.push(st.user.id);
+    await prisma.user.update({ where: { id: st.user.id }, data: { cohortId: other.id } });
+    expect(await resolveClassContext(st.user.id)).toMatchObject({
+      classroomId: cls.id,
+      sandboxId: st.sandbox.id,
     });
-    classroomIds.push(closedNewer.id);
-    await prisma.classroomMember.create({
-      data: {
-        classroomId: closedNewer.id,
-        userId: student.user.id,
-        joinedAt: new Date(NOW.getTime() + 1000),
-      },
-    });
-    const sb2 = await prisma.sandbox.create({
-      data: { classroomId: closedNewer.id, ownerUserId: student.user.id, name: 's2', seedValue: 2 },
-    });
-
-    // the older class is open, so it wins over the newer closed one
-    const open = await resolveClassContext(student.user.id, NOW);
-    expect(open).toMatchObject({ classroomId: cls.id, sandboxId: student.sandbox.id });
-
-    // nothing open: the most recent membership
-    const late = new Date(NOW.getTime() + 5 * 3_600_000);
-    const recent = await resolveClassContext(student.user.id, late);
-    expect(recent).toMatchObject({ classroomId: closedNewer.id, sandboxId: sb2.id });
-
-    // a student cannot pick a class
-    const byStudent = await resolveClassContext(student.user.id, late, {
-      override: cls.id,
-      actorId: student.user.id,
-      actorRole: 'user',
-    });
-    expect(byStudent.classroomId).toBe(closedNewer.id);
-
-    // the teacher of the class can, another admin cannot, a super admin can
-    const byOwner = await resolveClassContext(student.user.id, late, {
-      override: cls.id,
-      actorId: admin.user.id,
-      actorRole: 'admin',
-    });
-    expect(byOwner.classroomId).toBe(cls.id);
-    const byStranger = await resolveClassContext(student.user.id, late, {
-      override: cls.id,
-      actorId: otherAdmin.user.id,
-      actorRole: 'admin',
-    });
-    expect(byStranger.classroomId).toBe(closedNewer.id);
-    const bySuper = await resolveClassContext(student.user.id, late, {
-      override: cls.id,
-      actorId: superAdmin.user.id,
-      actorRole: 'super_admin',
-    });
-    expect(bySuper.classroomId).toBe(cls.id);
-
-    await prisma.sandbox.delete({ where: { id: sb2.id } });
-    await prisma.classroomMember.deleteMany({ where: { classroomId: closedNewer.id } });
   });
 
-  it('a person in no class has no class context', async () => {
-    expect(await resolveClassContext(admin.user.id, NOW)).toEqual({ classroomId: null });
+  it('a student without a sandbox gets their cohort, a person in no cohort none', async () => {
+    const { user } = await createAccount(prisma, { tag: 'sc-nosb', role: 'USER', cohortId: cls.id });
+    userIds.push(user.id);
+    expect(await resolveClassContext(user.id)).toEqual({
+      classroomId: cls.id,
+      timeZone: 'Asia/Kolkata',
+    });
+    expect(await resolveClassContext(superAdmin.user.id)).toEqual({ classroomId: null });
   });
 });
 

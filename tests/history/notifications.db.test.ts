@@ -25,7 +25,7 @@ const instructor = (world: World): SessionUser => ({
   id: world.ownerId,
   email: `${world.tag}-admin@example.test`,
   name: 'I',
-  appRole: 'admin',
+  appRole: 'super_admin',
   dvRole: 'ADMIN',
   classroomId: world.classroomId,
 });
@@ -95,20 +95,20 @@ describe('notifications', () => {
 });
 
 describe('announcement actions (HIS-010, HIS-011)', () => {
-  it('lets an instructor announce to their own class and delete it', async () => {
+  it('lets the Super admin announce to a class and delete it', async () => {
     const { id } = await createAnnouncement(instructor(a), { classId: a.classroomId, title: 'hist-new', body: 'Hello', learnMoreRoute: '/help', severity: 'WARNING', expiresAt: new Date(Date.now() + 7 * 86_400_000).toISOString() });
     const shown = (await listNotifications(student(a))).find((n) => n.id === id)!;
     expect(shown).toMatchObject({ title: 'hist-new', learnMoreRoute: '/help', severity: 'WARNING' });
-    await expect(deleteAnnouncement(instructor(b), id)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(deleteAnnouncement(student(a), id)).rejects.toMatchObject({ code: 'FORBIDDEN' });
     await expect(deleteAnnouncement(instructor(a), id)).resolves.toBeNull();
     expect(await titles(student(a))).not.toContain('hist-new');
   });
 
-  it('refuses a student, another class, and platform-wide from an instructor', async () => {
+  it('refuses a student, class or platform-wide; the Super admin may do both', async () => {
     const input = { title: 'hist-no', body: 'b' };
     await expect(createAnnouncement(student(a), { ...input, classId: a.classroomId })).rejects.toMatchObject({ code: 'FORBIDDEN' });
-    await expect(createAnnouncement(instructor(a), { ...input, classId: b.classroomId })).rejects.toMatchObject({ code: 'FORBIDDEN' });
-    await expect(createAnnouncement(instructor(a), input)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(createAnnouncement(student(a), input)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(createAnnouncement(instructor(a), { ...input, classId: b.classroomId })).resolves.toBeTruthy();
     await expect(createAnnouncement(superAdmin, input)).resolves.toBeTruthy();
   });
 

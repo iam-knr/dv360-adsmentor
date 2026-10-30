@@ -10,7 +10,7 @@ import { ScopeRegistryProvider } from '@/lib/scope/context';
 import { BannerStack } from './BannerStack';
 import { ChromeStateProvider } from './ChromeState';
 import { RailHost } from './RailHost';
-import { ShellHotkeys, WindowWatch } from './ShellHotkeys';
+import { ShellHotkeys } from './ShellHotkeys';
 import { SideNav } from './SideNav';
 import { TopBar } from './TopBar';
 
@@ -26,7 +26,6 @@ export function AppChrome({ children }: { children: ReactNode }) {
           </Box>
         </Box>
         <ShellHotkeys />
-        <WindowWatch />
       </ChromeStateProvider>
     </ScopeRegistryProvider>
   );
@@ -54,7 +53,6 @@ export function FullChrome({ children }: { children: ReactNode }) {
       <Box component="main" id="main" sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
         {children}
       </Box>
-      <WindowWatch />
     </ScopeRegistryProvider>
   );
 }

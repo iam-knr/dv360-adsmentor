@@ -242,7 +242,7 @@ describe('notes (AC-05-17, 18, 26)', () => {
     const mine = (await listHistoryNotes(userOf(w), { ...io(), date: day() }))[0]!;
     const peer = userOf(w, { id: 'someone-else', email: 'peer@example.test' });
     await expect(deleteHistoryNote(peer, mine.id)).rejects.toMatchObject({ issues: [{ code: 'HIS-003' }] });
-    const admin = userOf(w, { id: 'inst', email: 'inst@example.test', appRole: 'admin' });
+    const admin = userOf(w, { id: 'inst', email: 'inst@example.test', appRole: 'super_admin' });
     await expect(deleteHistoryNote(admin, mine.id)).resolves.toBeNull();
     const rest = await listHistoryNotes(userOf(w), { ...io(), date: day() });
     expect(rest.some((n) => n.id === mine.id)).toBe(false);

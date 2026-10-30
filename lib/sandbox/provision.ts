@@ -54,13 +54,37 @@ export const DEFAULT_ENGINE_DAYS = 90;
 export const STUDENT_SLICE_DAYS = 3;
 /** Time one step may take: the 60 s function limit minus the seed, the response and a safety margin. */
 export const STEP_BUDGET_MS = 40_000;
-/** A SEEDING claim older than this is taken over (the function that made it was cut off). */
-export const STALE_MS = 5 * 60_000;
+/**
+ * A SEEDING claim whose heartbeat is older than this is taken over (the function that made it was cut off). The step
+ * touches the row every `HEARTBEAT_MS` while it works, so a live build is never this old, however long it takes, and a
+ * dead one is retaken within a minute (it used to be 5 minutes, which left a student waiting).
+ */
+export const STALE_MS = 60_000;
+export const HEARTBEAT_MS = 10_000;
+/** "Create / Retry sandbox" restarts a build whose heartbeat is older than this, without waiting for `STALE_MS`. */
+export const FORCE_RESTART_AFTER_MS = 20_000;
 const FALLBACK_TEMPLATE: TemplateKey = 'starter-agency';
 
 function engineDays(): number {
   const raw = Number(process.env.SANDBOX_ENGINE_DAYS);
   return Number.isInteger(raw) && raw >= 0 && raw <= 90 ? raw : DEFAULT_ENGINE_DAYS;
+}
+
+/**
+ * Touches the claimed row so that `updatedAt` says "this build is alive". Runs until the returned function is called;
+ * it only writes while the row is still SEEDING or BACKFILLING, so it never revives a FAILED or READY row.
+ */
+function startHeartbeat(db: Db, sandboxId: string): () => void {
+  const timer = setInterval(() => {
+    void db.sandbox
+      .updateMany({
+        where: { id: sandboxId, provisionState: { in: ['SEEDING', 'BACKFILLING'] } },
+        data: { updatedAt: new Date() },
+      })
+      .catch(() => undefined);
+  }, HEARTBEAT_MS);
+  timer.unref?.();
+  return () => clearInterval(timer);
 }
 
 const errorText = (err: unknown): string =>
@@ -115,13 +139,11 @@ async function viewOf(db: Db, row: Row | null): Promise<ProvisionView> {
   }
 }
 
-export async function getProvisionView(
-  userId: string,
-  classroomId: string,
-  db: Db = prisma,
-): Promise<ProvisionView> {
+/** The student's own sandbox, found by owner so that moving a student to another cohort does not lose it. */
+export async function getProvisionView(userId: string, db: Db = prisma): Promise<ProvisionView> {
   const row = await db.sandbox.findFirst({
-    where: { classroomId, ownerUserId: userId, status: { not: 'ARCHIVED' } },
+    where: { ownerUserId: userId, kind: 'STUDENT', status: { not: 'ARCHIVED' } },
+    orderBy: { createdAt: 'desc' },
     select: { id: true, provisionState: true, provisionError: true },
   });
   return viewOf(db, row);
@@ -148,7 +170,8 @@ export async function enqueueProvisionSandbox(
   db: Db = prisma,
 ): Promise<ProvisionView> {
   const existing = await db.sandbox.findFirst({
-    where: { classroomId: cohortId, ownerUserId: userId },
+    where: { ownerUserId: userId, kind: 'STUDENT', status: { not: 'ARCHIVED' } },
+    orderBy: { createdAt: 'desc' },
     select: { id: true, provisionState: true, provisionError: true },
   });
   if (existing) return viewOf(db, existing);
@@ -257,6 +280,7 @@ export async function runProvisionStep(
       data: { provisionState: 'SEEDING', provisionError: null },
     });
     if (claimed.count === 1) {
+      const stopBeat = startHeartbeat(db, sandboxId);
       try {
         await provisionSandbox(db, {
           classroomId: sb.classroomId,
@@ -277,6 +301,8 @@ export async function runProvisionStep(
           where: { id: sandboxId, provisionState: 'SEEDING' },
           data: { provisionState: 'FAILED', provisionError: errorText(err) },
         });
+      } finally {
+        stopBeat();
       }
     }
     sb = await load();
@@ -284,6 +310,7 @@ export async function runProvisionStep(
   }
 
   if (sb.provisionState === 'BACKFILLING' && Date.now() < deadline) {
+    const stopBeat = startHeartbeat(db, sandboxId);
     try {
       await ensureStudentGrant(db, sandboxId, sb.ownerUserId);
       const jobs = await advanceSandboxJobs(sandboxId, deadline);
@@ -296,13 +323,20 @@ export async function runProvisionStep(
           provisionError: errorText(err),
         },
       });
+    } finally {
+      stopBeat();
     }
     sb = await load();
   }
   return viewOf(db, sb);
 }
 
-/** Retry after FAILED (or the first build when the row is missing). A sandbox that is building or ready is left alone. */
+/**
+ * "Create / Retry sandbox": makes sure the student's sandbox is being built and runs a step. A missing row is created, a
+ * FAILED one restarts, and a build that stopped (SEEDING with no heartbeat for `FORCE_RESTART_AFTER_MS`, or a
+ * BACKFILLING one, which the step simply continues) is taken over at once. A READY sandbox is left alone, and so is
+ * a build that is alive.
+ */
 export async function retryProvisionSandbox(
   cohortId: string,
   userId: string,
@@ -310,7 +344,8 @@ export async function retryProvisionSandbox(
 ): Promise<ProvisionView> {
   const db = opts.db ?? prisma;
   const row = await db.sandbox.findFirst({
-    where: { classroomId: cohortId, ownerUserId: userId },
+    where: { ownerUserId: userId, kind: 'STUDENT', status: { not: 'ARCHIVED' } },
+    orderBy: { createdAt: 'desc' },
     select: { id: true, provisionState: true, provisionError: true },
   });
   if (!row) {
@@ -320,6 +355,15 @@ export async function retryProvisionSandbox(
   if (row.provisionState === 'FAILED') {
     await db.sandbox.updateMany({
       where: { id: row.id, provisionState: 'FAILED' },
+      data: { provisionState: 'PENDING', provisionError: null },
+    });
+  } else if (row.provisionState === 'SEEDING') {
+    await db.sandbox.updateMany({
+      where: {
+        id: row.id,
+        provisionState: 'SEEDING',
+        updatedAt: { lt: new Date(Date.now() - FORCE_RESTART_AFTER_MS) },
+      },
       data: { provisionState: 'PENDING', provisionError: null },
     });
   }

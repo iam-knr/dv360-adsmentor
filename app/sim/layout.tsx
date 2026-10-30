@@ -3,13 +3,10 @@ import { Suspense } from 'react';
 import Box from '@mui/material/Box';
 import { SimHeader } from '@/components/sim/SimHeader';
 import { ViewAsBanner } from '@/components/sim/ViewAsBanner';
-import { DvBanner } from '@/components/dv/DvBanner';
-import { getWindowBanner } from '@/lib/access/windows';
 import { getSessionUser } from '@/lib/auth/session';
 
 export default async function SimLayout({ children }: { children: ReactNode }) {
   const user = await getSessionUser();
-  const banner = user ? await getWindowBanner(user) : null;
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <SimHeader
@@ -23,11 +20,6 @@ export default async function SimLayout({ children }: { children: ReactNode }) {
         <Suspense fallback={null}>
           <ViewAsBanner name={user.name} actAs={user.viewAs.actAs} />
         </Suspense>
-      ) : null}
-      {banner ? (
-        <DvBanner kind="warning" level="page">
-          {banner}
-        </DvBanner>
       ) : null}
       <Box component="main">{children}</Box>
     </Box>

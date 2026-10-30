@@ -1,12 +1,11 @@
 import 'server-only';
 // Read-only data for the chrome (routes.md 4.1 item 7, 4.5 banners; module 01 5 "Sim clock chip"): the sandbox sim
-// clock and the class window warning (P3-02 helpers). Nothing here writes.
+// clock. Nothing here writes.
 import { withSandbox } from '@/lib/db';
 import type { SessionUser } from '@/lib/auth/types';
 import { listNotifications } from '@/lib/history/notifications';
 import type { NotificationDto } from '@/lib/history/types';
 import { loadInbox, type InboxEntry } from '@/lib/reporting/inbox';
-import { bypassesWindow, getClassAccessState, getWindowBanner } from '@/lib/access/windows';
 
 export interface SimClockView {
   /** Simulated now, ISO (ENG 1.2: simStart + tickIndex hours). */
@@ -19,9 +18,6 @@ export interface SimClockView {
 
 export interface ChromeData {
   clock: SimClockView | null;
-  windowBanner: string | null;
-  /** When the class window closes, for the "next navigation goes to /sim/closed" check (AC-01-30). */
-  closesAt: string | null;
   /** Bell entries: scheduled report runs (module 16). Absent in tests. */
   inbox?: InboxEntry[];
   /** Bell entries: instructor and platform announcements (module 05 4.7). Absent in tests. */
@@ -47,12 +43,9 @@ export function simClockView(
   };
 }
 
-export async function getChromeData(
-  user: SessionUser,
-  now: Date = new Date(),
-): Promise<ChromeData> {
+export async function getChromeData(user: SessionUser): Promise<ChromeData> {
   const timeZone = user.timeZone ?? 'Asia/Kolkata';
-  const [clockRow, windowBanner, access, inbox, announcements] = await Promise.all([
+  const [clockRow, inbox, announcements] = await Promise.all([
     user.sandboxId
       ? withSandbox(user.sandboxId, (tx) =>
           tx.simClock.findUnique({
@@ -61,15 +54,11 @@ export async function getChromeData(
           }),
         )
       : null,
-    getWindowBanner(user, now),
-    !bypassesWindow(user) && user.classroomId ? getClassAccessState(user.classroomId, now) : null,
     loadInbox(user).catch(() => [] as InboxEntry[]),
     listNotifications(user).catch(() => [] as NotificationDto[]),
   ]);
   return {
     clock: clockRow ? simClockView(clockRow, timeZone) : null,
-    windowBanner,
-    closesAt: access?.closesAt?.toISOString() ?? null,
     inbox,
     announcements,
   };

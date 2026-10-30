@@ -38,7 +38,7 @@ import { useViewer } from './ViewerProvider';
 export const NOTIFICATION_POLL_MS = 30_000;
 
 export const PRODUCT_NAME = 'DV360 Simulator by Adsmetor';
-const ROLE_LABEL = { user: 'Student', admin: 'Instructor', super_admin: 'Admin' } as const;
+const ROLE_LABEL = { user: 'Student', super_admin: 'Super admin' } as const;
 
 function BarIcon({
   label,
@@ -138,7 +138,6 @@ export function TopBar() {
     ...c,
     ...(c.href ? { href: withSimParams(c.href, search?.toString() ?? null) } : {}),
   }));
-  const isInstructor = viewer.appRole !== 'user';
 
   return (
     <Box
@@ -382,17 +381,9 @@ export function TopBar() {
         <MenuItem component={AppLink} href={home} onClick={close}>
           DV360 Simulator
         </MenuItem>
-        <MenuItem component="a" href="/sim/scenarios" onClick={close}>
-          Exercises
-        </MenuItem>
-        {isInstructor ? (
-          <MenuItem component="a" href="/sim/instructor" onClick={close}>
-            Instructor console
-          </MenuItem>
-        ) : null}
         {viewer.appRole === 'super_admin' ? (
-          <MenuItem component="a" href="/sim/admin" onClick={close}>
-            Admin
+          <MenuItem component="a" href="/manage" onClick={close}>
+            Super admin console
           </MenuItem>
         ) : null}
       </Menu>

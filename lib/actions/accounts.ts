@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import {
+  archiveCohort,
   bulkAccounts,
   createAccount,
   createCohort,
@@ -12,6 +13,7 @@ import {
   revokeSessions,
   setAccountStatus,
   unlockAccount,
+  updateCohort,
   type BulkAction,
   type PasswordInput,
 } from '@/lib/accounts/service';
@@ -30,7 +32,7 @@ async function actorFromSession(): Promise<Actor> {
   const user = await requireUser();
   const who = user.actor ?? user;
   const role = toDbRole(who.appRole);
-  if (role === 'USER') throw new AccountError('FORBIDDEN');
+  if (role !== 'SUPER_ADMIN') throw new AccountError('FORBIDDEN');
   return { id: who.id, role };
 }
 
@@ -51,7 +53,7 @@ async function run<T>(fn: (actor: Actor) => Promise<T>): Promise<Result<T>> {
 export interface CreateAccountForm {
   email: string;
   name: string;
-  role: 'SUPER_ADMIN' | 'ADMIN' | 'USER';
+  role: 'SUPER_ADMIN' | 'USER';
   cohortId?: string;
   notes?: string;
   mustChangePassword?: boolean;
@@ -96,10 +98,7 @@ export async function resetPasswordAction(
 ) {
   return run((actor) => resetPassword(actor, id, req));
 }
-export async function deleteAccountAction(
-  id: string,
-  req: { confirm: string; transferTo?: string },
-) {
+export async function deleteAccountAction(id: string, req: { confirm: string }) {
   return run((actor) => deleteAccount(actor, id, req));
 }
 export async function restoreAccountAction(id: string) {
@@ -110,9 +109,14 @@ export async function bulkAccountsAction(ids: string[], action: BulkAction) {
 }
 export async function createCohortAction(input: {
   name: string;
-  ownerAdminId?: string;
   timeZone?: string;
   capacity?: number;
 }) {
   return run((actor) => createCohort(actor, input));
+}
+export async function updateCohortAction(id: string, input: { name?: string; capacity?: number }) {
+  return run((actor) => updateCohort(actor, id, input));
+}
+export async function archiveCohortAction(id: string) {
+  return run((actor) => archiveCohort(actor, id));
 }

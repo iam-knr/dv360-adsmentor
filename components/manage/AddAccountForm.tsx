@@ -20,18 +20,17 @@ import { passwordStrength } from '@/lib/auth/password-policy';
 import { OneTimeSecret } from './OneTimeSecret';
 
 export interface AddAccountFormProps {
-  isSuper: boolean;
   cohorts: { id: string; name: string; used: number; capacity: number }[];
   signInUrl: string;
 }
 
-export function AddAccountForm({ isSuper, cohorts, signInUrl }: AddAccountFormProps) {
+export function AddAccountForm({ cohorts, signInUrl }: AddAccountFormProps) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
-  const [role, setRole] = useState<'USER' | 'ADMIN' | 'SUPER_ADMIN'>('USER');
-  const [cohortId, setCohortId] = useState(cohorts[0]?.id ?? '');
+  const [role, setRole] = useState<'USER' | 'SUPER_ADMIN'>('USER');
+  const [cohortId, setCohortId] = useState('');
   const [mode, setMode] = useState<'GENERATE' | 'SET'>('GENERATE');
   const [typed, setTyped] = useState('');
   const [generated, setGenerated] = useState('');
@@ -54,7 +53,6 @@ export function AddAccountForm({ isSuper, cohorts, signInUrl }: AddAccountFormPr
     if (eEmail) e.email = eEmail;
     if (eName) e.name = eName;
     if (eNotes) e.notes = eNotes;
-    if (needsCohort && !cohortId) e.cohort = 'Choose a cohort.';
     setErrors(e);
     setError(undefined);
     if (Object.keys(e).length) return;
@@ -63,7 +61,7 @@ export function AddAccountForm({ isSuper, cohorts, signInUrl }: AddAccountFormPr
         email: normalised,
         name,
         role,
-        cohortId: needsCohort ? cohortId : undefined,
+        cohortId: needsCohort && cohortId ? cohortId : undefined,
         notes: notes || undefined,
         mustChangePassword: mustChange,
         // a generated value is made on the server at create time, so the plaintext is never posted back
@@ -109,45 +107,37 @@ export function AddAccountForm({ isSuper, cohorts, signInUrl }: AddAccountFormPr
             error={errors.name}
           />
           <DvSelect
-            label="Role"
+            label="Level"
             required
             value={role}
             onChange={(v) => setRole(v as typeof role)}
-            disabled={!isSuper}
-            help={isSuper ? undefined : 'Admins can add users only.'}
-            options={
-              isSuper
-                ? [
-                    { value: 'SUPER_ADMIN', label: 'Super admin' },
-                    { value: 'ADMIN', label: 'Admin' },
-                    { value: 'USER', label: 'User' },
-                  ]
-                : [{ value: 'USER', label: 'User' }]
-            }
+            options={[
+              { value: 'USER', label: 'Student' },
+              { value: 'SUPER_ADMIN', label: 'Super admin' },
+            ]}
           />
         </Box>
       </DvSectionCard>
       {needsCohort ? (
-        <DvSectionCard title="Where">
-          {cohorts.length ? (
-            <DvSelect
-              label="Cohort"
-              required
-              value={cohortId}
-              onChange={setCohortId}
-              error={errors.cohort}
-              options={cohorts.map((c) => ({
+        <DvSectionCard title="Cohort (optional)">
+          <DvSelect
+            label="Cohort"
+            value={cohortId}
+            onChange={setCohortId}
+            help="A cohort only groups students. Leave it empty to add the student on their own."
+            options={[
+              { value: '', label: 'No cohort' },
+              ...cohorts.map((c) => ({
                 value: c.id,
                 label: c.name,
                 secondLine: `${c.used} of ${c.capacity} used`,
                 disabled: c.used >= c.capacity,
-              }))}
-            />
-          ) : (
-            <Typography>
-              No cohorts yet. <Link href="/manage/cohorts/new">Create a cohort</Link> first.
-            </Typography>
-          )}
+              })),
+            ]}
+          />
+          <Typography variant="body2" sx={{ mt: 2 }}>
+            <Link href="/manage/cohorts/new">Create a cohort</Link>
+          </Typography>
         </DvSectionCard>
       ) : null}
       <DvSectionCard title="Password">
@@ -227,7 +217,7 @@ export function AddAccountForm({ isSuper, cohorts, signInUrl }: AddAccountFormPr
         <Button onClick={() => router.push('/manage/accounts')}>Cancel</Button>
         <Button
           variant="contained"
-          disabled={pending || (needsCohort && !cohortId)}
+          disabled={pending}
           onClick={submit}
         >
           Create account

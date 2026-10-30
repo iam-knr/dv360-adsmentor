@@ -1,10 +1,10 @@
 // Engine timer endpoint (routes.md 8.20, RC-027, ADR-048). A GitHub Actions workflow calls it every 5 minutes with
-// Authorization: Bearer $CRON_SECRET. It moves access windows first (P3-02), then advances every sandbox that owes ticks
+// Authorization: Bearer $CRON_SECRET. It thaws sandboxes that a class window froze before windows were removed, then advances every sandbox that owes ticks
 // within a time budget, at most 25 sandboxes per call, and reports how many are still due.
 import { NextResponse, type NextRequest } from 'next/server';
-import { tickAccessWindows } from '@/lib/access/windows';
 import { runDueTicks, runRetention } from '@/lib/engine/server';
 import { advanceProvisioning } from '@/lib/sandbox/provision';
+import { thawWindowFrozenSandboxes } from '@/lib/sandbox/thaw';
 import { budgetFrom, isAuthorised } from './auth';
 
 export const dynamic = 'force-dynamic';
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   }
   const started = Date.now();
   const url = new URL(req.url);
-  const windows = await tickAccessWindows(new Date());
+  const thawed = await thawWindowFrozenSandboxes(new Date()).catch(() => 0);
   const deadline = started + budgetFrom(url.searchParams);
   const result = await runDueTicks(deadline);
   // new students: seed queued sandboxes, start accounts that have none (module 18 4.4)
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   const trimmed = url.searchParams.get('retention') === '1' ? await runRetention() : undefined;
   return NextResponse.json({
     ok: true,
-    windows,
+    thawed,
     ...result,
     ...(provisioning ? { provisioning } : {}),
     ...(trimmed !== undefined ? { trimmedHourlyRows: trimmed } : {}),

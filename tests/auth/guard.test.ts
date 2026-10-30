@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { decide, isDvPath, isPublicPath, safeNext } from '@/lib/auth/guard';
 import {
   SUPER_ADMIN_LANDING,
-  atLeast,
   defaultDvRole,
   landingFor,
+  isRetiredRole,
+  sessionRoleOrNull,
   toDbRole,
   toSessionRole,
 } from '@/lib/auth/roles';
@@ -22,7 +23,7 @@ describe('middleware decisions', () => {
       status: 308,
     });
     expect(at('/ng_nav', claims('user'))).toEqual({ type: 'redirect', to: '/', status: 308 });
-    expect(at('/ng_navigation', claims('user')).type).toBe('window-check'); // not the prefix
+    expect(at('/ng_navigation', claims('user')).type).toBe('next'); // not the prefix
   });
 
   it('never turns /ng_nav into an open redirect', () => {
@@ -97,52 +98,29 @@ describe('middleware decisions', () => {
     ]) {
       expect(at(ok, c).type, ok).toBe('next');
     }
-    expect(at('/sim/me', claims('admin', true))).toEqual({
+    expect(at('/sim/me', claims('super_admin', true))).toEqual({
       type: 'redirect',
       to: '/sim/me/password',
       status: 307,
     });
   });
 
-  it('role guards send people without rights to /sim/forbidden (RC-075)', () => {
+  it('role guards keep students out of /manage (RC-075)', () => {
     const forbidden = { type: 'redirect', to: '/sim/forbidden', status: 307 };
-    expect(at('/sim/instructor', claims('user'))).toEqual(forbidden);
-    expect(at('/sim/instructor/classes', claims('user'))).toEqual(forbidden);
-    expect(at('/sim/admin', claims('user'))).toEqual(forbidden);
-    expect(at('/sim/admin', claims('admin'))).toEqual(forbidden);
     expect(at('/manage', claims('user'))).toEqual(forbidden);
     expect(at('/manage/accounts/new', claims('user'))).toEqual(forbidden);
-    expect(at('/manage/settings', claims('admin'))).toEqual(forbidden);
+    expect(at('/manage/cohorts', claims('user'))).toEqual(forbidden);
+    expect(at('/manage/settings', claims('user'))).toEqual(forbidden);
 
-    expect(at('/sim/instructor', claims('admin'))).toEqual({ type: 'next' });
-    expect(at('/sim/instructor', claims('super_admin'))).toEqual({ type: 'next' });
-    expect(at('/sim/admin', claims('super_admin'))).toEqual({ type: 'next' });
-    expect(at('/manage/accounts', claims('admin'))).toEqual({ type: 'next' });
+    expect(at('/manage', claims('super_admin'))).toEqual({ type: 'next' });
+    expect(at('/manage/accounts', claims('super_admin'))).toEqual({ type: 'next' });
     expect(at('/manage/settings', claims('super_admin'))).toEqual({ type: 'next' });
   });
 
-  it('asks for the class window check for students on DV360 and student pages only', () => {
-    expect(at('/p/1/home_v3', claims('user'))).toEqual({ type: 'window-check' });
-    expect(at('/ng_nav/x', claims('user')).type).toBe('redirect');
-    expect(at('/sim/welcome', claims('user'))).toEqual({ type: 'window-check' });
-    expect(at('/sim/scenarios/abc', claims('user'))).toEqual({ type: 'window-check' });
-    expect(at('/404', claims('user'))).toEqual({ type: 'window-check' });
-    for (const free of [
-      '/sim/me',
-      '/sim/me/password',
-      '/sim/closed',
-      '/sim/logout',
-      '/sim/forbidden',
-      '/api/sim/access/state',
-    ]) {
-      expect(at(free, claims('user')).type, free).toBe('next');
-    }
-  });
-
-  it('instructors and admins skip the class window', () => {
-    for (const role of ['admin', 'super_admin'] as AppRole[]) {
-      expect(at('/p/1/home_v3', claims(role))).toEqual({ type: 'next' });
-      expect(at('/sim/welcome', claims(role))).toEqual({ type: 'next' });
+  it('has no class window: a student with a session always gets through', () => {
+    for (const p of ['/p/1/home_v3', '/sim/welcome', '/404', '/sim/me', '/sim/forbidden']) {
+      expect(at(p, claims('user')), p).toEqual({ type: 'next' });
+      expect(at(p, claims('super_admin')), p).toEqual({ type: 'next' });
     }
   });
 
@@ -182,24 +160,22 @@ describe('safeNext', () => {
 describe('role map', () => {
   it('maps database values to lowercase session values and back (RC-016, RC-068)', () => {
     expect(toSessionRole('USER')).toBe('user');
-    expect(toSessionRole('ADMIN')).toBe('admin');
     expect(toSessionRole('SUPER_ADMIN')).toBe('super_admin');
-    for (const r of ['user', 'admin', 'super_admin'] as AppRole[])
-      expect(toSessionRole(toDbRole(r))).toBe(r);
+    for (const r of ['user', 'super_admin'] as AppRole[]) expect(toSessionRole(toDbRole(r))).toBe(r);
   });
-  it('orders SUPER_ADMIN > ADMIN > USER', () => {
-    expect(atLeast('super_admin', 'admin')).toBe(true);
-    expect(atLeast('admin', 'super_admin')).toBe(false);
-    expect(atLeast('user', 'user')).toBe(true);
+  it('gives the retired ADMIN level no session', () => {
+    expect(isRetiredRole('ADMIN')).toBe(true);
+    expect(isRetiredRole('USER')).toBe(false);
+    expect(sessionRoleOrNull('ADMIN')).toBeNull();
+    expect(() => toSessionRole('ADMIN')).toThrow('RETIRED_ROLE');
   });
-  it('gives Users STANDARD and admins DV360 ADMIN (RC-047)', () => {
+  it('gives students STANDARD and the Super admin DV360 ADMIN (RC-047)', () => {
     expect(defaultDvRole('user')).toBe('STANDARD');
-    expect(defaultDvRole('admin')).toBe('ADMIN');
     expect(defaultDvRole('super_admin')).toBe('ADMIN');
   });
   it('lands each level on its own page', () => {
     expect(landingFor('user')).toBe('/sim/welcome');
-    expect(landingFor('admin')).toBe('/sim/instructor');
     expect(landingFor('super_admin')).toBe(SUPER_ADMIN_LANDING);
+    expect(SUPER_ADMIN_LANDING).toBe('/manage');
   });
 });

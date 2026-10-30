@@ -251,7 +251,7 @@ describe('email preferences (AC-02-26)', () => {
         id: other.ownerId,
         email: 'admin@example.test',
         name: 'Admin',
-        appRole: 'admin' as const,
+        appRole: 'super_admin' as const,
       },
     };
     expect(await saveEmailPreferences(viewer, { alerts: true, news: true })).toMatchObject({

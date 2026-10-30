@@ -36,20 +36,20 @@ async function student() {
 export async function GET() {
   const s = await student();
   if (s.error) return s.error;
-  return NextResponse.json(body(await getProvisionView(s.user.id, s.classroomId)));
+  return NextResponse.json(body(await getProvisionView(s.user.id)));
 }
 
 export async function POST(req: NextRequest) {
   const s = await student();
   if (s.error) return s.error;
   if (s.user.viewAs)
-    return NextResponse.json(body(await getProvisionView(s.user.id, s.classroomId)));
+    return NextResponse.json(body(await getProvisionView(s.user.id)));
   const { retry } = (await req.json().catch(() => ({}))) as { retry?: boolean };
-  let view = await getProvisionView(s.user.id, s.classroomId);
+  let view = await getProvisionView(s.user.id);
   if (view.state === 'NOT_CREATED') {
     view = await enqueueProvisionSandbox(s.classroomId, s.user.id);
   }
-  if (view.state === 'FAILED' && retry) {
+  if ((view.state === 'FAILED' || view.state === 'BUILDING') && retry) {
     view = await retryProvisionSandbox(s.classroomId, s.user.id);
   } else if ((view.state === 'QUEUED' || view.state === 'BUILDING') && view.sandboxId) {
     view = await runProvisionStep(view.sandboxId);

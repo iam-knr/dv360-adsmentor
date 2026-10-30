@@ -1,17 +1,12 @@
-// Playwright flows for P3-02 (login, lockout, forced password change, class windows, role guards, view-as).
+// Playwright flows for P3-02 (login, lockout, forced password change, role guards, view-as). Two account levels exist
+// (ADM-FIX): a Super admin and students; there are no class windows.
 // Every test makes its own accounts (synthetic @example.test addresses, passwords generated per run) in the test
 // database, so the specs can run in any order and more than once. Each test also uses its own client address
 // (x-forwarded-for) so the per address failure limit of one test cannot hit another.
 import { PrismaClient } from '@prisma/client';
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { generatePassword } from '@/lib/auth/argon';
-import {
-  cleanup,
-  createAccount,
-  createClassroom,
-  createStudent,
-  type WindowKind,
-} from '../auth/fixtures';
+import { cleanup, createAccount, createClassroom, createStudent } from '../auth/fixtures';
 
 const db = new PrismaClient({
   datasources: { db: { url: process.env.DATABASE_URL_TEST ?? process.env.DATABASE_URL } },
@@ -38,17 +33,20 @@ test.beforeEach(async ({ context }) => {
   await ownAddress(context);
 });
 
-async function setup(windows: WindowKind = 'open', opts: { mustChangePassword?: boolean } = {}) {
+async function setup(opts: { mustChangePassword?: boolean } = {}) {
   const admin = await createAccount(db, {
     tag: 'e2e-admin',
-    role: 'ADMIN',
-    name: 'Anita Instructor',
+    role: 'SUPER_ADMIN',
+    name: 'Anita Admin',
   });
-  const classroom = await createClassroom(db, { tag: 'e2e', ownerAdminId: admin.user.id, windows });
+  const classroom = await createClassroom(db, {
+    tag: 'e2e',
+    ownerAdminId: admin.user.id,
+    windows: 'none',
+  });
   const student = await createStudent(db, {
     tag: 'e2e-stu',
     classroomId: classroom.id,
-    ownerAdminId: admin.user.id,
     name: 'Sam Student',
     mustChangePassword: opts.mustChangePassword ?? false,
   });
@@ -74,10 +72,10 @@ async function signedIn(page: Page, email: string, password: string) {
 const alertText = (page: Page) => page.getByRole('main').getByRole('alert');
 
 test.describe('sign in', () => {
-  test('a student with the right password during an open window lands on the welcome page (M18-AC1)', async ({
+  test('a student with the right password lands on the welcome page (M18-AC1)', async ({
     page,
   }) => {
-    const { student } = await setup('open');
+    const { student } = await setup();
     await signedIn(page, student.user.email, student.password);
     await expect(page).toHaveURL(/\/sim\/welcome$/);
     await expect(page.getByRole('heading', { name: 'Welcome, Sam Student' })).toBeVisible();
@@ -96,7 +94,7 @@ test.describe('sign in', () => {
   });
 
   test('wrong password and unknown email show the same message (M18-AC2)', async ({ page }) => {
-    const { student } = await setup('open');
+    const { student } = await setup();
     await signIn(page, student.user.email, 'Wrong-pass-1');
     await expect(alertText(page)).toContainText('Incorrect email or password.');
     await signIn(page, 'nobody-here@example.test', 'Wrong-pass-1');
@@ -108,7 +106,7 @@ test.describe('sign in', () => {
     page,
     context,
   }) => {
-    const { student } = await setup('open');
+    const { student } = await setup();
     for (let i = 1; i <= 4; i++) {
       await signIn(page, student.user.email, 'Wrong-pass-1');
       await expect(alertText(page)).toContainText('Incorrect email or password.');
@@ -129,35 +127,37 @@ test.describe('sign in', () => {
     await expect(alertText(page)).toContainText('Too many attempts. Try again in 15 minutes.');
   });
 
-  test('a disabled account and an ended access period get their own messages, only after the right password', async ({
-    page,
-  }) => {
-    const { student } = await setup('open');
+  test('a disabled account gets its own message, only after the right password', async ({ page }) => {
+    const { student } = await setup();
     await db.user.update({ where: { id: student.user.id }, data: { status: 'DISABLED' } });
     await signIn(page, student.user.email, student.password);
     await expect(alertText(page)).toContainText('Your account is disabled. Contact your admin.');
     await signIn(page, student.user.email, 'Wrong-pass-1');
     await expect(alertText(page)).toContainText('Incorrect email or password.');
+  });
 
-    const endedAt = new Date(Date.now() - 2 * 24 * 3_600_000);
-    const endedOn = new Intl.DateTimeFormat('en-GB', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      timeZone: 'Asia/Kolkata',
-    }).format(endedAt);
+  test('an old access period on a student does not lock them out: there are no time controls', async ({
+    page,
+  }) => {
+    const { student } = await setup();
     await db.user.update({
       where: { id: student.user.id },
-      data: { status: 'ACTIVE', accessEndsAt: endedAt },
+      data: { accessEndsAt: new Date(Date.now() - 2 * 24 * 3_600_000) },
     });
-    await signIn(page, student.user.email, student.password);
-    await expect(alertText(page)).toContainText(
-      `Your access ended on ${endedOn}. Contact your admin.`,
-    );
+    await signedIn(page, student.user.email, student.password);
+    await expect(page).toHaveURL(/\/sim\/welcome$/);
+  });
+
+  test('the retired Admin level cannot sign in', async ({ page }) => {
+    const retired = await createAccount(db, { tag: 'e2e-retired', role: 'ADMIN' });
+    userIds.push(retired.user.id);
+    await signIn(page, retired.user.email, retired.password);
+    await expect(alertText(page)).toContainText('Incorrect email or password.');
+    await expect(page).toHaveURL(/\/sim\/login/);
   });
 
   test('?next= is followed after sign in, and an outside address is ignored', async ({ page }) => {
-    const { student } = await setup('open');
+    const { student } = await setup();
     await page.goto('/sim/me');
     await expect(page).toHaveURL(/\/sim\/login\?next=%2Fsim%2Fme/);
     await page.getByLabel('Email').fill(student.user.email);
@@ -177,7 +177,7 @@ test.describe('sign in', () => {
   test('another site cannot sign a person out with a link, but a typed address and the button still work', async ({
     page,
   }) => {
-    const { student } = await setup('open');
+    const { student } = await setup();
     await signedIn(page, student.user.email, student.password);
     const cross = await page.request.get('/sim/logout', {
       headers: { 'sec-fetch-site': 'cross-site' },
@@ -193,7 +193,7 @@ test.describe('sign in', () => {
   });
 
   test('signing out ends the session', async ({ page }) => {
-    const { student } = await setup('open');
+    const { student } = await setup();
     await signedIn(page, student.user.email, student.password);
     await expect(page).toHaveURL(/\/sim\/welcome$/);
     await page.getByRole('button', { name: 'Sign out' }).click();
@@ -226,7 +226,7 @@ test.describe('forced password change (M18-AC3)', () => {
     page,
     context,
   }) => {
-    const { student } = await setup('open', { mustChangePassword: true });
+    const { student } = await setup({ mustChangePassword: true });
     await signedIn(page, student.user.email, student.password);
     await expect(page).toHaveURL(/\/sim\/me\/password$/);
     await expect(page.getByLabel('Current password')).toHaveCount(0);
@@ -271,16 +271,16 @@ test.describe('forced password change (M18-AC3)', () => {
     page,
     browser,
   }) => {
-    const { admin } = await setup('open');
+    const { admin } = await setup();
     await db.user.update({ where: { id: admin.user.id }, data: { mustChangePassword: false } });
     await signedIn(page, admin.user.email, admin.password);
-    await expect(page).toHaveURL(/\/sim\/instructor$/);
+    await expect(page).toHaveURL(/\/manage\/accounts$/);
 
     const other = await browser.newContext({ baseURL: test.info().project.use.baseURL });
     await ownAddress(other);
     const second = await other.newPage();
     await signedIn(second, admin.user.email, admin.password);
-    await expect(second).toHaveURL(/\/sim\/instructor$/); // admins may sign in on two devices
+    await expect(second).toHaveURL(/\/manage\/accounts$/); // Super admins may sign in on two devices
 
     await page.goto('/sim/me/password');
     await page.getByLabel('Current password').fill(admin.password);
@@ -288,7 +288,7 @@ test.describe('forced password change (M18-AC3)', () => {
     await page.getByLabel(/^New password/).fill(fresh);
     await page.getByLabel('Confirm new password').fill(fresh);
     await page.getByRole('button', { name: 'Change password' }).click();
-    await expect(page).toHaveURL(/\/sim\/instructor$/); // this session was re-issued
+    await expect(page).toHaveURL(/\/manage\/accounts$/); // this session was re-issued
 
     await second.goto('/sim/me');
     await expect(second).toHaveURL(/\/sim\/session-expired\?reason=revoked$/);
@@ -297,7 +297,7 @@ test.describe('forced password change (M18-AC3)', () => {
   });
 
   test('a wrong current password is refused', async ({ page }) => {
-    const { admin } = await setup('open');
+    const { admin } = await setup();
     await db.user.update({ where: { id: admin.user.id }, data: { mustChangePassword: false } });
     await signedIn(page, admin.user.email, admin.password);
     await page.goto('/sim/me/password');
@@ -309,100 +309,57 @@ test.describe('forced password change (M18-AC3)', () => {
   });
 });
 
-test.describe('class access window (M18-AC1, M18-AC5)', () => {
-  test('a closed class sends the student to /sim/closed for every DV360 URL', async ({ page }) => {
-    const { student, admin } = await setup('closed');
-    await signedIn(page, student.user.email, student.password);
-    await expect(page).toHaveURL(/\/sim\/closed$/);
-    await expect(page.getByRole('heading', { name: 'Class is not open right now' })).toBeVisible();
-    await expect(page.getByText(/Your next class opens on .* \(Asia\/Kolkata\)\./)).toBeVisible();
-    await expect(
-      page.getByText(new RegExp(`${admin.user.name}.*${admin.user.email}`)),
-    ).toBeVisible();
-
-    for (const url of [
-      '/p/123/home_v3',
-      '/a/456/cs',
-      '/ng_nav/p/123/home_v3',
-      '/sim/welcome',
-      '/sim/scenarios',
-    ]) {
-      await page.goto(url);
-      await expect(page, url).toHaveURL(/\/sim\/closed$/);
-    }
-    // the profile and password pages stay reachable
-    await page.goto('/sim/me');
-    await expect(page).toHaveURL(/\/sim\/me$/);
-  });
-
-  test('an open class lets the student through to the DV360 routes', async ({ page }) => {
-    const { student } = await setup('open');
-    await signedIn(page, student.user.email, student.password);
-    const res = await page.goto('/p/123/home_v3');
-    expect(res?.status()).toBe(404); // no DV360 page exists yet (P3-03); the point is: no redirect to /sim/closed
-    await expect(page).toHaveURL(/\/p\/123\/home_v3$/);
-    await page.goto('/sim/closed');
-    await expect(page).toHaveURL(/\/sim\/welcome$/); // nothing to see while the class is open
-  });
-
-  test('a class that opens later lets the same session in', async ({ page }) => {
-    const { student, classroom } = await setup('closed');
-    await signedIn(page, student.user.email, student.password);
-    await expect(page).toHaveURL(/\/sim\/closed$/);
-    await db.accessWindow.updateMany({
-      where: { classroomId: classroom.id },
+test.describe('no class windows (ADM-FIX)', () => {
+  test('a student gets through to every route whatever windows an old class has', async ({
+    page,
+  }) => {
+    const { student, classroom } = await setup();
+    // an old window row that is closed (or ended long ago) decides nothing any more
+    await db.accessWindow.create({
       data: {
-        opensAt: new Date(Date.now() - 60_000),
-        closesAt: new Date(Date.now() + 3_600_000),
-        status: 'OPEN',
+        classroomId: classroom.id,
+        label: 'Old',
+        opensAt: new Date(Date.now() + 26 * 3_600_000),
+        closesAt: new Date(Date.now() + 28 * 3_600_000),
+        status: 'SCHEDULED',
       },
     });
+    await signedIn(page, student.user.email, student.password);
+    await expect(page).toHaveURL(/\/sim\/welcome$/);
+    const res = await page.goto('/p/123/home_v3');
+    expect(res?.status()).toBe(404); // no such partner; the point is: no redirect to a "closed" page
+    await expect(page).toHaveURL(/\/p\/123\/home_v3$/);
     await page.goto('/sim/welcome');
     await expect(page).toHaveURL(/\/sim\/welcome$/);
+    await expect(page.getByText('Class ends at')).toHaveCount(0);
   });
 
-  test('the last five minutes show a warning banner', async ({ page }) => {
-    const { student } = await setup('closing-soon');
+  test('the class pages and the window endpoints are gone', async ({ page }) => {
+    const { student } = await setup();
     await signedIn(page, student.user.email, student.password);
-    await expect(page).toHaveURL(/\/sim\/welcome$/);
-    await expect(page.getByText(/^Class ends at .*\. Save your work\.$/)).toBeVisible();
-  });
-
-  test('the state endpoint tells the shell when the class closes', async ({ page }) => {
-    const { student } = await setup('closing-soon');
-    await signedIn(page, student.user.email, student.password);
-    const res = await page.request.get('/api/sim/access/state');
-    expect(res.status()).toBe(200);
-    const body = (await res.json()) as {
-      classOpen: boolean;
-      closesAt: string;
-      banner: string;
-      user: { role: string };
-    };
-    expect(body.classOpen).toBe(true);
-    expect(body.user.role).toBe('user');
-    expect(new Date(body.closesAt).getTime()).toBeGreaterThan(Date.now());
-    expect(body.banner).toMatch(/^Class ends at /);
-
-    // the middleware stops caching "open" at the end of the class
-    const gate = (await (await page.request.get('/api/sim/access/gate')).json()) as {
-      open: boolean;
-      until: number;
-    };
-    expect(gate.open).toBe(true);
-    expect(gate.until).toBe(new Date(body.closesAt).getTime());
+    for (const url of ['/sim/closed', '/sim/scenarios', '/sim/progress']) {
+      const res = await page.goto(url);
+      expect(res?.status(), url).toBe(404);
+    }
+    for (const url of ['/api/sim/access/state', '/api/sim/access/gate']) {
+      expect((await page.request.get(url)).status(), url).toBe(404);
+    }
   });
 });
 
 test.describe('role guards (M18-AC4, RC-075)', () => {
-  test('a student gets /sim/forbidden on instructor, admin and manage routes', async ({ page }) => {
-    const { student } = await setup('open');
+  test('a student gets /sim/forbidden on manage routes and 404 on the removed instructor and admin routes', async ({
+    page,
+  }) => {
+    const { student } = await setup();
     await signedIn(page, student.user.email, student.password);
     for (const url of [
-      '/sim/instructor',
-      '/sim/instructor/classes',
-      '/sim/admin',
+      '/manage',
       '/manage/accounts',
+      '/manage/accounts/new',
+      '/manage/cohorts',
+      '/manage/audit',
+      '/manage/seed',
       '/manage/settings',
     ]) {
       await page.goto(url);
@@ -411,54 +368,54 @@ test.describe('role guards (M18-AC4, RC-075)', () => {
         page.getByRole('heading', { name: 'You do not have access to this page' }),
       ).toBeVisible();
     }
+    for (const url of ['/sim/instructor', '/sim/instructor/classes', '/sim/admin', '/sim/admin/seed']) {
+      const res = await page.goto(url);
+      expect(res?.status(), url).toBe(404);
+    }
+    // the manage APIs refuse a student too
+    for (const url of ['/api/manage/accounts', '/api/manage/audit', '/api/manage/accounts.csv']) {
+      expect((await page.request.get(url)).status(), url).toBe(403);
+    }
+    await page.goto('/sim/me');
+    await expect(page.getByText(/instructor|Instructor/)).toHaveCount(0);
   });
 
-  test('an admin opens instructor routes but not super admin ones or settings', async ({
+  test('a Super admin opens /manage; the instructor and admin areas do not exist', async ({
     page,
   }) => {
-    const { admin } = await setup('open');
-    await signedIn(page, admin.user.email, admin.password);
-    await expect(page).toHaveURL(/\/sim\/instructor$/);
-    await expect(page.getByRole('heading', { name: 'Instructor console' })).toBeVisible();
-    await page.goto('/sim/admin');
-    await expect(page).toHaveURL(/\/sim\/forbidden$/);
-    await page.goto('/manage/settings');
-    await expect(page).toHaveURL(/\/sim\/forbidden$/);
-    await page.goto('/manage/accounts');
-    await expect(page).not.toHaveURL(/\/sim\/forbidden/);
-  });
-
-  test('a super admin opens everything and skips the class window', async ({ page }) => {
     const sa = await createAccount(db, { tag: 'e2e-super', role: 'SUPER_ADMIN' });
     userIds.push(sa.user.id);
     await signedIn(page, sa.user.email, sa.password);
-    // module 19: a super admin lands on the account dashboard (P3-02b)
     await expect(page).toHaveURL(/\/manage\/accounts$/);
-    await page.goto('/sim/instructor');
-    await expect(page).toHaveURL(/\/sim\/instructor$/);
-    await page.goto('/manage/settings');
-    await expect(page).not.toHaveURL(/\/sim\/forbidden/);
+    for (const url of ['/manage/cohorts', '/manage/audit', '/manage/seed', '/manage/engine', '/manage/settings']) {
+      const res = await page.goto(url);
+      await expect(page, url).not.toHaveURL(/\/sim\/forbidden/);
+      expect(res?.status(), url).toBeLessThan(500);
+    }
+    for (const url of ['/sim/instructor', '/sim/admin']) {
+      expect((await page.goto(url))?.status(), url).toBe(404);
+    }
     const res = await page.goto('/p/1/home_v3');
     await expect(page).toHaveURL(/\/p\/1\/home_v3$/);
     expect(res?.status()).toBe(404);
   });
 
   test('without a session every protected page goes to the login page', async ({ page }) => {
-    for (const url of ['/sim/me', '/sim/instructor', '/manage/accounts', '/p/1/home_v3']) {
+    for (const url of ['/sim/me', '/manage/accounts', '/p/1/home_v3']) {
       await page.goto(url);
       await expect(page, url).toHaveURL(/\/sim\/login\?next=/);
     }
   });
 
   test('AUTH_DEV_BYPASS has no effect in a production build', async ({ request }) => {
-    const res = await request.get('/api/sim/access/state', { maxRedirects: 0 });
+    const res = await request.get('/api/sim/provision', { maxRedirects: 0 });
     expect(res.status()).toBe(401);
   });
 });
 
 test.describe('single session (ACC-074)', () => {
   test('a second sign in on another device ends the first', async ({ page, browser }) => {
-    const { student } = await setup('open');
+    const { student } = await setup();
     await signedIn(page, student.user.email, student.password);
     await expect(page).toHaveURL(/\/sim\/welcome$/);
 
@@ -481,7 +438,7 @@ test.describe('single session (ACC-074)', () => {
 
 test.describe('disabled while signed in', () => {
   test('the open session ends on the next request', async ({ page }) => {
-    const { student } = await setup('open');
+    const { student } = await setup();
     await signedIn(page, student.user.email, student.password);
     await expect(page).toHaveURL(/\/sim\/welcome$/);
     await db.user.update({
@@ -497,10 +454,10 @@ test.describe('view-as (M18-AC13)', () => {
   test('shows the banner, blocks writes, and allows them once "Act as student" is on', async ({
     page,
   }) => {
-    const { admin, student } = await setup('open');
+    const { admin, student } = await setup();
     await db.user.update({ where: { id: admin.user.id }, data: { mustChangePassword: false } });
     await signedIn(page, admin.user.email, admin.password);
-    await expect(page).toHaveURL(/\/sim\/instructor$/);
+    await expect(page).toHaveURL(/\/manage\/accounts$/);
 
     await page.goto(`/sim/me?sim_as=${student.user.id}`);
     await expect(page.getByRole('status').filter({ hasText: 'Viewing as' })).toHaveText(
@@ -531,7 +488,7 @@ test.describe('view-as (M18-AC13)', () => {
     const audit = await db.auditLog.findFirst({
       where: { targetUserId: student.user.id, action: 'ACCOUNT_UPDATED' },
     });
-    expect(audit).toMatchObject({ actorUserId: admin.user.id, actorRole: 'ADMIN' });
+    expect(audit).toMatchObject({ actorUserId: admin.user.id, actorRole: 'SUPER_ADMIN' });
 
     await page.getByRole('link', { name: 'Exit' }).click();
     await expect(page).toHaveURL(/\/sim\/me$/);
@@ -539,16 +496,8 @@ test.describe('view-as (M18-AC13)', () => {
     await expect(page.getByText('Viewing as')).toHaveCount(0);
   });
 
-  test('an admin of another cohort and a student get no view-as', async ({ page, browser }) => {
-    const { admin, student } = await setup('open');
-    const stranger = await createAccount(db, { tag: 'e2e-stranger', role: 'ADMIN' });
-    userIds.push(stranger.user.id);
-
-    await signedIn(page, stranger.user.email, stranger.password);
-    await page.goto(`/sim/me?sim_as=${student.user.id}`);
-    await expect(page.getByText('Viewing as')).toHaveCount(0);
-    await expect(page.getByText(stranger.user.email)).toBeVisible();
-
+  test('a student gets no view-as', async ({ browser }) => {
+    const { admin, student } = await setup();
     const other = await browser.newContext({ baseURL: test.info().project.use.baseURL });
     await ownAddress(other);
     const p2 = await other.newPage();
@@ -582,19 +531,15 @@ test.describe('plumbing', () => {
     expect((await request.get('/brand/adsmentor-logo-horizontal.png')).status()).toBe(200);
   });
 
-  test('the window tick endpoint needs the cron secret', async ({ request }) => {
-    expect((await request.post('/api/sim/access/tick')).status()).toBe(401);
+  test('the engine timer endpoint needs the cron secret, and the window tick is gone', async ({
+    request,
+  }) => {
+    expect((await request.post('/api/sim/engine/tick')).status()).toBe(401);
     expect(
       (
-        await request.post('/api/sim/access/tick', { headers: { authorization: 'Bearer wrong' } })
+        await request.post('/api/sim/engine/tick', { headers: { authorization: 'Bearer wrong' } })
       ).status(),
     ).toBe(401);
-    const secret = process.env.CRON_SECRET;
-    test.skip(!secret, 'CRON_SECRET not set for this run');
-    const ok = await request.post('/api/sim/access/tick', {
-      headers: { authorization: `Bearer ${secret!}` },
-    });
-    expect(ok.status()).toBe(200);
-    expect(await ok.json()).toMatchObject({ ok: true });
+    expect((await request.post('/api/sim/access/tick')).status()).toBe(401); // no session, no route
   });
 });

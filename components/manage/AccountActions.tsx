@@ -27,8 +27,8 @@ export interface AccountActionsProps {
     revoke: boolean;
     remove: boolean;
     restore: boolean;
-    /** Create sandbox / Retry provisioning: only for a User whose sandbox is missing or FAILED. */
-    sandbox?: 'create' | 'retry';
+    /** Create / Retry / Restart sandbox: for a student whose sandbox is missing, FAILED or not ready yet. */
+    sandbox?: 'create' | 'retry' | 'restart';
   };
 }
 
@@ -55,7 +55,11 @@ export function AccountActions({ id, email, status, can }: AccountActionsProps) 
           disabled={pending}
           onClick={() => run(() => retrySandboxAction(id))}
         >
-          {can.sandbox === 'create' ? 'Create sandbox' : 'Retry provisioning'}
+          {can.sandbox === 'create'
+            ? 'Create sandbox'
+            : can.sandbox === 'retry'
+              ? 'Retry provisioning'
+              : 'Restart provisioning'}
         </Button>
       ) : null}
       {can.reset && status !== 'ARCHIVED' ? (

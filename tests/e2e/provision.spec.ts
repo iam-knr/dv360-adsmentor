@@ -1,23 +1,44 @@
-// M18-05: a student with an account and no sandbox signs in, watches /sim/welcome build the sandbox and opens the
-// simulator: Overview, a campaign, a line item and a report. The server runs with SANDBOX_ENGINE_DAYS=3
-// (playwright.config.ts) so the engine part of the build takes seconds; production builds 90 days.
+// M18-05 and ADM-FIX: the Super admin adds a student, the student's sandbox is built, and the student signs in, lands on
+// /sim/welcome, reaches the sandbox home and opens a campaign, a line item and a report. A second test makes a build
+// that stopped (a SEEDING row whose heartbeat is old) and recovers it with "Restart provisioning" on the account
+// page. Waits are polls on real state (expect.poll, toPass, toHaveURL), never a fixed sleep or a reload. The server runs
+// with SANDBOX_ENGINE_DAYS=3 (playwright.config.ts) so the engine part of the build takes seconds; production builds 90.
 import { PrismaClient } from '@prisma/client';
-import { expect, test, type Page } from '@playwright/test';
-import { cleanup, createAccount, createClassroom } from '../auth/fixtures';
+import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { clearSandboxData } from '@/lib/seed/write';
+import { cleanup, createAccount, createClassroom, uniq } from '../auth/fixtures';
 
 const db = new PrismaClient({
   datasources: { db: { url: process.env.DATABASE_URL_TEST ?? process.env.DATABASE_URL } },
 });
-const created: { userIds: string[]; classroomIds: string[] } = { userIds: [], classroomIds: [] };
-const sandboxIds: string[] = [];
+const userIds: string[] = [];
+const classroomIds: string[] = [];
+const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+const STUDENT_DOMAIN = '@prov-e2e.example.test';
+
+let ipCounter = Math.floor(Math.random() * 200);
+async function ownAddress(context: BrowserContext) {
+  const ip = `10.${(ipCounter++ % 250) + 1}.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`;
+  await context.setExtraHTTPHeaders({
+    ...(bypass ? { 'x-vercel-protection-bypass': bypass } : {}),
+    'x-forwarded-for': ip,
+  });
+}
+test.beforeEach(async ({ context }) => ownAddress(context));
 
 test.afterAll(async () => {
-  for (const id of sandboxIds) {
-    await db.$transaction((tx) => clearSandboxData(tx, id), { timeout: 120_000 });
-    await db.userAccessGrant.deleteMany({ where: { sandboxId: id } });
+  const made = await db.user.findMany({
+    where: { email: { endsWith: STUDENT_DOMAIN } },
+    select: { id: true },
+  });
+  const ids = [...userIds, ...made.map((u) => u.id)];
+  for (const sb of await db.sandbox.findMany({ where: { ownerUserId: { in: ids } } })) {
+    await db.$transaction((tx) => clearSandboxData(tx, sb.id), { timeout: 120_000 });
+    await db.userAccessGrant.deleteMany({ where: { sandboxId: sb.id } });
+    await db.sandbox.delete({ where: { id: sb.id } });
   }
-  await cleanup(db, created);
+  await db.classroomMember.deleteMany({ where: { userId: { in: ids } } });
+  await cleanup(db, { userIds: ids, classroomIds });
   await db.$disconnect();
 });
 
@@ -26,68 +47,60 @@ async function signIn(page: Page, email: string, password: string) {
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await page.waitForURL((url) => !url.pathname.startsWith('/sim/login'));
 }
 
-test('a new student gets a sandbox on /sim/welcome and can open campaign, line item and report', async ({
-  page,
-}) => {
-  test.setTimeout(420_000);
-  const admin = await createAccount(db, { tag: 'prov-instr', role: 'ADMIN' });
-  const classroom = await createClassroom(db, {
-    tag: 'prov-open',
-    ownerAdminId: admin.user.id,
-    windows: 'open',
-  });
-  await db.classroom.update({
-    where: { id: classroom.id },
-    data: { defaultSeedTemplate: 'starter-agency' },
-  });
-  const student = await createAccount(db, {
-    tag: 'prov-stu',
-    role: 'USER',
-    cohortId: classroom.id,
-    ownerAdminId: admin.user.id,
-    name: 'Fresh Student',
-    mustChangePassword: false,
-  });
-  await db.classroomMember.create({ data: { classroomId: classroom.id, userId: student.user.id } });
-  created.userIds.push(admin.user.id, student.user.id);
-  created.classroomIds.push(classroom.id);
-  expect(await db.sandbox.count({ where: { ownerUserId: student.user.id } })).toBe(0);
+/** The Super admin adds a student through the form (no cohort, no forced password change). */
+async function addStudent(page: Page, name: string) {
+  const email = `${uniq('prov')}${STUDENT_DOMAIN}`;
+  await page.goto('/manage/accounts/new');
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Display name').fill(name);
+  await page.getByLabel('Ask for a new password at first sign in').uncheck();
+  await page.getByRole('button', { name: 'Create account' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Account created' });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'Show' }).click();
+  const password = (await dialog.getByTestId('secret-value').innerText()).trim();
+  await dialog.getByLabel('I have saved the password').check();
+  await dialog.getByRole('button', { name: 'Done' }).click();
+  await page.waitForURL('**/manage/accounts');
+  const user = await db.user.findUniqueOrThrow({ where: { email } });
+  return { id: user.id, email, password };
+}
 
-  await signIn(page, student.user.email, student.password);
-  await expect(page).toHaveURL(/\/sim\/welcome$/);
+const sandboxOf = (userId: string) =>
+  db.sandbox.findFirst({ where: { ownerUserId: userId, kind: 'STUDENT' } });
 
-  // the page starts the build and reports progress until the way in appears
-  const open = page.getByRole('link', { name: 'Open Overview' });
-  await expect(open).toBeVisible({ timeout: 360_000 });
-  const sandbox = await db.sandbox.findFirstOrThrow({ where: { ownerUserId: student.user.id } });
-  sandboxIds.push(sandbox.id);
-  expect(sandbox.provisionState).toBe('READY');
-  expect(sandbox.resetCount).toBe(0);
-
-  await open.click();
-  await expect(page).toHaveURL(/\/p\/[^/]+\/home_v3$/);
+/** The student signs in, passes /sim/welcome and reaches the sandbox home, then opens a campaign, a line item, a report. */
+async function studentWalksTheSandbox(page: Page, s: { id: string; email: string; password: string }) {
+  await signIn(page, s.email, s.password);
+  // /sim/welcome shows the build and drives it; it opens the sandbox home when the sandbox is ready
+  await expect(page).toHaveURL(/\/sim\/welcome$|\/p\/[^/]+\/home_v3$/);
+  await expect(page).toHaveURL(/\/p\/[^/]+\/home_v3$/, { timeout: 360_000 });
   await expect(page).toHaveTitle('Overview - DV360 Simulator by Adsmetor');
 
-  // campaign, line item and report of the seeded template
-  const partner = await db.partner.findFirstOrThrow({ where: { sandboxId: sandbox.id } });
+  const sandbox = await sandboxOf(s.id);
+  expect(sandbox).not.toBeNull();
+  expect(sandbox!.provisionState).toBe('READY');
+  expect(sandbox!.resetCount).toBe(0);
+  expect(sandbox!.status).toBe('ACTIVE');
+
+  const partner = await db.partner.findFirstOrThrow({ where: { sandboxId: sandbox!.id } });
   const pid = partner.publicId.toString();
   const adv = await db.advertiser.findFirstOrThrow({
-    where: { sandboxId: sandbox.id },
+    where: { sandboxId: sandbox!.id },
     orderBy: { createdAt: 'asc' },
   });
   const campaign = await db.campaign.findFirstOrThrow({
-    where: { sandboxId: sandbox.id, advertiserId: adv.id },
+    where: { sandboxId: sandbox!.id, advertiserId: adv.id },
     orderBy: { createdAt: 'asc' },
   });
   const io = await db.insertionOrder.findFirstOrThrow({
-    where: { sandboxId: sandbox.id, campaignId: campaign.id },
+    where: { sandboxId: sandbox!.id, campaignId: campaign.id },
     orderBy: { createdAt: 'asc' },
   });
   const li = await db.lineItem.findFirstOrThrow({
-    where: { sandboxId: sandbox.id, ioId: io.id },
+    where: { sandboxId: sandbox!.id, ioId: io.id },
     orderBy: { createdAt: 'asc' },
   });
   const base = `/p/${pid}/a/${adv.publicId}`;
@@ -97,4 +110,109 @@ test('a new student gets a sandbox on /sim/welcome and can open campaign, line i
   await expect(page.locator('#name')).toHaveValue(li.name);
   await page.goto(`/p/${pid}/reporting`);
   await expect(page.getByText('Suggested templates')).toBeVisible();
+  // a student never sees the console
+  await page.goto('/manage/accounts');
+  await expect(page).toHaveURL(/\/sim\/forbidden$/);
+}
+
+test('E2E-ADM-01 the Super admin adds a student; the sandbox builds; the student opens campaign, line item and report', async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(480_000);
+  const sa = await createAccount(db, { tag: 'prov-super', role: 'SUPER_ADMIN' });
+  userIds.push(sa.user.id);
+  await signIn(page, sa.user.email, sa.password);
+  await page.waitForURL('**/manage/accounts');
+  const student = await addStudent(page, 'Fresh Student');
+
+  // the account page shows the sandbox of the new student
+  await page.goto(`/manage/accounts/${student.id}`);
+  await expect(page.getByRole('heading', { name: 'Fresh Student' })).toBeVisible();
+  await expect(page.getByText(/^State:/)).toBeVisible();
+
+  // the student's own session drives the build through /sim/welcome
+  const ctx = await browser.newContext({ baseURL: test.info().project.use.baseURL });
+  await ownAddress(ctx);
+  const sp = await ctx.newPage();
+  await studentWalksTheSandbox(sp, student);
+  await ctx.close();
+
+  // the admin's view follows the database state: a poll, no reload loop
+  await expect
+    .poll(async () => (await sandboxOf(student.id))?.provisionState, { timeout: 60_000 })
+    .toBe('READY');
+  await page.goto(`/manage/accounts/${student.id}`);
+  await expect(page.getByText('State: READY')).toBeVisible();
+  // nothing to create or retry once it is ready
+  await expect(page.getByRole('button', { name: /sandbox|provisioning/i })).toHaveCount(0);
+});
+
+test('E2E-ADM-02 "Restart provisioning" recovers a build that stopped, and the student gets in', async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(480_000);
+  const sa = await createAccount(db, { tag: 'prov-super2', role: 'SUPER_ADMIN' });
+  userIds.push(sa.user.id);
+  await signIn(page, sa.user.email, sa.password);
+  await page.waitForURL('**/manage/accounts');
+  // A build that died: the student has a sandbox row that says SEEDING while its heartbeat stopped 5 minutes ago. The
+  // row is made directly in the database so that no real build races with the one the test fakes.
+  const cohort = await createClassroom(db, {
+    tag: 'prov-stuck',
+    ownerAdminId: sa.user.id,
+    windows: 'none',
+  });
+  classroomIds.push(cohort.id);
+  await db.classroom.update({ where: { id: cohort.id }, data: { defaultSeedTemplate: 'starter-agency' } });
+  const made = await createAccount(db, {
+    tag: 'prov-stuck',
+    role: 'USER',
+    cohortId: cohort.id,
+    name: 'Stuck Student',
+    mustChangePassword: false,
+  });
+  userIds.push(made.user.id);
+  const student = { id: made.user.id, email: made.user.email, password: made.password };
+  const sb = await db.sandbox.create({
+    data: {
+      classroomId: cohort.id,
+      ownerUserId: made.user.id,
+      name: 'Sandbox stuck',
+      kind: 'STUDENT',
+      status: 'ACTIVE',
+      seedTemplateKey: 'starter-agency',
+      seedValue: 4242,
+      provisionState: 'PENDING',
+    },
+  });
+  await db.$executeRaw`UPDATE "Sandbox" SET "provisionState" = 'SEEDING'::"ProvisionState", "updatedAt" = now() - interval '5 minutes' WHERE "id" = ${sb.id}`;
+
+  await page.goto(`/manage/accounts/${student.id}`);
+  const restart = page.getByRole('button', { name: /Create sandbox|Retry provisioning|Restart provisioning/ });
+  await expect(restart).toBeVisible();
+
+  // Each attempt clicks, waits for that server action to answer (no navigation or reload in the middle of the build),
+  // then reads the database; it is repeated until the sandbox is READY.
+  await expect(async () => {
+    if ((await sandboxOf(student.id))?.provisionState !== 'READY') {
+      const button = page.getByRole('button', { name: /Create sandbox|Retry provisioning|Restart provisioning/ });
+      if (await button.count()) {
+        const answered = page.waitForResponse(
+          (r) => r.request().method() === 'POST' && r.url().includes('/manage/accounts/'),
+          { timeout: 120_000 },
+        );
+        await button.first().click();
+        await answered;
+      }
+    }
+    expect((await sandboxOf(student.id))?.provisionState).toBe('READY');
+  }).toPass({ timeout: 360_000, intervals: [500, 2_000, 5_000] });
+
+  const ctx = await browser.newContext({ baseURL: test.info().project.use.baseURL });
+  await ownAddress(ctx);
+  const sp = await ctx.newPage();
+  await studentWalksTheSandbox(sp, student);
+  await ctx.close();
 });

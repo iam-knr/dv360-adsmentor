@@ -1,12 +1,13 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Box from '@mui/material/Box';
+import Link from '@mui/material/Link';
 import Typography from '@mui/material/Typography';
 import { AccountActions } from '@/components/manage/AccountActions';
 import { DvSectionCard } from '@/components/dv/DvSectionCard';
 import { can, type Target } from '@/lib/accounts/permissions';
 import { AccountError } from '@/lib/accounts/rules';
-import { getAccount } from '@/lib/accounts/service';
+import { DEFAULT_COHORT_CODE, getAccount } from '@/lib/accounts/service';
 import { pageActor } from '@/lib/accounts/session-actor';
 import { formatDateTime } from '@/lib/auth/messages';
 
@@ -31,17 +32,18 @@ export default async function AccountDetailPage({
     throw err;
   }
   const a = data.account;
-  const target: Target = { id: a.id, role: a.appRole, ownerAdminId: null, cohortOwnerId: null };
-  // Scope was checked by getAccount; for the buttons treat an in-scope User as own.
-  const own: Target = a.appRole === 'USER' ? { ...target, ownerAdminId: actor.id } : target;
+  const target: Target = { id: a.id, role: a.appRole };
+  // "Create sandbox" / "Retry provisioning" / "Restart provisioning" show for every student whose sandbox is not ready, so
+  // a missing, failed or stuck build can always be recovered from here.
   const sandboxAction =
     data.sandbox?.state === 'NOT_CREATED'
       ? ('create' as const)
       : data.sandbox?.state === 'FAILED'
         ? ('retry' as const)
-        : undefined;
-  const perm = (action: Parameters<typeof can>[1]) =>
-    can(actor, action, actor.role === 'SUPER_ADMIN' ? target : own);
+        : data.sandbox?.state === 'QUEUED' || data.sandbox?.state === 'BUILDING'
+          ? ('restart' as const)
+          : undefined;
+  const perm = (action: Parameters<typeof can>[1]) => can(actor, action, target);
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, maxWidth: 800 }}>
       <Typography variant="pageTitle" component="h1">
@@ -68,10 +70,18 @@ export default async function AccountDetailPage({
         {a.notes ? <Typography>Notes: {a.notes}</Typography> : null}
       </DvSectionCard>
       <DvSectionCard title="Access">
-        <Typography>Role: {a.appRole}</Typography>
+        <Typography>Level: {a.appRole === 'USER' ? 'Student' : 'Super admin'}</Typography>
         <Typography>Status: {a.status}</Typography>
-        <Typography>Cohort: {a.cohort?.name ?? '-'}</Typography>
-        <Typography>Owner admin: {a.ownerAdmin?.name ?? '-'}</Typography>
+        {a.appRole === 'USER' ? (
+          <Typography>
+            Cohort:{' '}
+            {a.cohort && a.cohort.code !== DEFAULT_COHORT_CODE ? (
+              <Link href={`/manage/cohorts/${a.cohort.id}`}>{a.cohort.name}</Link>
+            ) : (
+              'None'
+            )}
+          </Typography>
+        ) : null}
         <Typography>
           Ask for a new password at next sign in: {a.mustChangePassword ? 'Yes' : 'No'}
         </Typography>
@@ -99,7 +109,8 @@ export default async function AccountDetailPage({
         {data.activity.length ? (
           data.activity.map((r) => (
             <Typography key={r.id} variant="body2">
-              {when(r.createdAt)}: {r.action} ({r.result})
+              {when(r.createdAt)}: {r.summary}
+              {r.actorName ? ` (by ${r.actorName})` : ''}
             </Typography>
           ))
         ) : (

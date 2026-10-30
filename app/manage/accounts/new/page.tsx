@@ -10,7 +10,6 @@ export default async function NewAccountPage() {
   const cohorts = await listCohorts(actor);
   return (
     <AddAccountForm
-      isSuper={actor.role === 'SUPER_ADMIN'}
       cohorts={cohorts.map((c) => ({ id: c.id, name: c.name, used: c.used, capacity: c.capacity }))}
       signInUrl={`${process.env.NEXT_PUBLIC_APP_URL ?? ''}/sim/login`}
     />

@@ -5,7 +5,6 @@ import { clearLockout } from '@/lib/auth/lockout';
 import { getAccountPolicy } from '@/lib/auth/policy';
 import { ProvisionError, provisionStudent } from '@/lib/auth/provision';
 import { assertNotLastActiveSuperAdmin, LastSuperAdminError } from '@/lib/auth/super-admin';
-import { isClassOpen } from '@/lib/access/windows';
 import { prisma } from '@/lib/db';
 import {
   enqueueProvisionSandbox,
@@ -14,7 +13,6 @@ import {
   type ProvisionView,
 } from '@/lib/sandbox/provision';
 import { writeAccountAudit, type AccountAuditAction } from './audit';
-import { ownedCounts, transferOwnership } from './ownership';
 import { can, type AccountAction, type Actor, type Target } from './permissions';
 import {
   ACC,
@@ -43,7 +41,6 @@ export interface AccountRow {
   status: 'ACTIVE' | 'DISABLED' | 'LOCKED' | 'ARCHIVED';
   cohortId: string | null;
   cohortName: string | null;
-  ownerAdminName: string | null;
   accessStartsAt: Date | null;
   accessEndsAt: Date | null;
   lastLoginAt: Date | null;
@@ -122,6 +119,53 @@ function wrap<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
+// Default cohort
+// ---------------------------------------------------------------------------------------------------------------
+
+/** Code of the cohort every student without a chosen cohort belongs to. Cohorts are an optional grouping (ADM-FIX). */
+export const DEFAULT_COHORT_CODE = 'students';
+const DEFAULT_COHORT_NAME = 'All students';
+const DEFAULT_COHORT_CAPACITY = 100_000;
+
+/**
+ * The cohort that holds students who were added without one. A sandbox row hangs on a cohort (`Sandbox.classroomId`),
+ * so every student has one; this one is created on first use, owned by the Super admin, and never listed as a cohort.
+ */
+export async function ensureDefaultCohort(tx: Tx, actor: Actor): Promise<string> {
+  const found = await tx.classroom.findUnique({
+    where: { code: DEFAULT_COHORT_CODE },
+    select: { id: true, archivedAt: true },
+  });
+  if (found) {
+    if (found.archivedAt) {
+      await tx.classroom.update({ where: { id: found.id }, data: { archivedAt: null } });
+    }
+    return found.id;
+  }
+  // The oldest Super admin owns it: that account is never deleted, so the cohort never loses its owner.
+  const owner = await tx.user.findFirst({
+    where: { appRole: 'SUPER_ADMIN' },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true },
+  });
+  const ownerId = owner?.id ?? (actor.role === 'SUPER_ADMIN' ? actor.id : null);
+  if (!ownerId) throw new AccountError('ACC-031');
+  const created = await tx.classroom.upsert({
+    where: { code: DEFAULT_COHORT_CODE },
+    update: {},
+    create: {
+      name: DEFAULT_COHORT_NAME,
+      code: DEFAULT_COHORT_CODE,
+      ownerAdminId: ownerId,
+      capacity: DEFAULT_COHORT_CAPACITY,
+      defaultSeedTemplate: 'starter-agency',
+    },
+    select: { id: true },
+  });
+  return created.id;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
 // Create
 // ---------------------------------------------------------------------------------------------------------------
 
@@ -141,8 +185,9 @@ export async function createAccount(
   actor: Actor,
   input: CreateAccountInput,
   db: Db = prisma,
-): Promise<{ id: string; email: string; initialPassword?: string }> {
-  if (!can(actor, 'account.create', { role: input.role })) {
+): Promise<{ id: string; email: string; cohortId?: string; initialPassword?: string }> {
+  // Two levels exist (ADM-FIX): the retired ADMIN level can no longer be created, whoever asks.
+  if (input.role === 'ADMIN' || !can(actor, 'account.create', { role: input.role })) {
     return deny(db, actor, 'ACCOUNT_CREATED', null, 'ACC-020', { toRole: input.role });
   }
   const email = normaliseEmail(input.email);
@@ -154,14 +199,15 @@ export async function createAccount(
       async (tx) => {
         const policy = await getAccountPolicy(tx);
         if (input.role === 'USER') {
-          if (!input.cohortId) throw new AccountError('ACC-030');
+          // The cohort is an optional grouping: without one the student joins the default cohort.
+          const cohortId = input.cohortId ?? (await ensureDefaultCohort(tx, actor));
           const cohort = await tx.classroom.findFirst({
-            where: { AND: [cohortScopeWhere(actor), { id: input.cohortId, archivedAt: null }] },
+            where: { AND: [cohortScopeWhere(actor), { id: cohortId, archivedAt: null }] },
             select: { id: true },
           });
           if (!cohort) throw new AccountError('ACC-031');
           const pw = passwordFor(input.password, email, policy.minPasswordLength);
-          const res = await provisionStudent(tx, input.cohortId, {
+          const res = await provisionStudent(tx, cohortId, {
             email,
             name: input.name.trim(),
             password: pw.generated ? undefined : pw.plaintext,
@@ -173,9 +219,9 @@ export async function createAccount(
           if (input.notes) {
             await tx.user.update({ where: { id: res.user.id }, data: { notes: input.notes } });
           }
-          return { id: res.user.id, email, initialPassword: res.password };
+          return { id: res.user.id, email, cohortId, initialPassword: res.password };
         }
-        // ADMIN / SUPER_ADMIN: Super admin only (can() above); no cohort, no sandbox.
+        // SUPER_ADMIN: Super admin only (can() above); no cohort, no sandbox.
         const existing = await tx.user.findUnique({ where: { email }, select: { status: true } });
         if (existing) {
           throw new AccountError(existing.status === 'ARCHIVED' ? 'ACC-002A' : 'ACC-002');
@@ -208,9 +254,9 @@ export async function createAccount(
       { timeout: 20_000 },
     ),
   );
-  if (input.role === 'USER' && input.cohortId) {
+  if (input.role === 'USER' && result.cohortId) {
     // After commit (module 19 4.10). A failure leaves the account in place.
-    await enqueueProvisionSandbox(input.cohortId, result.id).catch(() => undefined);
+    await enqueueProvisionSandbox(result.cohortId, result.id).catch(() => undefined);
   }
   return result;
 }
@@ -244,26 +290,16 @@ async function freezeForAccount(tx: Tx, userId: string, now: Date): Promise<void
   }
 }
 
-async function thawForAccount(
-  tx: Tx,
-  userId: string,
-  classOpen: (cohortId: string) => Promise<boolean>,
-  now: Date,
-) {
+async function thawForAccount(tx: Tx, userId: string, now: Date) {
   const boxes = await tx.sandbox.findMany({
     where: { ownerUserId: userId, kind: 'STUDENT', status: 'FROZEN', frozenReason: 'ACCOUNT' },
     select: {
       id: true,
-      classroomId: true,
       clockStateBeforeFreeze: true,
       clock: { select: { runOutsideSession: true } },
     },
   });
   for (const sb of boxes) {
-    if (!(await classOpen(sb.classroomId))) {
-      await tx.sandbox.update({ where: { id: sb.id }, data: { frozenReason: 'WINDOW' } });
-      continue;
-    }
     await tx.sandbox.update({
       where: { id: sb.id },
       data: { status: 'ACTIVE', frozenAt: null, frozenReason: null, clockStateBeforeFreeze: null },
@@ -351,13 +387,7 @@ export async function setAccountStatus(
       });
       if (user.appRole === 'USER') {
         if (event === 'disable') await freezeForAccount(tx, id, now);
-        else
-          await thawForAccount(
-            tx,
-            id,
-            (c) => isClassOpen(c, now, tx as unknown as PrismaClient),
-            now,
-          );
+        else await thawForAccount(tx, id, now);
       }
       await writeAccountAudit(tx, {
         actorUserId: actor.id,
@@ -464,7 +494,7 @@ export async function resetPassword(
 export async function deleteAccount(
   actor: Actor,
   id: string,
-  req: { confirm: string; transferTo?: string },
+  req: { confirm: string },
   db: Db = prisma,
   now: Date = new Date(),
 ): Promise<void> {
@@ -477,31 +507,6 @@ export async function deleteAccount(
       await authorise(db, actor, 'account.delete', 'ACCOUNT_ARCHIVED', user);
       const next = transition(user.status, 'archive');
       if (!next) throw new AccountError('ACC-022');
-      if (user.appRole === 'ADMIN') {
-        const owned = await ownedCounts(tx, id);
-        if (owned.users + owned.cohorts > 0) {
-          if (!req.transferTo) throw new AccountError('ACC-025');
-          const to = await tx.user.findFirst({
-            where: {
-              id: req.transferTo,
-              appRole: { in: ['ADMIN', 'SUPER_ADMIN'] },
-              status: 'ACTIVE',
-            },
-            select: { id: true },
-          });
-          if (!to || to.id === id) throw new AccountError('ACC-025');
-          await transferOwnership(tx, id, to.id);
-          await writeAccountAudit(tx, {
-            actorUserId: actor.id,
-            actorRole: actor.role,
-            action: 'ACCOUNT_OWNER_TRANSFERRED',
-            targetType: 'User',
-            targetId: id,
-            targetUserId: id,
-            payload: { count: owned.users + owned.cohorts },
-          });
-        }
-      }
       await tx.user.update({
         where: { id },
         data: {
@@ -654,7 +659,8 @@ export async function listAccounts(
   const search = q.search?.trim();
   const where: Prisma.UserWhereInput = {
     AND: [
-      q.role?.length ? { appRole: { in: q.role } } : {},
+      // the retired ADMIN level is never listed
+      { appRole: q.role?.length ? { in: q.role.filter((r) => r !== 'ADMIN') } : { not: 'ADMIN' } },
       // default filter: not archived (module 19 2.2)
       q.status?.length ? { status: { in: q.status } } : { status: { not: 'ARCHIVED' } },
       q.cohortId?.length ? { cohortId: { in: q.cohortId } } : {},
@@ -689,16 +695,14 @@ export async function listAccounts(
         lastLoginAt: true,
         lockedUntil: true,
         cohort: { select: { name: true } },
-        ownerAdmin: { select: { name: true } },
         sandboxes: { select: { status: true, provisionState: true }, take: 1 },
       },
     }),
   ]);
   const rows = (
     users as unknown as Array<
-      Omit<AccountRow, 'cohortName' | 'ownerAdminName' | 'sandbox'> & {
+      Omit<AccountRow, 'cohortName' | 'sandbox'> & {
         cohort: { name: string } | null;
-        ownerAdmin: { name: string } | null;
         sandboxes: { status: string; provisionState: string }[];
       }
     >
@@ -714,7 +718,6 @@ export async function listAccounts(
         : u.status,
     cohortId: u.cohortId,
     cohortName: u.cohort?.name ?? null,
-    ownerAdminName: u.ownerAdmin?.name ?? null,
     accessStartsAt: u.accessStartsAt,
     accessEndsAt: u.accessEndsAt,
     lastLoginAt: u.lastLoginAt,
@@ -751,22 +754,31 @@ export async function getAccount(actor: Actor, id: string, db: Db = prisma) {
       accessStartsAt: true,
       accessEndsAt: true,
       createdAt: true,
-      cohort: { select: { id: true, name: true } },
-      ownerAdmin: { select: { name: true } },
+      cohort: { select: { id: true, name: true, code: true } },
       createdBy: { select: { name: true } },
     },
   });
-  const activity = await db.auditLog.findMany({
+  const log = await db.auditLog.findMany({
     where: { targetUserId: id },
     orderBy: { createdAt: 'desc' },
     take: 20,
-    select: { id: true, action: true, result: true, createdAt: true, actorUserId: true },
+    select: { id: true, action: true, result: true, createdAt: true, actorUserId: true, payload: true },
   });
+  const actorIds = [...new Set(log.map((r) => r.actorUserId).filter((v): v is string => !!v))];
+  const actors = actorIds.length
+    ? await db.user.findMany({ where: { id: { in: actorIds } }, select: { id: true, name: true } })
+    : [];
+  const actorName = new Map(actors.map((a) => [a.id, a.name]));
+  const activity = log.map((r) => ({
+    id: r.id,
+    createdAt: r.createdAt,
+    result: r.result,
+    actorName: r.actorUserId ? (actorName.get(r.actorUserId) ?? null) : null,
+    summary: auditSummary(r.action, r.result, r.payload as AuditPayload),
+  }));
   const account = u!;
   const sandbox =
-    account.appRole === 'USER' && account.cohort
-      ? await getProvisionView(id, account.cohort.id, db)
-      : null;
+    account.appRole === 'USER' ? await getProvisionView(id, db) : null;
   return { account, activity, sandbox };
 }
 
@@ -781,25 +793,31 @@ export async function retrySandbox(
 ): Promise<ProvisionView> {
   const user = await loadTarget(db, actor, id);
   await authorise(db, actor, 'account.edit', 'ACCOUNT_UPDATED', user);
-  if (user.appRole !== 'USER' || !user.cohortId || user.status === 'ARCHIVED') {
-    throw new AccountError('ACC-022');
-  }
+  if (user.appRole !== 'USER' || user.status === 'ARCHIVED') throw new AccountError('ACC-022');
+  // Students made before cohorts became optional may have none: they join the default cohort.
+  const cohortId = user.cohortId ?? (await db.$transaction((tx) => ensureDefaultCohort(tx, actor)));
+  if (!user.cohortId) await db.user.update({ where: { id }, data: { cohortId } });
   await writeAccountAudit(db, {
     actorUserId: actor.id,
     actorRole: actor.role,
-    classroomId: user.cohortId,
+    classroomId: cohortId,
     action: 'ACCOUNT_UPDATED',
     targetType: 'User',
     targetId: id,
     targetUserId: id,
     payload: { reason: 'SANDBOX_PROVISION' },
   });
-  return retryProvisionSandbox(user.cohortId, id, { db, budgetMs: 25_000 });
+  return retryProvisionSandbox(cohortId, id, { db, budgetMs: 25_000 });
 }
 
+const CHARGED = ['ACTIVE', 'DISABLED', 'LOCKED'] as const;
+
+/** Cohorts are an optional grouping of students. The default cohort (every student without a chosen one) is not listed. */
 export async function listCohorts(actor: Actor, db: Db = prisma) {
   const rows = await db.classroom.findMany({
-    where: { AND: [cohortScopeWhere(actor), { archivedAt: null }] },
+    where: {
+      AND: [cohortScopeWhere(actor), { archivedAt: null, code: { not: DEFAULT_COHORT_CODE } }],
+    },
     orderBy: { name: 'asc' },
     select: {
       id: true,
@@ -807,20 +825,54 @@ export async function listCohorts(actor: Actor, db: Db = prisma) {
       capacity: true,
       timeZone: true,
       createdAt: true,
-      ownerAdmin: { select: { id: true, name: true } },
-      _count: {
-        select: {
-          users: { where: { status: { in: ['ACTIVE', 'DISABLED', 'LOCKED'] }, appRole: 'USER' } },
-        },
-      },
+      _count: { select: { users: { where: { status: { in: [...CHARGED] }, appRole: 'USER' } } } },
     },
   });
   return rows.map((c) => ({ ...c, used: c._count.users }));
 }
 
+/** One cohort with its students (archived accounts are not members), or ACC-031. */
+export async function getCohort(actor: Actor, id: string, db: Db = prisma) {
+  const c = await db.classroom.findFirst({
+    where: { AND: [cohortScopeWhere(actor), { id, code: { not: DEFAULT_COHORT_CODE } }] },
+    select: {
+      id: true,
+      name: true,
+      capacity: true,
+      timeZone: true,
+      createdAt: true,
+      archivedAt: true,
+      users: {
+        where: { appRole: 'USER', status: { not: 'ARCHIVED' } },
+        orderBy: { name: 'asc' },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          status: true,
+          lastLoginAt: true,
+          sandboxes: { select: { provisionState: true }, take: 1 },
+        },
+      },
+    },
+  });
+  if (!c) throw new AccountError('ACC-031');
+  return {
+    ...c,
+    members: c.users.map((u) => ({
+      id: u.id,
+      email: u.email,
+      name: u.name,
+      status: u.status,
+      lastLoginAt: u.lastLoginAt,
+      sandbox: u.sandboxes[0]?.provisionState ?? 'NOT CREATED',
+    })),
+  };
+}
+
 export async function createCohort(
   actor: Actor,
-  input: { name: string; ownerAdminId?: string; timeZone?: string; capacity?: number },
+  input: { name: string; timeZone?: string; capacity?: number },
   db: Db = prisma,
 ): Promise<{ id: string }> {
   if (!can(actor, 'cohort.create')) return deny(db, actor, 'COHORT_CREATED', null, 'FORBIDDEN');
@@ -830,16 +882,9 @@ export async function createCohort(
   const capacity = input.capacity ?? (await getAccountPolicy(db)).defaultCohortCapacity;
   const capProblem = checkCapacity(capacity, actor.role === 'SUPER_ADMIN');
   if (capProblem) throw new AccountError('ACC-034', capProblem);
-  // Admins own their cohorts; only a Super admin may pick another owner.
-  const ownerAdminId = actor.role === 'SUPER_ADMIN' ? (input.ownerAdminId ?? actor.id) : actor.id;
+  // The Super admin owns every cohort.
+  const ownerAdminId = actor.id;
   return db.$transaction(async (tx) => {
-    if (ownerAdminId !== actor.id) {
-      const owner = await tx.user.findFirst({
-        where: { id: ownerAdminId, appRole: { in: ['ADMIN', 'SUPER_ADMIN'] }, status: 'ACTIVE' },
-        select: { id: true },
-      });
-      if (!owner) throw new AccountError('ACC-022');
-    }
     const dup = await tx.classroom.findFirst({
       where: { ownerAdminId, name },
       select: { id: true },
@@ -852,12 +897,10 @@ export async function createCohort(
         code,
         ownerAdminId,
         capacity,
+        defaultSeedTemplate: 'starter-agency',
         ...(input.timeZone ? { timeZone: input.timeZone } : {}),
       },
       select: { id: true },
-    });
-    await tx.classroomMember.create({
-      data: { classroomId: c.id, userId: ownerAdminId, appRole: 'ADMIN' },
     });
     await writeAccountAudit(tx, {
       actorUserId: actor.id,
@@ -866,46 +909,244 @@ export async function createCohort(
       action: 'COHORT_CREATED',
       targetType: 'Classroom',
       targetId: c.id,
-      payload: { cohortId: c.id, count: capacity },
+      payload: { cohortId: c.id, cohortName: name, count: capacity },
     });
     return c;
   });
 }
 
-/** Audit rows visible to the actor: Super admin all; Admin where they are the actor or the target is in scope. */
-export async function listAudit(actor: Actor, db: Db = prisma, take = 100) {
-  const where: Prisma.AuditLogWhereInput =
-    actor.role === 'SUPER_ADMIN'
-      ? {}
-      : {
-          OR: [
-            { actorUserId: actor.id },
-            {
-              targetUserId: {
-                in: (
-                  (await scopedUsers(db, actor).findMany({ select: { id: true } })) as {
-                    id: string;
-                  }[]
-                ).map((u) => u.id),
-              },
-            },
-          ],
-        };
-  return db.auditLog.findMany({
-    where,
-    orderBy: { createdAt: 'desc' },
-    take,
-    select: {
-      id: true,
-      action: true,
-      result: true,
-      createdAt: true,
-      actorUserId: true,
-      targetUserId: true,
-      targetType: true,
-      payload: true,
-    },
+/** Rename a cohort or change its seat limit (never below the students in it). */
+export async function updateCohort(
+  actor: Actor,
+  id: string,
+  input: { name?: string; capacity?: number },
+  db: Db = prisma,
+): Promise<void> {
+  if (!can(actor, 'cohort.edit', { role: 'USER', ownerAdminId: actor.id })) {
+    return deny(db, actor, 'COHORT_UPDATED', null, 'FORBIDDEN');
+  }
+  await db.$transaction(async (tx) => {
+    const c = await tx.classroom.findFirst({
+      where: { AND: [cohortScopeWhere(actor), { id, archivedAt: null, code: { not: DEFAULT_COHORT_CODE } }] },
+      select: { id: true, name: true, capacity: true },
+    });
+    if (!c) throw new AccountError('ACC-031');
+    const name = input.name === undefined ? c.name : input.name.trim();
+    if (!name) throw new AccountError('ACC-033');
+    if ([...name].length > 100) throw new AccountError('ACC-003B');
+    const capacity = input.capacity ?? c.capacity;
+    const problem = checkCapacity(capacity, true);
+    if (problem) throw new AccountError('ACC-034', problem);
+    const used = await tx.user.count({
+      where: { cohortId: id, appRole: 'USER', status: { in: [...CHARGED] } },
+    });
+    if (capacity < used) throw new AccountError('ACC-034', `The cohort already has ${used} students.`);
+    if (name !== c.name) {
+      const dup = await tx.classroom.findFirst({
+        where: { ownerAdminId: actor.id, name, NOT: { id } },
+        select: { id: true },
+      });
+      if (dup) throw new AccountError('ACC-033B');
+    }
+    await tx.classroom.update({ where: { id }, data: { name, capacity } });
+    await writeAccountAudit(tx, {
+      actorUserId: actor.id,
+      actorRole: actor.role,
+      classroomId: id,
+      action: 'COHORT_UPDATED',
+      targetType: 'Classroom',
+      targetId: id,
+      payload: { cohortId: id, cohortName: name, count: capacity },
+    });
   });
+}
+
+/**
+ * Archive a cohort. Its students are not deleted: they move to the default cohort and keep their sandboxes (a sandbox
+ * is found by its owner, `resolveClassContext`).
+ */
+export async function archiveCohort(actor: Actor, id: string, db: Db = prisma): Promise<{ moved: number }> {
+  if (!can(actor, 'cohort.edit', { role: 'USER', ownerAdminId: actor.id })) {
+    return deny(db, actor, 'COHORT_ARCHIVED', null, 'FORBIDDEN');
+  }
+  return db.$transaction(async (tx) => {
+    const c = await tx.classroom.findFirst({
+      where: { AND: [cohortScopeWhere(actor), { id, archivedAt: null, code: { not: DEFAULT_COHORT_CODE } }] },
+      select: { id: true, name: true },
+    });
+    if (!c) throw new AccountError('ACC-031');
+    const defaultId = await ensureDefaultCohort(tx, actor);
+    const moved = await tx.user.updateMany({
+      where: { cohortId: id },
+      data: { cohortId: defaultId },
+    });
+    await tx.classroom.update({ where: { id }, data: { archivedAt: new Date() } });
+    await writeAccountAudit(tx, {
+      actorUserId: actor.id,
+      actorRole: actor.role,
+      classroomId: id,
+      action: 'COHORT_ARCHIVED',
+      targetType: 'Classroom',
+      targetId: id,
+      payload: { cohortId: id, cohortName: c.name, count: moved.count },
+    });
+    return { moved: moved.count };
+  });
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Audit log
+// ---------------------------------------------------------------------------------------------------------------
+
+export interface AuditEntry {
+  id: string;
+  createdAt: Date;
+  action: string;
+  result: 'OK' | 'DENIED';
+  actor: { id: string; name: string; email: string } | null;
+  target: { id: string; name: string; email: string } | null;
+  targetLabel: string;
+  summary: string;
+}
+
+type AuditPayload = Record<string, string | number | boolean | null> | null;
+
+const ACTION_TEXT: Record<string, string> = {
+  ACCOUNT_CREATED: 'Created account',
+  ACCOUNT_UPDATED: 'Updated account',
+  ACCOUNT_ROLE_CHANGED: 'Changed level',
+  ACCOUNT_DISABLED: 'Disabled account',
+  ACCOUNT_ENABLED: 'Enabled account',
+  ACCOUNT_LOCKED: 'Account locked after failed sign-ins',
+  ACCOUNT_UNLOCKED: 'Unlocked account',
+  ACCOUNT_COHORT_MOVED: 'Moved to another cohort',
+  ACCOUNT_ARCHIVED: 'Deleted account',
+  ACCOUNT_RESTORED: 'Restored account',
+  ACCOUNT_PURGED: 'Purged account',
+  ACCOUNTS_IMPORTED: 'Imported accounts',
+  PASSWORD_RESET: 'Reset password',
+  PASSWORD_CHANGED: 'Changed password',
+  SESSIONS_REVOKED: 'Signed out all devices',
+  COHORT_CREATED: 'Created cohort',
+  COHORT_UPDATED: 'Updated cohort',
+  COHORT_ARCHIVED: 'Archived cohort',
+  POLICY_CHANGED: 'Changed account policy',
+  AUTHZ_DENIED: 'Action refused',
+};
+
+const LEVEL: Record<string, string> = { USER: 'Student', SUPER_ADMIN: 'Super admin', ADMIN: 'Retired level' };
+const nice = (v: unknown) => String(v).toLowerCase().replace(/_/g, ' ');
+
+/** One readable line for an audit row (the raw payload is never shown). */
+export function auditSummary(action: string, result: string, payload: AuditPayload): string {
+  const p = payload ?? {};
+  const base = ACTION_TEXT[action] ?? action.toLowerCase().replace(/_/g, ' ');
+  const bits: string[] = [];
+  if (result === 'DENIED' && typeof p.reason === 'string') bits.push(`refused (${p.reason})`);
+  if (typeof p.cohortName === 'string') bits.push(`cohort "${p.cohortName}"`);
+  const from = p.fromRole ?? p.oldRole;
+  const to = p.toRole ?? p.newRole;
+  if (from && to) bits.push(`${LEVEL[String(from)] ?? from} to ${LEVEL[String(to)] ?? to}`);
+  else if (to) bits.push(`as ${LEVEL[String(to)] ?? to}`);
+  const fs = p.fromStatus ?? p.oldStatus;
+  const ts = p.toStatus ?? p.newStatus;
+  if (fs && ts) bits.push(`${nice(fs)} to ${nice(ts)}`);
+  if (p.reason === 'SANDBOX_PROVISION') bits.push('create or retry sandbox');
+  if (p.mustChangePassword === true) bits.push('new password required at next sign-in');
+  if (typeof p.count === 'number' && action.startsWith('COHORT')) bits.push(`${p.count} students`);
+  if (typeof p.fileName === 'string') bits.push(p.fileName);
+  return bits.length ? `${base}: ${bits.join(', ')}` : base;
+}
+
+export interface AuditQuery {
+  action?: string;
+  /** Matches the actor's or the target's name or email. */
+  q?: string;
+  page?: number;
+}
+
+export const AUDIT_PAGE_SIZE = 50;
+
+/** Audit rows with the actor and target resolved to names. A Super admin sees all of it. */
+export async function listAudit(actor: Actor, query: AuditQuery = {}, db: Db = prisma) {
+  if (!can(actor, 'audit.view')) throw new AccountError('FORBIDDEN');
+  const q = query.q?.trim();
+  const people = q
+    ? (
+        await db.user.findMany({
+          where: {
+            OR: [
+              { name: { contains: q, mode: 'insensitive' } },
+              { email: { contains: q, mode: 'insensitive' } },
+            ],
+          },
+          select: { id: true },
+          take: 200,
+        })
+      ).map((u) => u.id)
+    : [];
+  const where: Prisma.AuditLogWhereInput = {
+    ...(query.action ? { action: query.action } : {}),
+    ...(q ? { OR: [{ actorUserId: { in: people } }, { targetUserId: { in: people } }] } : {}),
+  };
+  const page = Math.max(1, query.page ?? 1);
+  const [rows, total, actions] = await Promise.all([
+    db.auditLog.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * AUDIT_PAGE_SIZE,
+      take: AUDIT_PAGE_SIZE,
+      select: {
+        id: true,
+        action: true,
+        result: true,
+        createdAt: true,
+        actorUserId: true,
+        targetUserId: true,
+        targetType: true,
+        targetId: true,
+        payload: true,
+      },
+    }),
+    db.auditLog.count({ where }),
+    db.auditLog.findMany({ distinct: ['action'], select: { action: true }, orderBy: { action: 'asc' } }),
+  ]);
+  const ids = [...new Set(rows.flatMap((r) => [r.actorUserId, r.targetUserId]).filter((v): v is string => !!v))];
+  const users = ids.length
+    ? await db.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true, email: true } })
+    : [];
+  const byId = new Map(users.map((u) => [u.id, u]));
+  const cohortIds = [
+    ...new Set(rows.filter((r) => r.targetType === 'Classroom' && r.targetId).map((r) => r.targetId as string)),
+  ];
+  const cohorts = cohortIds.length
+    ? await db.classroom.findMany({ where: { id: { in: cohortIds } }, select: { id: true, name: true } })
+    : [];
+  const cohortName = new Map(cohorts.map((c) => [c.id, c.name]));
+  const entries: AuditEntry[] = rows.map((r) => {
+    const target = r.targetUserId ? (byId.get(r.targetUserId) ?? null) : null;
+    return {
+      id: r.id,
+      createdAt: r.createdAt,
+      action: r.action,
+      result: r.result,
+      actor: r.actorUserId ? (byId.get(r.actorUserId) ?? null) : null,
+      target,
+      targetLabel: target
+        ? `${target.name} (${target.email})`
+        : r.targetType === 'Classroom' && r.targetId
+          ? `Cohort ${cohortName.get(r.targetId) ?? ''}`.trim()
+          : '',
+      summary: auditSummary(r.action, r.result, r.payload as AuditPayload),
+    };
+  });
+  return {
+    rows: entries,
+    total,
+    page,
+    pages: Math.max(1, Math.ceil(total / AUDIT_PAGE_SIZE)),
+    actions: actions.map((a) => a.action),
+  };
 }
 
 export { userScopeWhere };

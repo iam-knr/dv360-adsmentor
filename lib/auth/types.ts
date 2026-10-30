@@ -1,6 +1,8 @@
 // Session shapes shared by the edge middleware, server code and the Auth.js type augmentation.
-// Session role values are lowercase (RC-016, RC-068); the database enum is USER, ADMIN, SUPER_ADMIN.
-export type AppRole = 'user' | 'admin' | 'super_admin';
+// Session role values are lowercase (RC-016, RC-068). Two account levels exist (ADM-FIX): a Super admin and students.
+// The database enum keeps ADMIN (dropping an enum value needs a risky migration), but nothing creates, shows or signs in
+// that level, and it has no session value.
+export type AppRole = 'user' | 'super_admin';
 export type DvRole =
   'ADMIN' | 'STANDARD' | 'READ_ONLY' | 'REPORTING_ONLY' | 'PARTNER_CLIENT' | 'CREATIVE';
 
