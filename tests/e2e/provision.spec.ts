@@ -68,11 +68,12 @@ test('a new student gets a sandbox on /sim/welcome and can open campaign, line i
   expect(sandbox.resetCount).toBe(0);
 
   await open.click();
-  await expect(page).toHaveURL(/\/p\/\d+\/home_v3$/);
+  await expect(page).toHaveURL(/\/p\/[^/]+\/home_v3$/);
   await expect(page).toHaveTitle('Overview - DV360 Simulator by Adsmetor');
-  const pid = /\/p\/(\d+)\//.exec(page.url())?.[1] as string;
 
   // campaign, line item and report of the seeded template
+  const partner = await db.partner.findFirstOrThrow({ where: { sandboxId: sandbox.id } });
+  const pid = partner.publicId.toString();
   const adv = await db.advertiser.findFirstOrThrow({
     where: { sandboxId: sandbox.id },
     orderBy: { createdAt: 'asc' },
