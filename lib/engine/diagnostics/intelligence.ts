@@ -10,12 +10,15 @@ export type RecommendationType =
   | 'RAISE_BID'
   | 'ADD_CREATIVES'
   | 'BROADEN_TARGETING'
+  | 'USE_OPTIMIZED_TARGETING'
   | 'BID_LEARNING';
 
 export interface RecommendationFacts {
   liId: string;
   rows: readonly FunnelRow[];
   learning: boolean;
+  /** The line item already has optimized targeting on. Absent counts as on (no suggestion). */
+  optimizedTargeting?: boolean;
 }
 
 export interface RecommendationDecision {
@@ -32,8 +35,12 @@ const TITLE: Record<RecommendationType, string> = {
   RAISE_BID: 'Raise bid, bids are below typical clearing price',
   ADD_CREATIVES: 'Add creative sizes',
   BROADEN_TARGETING: 'Broaden targeting',
+  USE_OPTIMIZED_TARGETING: 'Use optimized targeting',
   BID_LEARNING: 'Bid strategy still learning',
 };
+
+/** Share of available requests removed by targeting from which optimized targeting is suggested (module 11 4.9). */
+export const OPTIMIZED_TARGETING_SHARE = 0.6;
 
 /** Suggestion conditions that hold for a line item given the tick's funnel. */
 export function suggestionsFor(f: RecommendationFacts, p: Params): RecommendationType[] {
@@ -49,6 +56,8 @@ export function suggestionsFor(f: RecommendationFacts, p: Params): Recommendatio
     let tCount = 0;
     for (const [code, n] of t) if (code.startsWith('T.')) tCount += n;
     if (tCount / A > p.alerts.suggestions.targetingThreshold) out.push('BROADEN_TARGETING');
+    if (f.optimizedTargeting === false && tCount / A >= OPTIMIZED_TARGETING_SHARE)
+      out.push('USE_OPTIMIZED_TARGETING');
   }
   if (f.learning) out.push('BID_LEARNING');
   return out;

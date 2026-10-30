@@ -446,6 +446,23 @@ describe('optimisation suggestions (engine.md 3.7, RC-014)', () => {
     ).toEqual([]);
   });
 
+  it('suggests optimized targeting from 60% targeting loss when it is off (module 11 4.9)', () => {
+    const at = (t: number, optimizedTargeting?: boolean) =>
+      suggestionsFor(
+        {
+          liId: 'l',
+          learning: false,
+          ...(optimizedTargeting === undefined ? {} : { optimizedTargeting }),
+          rows: rows({ 'M.AVAILABLE': 1000, 'T.GEO': t }),
+        },
+        P,
+      );
+    expect(at(600, false)).toEqual(['USE_OPTIMIZED_TARGETING']);
+    expect(at(599, false)).toEqual([]);
+    expect(at(600, true)).toEqual([]);
+    expect(at(600)).toEqual([]);
+  });
+
   it('opens a suggestion once and closes it when the condition clears', () => {
     const facts = new Map([
       [

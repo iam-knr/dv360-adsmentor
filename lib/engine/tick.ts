@@ -814,7 +814,15 @@ export function runTick(
   for (const r of runs) {
     const learning =
       r.strategy.kind !== 'fixed' && (next.li[r.li.id] as LiState).learning.phase !== 'STABLE';
-    for (const type of suggestionsFor({ liId: r.li.id, rows: r.funnel, learning }, params)) {
+    for (const type of suggestionsFor(
+      {
+        liId: r.li.id,
+        rows: r.funnel,
+        learning,
+        optimizedTargeting: r.li.optimizedTargeting,
+      },
+      params,
+    )) {
       sugFacts.set(`${type}|LINE_ITEM|${r.li.id}`, {
         type,
         scopeKind: 'LINE_ITEM',

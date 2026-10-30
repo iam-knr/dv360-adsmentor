@@ -275,3 +275,40 @@ test('read-only people see the rows without Apply or Dismiss (AC-11-26)', async 
   });
   expect([403, 404]).toContain(res.status());
 });
+
+test('PW-03-6 Alert preferences: dependency, validation, save and read-only', async ({ page }) => {
+  await signIn(page);
+  await page.goto(`${base()}/alert-config`);
+  const save = page.getByRole('button', { name: 'Save' });
+  await expect(save).toBeDisabled();
+  await expect(page.getByTestId('alert-NO_SPEND')).toBeChecked();
+  await expect(page.getByTestId('alert-EXCEEDED_SPEND_THRESHOLD')).not.toBeChecked();
+  await expect(page.getByRole('textbox', { name: 'Spend threshold' })).toBeDisabled();
+  // an out of range percentage is refused by ADV-015
+  await page.getByRole('textbox', { name: 'Underpacing threshold' }).fill('101');
+  await save.click();
+  await expect(page.getByText('Enter a number between 1 and 100.')).toBeVisible();
+  // Underpacing off disables the dependent toggles (ADV-019)
+  await page.getByRole('textbox', { name: 'Underpacing threshold' }).fill('80');
+  await page.getByTestId('alert-UNDERPACING').uncheck();
+  await expect(page.getByTestId('alert-DEALS_OFFLINE')).toBeDisabled();
+  await page.getByTestId('alert-UNDERPACING').check();
+  await page.getByTestId('alert-REJECTED_CREATIVE').uncheck();
+  await save.click();
+  await expect(page.getByText('Alert preferences saved.')).toBeVisible();
+  await expect(save).toBeDisabled();
+  const row = await db.advertiserAlertPreference.findFirstOrThrow({
+    where: { advertiserId: w.rows.advertiserId, alertType: 'REJECTED_CREATIVE' },
+  });
+  expect(row.enabled).toBe(false);
+  await page.reload();
+  await expect(page.getByTestId('alert-REJECTED_CREATIVE')).not.toBeChecked();
+  await expect(page.getByRole('textbox', { name: 'Underpacing threshold' })).toHaveValue('80');
+});
+
+test('Alert preferences are read only for a limited-access person', async ({ page }) => {
+  await signIn(page, readOnly);
+  await page.goto(`${base(readOnly)}/alert-config`);
+  await expect(page.getByTestId('alert-NO_SPEND')).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled();
+});
