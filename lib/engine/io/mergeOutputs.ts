@@ -12,6 +12,17 @@ const roundTo = (x: number, digits: number): number => {
   return Math.round(x * f) / f;
 };
 
+/**
+ * What the database stores for a delta: the value is sent as a six-decimal string (toFixed) and Postgres rounds that
+ * decimal half away from zero to the column scale. Integer micros avoid the double rounding errors of x * 10^n.
+ */
+function toScale(x: number, scale: number): number {
+  const micros = Math.round(Number(x.toFixed(6)) * 1e6);
+  if (scale >= 6) return micros / 1e6;
+  const unit = 10 ** (6 - scale);
+  return (Math.sign(micros) * Math.floor((Math.abs(micros) + unit / 2) / unit)) / 10 ** scale;
+}
+
 /** Decimal scale of the stored conversion columns: Decimal(20,4) for counts, Decimal(20,6) for revenue. */
 const CONV_SCALE: Record<(typeof CONVERSION_KEYS)[number], number> = {
   convPostClick: 4,
@@ -32,7 +43,7 @@ function addInto(target: Metrics, delta: Metrics): void {
  */
 function rounded(m: Metrics): Metrics {
   const out = { ...m };
-  for (const k of CONVERSION_KEYS) out[k] = roundTo(roundTo(out[k], 6), CONV_SCALE[k]);
+  for (const k of CONVERSION_KEYS) out[k] = toScale(out[k], CONV_SCALE[k]);
   return out;
 }
 
