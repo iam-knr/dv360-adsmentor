@@ -521,6 +521,9 @@ enum ChartCardKind {
   PIE
   BUBBLE
   BUILT_IN_IMPRESSIONS_LOST
+  KPI // P4-10a (Δ-11-6: ChartCardSpec.kind)
+  BUILT_IN
+  NOTE
 }
 
 enum InboxMessageKind {
@@ -666,6 +669,7 @@ enum BulkAction {
   DUPLICATE
   APPLY_TARGETING_TEMPLATE
   EDIT_SETTINGS
+  EDIT_TARGETING // P4-10a (K7: bulk edit of targeting, Add / Replace / Remove)
   EDIT_CREATIVE_ASSIGNMENT
   DOWNLOAD_SDF
   DOWNLOAD_QA

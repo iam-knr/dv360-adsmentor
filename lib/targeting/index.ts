@@ -106,6 +106,29 @@ export async function loadTargetingState(db: Db, liId: string): Promise<Targetin
   return rowsToState(await toRows(db, rows), li.type);
 }
 
+/** The rows of a targeting template (owner TEMPLATE) as a state, for bulk apply (module 11 K5). */
+export async function loadTemplateState(
+  db: Db,
+  templateId: string,
+): Promise<{ state: TargetingState; lineItemType: string; name: string; optimizedTargeting: boolean } | null> {
+  const template = await db.targetingTemplate.findUnique({
+    where: { id: templateId },
+    select: { lineItemType: true, name: true, optimizedTargeting: true },
+  });
+  if (!template) return null;
+  const rows = await db.targetingAssignment.findMany({
+    where: { templateId, ownerType: 'TEMPLATE', dimension: { notIn: [...NOT_CARD] } },
+    select: SELECT,
+    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+  });
+  return {
+    state: rowsToState(await toRows(db, rows), template.lineItemType),
+    lineItemType: template.lineItemType,
+    name: template.name,
+    optimizedTargeting: template.optimizedTargeting,
+  };
+}
+
 type Owner = { kind: 'LINE_ITEM'; id: string } | { kind: 'AD_GROUP'; id: string };
 
 async function persistRows(
