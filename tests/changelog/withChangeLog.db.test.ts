@@ -47,6 +47,30 @@ afterAll(async () => {
 });
 
 describe('withChangeLog', () => {
+  it('puts the entity itself in its chain when the service passes only the parents (IO and line item History find it)', async () => {
+    const ioName = (await prisma.insertionOrder.findUniqueOrThrow({ where: { id: w.ioId } })).name;
+    const liName = (await prisma.lineItem.findUniqueOrThrow({ where: { id: w.lineItemId } })).name;
+    await withChangeLog(
+      ctx(),
+      { type: 'INSERTION_ORDER', id: w.ioId, chain: { advertiserId: w.advertiserId, campaignId: w.campaignId } },
+      (tx) => tx.insertionOrder.update({ where: { id: w.ioId }, data: { name: 'Own chain IO' } }),
+      { registry: ioTestRegistry },
+    );
+    await withChangeLog(
+      ctx(),
+      { type: 'LINE_ITEM', id: w.lineItemId, chain: chain() },
+      (tx) => tx.lineItem.update({ where: { id: w.lineItemId }, data: { name: 'Own chain LI' } }),
+      { registry: lineItemTestRegistry },
+    );
+    const [io] = await groupsFor(w.ioId);
+    const [li] = await groupsFor(w.lineItemId);
+    expect(io!.ioId).toBe(w.ioId);
+    expect(li!.lineItemId).toBe(w.lineItemId);
+    await prisma.changeGroup.deleteMany({ where: { sandboxId: w.sandboxId } });
+    await prisma.insertionOrder.update({ where: { id: w.ioId }, data: { name: ioName } });
+    await prisma.lineItem.update({ where: { id: w.lineItemId }, data: { name: liName } });
+  });
+
   it('AC-05-1: one scalar edit of an IO writes one group with one UPDATE entry', async () => {
     await withChangeLog(
       ctx(),

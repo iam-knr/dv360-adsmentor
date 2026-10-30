@@ -3,7 +3,7 @@
 // Top bar (routes.md 4.1, design-system 2.1). Local to the shell rather than DvAppBar because the shell needs the
 // sim clock chip between Search and the bell, the wordmark text, a controlled search overlay (opened by `/`) and a
 // hamburger that hides on frames without a left nav (PR deviation note). Crumbs reuse DvBreadcrumbs.
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import Avatar from '@mui/material/Avatar';
@@ -20,6 +20,8 @@ import Popover from '@mui/material/Popover';
 import Typography from '@mui/material/Typography';
 import { DvBreadcrumbs, DvTooltip } from '@/components/dv';
 import { DvIcon, type DvIconName } from '@/components/icons';
+import { dismissNotificationAction } from '@/lib/history/actions';
+import type { NotificationDto } from '@/lib/history/types';
 import { markInboxReadAction } from '@/lib/reporting/actions';
 import { sizes } from '@/lib/theme/tokens';
 import { topCrumbs } from '@/lib/nav/breadcrumbs';
@@ -31,6 +33,9 @@ import { useChromeState } from './ChromeState';
 import { useShellDialogs } from './DialogHost';
 import { SimClockChip } from './SimClockChip';
 import { useViewer } from './ViewerProvider';
+
+/** The bell polls for new announcements this often (module 05 AC-05-24). */
+export const NOTIFICATION_POLL_MS = 30_000;
 
 export const PRODUCT_NAME = 'DV360 Simulator by Adsmetor';
 const ROLE_LABEL = { user: 'Student', admin: 'Instructor', super_admin: 'Admin' } as const;
@@ -99,6 +104,24 @@ function SearchOverlay({ open, onClose }: { open: boolean; onClose: () => void }
 export function TopBar() {
   const { viewer, chrome } = useViewer();
   const inbox = chrome.inbox ?? [];
+  const [announcements, setAnnouncements] = useState<NotificationDto[]>(chrome.announcements ?? []);
+  useEffect(() => setAnnouncements(chrome.announcements ?? []), [chrome.announcements]);
+  useEffect(() => {
+    const poll = async () => {
+      try {
+        const res = await fetch('/api/dv/notifications', { cache: 'no-store' });
+        if (res.ok) setAnnouncements((await res.json()) as NotificationDto[]);
+      } catch {
+        // offline or signed out: keep what the bell has
+      }
+    };
+    const timer = window.setInterval(() => void poll(), NOTIFICATION_POLL_MS);
+    return () => window.clearInterval(timer);
+  }, []);
+  const dismiss = (id: string) => {
+    setAnnouncements((cur) => cur.filter((n) => n.id !== id));
+    void dismissNotificationAction(id);
+  };
   const { scope, ids } = usePageScope();
   const hasNav = useHasNav();
   const { toggleNav } = useChromeState();
@@ -195,7 +218,26 @@ export function TopBar() {
             setMenu({ id: 'bell', el });
             if (inbox.some((m) => !m.read)) void markInboxReadAction();
           }}
-        />
+        >
+          {announcements.length > 0 || inbox.some((m) => !m.read) ? (
+            <Box
+              component="span"
+              data-testid="bell-dot"
+              aria-hidden="true"
+              sx={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                width: 10,
+                height: 10,
+                borderRadius: '50%',
+                bgcolor: 'error.main',
+                border: '2px solid',
+                borderColor: 'background.paper',
+              }}
+            />
+          ) : null}
+        </BarIcon>
         <BarIcon
           label="User management and email preferences"
           icon="manage_accounts"
@@ -254,11 +296,49 @@ export function TopBar() {
             <DvIcon name="close" size={20} />
           </IconButton>
         </Box>
-        {inbox.length === 0 ? (
+        {announcements.length > 0 ? (
+          <Box
+            component="ul"
+            aria-label="Announcements"
+            sx={{ listStyle: 'none', m: 0, p: 0, maxHeight: 360, overflowY: 'auto' }}
+          >
+            {announcements.map((n) => (
+              <Box
+                component="li"
+                key={n.id}
+                data-testid="announcement-item"
+                data-severity={n.severity}
+                sx={{ px: 4, py: 2, borderTop: '1px solid', borderColor: 'divider' }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Typography variant="overline" color={n.severity === 'WARNING' ? 'warning.main' : 'text.secondary'}>
+                    {n.kind}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
+                    {n.ageLabel}
+                  </Typography>
+                  <IconButton size="small" aria-label={`Dismiss ${n.title}`} onClick={() => dismiss(n.id)}>
+                    <DvIcon name="close" size={16} />
+                  </IconButton>
+                </Box>
+                <Typography variant="subtitle2">{n.title}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {n.body}
+                </Typography>
+                {n.learnMoreRoute ? (
+                  <MuiLink component={AppLink} href={n.learnMoreRoute} onClick={close} underline="hover">
+                    Learn more
+                  </MuiLink>
+                ) : null}
+              </Box>
+            ))}
+          </Box>
+        ) : null}
+        {inbox.length === 0 && announcements.length === 0 ? (
           <Typography variant="body2" sx={{ p: 4, pt: 0 }}>
             No notifications
           </Typography>
-        ) : (
+        ) : inbox.length === 0 ? null : (
           <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0, maxHeight: 360, overflowY: 'auto' }}>
             {inbox.map((m) => (
               <Box
