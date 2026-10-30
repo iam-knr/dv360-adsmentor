@@ -229,7 +229,7 @@ describe('flight lifecycle, report, Add flight and End (AC 14 to 16)', () => {
     expect(base.surveyResponses).toBeGreaterThan(1000);
     const rel = await getLiftReport(user(), aid(), studyId, { tab: 'CROSS_EXCHANGE', liftType: 'RELATIVE', slice: 'OVERALL' });
     const relM = rel.metrics.find((x) => x.metric === 'AWARENESS')!;
-    expect(relM.ci![1]).toBeGreaterThan(m.ci![1]); // relative lift scales the interval
+    expect(relM.ci![1] - relM.ci![0]).toBeGreaterThan(m.ci![1] - m.ci![0]); // relative lift scales the interval
     const age = await getLiftReport(user(), aid(), studyId, { tab: 'CROSS_EXCHANGE', liftType: 'ABSOLUTE', slice: 'AGE' });
     expect(age.metrics[0]?.slices.map((s) => s.value)).toEqual(['18-24', '25-34', '35-44', '45-54', '55-64', '65+']);
     const li = await getLiftReport(user(), aid(), studyId, { tab: 'CROSS_EXCHANGE', slice: 'LINE_ITEM' });
