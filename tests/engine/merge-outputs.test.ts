@@ -61,10 +61,10 @@ describe('mergeOutputs', () => {
       sliceKey: '',
       metrics: metrics({ convTotal, convRevenue }),
     });
-    // 0.00005 rounds to 0.0001 in a Decimal(20,4) column, twice: 0.0002, not 0.0001
+    // 0.00005 rounds to 0.0001 in a Decimal(20,4) column, twice: 0.0002, not 0.0001; 0.0000006 is 0.000001 at scale 6
     const merged = mergeOutputs([
-      tick(0, { daily: [row(0.00005, 0.0000005)] }),
-      tick(1, { daily: [row(0.00005, 0.0000005)] }),
+      tick(0, { daily: [row(0.00005, 0.0000006)] }),
+      tick(1, { daily: [row(0.00005, 0.0000006)] }),
     ]);
     expect(merged?.daily[0]?.metrics.convTotal).toBeCloseTo(0.0002, 10);
     expect(merged?.daily[0]?.metrics.convRevenue).toBeCloseTo(0.000002, 10);
