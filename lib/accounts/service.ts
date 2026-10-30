@@ -10,6 +10,7 @@ import {
   enqueueProvisionSandbox,
   getProvisionView,
   retryProvisionSandbox,
+  runProvisionStep,
   type ProvisionView,
 } from '@/lib/sandbox/provision';
 import { writeAccountAudit, type AccountAuditAction } from './audit';
@@ -808,6 +809,25 @@ export async function retrySandbox(
     payload: { reason: 'SANDBOX_PROVISION' },
   });
   return retryProvisionSandbox(cohortId, id, { db, budgetMs: 25_000 });
+}
+
+/**
+ * One poll of the Sandbox section on the account page: authorised like "Create sandbox", but it neither audits nor
+ * restarts anything. A QUEUED or BUILDING sandbox runs one build step (the caller waits for it, at most the step
+ * budget); any other state is only reported, so the page can stop polling.
+ */
+export async function driveSandbox(
+  actor: Actor,
+  id: string,
+  db: Db = prisma,
+): Promise<ProvisionView> {
+  const user = await loadTarget(db, actor, id);
+  await authorise(db, actor, 'account.edit', 'ACCOUNT_UPDATED', user);
+  if (user.appRole !== 'USER' || user.status === 'ARCHIVED') throw new AccountError('ACC-022');
+  const view = await getProvisionView(id, db);
+  if ((view.state === 'QUEUED' || view.state === 'BUILDING') && view.sandboxId)
+    return runProvisionStep(view.sandboxId, { db });
+  return view;
 }
 
 const CHARGED = ['ACTIVE', 'DISABLED', 'LOCKED'] as const;

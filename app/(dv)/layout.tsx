@@ -6,6 +6,7 @@ import { DialogHost } from '@/components/shell/DialogHost';
 import { ViewerProvider } from '@/components/shell/ViewerProvider';
 import { SnackbarHost } from '@/components/dv';
 import { requireUserOrRedirect } from '@/lib/auth/session';
+import { scheduleMaybeAdvance } from '@/lib/sandbox/maybe-advance';
 import { getChromeData } from '@/lib/scope/chrome-data';
 import { toViewerInfo } from '@/lib/scope/guard';
 
@@ -18,6 +19,8 @@ export const metadata: Metadata = {
 
 export default async function DvLayout({ children }: { children: ReactNode }) {
   const user = await requireUserOrRedirect();
+  // lazy engine catch-up and provisioning, after the response (docs/gaps/prov-drive.md)
+  scheduleMaybeAdvance(user.viewAs ? null : user.sandboxId);
   const chrome = await getChromeData(user);
   return (
     <ViewerProvider value={{ viewer: toViewerInfo(user), chrome }}>

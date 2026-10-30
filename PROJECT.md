@@ -310,6 +310,7 @@ Outline of waves and module tasks: `docs/specs/build-plan.md` section 3.7. Modul
 - 🟨 P4-11 Optimisation recommendations, alerts & troubleshooting (built on branch `p4-11-optimisation`, no migration: Intelligence panel with Investigate, Apply and Dismiss, `Recommendation` writer, Troubleshooter, campaign Alerts page, Alert preferences page; not done: grid `f.alert` filters, forecast panels, Combined tab, Overview cards, search, help, Advisor, see `docs/gaps/p4-11.md`)
 - ✅ P4-12 Change history, notifications (module 05 T3..T10 built on branch `p4-12-history`: History pages at four levels, notes, CSV, notification service and bell; no migration; not done: see `docs/gaps/p4-12.md`)
 - 🟨 ENG-FF Engine fast-forward history mode and sandbox provisioning job M18-05 (branch `eng-fast-forward`, no migration: batched history mode for `fastForward`, `engineDays` seed knob, `lib/sandbox/provision.ts` with QUEUED/BUILDING/READY/FAILED, welcome page progress, Create/Retry sandbox on the account page; 90 engine days in about 65 s per sandbox instead of 6 minutes; not done: see `docs/gaps/eng-ff.md`)
+- 🟨 PROV-DRIVE Provisioning and the engine without the GitHub cron (branch `prov-drive`, no migration: the account page and `/sim/welcome` drive the build step by step, rate limited "maybe advance" after page loads through `AppMeta`, `POST /api/manage/accounts/[userId]/provision`; see `docs/gaps/prov-drive.md`; external pinger recommended, not built)
 
 ### Phase 5 — Training layer
 Outline: `docs/specs/build-plan.md` section 3.8. Module 18 holds the tasks.
