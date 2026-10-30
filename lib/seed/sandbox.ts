@@ -157,7 +157,11 @@ export async function provisionSandbox(db: Db, input: ProvisionInput): Promise<P
           today: input.today ?? simToday(),
         });
         // Module 11 (P4-10a): bulk job history, saved column views and chart views.
-        await seedBulk(tx, { sandboxId: sandbox.id, ownerUserId: input.ownerUserId, now: new Date() });
+        await seedBulk(tx, {
+          sandboxId: sandbox.id,
+          ownerUserId: input.ownerUserId,
+          now: new Date(),
+        });
         return inserted;
       },
       { timeout: 300_000, maxWait: 30_000 },
