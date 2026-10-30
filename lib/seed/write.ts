@@ -144,6 +144,13 @@ export async function clearSandboxData(tx: Tx, sandboxId: string): Promise<void>
   await tx.simDailyMetric.deleteMany({ where });
   await tx.deliveryDiagnostic.deleteMany({ where });
   await tx.alert.deleteMany({ where });
+  // engine rows of an earlier run (a rebuild after history mode or after live ticks starts from tick 0 again)
+  await tx.simPacingSnapshot.deleteMany({ where });
+  await tx.simReachSnapshot.deleteMany({ where });
+  await tx.simConversionDaily.deleteMany({ where });
+  await tx.simState.deleteMany({ where });
+  await tx.simTickLog.deleteMany({ where });
+  await tx.simJob.deleteMany({ where });
   await tx.targetingAssignment.deleteMany({ where });
   await tx.creativeAssignment.deleteMany({ where });
   await tx.creativeReview.deleteMany({ where });

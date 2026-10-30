@@ -4,6 +4,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { tickAccessWindows } from '@/lib/access/windows';
 import { runDueTicks, runRetention } from '@/lib/engine/server';
+import { advanceProvisioning } from '@/lib/sandbox/provision';
 import { budgetFrom, isAuthorised } from './auth';
 
 export const dynamic = 'force-dynamic';
@@ -16,12 +17,16 @@ export async function POST(req: NextRequest) {
   const started = Date.now();
   const url = new URL(req.url);
   const windows = await tickAccessWindows(new Date());
-  const result = await runDueTicks(started + budgetFrom(url.searchParams));
+  const deadline = started + budgetFrom(url.searchParams);
+  const result = await runDueTicks(deadline);
+  // new students: seed queued sandboxes, start accounts that have none (module 18 4.4)
+  const provisioning = await advanceProvisioning(deadline).catch(() => undefined);
   const trimmed = url.searchParams.get('retention') === '1' ? await runRetention() : undefined;
   return NextResponse.json({
     ok: true,
     windows,
     ...result,
+    ...(provisioning ? { provisioning } : {}),
     ...(trimmed !== undefined ? { trimmedHourlyRows: trimmed } : {}),
     elapsedMs: Date.now() - started,
   });

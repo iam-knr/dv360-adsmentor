@@ -7,7 +7,12 @@ import { ProvisionError, provisionStudent } from '@/lib/auth/provision';
 import { assertNotLastActiveSuperAdmin, LastSuperAdminError } from '@/lib/auth/super-admin';
 import { isClassOpen } from '@/lib/access/windows';
 import { prisma } from '@/lib/db';
-import { enqueueProvisionSandbox } from '@/lib/sandbox/provision';
+import {
+  enqueueProvisionSandbox,
+  getProvisionView,
+  retryProvisionSandbox,
+  type ProvisionView,
+} from '@/lib/sandbox/provision';
 import { writeAccountAudit, type AccountAuditAction } from './audit';
 import { ownedCounts, transferOwnership } from './ownership';
 import { can, type AccountAction, type Actor, type Target } from './permissions';
@@ -757,7 +762,39 @@ export async function getAccount(actor: Actor, id: string, db: Db = prisma) {
     take: 20,
     select: { id: true, action: true, result: true, createdAt: true, actorUserId: true },
   });
-  return { account: u!, activity };
+  const account = u!;
+  const sandbox =
+    account.appRole === 'USER' && account.cohort
+      ? await getProvisionView(id, account.cohort.id, db)
+      : null;
+  return { account, activity, sandbox };
+}
+
+/**
+ * "Create sandbox" and "Retry provisioning" on the account page (module 19 4.10): starts the build for a User who has
+ * none, or restarts a FAILED one, and runs the first step. Building or ready sandboxes are left alone.
+ */
+export async function retrySandbox(
+  actor: Actor,
+  id: string,
+  db: Db = prisma,
+): Promise<ProvisionView> {
+  const user = await loadTarget(db, actor, id);
+  await authorise(db, actor, 'account.edit', 'ACCOUNT_UPDATED', user);
+  if (user.appRole !== 'USER' || !user.cohortId || user.status === 'ARCHIVED') {
+    throw new AccountError('ACC-022');
+  }
+  await writeAccountAudit(db, {
+    actorUserId: actor.id,
+    actorRole: actor.role,
+    classroomId: user.cohortId,
+    action: 'ACCOUNT_UPDATED',
+    targetType: 'User',
+    targetId: id,
+    targetUserId: id,
+    payload: { reason: 'SANDBOX_PROVISION' },
+  });
+  return retryProvisionSandbox(user.cohortId, id, { db, budgetMs: 25_000 });
 }
 
 export async function listCohorts(actor: Actor, db: Db = prisma) {

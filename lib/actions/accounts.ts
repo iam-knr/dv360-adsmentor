@@ -8,6 +8,7 @@ import {
   deleteAccount,
   resetPassword,
   restoreAccount,
+  retrySandbox,
   revokeSessions,
   setAccountStatus,
   unlockAccount,
@@ -82,6 +83,9 @@ export async function setAccountStatusAction(id: string, event: 'disable' | 'ena
 }
 export async function unlockAccountAction(id: string) {
   return run((actor) => unlockAccount(actor, id));
+}
+export async function retrySandboxAction(id: string) {
+  return run((actor) => retrySandbox(actor, id));
 }
 export async function revokeSessionsAction(id: string) {
   return run((actor) => revokeSessions(actor, id));

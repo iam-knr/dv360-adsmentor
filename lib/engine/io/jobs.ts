@@ -6,8 +6,20 @@ import { newId } from '@/lib/db';
 
 export type StopCondition = { untilAlert?: string; untilDate?: string };
 
+/**
+ * History mode (backfill of a new or reset sandbox): the job writes once per chunk, keeps hourly rows only for the last
+ * `hourlyDays` and daily slices only for the last `sliceDays` before the end of the job. `today` is the sim date the
+ * seed treats as today, used to finish the seed once the history is there.
+ */
+export interface HistoryParams {
+  hourlyDays: number;
+  sliceDays: number;
+  today?: string;
+}
+
 export interface FastForwardParams extends StopCondition {
   simHours: number;
+  history?: HistoryParams;
 }
 
 export interface JobProgress {
@@ -83,10 +95,14 @@ export async function setJob(
   });
 }
 
-/** Unfinished fast-forward jobs, oldest first. */
-export async function openJobs(tx: Tx, limit: number): Promise<JobView[]> {
+/** Unfinished fast-forward jobs, oldest first; of one sandbox when `sandboxId` is given. */
+export async function openJobs(tx: Tx, limit: number, sandboxId?: string): Promise<JobView[]> {
   const rows = await tx.simJob.findMany({
-    where: { kind: 'FAST_FORWARD', status: { in: ['QUEUED', 'RUNNING'] } },
+    where: {
+      kind: 'FAST_FORWARD',
+      status: { in: ['QUEUED', 'RUNNING'] },
+      ...(sandboxId ? { sandboxId } : {}),
+    },
     orderBy: { createdAt: 'asc' },
     take: limit,
   });

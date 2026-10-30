@@ -100,6 +100,26 @@ export async function claimTick(
   return rows.length > 0;
 }
 
+/**
+ * History mode: claims `count` consecutive ticks in one statement. Returns the tick numbers that were not in the ledger
+ * yet (the others were applied before and are skipped, as claimTick does one by one).
+ */
+export async function claimTicks(
+  tx: Tx,
+  sandboxId: string,
+  firstTick: number,
+  count: number,
+  simStartMs: number,
+): Promise<Set<number>> {
+  const rows = await tx.$queryRaw<{ tickNo: bigint }[]>`
+    INSERT INTO "SimTickLog" ("id", "sandboxId", "tickNo", "simHour")
+    SELECT 'tl_' || ${sandboxId} || '_' || g::text, ${sandboxId}, g, ${new Date(simStartMs)}::timestamp + g * interval '1 hour'
+    FROM generate_series(${firstTick}::bigint, ${firstTick + count - 1}::bigint) AS g
+    ON CONFLICT ("sandboxId", "tickNo") DO NOTHING
+    RETURNING "tickNo"`;
+  return new Set(rows.map((r) => Number(r.tickNo)));
+}
+
 export async function finishTickLog(
   tx: Tx,
   sandboxId: string,

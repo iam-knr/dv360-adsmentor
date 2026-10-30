@@ -1,7 +1,8 @@
 // Engine runtime API (engine.md 1.6): lazy catch-up, the cron entry point, fast-forward, reset and the clock controls.
 // Everything here runs through withBypass (role app_engine). It is the only module that app/api/** imports from the
 // engine besides the types in lib/engine/index.ts.
-import { withBypass } from '@/lib/db';
+import { prisma, withBypass } from '@/lib/db';
+import { finishBackfill } from '@/lib/seed/after-history';
 import { MAX_DUE_TICKS, SPEED_PRESETS, speedAllowed } from './clock/clock';
 import {
   createJob,
@@ -9,6 +10,7 @@ import {
   openJobs,
   setJob,
   type FastForwardParams,
+  type HistoryParams,
   type JobProgress,
   type JobView,
 } from './io/jobs';
@@ -18,7 +20,7 @@ import { trimHourly } from './io/retention';
 import { nowMs } from './io/time';
 import { MS_HOUR } from './calendar';
 
-export type { JobView, FastForwardParams } from './io/jobs';
+export type { JobView, FastForwardParams, HistoryParams } from './io/jobs';
 export { SPEED_PRESETS } from './clock/clock';
 
 const TX = { timeout: 55_000, maxWait: 10_000 };
@@ -137,14 +139,35 @@ export async function ensureCaughtUp(
 
 // ---- fast-forward ---------------------------------------------------------------------------------------------------
 
+/** Runs a job; an error ends it as FAILED (a history job also fails its sandbox) so the next call does not retry forever. */
 async function runJob(job: JobView, deadline: number): Promise<JobView> {
+  try {
+    return await runJobChunks(job, deadline);
+  } catch (err) {
+    const message = (err instanceof Error ? err.message : String(err)).slice(0, 300);
+    const params = job.params as FastForwardParams;
+    await withBypass(async (tx) => {
+      await setJob(tx, job.id, { status: 'FAILED', error: message }, new Date(nowMs()));
+      if (params.history)
+        await tx.sandbox.updateMany({
+          where: { id: job.sandboxId, provisionState: 'BACKFILLING' },
+          data: { provisionState: 'FAILED', provisionError: message },
+        });
+    }).catch(() => undefined);
+    throw err;
+  }
+}
+
+async function runJobChunks(job: JobView, deadline: number): Promise<JobView> {
   const params = job.params as FastForwardParams;
   const startedAt = nowMs();
   const sandbox = await withBypass(
     (tx) => tx.sandbox.findUnique({ where: { id: job.sandboxId }, select: { status: true } }),
     TX,
   );
-  if (!sandbox || sandbox.status !== 'ACTIVE') {
+  // A class window closing freezes a sandbox, but its history is not student activity: that job goes on.
+  const runnable = sandbox?.status === 'ACTIVE' || (params.history && sandbox?.status === 'FROZEN');
+  if (!sandbox || !runnable) {
     await withBypass((tx) =>
       setJob(tx, job.id, { status: 'FAILED', error: 'Sandbox is not active' }, new Date(startedAt)),
     );
@@ -157,6 +180,8 @@ async function runJob(job: JobView, deadline: number): Promise<JobView> {
   };
   await withBypass((tx) => setJob(tx, job.id, { status: 'RUNNING' }, new Date(startedAt)));
   let stoppedBy: string | undefined;
+  // History mode keeps hourly rows and slices for the last days before the end of the job only
+  const history = params.history ? await historyWindow(job.sandboxId, params, progress) : undefined;
   while (progress.doneTicks < params.simHours && nowMs() < deadline && !stoppedBy) {
     const count = Math.min(BATCH_TICKS, params.simHours - progress.doneTicks);
     const r: BatchResult = await withBypass(
@@ -166,6 +191,7 @@ async function runJob(job: JobView, deadline: number): Promise<JobView> {
           job.sandboxId,
           { kind: 'fixed', count },
           {
+            ...(history ? { history } : {}),
             stopAfterTick: ({ simDate, raised }) => {
               if (params.untilAlert && raised.includes(params.untilAlert))
                 return `alert:${params.untilAlert}`;
@@ -195,9 +221,35 @@ async function runJob(job: JobView, deadline: number): Promise<JobView> {
     if (r.ticks === 0) break;
   }
   const done = stoppedBy !== undefined || progress.doneTicks >= params.simHours;
-  if (done)
+  if (done) {
     await withBypass((tx) => setJob(tx, job.id, { status: 'DONE', progress }, new Date(nowMs())));
+    // a sandbox waiting for its history is finished here when the job ran in several calls
+    if (params.history?.today) await finishBackfill(prisma, job.sandboxId, params.history.today);
+  }
   return (await withBypass((tx) => getJob(tx, job.id), TX)) as JobView;
+}
+
+async function historyWindow(
+  sandboxId: string,
+  params: FastForwardParams,
+  progress: JobProgress,
+): Promise<{ hourlyFromMs: number; sliceFromDay: string }> {
+  const h = params.history as HistoryParams;
+  const clock = await withBypass(
+    (tx) =>
+      tx.simClock.findUniqueOrThrow({
+        where: { sandboxId },
+        select: { simStart: true, tickIndex: true },
+      }),
+    TX,
+  );
+  const endMs =
+    clock.simStart.getTime() +
+    (Number(clock.tickIndex) + params.simHours - progress.doneTicks) * MS_HOUR;
+  return {
+    hourlyFromMs: endMs - h.hourlyDays * 24 * MS_HOUR,
+    sliceFromDay: new Date(endMs - h.sliceDays * 24 * MS_HOUR).toISOString().slice(0, 10),
+  };
 }
 
 /**
@@ -208,7 +260,12 @@ async function runJob(job: JobView, deadline: number): Promise<JobView> {
 export async function fastForward(
   sandboxId: string,
   simHours: number,
-  opts: { untilAlert?: string; untilDate?: string; deadline?: number } = {},
+  opts: {
+    untilAlert?: string;
+    untilDate?: string;
+    deadline?: number;
+    history?: HistoryParams;
+  } = {},
 ): Promise<JobView> {
   if (!Number.isInteger(simHours) || simHours < 1 || simHours > 24 * 120) {
     throw new Error('simHours must be a whole number between 1 and 2880');
@@ -217,6 +274,7 @@ export async function fastForward(
     simHours,
     ...(opts.untilAlert ? { untilAlert: opts.untilAlert } : {}),
     ...(opts.untilDate ? { untilDate: opts.untilDate } : {}),
+    ...(opts.history ? { history: opts.history } : {}),
   };
   const job = await withBypass((tx) => createJob(tx, sandboxId, 'FAST_FORWARD', params), TX);
   return runJob(job, opts.deadline ?? Number.MAX_SAFE_INTEGER);
@@ -228,10 +286,22 @@ export async function advanceJobs(deadline: number): Promise<number> {
   let n = 0;
   for (const j of jobs) {
     if (nowMs() >= deadline) break;
-    await runJob(j, deadline);
+    // a failed job is recorded by runJob; the others still get their turn
+    await runJob(j, deadline).catch(() => undefined);
     n++;
   }
   return n;
+}
+
+/** Continues the unfinished fast-forward jobs of one sandbox (provisioning, welcome page). Errors are thrown. */
+export async function advanceSandboxJobs(sandboxId: string, deadline: number): Promise<JobView[]> {
+  const jobs = await withBypass((tx) => openJobs(tx, 5, sandboxId), TX);
+  const out: JobView[] = [];
+  for (const j of jobs) {
+    if (nowMs() >= deadline) break;
+    out.push(await runJob(j, deadline));
+  }
+  return out;
 }
 
 export async function getJobProgress(jobId: string): Promise<JobView | null> {
