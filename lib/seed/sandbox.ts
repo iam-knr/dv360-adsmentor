@@ -1,6 +1,7 @@
 // Provisioning of one seeded sandbox: plan, history stub and insert in a single transaction (data-model 3.1 step 2).
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { seedAudiences } from '../audiences/seed';
+import { seedPlans } from '../planning/seed';
 import { seedAppCatalog, seedResources } from '../resources/seed';
 import { seedReports } from '../reporting/seed';
 import { seedYoutube, seedYoutubeVideos } from '../youtube/seed';
@@ -147,6 +148,13 @@ export async function provisionSandbox(db: Db, input: ProvisionInput): Promise<P
             template: input.template,
             today: input.today ?? simToday(),
           });
+        // Module 04 (P4-08): twelve plans per advertiser with forecast snapshots.
+        await seedPlans(tx, {
+          sandboxId: sandbox.id,
+          template: input.template,
+          seedValue: input.seedValue,
+          today: input.today ?? simToday(),
+        });
         return inserted;
       },
       { timeout: 300_000, maxWait: 30_000 },

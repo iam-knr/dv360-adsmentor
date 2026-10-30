@@ -1,7 +1,11 @@
-import { StubPage } from '@/components/shell/StubPage';
+import { CrossMediaListRoute } from '@/components/planning/pages/CrossMediaRoutes';
 
 export const metadata = { title: 'Cross-media reach' };
 
-export default function Page() {
-  return <StubPage module="04" title="Cross-media reach" view="REP" />;
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ partnerId: string; advertiserId?: string; reportId?: string }>;
+}) {
+  return <CrossMediaListRoute params={await params} />;
 }
