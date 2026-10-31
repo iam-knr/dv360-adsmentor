@@ -46,6 +46,30 @@ export interface RunDueResult {
   jobs: number;
 }
 
+/** Longest debt a running clock keeps: 7 simulated days. Time beyond it, while nobody used the sandbox, is not owed. */
+export const MAX_OWED_TICKS = 7 * 24;
+
+/**
+ * An abandoned sandbox must not come back owing months of ticks (load protection, docs/gaps/sim-clock-runs.md): debt
+ * above `MAX_OWED_TICKS` is forgiven by moving the accounting point forward, like paused time. What remains is caught up
+ * in chunks of at most `MAX_TICKS_PER_CALL` per call.
+ */
+export async function forgiveStaleDebt(sandboxId: string, now: number): Promise<boolean> {
+  const n = await withBypass(
+    (tx) =>
+      tx.$executeRaw`
+        UPDATE "SimClock"
+        SET "lastAdvanceRealAt" = ${new Date(now)}::timestamp
+              - ("minutesPerSimDay" * 2.5 * ${MAX_OWED_TICKS}) * interval '1 second',
+            "remainderMs" = 0
+        WHERE "sandboxId" = ${sandboxId} AND "state" = 'RUNNING' AND "lastAdvanceRealAt" IS NOT NULL
+          AND (EXTRACT(EPOCH FROM (${new Date(now)}::timestamp - "lastAdvanceRealAt")) * 1000 + "remainderMs")
+              > "minutesPerSimDay" * 2500 * ${MAX_OWED_TICKS}`,
+    TX,
+  );
+  return n > 0;
+}
+
 async function runSandboxDue(
   sandboxId: string,
   now: number,
@@ -53,6 +77,7 @@ async function runSandboxDue(
   deadline: number,
 ): Promise<{ ticks: number; busy: boolean }> {
   let ticks = 0;
+  await forgiveStaleDebt(sandboxId, now).catch(() => false);
   while (ticks < maxTicks && nowMs() < deadline) {
     const r: BatchResult = await withBypass(
       (tx) =>
@@ -86,11 +111,17 @@ async function recordFailure(sandboxId: string, error: unknown): Promise<void> {
  */
 export async function runDueTicks(
   deadline: number,
-  opts: { now?: number; maxSandboxes?: number; concurrency?: number } = {},
+  opts: {
+    now?: number;
+    maxSandboxes?: number;
+    concurrency?: number;
+    /** Only sandboxes whose owner was seen within this many ms (load protection); undefined = every sandbox. */
+    activeWithinMs?: number;
+  } = {},
 ): Promise<RunDueResult> {
   const now = opts.now ?? nowMs();
   const ids = await withBypass(
-    (tx) => listDueSandboxes(tx, now, opts.maxSandboxes ?? MAX_SANDBOXES_PER_CALL),
+    (tx) => listDueSandboxes(tx, now, opts.maxSandboxes ?? MAX_SANDBOXES_PER_CALL, opts.activeWithinMs),
     TX,
   );
   const result: RunDueResult = { processed: 0, ticks: 0, failed: 0, busy: 0, stillDue: 0, jobs: 0 };
@@ -115,7 +146,7 @@ export async function runDueTicks(
   await Promise.all(Array.from({ length: opts.concurrency ?? CONCURRENCY }, worker));
   // queued fast-forwards continue with the time that is left
   if (nowMs() < deadline) result.jobs = await advanceJobs(deadline);
-  result.stillDue = await withBypass((tx) => countDueSandboxes(tx, now), TX);
+  result.stillDue = await withBypass((tx) => countDueSandboxes(tx, now, opts.activeWithinMs), TX);
   return result;
 }
 

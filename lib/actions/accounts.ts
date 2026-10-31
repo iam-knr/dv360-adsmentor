@@ -9,6 +9,7 @@ import {
   deleteAccount,
   resetPassword,
   rebuildSandbox,
+  setSandboxClockRunning,
   restoreAccount,
   retrySandbox,
   revokeSessions,
@@ -89,6 +90,10 @@ export async function unlockAccountAction(id: string) {
 }
 export async function rebuildSandboxAction(id: string) {
   return run((actor) => rebuildSandbox(actor, id));
+}
+
+export async function setSandboxClockAction(id: string, running: boolean) {
+  return run((actor) => setSandboxClockRunning(actor, id, running));
 }
 
 export async function retrySandboxAction(id: string) {

@@ -115,7 +115,9 @@ describe('build', () => {
     expect(sb).toMatchObject({ provisionState: 'READY', resetCount: 0, provisionError: null });
     const clock = await prisma.simClock.findUniqueOrThrow({ where: { sandboxId } });
     expect(Number(clock.tickIndex)).toBe(90 * 24);
-    expect(clock.state).toBe('PAUSED');
+    // a finished build runs (docs/gaps/sim-clock-runs.md); it used to end PAUSED
+    expect(clock.state).toBe('RUNNING');
+    expect(clock.minutesPerSimDay).toBe(10);
     const grant = await prisma.userAccessGrant.findFirst({
       where: { userId: id, sandboxId, partnerId: partnerIdOf(sandboxId), advertiserId: null },
     });

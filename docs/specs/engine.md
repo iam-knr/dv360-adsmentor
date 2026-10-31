@@ -65,6 +65,16 @@ Speed rules
 - Speed can be changed per classroom and overridden per sandbox. A change takes effect from the next due calculation.
 - The UI date picker shows sim dates. "Today" for every list page is `floor(simNow)` in the advertiser time zone; "Yesterday" is the previous sim day. Data for the current sim day is partial (ticks so far).
 
+#### Defaults of a student sandbox (sim-clock-runs, 31 Oct 2026)
+
+Owner decision: student sandboxes **run** at one fixed speed; the instructor time controls are dropped and students have no controls.
+
+- A sandbox reaches READY with its clock `RUNNING`, `minutesPerSimDay = 10` (1 simulated day per 10 real minutes, shown as `144x` in the header chip), `lastAdvanceRealAt = now`, `remainderMs = 0` (the history was built by the fast-forward job, so there is no catch-up debt). The speed is the `AppMeta` key `sandbox:minutes-per-sim-day`, else the env `SANDBOX_SIM_MINUTES_PER_DAY`, else 10; a value must be a whole number from 2 to 1440 (the tick cap of 12 per minute), anything else is ignored.
+- Sandboxes that were READY and `PAUSED` since provisioning are resumed **once** by `prisma/bootstrap/30-sandbox-clocks.bootstrap.ts` (every deploy; the marker `sandbox-clock:resumed-existing:v1`). The same step re-applies the configured speed to running clocks.
+- A **Super admin pause** (account page, Sandbox section) writes `sandbox-clock:admin-paused:<sandboxId>` in `AppMeta`; the READY hook, the deploy-time resume and the timer all respect it. Only the Super admin's Resume (or a rebuild) clears it. Both actions are audited (`SANDBOX_PAUSED`, `SANDBOX_RESUMED`).
+- **Load protection.** The timer (`POST /api/sim/engine/tick`) and `maybeAdvance` work only for sandboxes whose owner was seen (`User.lastSeenAt`) within 7 days (`SANDBOX_ACTIVE_WINDOW_DAYS`, 1 to 90); other sandboxes wait until the student returns, and the student's own page load catches them up (`ensureCaughtUp`, 6 ticks, 800 ms). A catch-up call runs at most `MAX_TICKS_PER_CALL = 96` ticks per sandbox, and debt above `MAX_OWED_TICKS = 168` (7 simulated days) is forgiven like paused time (`forgiveStaleDebt`), so a long abandoned sandbox returns in at most two chunks and never as one burst.
+- The pacing allocation gives a line item that has never delivered a probe share (10%) of its insertion order's hourly allowance (`PROBE_SHARE`, `tick.ts`); see `docs/gaps/sim-clock-runs.md` for why.
+
 ### 1.3 Determinism
 
 Rules every engine module must follow (enforced by an ESLint rule `no-restricted-globals`: `Math.random`, `Date.now`, `new Date()` without argument, `performance.now` in `lib/engine/**` except `io/` and `testing/`):
