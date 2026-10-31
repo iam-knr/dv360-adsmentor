@@ -22,6 +22,21 @@ async function planWorld(tag: string, role?: 'READ_ONLY' | 'REPORTING_ONLY') {
     where: { sandboxId: world.sandboxId },
     data: { state: 'PAUSED', tickIndex: 0 },
   });
+  // a sandbox that was seeded keeps the Cross-media Welcome screen when it has no report (plan-fix2 #1: an unseeded one is
+  // healed on the first visit); this fixture starts empty on purpose, so mark it as seeded
+  const owner = await db.sandbox.findUniqueOrThrow({
+    where: { id: world.sandboxId },
+    select: { ownerUserId: true },
+  });
+  if (owner.ownerUserId)
+    await db.userPreference.create({
+      data: {
+        sandboxId: world.sandboxId,
+        userId: owner.ownerUserId,
+        key: 'seed:cross-media-reports',
+        value: true,
+      },
+    });
   // the shell fixture has no plans: write the starter ones for sim day 0 (2026-01-01)
   await seedPlans(db, {
     sandboxId: world.sandboxId,
@@ -500,7 +515,7 @@ test('PW-04-7: the New plan wizard saves every answer; they survive a reload', a
   await page.getByRole('combobox', { name: 'Age from' }).click();
   await page.getByRole('option', { name: '25', exact: true }).click();
   await page.getByRole('combobox', { name: 'Age to' }).click();
-  await page.getByRole('option', { name: '45', exact: true }).click();
+  await page.getByRole('option', { name: '44', exact: true }).click();
   await page.getByRole('checkbox', { name: 'Male', exact: true }).uncheck();
   await page.getByRole('textbox', { name: 'Sub-location' }).fill('Victoria');
   await page.getByRole('button', { name: 'Next: Add products' }).click();
@@ -511,7 +526,7 @@ test('PW-04-7: the New plan wizard saves every answer; they survive a reload', a
     await expect(page.getByRole('combobox', { name: 'Location' })).toContainText('Australia');
     await expect(page.getByRole('group', { name: 'Dates' })).toContainText('Mar 2 - 29, 2026');
     await expect(page.getByRole('button', { name: /On-target demographics/ })).toContainText(
-      'Female',
+      'Female, 25 - 44',
     );
     await expect(page.getByText('Currency: AUD')).toBeVisible();
   };
@@ -620,7 +635,7 @@ test('PW-04-8: every kind of field is edited, saved and still there after a relo
       'Female',
     );
     await expect(page.getByText('Row edited', { exact: true })).toHaveCount(1);
-    await expect(page.getByText('Copy of Row edited')).toHaveCount(1);
+    await expect(page.getByText('Copy of Row edited', { exact: true })).toHaveCount(1);
     await expect(page.getByText('Row to delete')).toHaveCount(0);
     await expect(page.getByText('Open auction display')).toBeVisible();
     await expect(page.getByText('Open auction video')).toBeVisible();
@@ -700,7 +715,7 @@ test('PW-04-9: Archive hides a plan behind the Archived filter, Restore brings i
   expect(rows.find((r) => r.dimension === 'KEYWORD')?.valueText).toBe('trail running');
 });
 
-test('PW-04-9 (plan-fix2): rows follow plan edits, 100% budget share, Max CPM warning, Copy on the first click, trafficked state', async ({
+test('PW-04-10 (plan-fix2): rows follow plan edits, 100% budget share, Max CPM warning, Copy on the first click, trafficked state', async ({
   page,
 }) => {
   await signIn(page);
