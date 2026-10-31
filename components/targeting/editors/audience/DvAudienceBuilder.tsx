@@ -1,9 +1,12 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
 import {
   AUDIENCE_MESSAGES,
@@ -24,6 +27,42 @@ import { advertiserPath } from '@/lib/routes/paths';
 import { AudiencePicker, type PickerCategory } from './AudiencePicker';
 import { ImpressionsSummaryPane } from './ImpressionsSummaryPane';
 import { allItems, useAudienceCatalogue, type CatalogueItem } from './useAudienceCatalogue';
+
+/** Create menu of the Custom lists section: the three create forms open in a new tab so the line item draft stays. */
+function CreateCustomList({ base }: { base: string | null }) {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const items = [
+    { label: 'Custom affinity', href: `${base}/customaudience/affinity/new` },
+    { label: 'Custom intent (Display, Video)', href: `${base}/customaudience/intent/new?surface=display` },
+    { label: 'Custom intent (YouTube)', href: `${base}/customaudience/intent/new?surface=youtube` },
+  ];
+  return (
+    <>
+      <Button
+        size="small"
+        disabled={!base}
+        aria-haspopup="menu"
+        onClick={(e) => setAnchor(e.currentTarget)}
+      >
+        Create
+      </Button>
+      <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)}>
+        {items.map((i) => (
+          <MenuItem
+            key={i.label}
+            component="a"
+            href={i.href}
+            target="_blank"
+            rel="noopener"
+            onClick={() => setAnchor(null)}
+          >
+            {i.label}
+          </MenuItem>
+        ))}
+      </Menu>
+    </>
+  );
+}
 
 /** Apply is blocked while the same list is on both sides (TGT-100). */
 export function audienceError(lists: AudienceLists | undefined): string | null {
@@ -95,6 +134,9 @@ export function DvAudienceBuilder({ criteria, onChange, lineItemType, readOnly }
   const issues = audienceIssues(lists, type, meta);
   const name = (id: string) => byId.get(id)?.name ?? id;
 
+  const pathname = usePathname();
+  const m = /^\/p\/(\d+)\/a\/(\d+)/.exec(pathname ?? '');
+  const base = m ? `/p/${m[1]}/a/${m[2]}` : null;
   const open = (target: PickTarget, title: string, source: SectionDef['source']) => {
     setError(null);
     setPicking({ target, title, source });
@@ -108,10 +150,13 @@ export function DvAudienceBuilder({ criteria, onChange, lineItemType, readOnly }
   };
   const remove = (ref: AudienceRef) => set(removeAudience(lists, ref));
 
+  // Links for the empty-state "create" hints of the picker; the Create menu itself is CreateCustomList above.
   const link = (...seg: string[]) =>
     ctx.partnerPublicId && ctx.advertiserPublicId
       ? advertiserPath(ctx.partnerPublicId, ctx.advertiserPublicId, ...seg)
-      : undefined;
+      : base
+        ? `${base}/${seg.join('/')}`
+        : undefined;
   const createAffinity = link('customaudience', 'affinity', 'new');
   const createIntentDv = link('customaudience', 'intent', 'new');
   const createIntentYt = link('customaudience', 'intent', 'new');
@@ -169,18 +214,7 @@ export function DvAudienceBuilder({ criteria, onChange, lineItemType, readOnly }
           </Typography>
         </Box>
         {def.target.section === 'CUSTOM' && def.target.side === 'INCLUDE' ? (
-          <Button
-            size="small"
-            component="a"
-            href={createAffinity}
-            target="_blank"
-            rel="noreferrer"
-            disabled={!createAffinity}
-            title="Create a custom list in the Audiences module"
-            aria-label="Create a custom list"
-          >
-            Create
-          </Button>
+          <CreateCustomList base={base} />
         ) : null}
         <Button
           size="small"

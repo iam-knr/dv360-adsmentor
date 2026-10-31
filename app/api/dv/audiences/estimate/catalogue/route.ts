@@ -43,7 +43,7 @@ export async function GET(req: Request) {
       name: r.name,
       path: `${TYPE_PATH[r.type] ?? r.type} » ${r.name}`,
       meta,
-      subtype: r.type === 'PARTNER' || r.type.startsWith('CUSTOM_') ? r.type : meta.kind,
+      subtype: r.type === 'PARTNER' ? 'PARTNER' : meta.kind === 'CUSTOM' ? r.type : meta.kind,
     };
   });
   const google: CatalogueItem[] = GOOGLE_AUDIENCES.map((g) => ({

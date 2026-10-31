@@ -68,16 +68,16 @@ describe('AudiencePicker: custom lists (module 10 2.5, module 14 S2)', () => {
     expect(within(list).getByText('CUSTOM_AFFINITY » Gadget fans')).toBeInTheDocument();
   });
 
-  it('offers Custom affinity and Custom intent (Display and Video) with counts, and hides YouTube intent on Display', async () => {
+  it('offers Custom affinity and Custom intent (Display, Video) with counts, and hides YouTube intent on Display', async () => {
     const user = userEvent.setup();
     renderDv(<Harness />);
     await user.click(screen.getByRole('combobox', { name: 'Audience type' }));
-    expect(await screen.findByRole('option', { name: 'Custom affinity (2)' })).toBeInTheDocument();
+    expect(await screen.findByRole('option', { name: 'Custom affinity' })).toBeInTheDocument();
     expect(
-      screen.getByRole('option', { name: 'Custom intent (Display and Video) (1)' }),
+      screen.getByRole('option', { name: 'Custom intent (Display, Video)' }),
     ).toBeInTheDocument();
     // the YouTube list is not eligible for a Display line item (TGT-101), so it is not listed
-    expect(screen.getByRole('option', { name: 'Custom intent (YouTube) (0)' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Custom intent (YouTube)' })).toBeInTheDocument();
     expect(screen.queryByText('Phone review viewers')).toBeNull();
   });
 
@@ -94,7 +94,7 @@ describe('AudiencePicker: custom lists (module 10 2.5, module 14 S2)', () => {
     const user = userEvent.setup();
     renderDv(<Harness />);
     await user.click(screen.getByRole('combobox', { name: 'Audience type' }));
-    await user.click(await screen.findByRole('option', { name: 'Custom affinity (2)' }));
+    await user.click(await screen.findByRole('option', { name: 'Custom affinity' }));
     const list = screen.getByRole('group', { name: 'Audiences' });
     expect(within(list).queryByText('Buying a phone')).toBeNull();
     expect(within(list).getAllByRole('checkbox')).toHaveLength(2);
@@ -104,7 +104,7 @@ describe('AudiencePicker: custom lists (module 10 2.5, module 14 S2)', () => {
     const user = userEvent.setup();
     renderDv(<Harness items={ITEMS.filter((i) => i.subtype !== 'CUSTOM_AFFINITY')} />);
     await user.click(screen.getByRole('combobox', { name: 'Audience type' }));
-    await user.click(await screen.findByRole('option', { name: 'Custom affinity (0)' }));
+    await user.click(await screen.findByRole('option', { name: 'Custom affinity' }));
     expect(screen.getByText(/No Custom affinity lists yet/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Create a custom affinity list' })).toHaveAttribute(
       'href',

@@ -272,17 +272,23 @@ test('PW-10-07: the audience picker offers Custom affinity and Custom intent and
   await page.getByRole('button', { name: 'Add targeting' }).click();
   await page.getByRole('menuitem', { name: /Audience lists/ }).click();
   const editor = page.getByRole('dialog').last();
-  // the Create link of the Custom lists section points at the Audiences module forms
-  await expect(editor.getByRole('link', { name: 'Create a custom list' })).toHaveAttribute(
+  // the Create menu of the Custom lists section links to the three Audiences forms
+  await editor.getByRole('button', { name: 'Create', exact: true }).click();
+  await expect(page.getByRole('menuitem', { name: 'Custom affinity' })).toHaveAttribute(
     'href',
     /customaudience\/affinity\/new/,
   );
+  await expect(page.getByRole('menuitem', { name: 'Custom intent (YouTube)' })).toHaveAttribute(
+    'href',
+    /surface=youtube/,
+  );
+  await page.keyboard.press('Escape');
   await editor.getByRole('button', { name: 'Select Custom lists' }).click();
   const picker = page.getByRole('dialog').last();
   await picker.getByRole('combobox', { name: 'Audience type' }).click();
-  await expect(page.getByRole('option', { name: 'Custom affinity (1)' })).toBeVisible();
+  await expect(page.getByRole('option', { name: 'Custom affinity' })).toBeVisible();
   await expect(
-    page.getByRole('option', { name: 'Custom intent (Display and Video) (1)' }),
+    page.getByRole('option', { name: 'Custom intent (Display, Video)' }),
   ).toBeVisible();
   // the YouTube intent list is not offered to a Display line item
   await expect(page.getByRole('option', { name: /Custom intent \(YouTube\)/ })).toHaveCount(0);

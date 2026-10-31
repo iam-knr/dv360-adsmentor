@@ -36,7 +36,7 @@ export const SUBTYPE_LABEL: Record<string, string> = {
   COMBINED: 'Combined',
   CUSTOM: 'Custom',
   CUSTOM_AFFINITY: 'Custom affinity',
-  CUSTOM_INTENT_DISPLAY_VIDEO: 'Custom intent (Display and Video)',
+  CUSTOM_INTENT_DISPLAY_VIDEO: 'Custom intent (Display, Video)',
   CUSTOM_INTENT_YOUTUBE: 'Custom intent (YouTube)',
 };
 
@@ -72,7 +72,6 @@ export function AudiencePicker({
     const fixed = categories.map((c) => c.value);
     return [...fixed, ...[...present].filter((t) => !fixed.includes(t))];
   }, [eligible, categories]);
-  const countOf = (t: string) => eligible.filter((i) => i.subtype === t).length;
   const category = categories.find((c) => c.value === type);
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -104,7 +103,7 @@ export function AudiencePicker({
                 { value: 'ALL', label: 'All types' },
                 ...types.map((t) => ({
                   value: t,
-                  label: `${SUBTYPE_LABEL[t] ?? t} (${countOf(t)})`,
+                  label: SUBTYPE_LABEL[t] ?? t,
                 })),
               ]}
             />
