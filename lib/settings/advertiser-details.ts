@@ -78,7 +78,7 @@ export interface AdvertiserDetails {
   partnerDataTermsAccepted: boolean;
   version: number;
   canEdit: boolean; // STANDARD and ADMIN
-  canEditAdmin: boolean; // ad server, third-party services, business name, integration code
+  canEditAdmin: boolean; // ad server, attribution, third-party services
   canSchedule: boolean; // ADMIN
   limitedAccess: boolean;
 }
@@ -187,13 +187,11 @@ export interface UpdateAdvertiserInput {
 
 type Stored = Awaited<ReturnType<typeof loadAdvertiser>>;
 
-/** Fields a STANDARD user may not change (RC-047 limits STANDARD to the first group; module 03 4.2 says ADM for the panels). */
+/** Fields a STANDARD user may not change: the ad server and attribution panel and the third-party services panel (module 03 4.2 says ADM). Business name and integration code have no engine effect and are STANDARD too (adv-details-fix). */
 function adminOnlyChanged(a: Stored, i: UpdateAdvertiserInput): boolean {
   return (
     a.adServer !== i.adServer ||
     (a.floodlightGroupId ?? null) !== (i.attributionFloodlightGroupId ?? null) ||
-    (a.ytBusinessName ?? '') !== (i.businessName ?? '') ||
-    (a.integrationCode ?? '') !== (i.integrationCode ?? '') ||
     Number(a.iasClientId) !== Number(i.iasClientId)
   );
 }

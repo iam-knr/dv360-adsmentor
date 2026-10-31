@@ -170,9 +170,17 @@ describe('updateAdvertiser', () => {
       inputOf(d, { adServer: 'CM360_HYBRID' }),
     );
     expect(res).toMatchObject({ ok: false, code: 'FORBIDDEN' });
+    // Business name and integration code have no engine effect: STANDARD may change them.
     expect(
-      await updateAdvertiser(userFor(w), w.advertiserId, inputOf(d, { integrationCode: 'abc' })),
-    ).toMatchObject({ ok: false, code: 'FORBIDDEN' });
+      (
+        await updateAdvertiser(
+          userFor(w),
+          w.advertiserId,
+          inputOf(d, { integrationCode: 'std-code', businessName: 'Std Biz' }),
+        )
+      ).ok,
+    ).toBe(true);
+    expect(await details()).toMatchObject({ integrationCode: 'std-code', businessName: 'Std Biz' });
     const ok = await updateAdvertiser(
       adminFor(w),
       w.advertiserId,
