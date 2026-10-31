@@ -91,6 +91,20 @@ export function planRowIssues(v: PlanRowValues, i: number): Issue[] {
 export const planRowCapIssues = (count: number): Issue[] =>
   count > PLAN_PARAMS.maxRows ? [issue('PLN-026', 'rows', PLN_MSG.ROW_CAP)] : [];
 
+export type PlanLockReason = 'DATE_PASSED' | 'TRAFFICKED' | 'ARCHIVED';
+
+/**
+ * Why a plan is read-only. "Your start date has passed" is only true when the start date is before sim today
+ * (`locked`, computed on the server from the sandbox clock); a plan turned into a campaign is Trafficked, an archived
+ * one is Archived (plan-fix2 #7: a converted plan used to claim its start date had passed).
+ */
+export function planLockReason(p: { locked: boolean; status: string }): PlanLockReason | null {
+  if (p.locked) return 'DATE_PASSED';
+  if (p.status === 'TRAFFICKED') return 'TRAFFICKED';
+  if (p.status === 'ARCHIVED') return 'ARCHIVED';
+  return null;
+}
+
 export function lockedIssue(): Issue {
   return issue('PLN-002', '*', `${PLN_MSG.LOCKED}. ${PLN_MSG.LOCKED_HINT}`);
 }

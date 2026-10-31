@@ -152,7 +152,6 @@ export function TemplateForm({
           required
           value={value.name}
           maxLength={240}
-          hint={`${value.name.length} / 240`}
           readOnly={!canWrite}
           error={errors.name ?? ''}
           onChange={(name) => set({ name })}
@@ -163,7 +162,6 @@ export function TemplateForm({
           rows={3}
           value={value.description}
           maxLength={600}
-          hint={`${value.description.length} / 600`}
           readOnly={!canWrite}
           error={errors.description ?? ''}
           onChange={(description) => set({ description })}

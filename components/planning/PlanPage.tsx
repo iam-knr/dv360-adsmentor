@@ -47,8 +47,10 @@ import {
   type Gender,
   type PlanDemographics,
 } from '@/lib/planning/countries';
+import { inheritRows } from '@/lib/planning/inherit';
 import { planPagePath, plansListPath } from '@/lib/planning/paths';
-import { PLN_MSG } from '@/lib/planning/rules';
+import { fmtMoney } from '@/lib/planning/table';
+import { PLN_MSG, planLockReason } from '@/lib/planning/rules';
 import type { PlanCampaignChoice } from '@/lib/planning/service';
 import {
   INVENTORY_QUALITY_LABEL,
@@ -119,6 +121,21 @@ const bracketsOf = (d: PlanDemographics): string[] =>
     (b) => d.ageMin <= (BRACKET_HIGH[b] as number) && d.ageMax >= (BRACKET_LOW[b] as number),
   );
 
+/** DV360 warns when a Max. CPM is below what the line item is expected to cost: it will not spend all of its budget. */
+export function cpmWarningsOf(rows: PlanRowDto[], f: PlanForecast | null, cur: string): string[] {
+  if (!f) return [];
+  const out: string[] = [];
+  for (const r of rows) {
+    const pr = f.perRow[r.id];
+    if (!pr || pr.expectedSpendPct === undefined || pr.expectedSpendPct >= 100) continue;
+    if (r.maxCpm === null || r.maxCpm === undefined) continue;
+    out.push(
+      `${r.name || 'Line item'}: Max. CPM ${fmtMoney(r.maxCpm, cur)} is below the expected CPM ${fmtMoney(pr.avgCost, cur)}. About ${Math.round(pr.expectedSpendPct)}% of the budget is expected to be spent.`,
+    );
+  }
+  return out;
+}
+
 const savedLabel = (plan: PlanDto): string => {
   if (!plan.savedAt) return 'Not saved yet';
   const n = daysBetween(plan.savedAt.slice(0, 10), plan.simToday);
@@ -168,6 +185,19 @@ export function PlanPage({
   const stale = editable && (dirty || plan.stale) && draft.rows.length > 0;
   const cur = plan.header.currencyCode;
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
+  // Rows follow the plan's location and dates unless they were changed on the row itself (plan-fix2 #2)
+  const setHeader = (patch: Partial<Pick<Draft, 'location' | 'start' | 'end'>>) =>
+    setDraft((d) => {
+      const next = { ...d, ...patch };
+      return {
+        ...next,
+        rows: inheritRows(
+          d.rows,
+          { start: d.start, end: d.end, location: d.location },
+          { start: next.start, end: next.end, location: next.location },
+        ),
+      };
+    });
 
   // Fee is the plan default for new rows; existing rows keep theirs.
   const defaultFee = plan.rows[0]?.feePct ?? 0.1;
@@ -402,16 +432,18 @@ export function PlanPage({
     header: { ...plan.header, demographics: draft.demographics, currencyCode: cur },
   };
 
+  const lockReason = planLockReason(plan);
+  // Only a start date before sim today empties the forecast; a trafficked or archived plan keeps showing its forecast.
   const lockedEmpty = (
     <DvEmptyState
       icon="refresh"
       variant="icon"
-      title="Your start date has passed"
+      title={PLN_MSG.LOCKED}
       message="Make a copy of this plan with new dates to work on it again."
       action={{ label: 'Make a copy', onClick: openCopy }}
     />
   );
-  const detailEmpty = locked ? (
+  const detailEmpty = lockReason === 'DATE_PASSED' ? (
     lockedEmpty
   ) : draft.rows.length === 0 ? (
     <DvEmptyState variant="inline" message="Add a plan line item to see a forecast" />
@@ -426,6 +458,8 @@ export function PlanPage({
     ),
   };
 
+  const shown = preview ?? plan.forecast;
+  const cpmWarnings = cpmWarningsOf(draft.rows, shown, cur);
   const country = planCountry(draft.location);
   const showDemo = demographicsLabel(draft.demographics);
 
@@ -545,7 +579,7 @@ export function PlanPage({
               label: c.name,
               secondLine: c.currency,
             }))}
-            onChange={(location) => set({ location })}
+            onChange={(location) => setHeader({ location })}
           />
         </Box>
         <PlanDateRange
@@ -555,7 +589,7 @@ export function PlanPage({
           today={plan.simToday}
           disabled={!editable}
           error={errors['dates.start'] ?? errors['dates.end']}
-          onChange={(start, end) => set({ start, end })}
+          onChange={(start, end) => setHeader({ start, end })}
         />
         <Box>
           <Typography variant="caption" color="text.secondary" component="div">
@@ -645,6 +679,11 @@ export function PlanPage({
             {errors.rows}
           </Typography>
         ) : null}
+        {cpmWarnings.map((w) => (
+          <DvBanner key={w} kind="warning" level="inline">
+            {w}
+          </DvBanner>
+        ))}
         <PlanTable
           plan={tablePlan}
           rows={tableRows}

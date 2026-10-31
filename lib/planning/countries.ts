@@ -172,10 +172,11 @@ export interface PlanDemographics {
   ageMax: number;
 }
 
+/** "All people": every gender (unknown included) and every bracket, 18 to 65+ (stored as 120, like the editor's 65+). */
 export const DEFAULT_DEMOGRAPHICS: PlanDemographics = {
   genders: ['MALE', 'FEMALE', 'UNKNOWN'],
   ageMin: 18,
-  ageMax: 64,
+  ageMax: 120,
 };
 
 const BRACKET_RANGE: Record<AgeBracket, [number, number]> = {
@@ -205,11 +206,13 @@ export function demoShare(d: PlanDemographics): number {
 export const ageShare = (b: AgeBracket): number => AGE_SHARE[b];
 export const genderShare = (g: Gender): number => GENDER_SHARE[g];
 
-/** "Male and Female, 25 - 64" (explore 13). */
+/** "All people, 18 - 65+" or "Male and Female, 25 - 64" (explore 13). One label for the wizard, the editor, the CSV. */
 export function demographicsLabel(d: PlanDemographics): string {
   const known = d.genders.filter((g) => g !== 'UNKNOWN');
-  const sex =
-    known.length === 2 || known.length === 0
+  const all = d.genders.includes('UNKNOWN') && known.length === 2;
+  const sex = all
+    ? 'All people'
+    : known.length === 2 || known.length === 0
       ? 'Male and Female'
       : known[0] === 'MALE'
         ? 'Male'

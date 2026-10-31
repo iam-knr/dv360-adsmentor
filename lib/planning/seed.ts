@@ -437,5 +437,22 @@ export async function seedCrossMediaReports(
     });
     made++;
   }
+  await markCrossMediaSeeded(tx, input.sandboxId, input.ownerUserId);
   return made;
+}
+
+/** Key of the "Cross-media reports were seeded" marker (a deleted report must not bring the seed back). */
+export const CROSS_MEDIA_SEEDED_KEY = 'seed:cross-media-reports';
+
+export async function markCrossMediaSeeded(
+  tx: Db,
+  sandboxId: string,
+  userId: string | null,
+): Promise<void> {
+  if (!userId) return;
+  await tx.userPreference.upsert({
+    where: { userId_sandboxId_key: { userId, sandboxId, key: CROSS_MEDIA_SEEDED_KEY } },
+    create: { userId, sandboxId, key: CROSS_MEDIA_SEEDED_KEY, value: true },
+    update: { value: true },
+  });
 }

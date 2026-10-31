@@ -109,7 +109,12 @@ export function forecastRowData(
     viewableCpm: f.viewableCpm,
     viewabilityRate: f.viewabilityRate,
     perRow: f.perRow as unknown as Prisma.InputJsonValue,
-    curves: { reach: f.reach, budget: f.budget, impressions: f.impressions },
+    curves: {
+      reach: f.reach,
+      budget: f.budget,
+      plannedBudget: f.plannedBudget ?? f.budget,
+      impressions: f.impressions,
+    },
     reachByFrequency: f.reachByFrequency,
     tabs: f.tabs,
     inputsHash: f.inputsHash,
@@ -117,7 +122,12 @@ export function forecastRowData(
 }
 
 export function forecastFromRow(r: PlanForecastRow): PlanForecast {
-  const curves = (r.curves ?? {}) as { reach?: number; budget?: number; impressions?: number };
+  const curves = (r.curves ?? {}) as {
+    reach?: number;
+    budget?: number;
+    plannedBudget?: number;
+    impressions?: number;
+  };
   return {
     asOf: r.asOf.toISOString(),
     reachPct: num(r.onTargetReachPct),
@@ -139,6 +149,7 @@ export function forecastFromRow(r: PlanForecastRow): PlanForecast {
     viewabilityRate: r.viewabilityRate == null ? null : num(r.viewabilityRate),
     reachByFrequency: (r.reachByFrequency ?? []) as number[],
     budget: curves.budget ?? 0,
+    ...(curves.plannedBudget === undefined ? {} : { plannedBudget: curves.plannedBudget }),
     impressions: curves.impressions ?? 0,
     perRow: (r.perRow ?? {}) as unknown as PlanForecast['perRow'],
     tabs: (r.tabs ?? {}) as unknown as PlanForecast['tabs'],
