@@ -21,6 +21,9 @@ export const ACC = {
   'ACC-060': 'Select 100 accounts or fewer.',
   'ACC-061': 'Type DELETE to confirm.',
   'ACC-063': 'Generate passwords when you reset more than 25 accounts.',
+  'SEC-001': 'This account is not suspended.',
+  'SEC-002': 'Screenshot settings apply to students only.',
+  'SEC-003': 'Unknown screenshot method.',
   FORBIDDEN: "You don't have access to this.",
 } as const;
 

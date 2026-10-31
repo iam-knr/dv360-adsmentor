@@ -1,0 +1,21 @@
+// Screenshot guard (docs/gaps/screenshot-guard.md). One row per recognised screenshot attempt of a guarded student.
+// Global table (no sandboxId): it is read by the Super admin only, through the owner connection like AuditLog.
+// Only the recognised event is stored (method, page path, time); no keystrokes are ever stored.
+model SecurityEvent {
+  id           String    @id @default(cuid())
+  userId       String
+  kind         String    @default("SCREENSHOT")
+  method       String
+  path         String
+  occurredAt   DateTime  @default(now())
+  /// first time a Super admin opened the security page after this event (drives the unread badge)
+  seenAt       DateTime?
+  /// null while the suspension is open
+  restoredAt   DateTime?
+  restoredById String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([restoredAt, occurredAt])
+  @@index([userId, occurredAt])
+}

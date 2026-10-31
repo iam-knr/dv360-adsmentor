@@ -2,6 +2,8 @@
 export const SIM_001 = 'Incorrect email or password.';
 export const SIM_010 = 'Class has ended. Your work is saved.';
 export const ACC_070 = 'Your account is disabled. Contact your admin.';
+export const ACC_SUSPENDED =
+  'Access suspended. A screenshot attempt was detected. Contact your administrator.';
 export const ACC_074 = 'You were signed out because this account signed in on another device.';
 export const ACC_075 = 'Your session expired. Sign in again.';
 export const ACC_013 = 'The passwords do not match.';
@@ -41,8 +43,9 @@ export const acc071 = (startsAt: Date, timeZone?: string) =>
 export const acc072 = (endedAt: Date, timeZone?: string) =>
   `Your access ended on ${formatDate(endedAt, timeZone)}. Contact your admin.`;
 
-export type SessionEndReason = 'idle' | 'absolute' | 'revoked' | 'other-device';
+export type SessionEndReason = 'idle' | 'absolute' | 'revoked' | 'other-device' | 'suspended';
 
 export function sessionEndMessage(reason: string | undefined): string {
+  if (reason === 'suspended') return ACC_SUSPENDED;
   return reason === 'other-device' ? ACC_074 : ACC_075;
 }

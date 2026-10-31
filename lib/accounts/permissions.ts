@@ -18,7 +18,10 @@ export type AccountAction =
   | 'account.transfer'
   | 'cohort.create'
   | 'cohort.edit'
-  | 'audit.view';
+  | 'audit.view'
+  | 'account.screenshots'
+  | 'account.restoreAccess'
+  | 'security.view';
 
 export interface Actor {
   id: string;
@@ -60,6 +63,10 @@ const SUPER: Record<AccountAction, Rule> = {
   'cohort.create': () => true,
   'cohort.edit': () => true,
   'audit.view': () => true,
+  // screenshot guard: students only (a Super admin has no guard to switch)
+  'account.screenshots': (_a, t) => !t || t.role === 'USER',
+  'account.restoreAccess': (_a, t) => !t || t.role === 'USER',
+  'security.view': () => true,
 };
 
 const TABLES: Record<Level, Record<AccountAction, Rule> | null> = {

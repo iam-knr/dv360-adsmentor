@@ -125,3 +125,28 @@ describe('evaluateSession', () => {
     );
   });
 });
+
+describe('evaluateSession: screenshot suspension', () => {
+  const suspended = { accessSuspendedAt: T0 };
+  it('refuses a suspended student with the reason "suspended", even with a stale session version', () => {
+    expect(evaluateSession(claims, user(suspended), DEFAULT_POLICY, after(1))).toBe('suspended');
+    expect(
+      evaluateSession(claims, user({ ...suspended, sessionVersion: 4 }), DEFAULT_POLICY, after(1)),
+    ).toBe('suspended');
+  });
+  it('never applies to a Super admin', () => {
+    expect(
+      evaluateSession(
+        claims,
+        user({ ...suspended, appRole: 'super_admin' }),
+        DEFAULT_POLICY,
+        after(1),
+      ),
+    ).toBeNull();
+  });
+  it('a disabled account stays "revoked"', () => {
+    expect(
+      evaluateSession(claims, user({ ...suspended, status: 'DISABLED' }), DEFAULT_POLICY, after(1)),
+    ).toBe('revoked');
+  });
+});

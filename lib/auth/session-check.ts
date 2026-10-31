@@ -24,6 +24,8 @@ export interface UserStateIn {
   sessionVersion: number;
   activeSessionId: string | null;
   lastSeenAt: Date | null;
+  /** Set while the account is suspended (screenshot guard); students only, a Super admin is immune. */
+  accessSuspendedAt?: Date | null;
 }
 
 export function evaluateSession(
@@ -33,6 +35,8 @@ export function evaluateSession(
   now: Date,
 ): SessionFailureReason | null {
   if (!user || user.status === 'DISABLED' || user.status === 'ARCHIVED') return 'revoked';
+  // Suspension is checked before the version so that the person sees why (the suspension also bumps the version).
+  if (user.appRole === 'user' && user.accessSuspendedAt) return 'suspended';
   if (claims.sv !== user.sessionVersion) return 'revoked';
   if (singleSessionFor(policy, user.appRole) && user.activeSessionId !== claims.sid)
     return 'other-device';
