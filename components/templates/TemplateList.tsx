@@ -2,6 +2,7 @@
 
 // Targeting templates list (module 10 2.7): Name, Type, Description, Last modified, Status; filter Active / Archived /
 // All, search, New, row menu with Archive and Unarchive. Empty state with New targeting template.
+import { formatMediumDate } from '@/lib/date-format';
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
@@ -72,7 +73,7 @@ export function TemplateList({
     {
       id: 'lastModified',
       header: 'Last modified',
-      accessor: (r) => new Date(r.lastModified).toLocaleDateString('en-GB'),
+      accessor: (r) => formatMediumDate(r.lastModified),
     },
     {
       id: 'status',

@@ -18,6 +18,7 @@ import {
 } from '@/lib/campaigns/service-kit';
 import { addDaysIso } from '@/lib/metrics/date-range';
 import { persistTargeting } from '@/lib/targeting';
+import { inheritRow } from './inherit';
 import type { Issue } from '@/lib/validation/types';
 import {
   countryForCurrency,
@@ -446,6 +447,7 @@ export async function updatePlan(
             },
           });
           if (rowsIn) await writeRows(t, ctx, plan, rowsIn);
+          else await moveInheritingRows(t, plan, { start, end, location });
           await refreshForecast(t, ctx, plan.id);
           return plan.id;
         },
@@ -455,6 +457,34 @@ export async function updatePlan(
     });
     return { data: { plan: data } };
   });
+}
+
+/** A save that sends no rows still moves the rows that follow the plan header (plan-fix2 #2). */
+async function moveInheritingRows(
+  t: Tx,
+  plan: PlanFull,
+  to: { start: string; end: string; location: string },
+): Promise<void> {
+  const from = { start: iso(plan.startDate), end: iso(plan.endDate), location: plan.locationCountry };
+  for (const r of plan.rows) {
+    const cur = { startDate: iso(r.startDate), endDate: iso(r.endDate), locations: r.locations };
+    const next = inheritRow(cur, from, to);
+    if (
+      next.startDate === cur.startDate &&
+      next.endDate === cur.endDate &&
+      next.locations === cur.locations
+    )
+      continue;
+    await t.planRow.update({
+      where: { id: r.id },
+      data: {
+        startDate: dbDate(next.startDate),
+        endDate: dbDate(next.endDate),
+        locations: next.locations,
+      },
+      select: { id: true },
+    });
+  }
 }
 
 function rowsChanged(existing: PlanRow[], input: PlanRowInput[]): boolean {

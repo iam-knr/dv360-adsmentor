@@ -1,8 +1,12 @@
 import { formatMoney } from '@/lib/money';
 // Cell text of the plan line item table (module 04 2.2), shared by the grid and the CSV download so both show the
 // same column order and values.
-import { planCountry } from './countries';
+import { demographicsLabel, planCountry } from './countries';
 import { PLAN_COLUMNS, normalizePlanColumns } from './columns';
+import { criteriaOf } from './persist';
+import { CARD_LABEL, rowsOf } from '../targeting/dimensions';
+import { summarizeTargeting } from '../targeting/summary';
+import type { TargetingState } from '../targeting/types';
 import { BUYING_METHOD_LABEL, type PlanDto, type PlanRowDto, type PlanRowForecast } from './types';
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -31,11 +35,17 @@ export const fmtPct = (n: number | null | undefined, d = 1): string =>
 export const dateRangeLabel = (r: Pick<PlanRowDto, 'startDate' | 'endDate'>): string =>
   `${fmtDate(r.startDate)} - ${fmtDate(r.endDate)}`;
 
+/** Demographics of the plan, then every targeting the row carries (the "Add targeting" rows), then older audience tags. */
 export function targetingSummary(plan: PlanDto, r: PlanRowDto): string {
-  const d = plan.header.demographics;
-  const sex = d.genders.length >= 2 ? 'Male, Female' : d.genders.join(', ').toLowerCase();
-  const parts = [`${sex}, ${d.ageMin} - ${d.ageMax}`];
-  if (r.audienceRefs.length) parts.push(r.audienceRefs.join(', '));
+  const parts = [demographicsLabel(plan.header.demographics)];
+  const criteria = criteriaOf(r);
+  const state: TargetingState = { version: 1, lineItemType: 'DISPLAY', criteria };
+  for (const dim of rowsOf(state)) {
+    if (dim === 'INVENTORY_SOURCES') continue;
+    const text = summarizeTargeting(dim, criteria);
+    if (text) parts.push(`${CARD_LABEL[dim] ?? dim}: ${text}`);
+  }
+  if (r.audienceRefs.length && !criteria.audienceLists) parts.push(r.audienceRefs.join(', '));
   return parts.join('; ');
 }
 
@@ -112,7 +122,7 @@ export function planCsv(plan: PlanDto, columns: readonly string[]): string {
     ['Dates', `${fmtDate(h.dates.start)} - ${fmtDate(h.dates.end)}`],
     [
       'Demographics',
-      `${h.demographics.genders.join('/')} ${h.demographics.ageMin}-${h.demographics.ageMax}`,
+      demographicsLabel(h.demographics),
     ],
     ['Forecast as of', f ? fmtDate(f.asOf.slice(0, 10)) : '-'],
     [],
