@@ -44,3 +44,5 @@ Replaces the "Not built yet" placeholders of module 02 with pages on the P4-09 s
   the sandbox build whenever it runs in the same suite as `demo-path.spec.ts`. It fails the same way on an untouched `origin/main`
   build, passes when run alone, and passes in CI on `main`. `PW-04-2` (`planning.spec.ts`) failed once in one of four full runs
   (known flaky, ACTION-PLAN Phase G). Neither touches the pages of this branch.
+- After merging `main` at 32ede4f: `PW-05-7` (history.spec, announcement bell) fails the same way on an untouched `origin/main` build and
+  is unrelated to this branch. Full Playwright on the merged tree: 214 passed, 1 failed (that test); `E2E-ADM-01` passed in that run.
