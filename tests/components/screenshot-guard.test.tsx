@@ -85,13 +85,13 @@ describe('reportScreenshot', () => {
   it('uses sendBeacon with a JSON body (method and path only)', async () => {
     const beacon = vi.fn(() => true);
     const fetcher = vi.fn();
-    reportScreenshot('PRINT_SCREEN', '/p/1', { beacon, fetcher: fetcher as never });
+    reportScreenshot('PRINT_SCREEN', '/p/1', { beacon, fetcher });
     expect(beacon).toHaveBeenCalledTimes(1);
     const [url, blob] = beacon.mock.calls[0] as unknown as [string, Blob];
     expect(url).toBe('/api/security/screenshot-event');
     const text = await new Promise<string>((res) => {
       const r = new FileReader();
-      r.onload = () => res(String(r.result));
+      r.onload = () => res(r.result as string);
       r.readAsText(blob);
     });
     expect(JSON.parse(text)).toEqual({ method: 'PRINT_SCREEN', path: '/p/1' });
@@ -100,7 +100,7 @@ describe('reportScreenshot', () => {
 
   it('falls back to fetch with keepalive when the beacon is refused', () => {
     const fetcher = vi.fn(() => Promise.resolve(new Response('{}')));
-    reportScreenshot('PRINT_EVENT', '/x', { beacon: () => false, fetcher: fetcher as never });
+    reportScreenshot('PRINT_EVENT', '/x', { beacon: () => false, fetcher });
     expect(fetcher).toHaveBeenCalledWith(
       '/api/security/screenshot-event',
       expect.objectContaining({ method: 'POST', keepalive: true }),
