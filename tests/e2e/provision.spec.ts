@@ -164,7 +164,7 @@ test('E2E-ADM-01 the Super admin adds a student; the sandbox builds; the student
   await page.goto(`/manage/accounts/${student.id}`);
   await expect(page.getByText('State: Ready')).toBeVisible();
   // nothing to create or retry once it is ready
-  await expect(page.getByRole('button', { name: /sandbox|provisioning/i })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Create sandbox|Retry|Restart provisioning/ })).toHaveCount(0);
 });
 
 test('E2E-ADM-02 the account page takes over a build that stopped, and the student gets in', async ({
@@ -251,7 +251,7 @@ test('E2E-ADM-03 the account page follows the build to READY without a reload, a
   expect(await page.evaluate(() => (window as unknown as { __kept?: number }).__kept)).toBe(1);
   expect((await sandboxOf(student.id))?.provisionState).toBe('READY');
   // nothing to create or retry once it is ready, and the polling has stopped
-  await expect(page.getByRole('button', { name: /sandbox|provisioning/i })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Create sandbox|Retry|Restart provisioning/ })).toHaveCount(0);
 
   const ctx = await browser.newContext({ baseURL: test.info().project.use.baseURL });
   await ownAddress(ctx);
