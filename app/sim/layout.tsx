@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Suspense } from 'react';
 import Box from '@mui/material/Box';
+import { ScreenshotGuardMount } from '@/components/security/ScreenshotGuardMount';
 import { SimHeader } from '@/components/sim/SimHeader';
 import { ViewAsBanner } from '@/components/sim/ViewAsBanner';
 import { getSessionUser } from '@/lib/auth/session';
@@ -16,6 +17,7 @@ export default async function SimLayout({ children }: { children: ReactNode }) {
             : null
         }
       />
+      <ScreenshotGuardMount user={user} />
       {user?.viewAs ? (
         <Suspense fallback={null}>
           <ViewAsBanner name={user.name} actAs={user.viewAs.actAs} />

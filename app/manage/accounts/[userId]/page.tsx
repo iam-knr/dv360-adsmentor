@@ -4,6 +4,7 @@ import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
 import Typography from '@mui/material/Typography';
 import { AccountActions } from '@/components/manage/AccountActions';
+import { ScreenshotSection } from '@/components/manage/ScreenshotSection';
 import { SandboxSection } from '@/components/manage/SandboxSection';
 import { DvSectionCard } from '@/components/dv/DvSectionCard';
 import { can, type Target } from '@/lib/accounts/permissions';
@@ -11,6 +12,7 @@ import { AccountError } from '@/lib/accounts/rules';
 import { DEFAULT_COHORT_CODE, getAccount } from '@/lib/accounts/service';
 import { pageActor } from '@/lib/accounts/session-actor';
 import { formatDateTime } from '@/lib/auth/messages';
+import { screenshotMethodLabel } from '@/lib/security/screenshot-detect';
 
 export const metadata: Metadata = { title: 'Account | DV360 Simulator by Adsmetor' };
 // the Create / Retry sandbox action runs a build step
@@ -77,6 +79,25 @@ export default async function AccountDetailPage({
           Created by {a.createdBy?.name ?? '-'} on {when(a.createdAt)}
         </Typography>
       </DvSectionCard>
+      {a.appRole === 'USER' ? (
+        <DvSectionCard title="Screenshots">
+          <ScreenshotSection
+            id={a.id}
+            name={a.name}
+            screenshotsAllowed={a.screenshotsAllowed}
+            canChange={perm('account.screenshots')}
+            suspension={
+              a.accessSuspendedAt
+                ? {
+                    at: formatDateTime(a.accessSuspendedAt),
+                    method: screenshotMethodLabel(a.accessSuspendedMethod),
+                    path: a.accessSuspendedPath ?? '/',
+                  }
+                : null
+            }
+          />
+        </DvSectionCard>
+      ) : null}
       <DvSectionCard title="Security">
         <Typography>Last sign in: {when(a.lastLoginAt)}</Typography>
         <Typography>Failed attempts since last success: {a.failedLoginCount}</Typography>

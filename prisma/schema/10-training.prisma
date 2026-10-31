@@ -30,6 +30,14 @@ model User {
   disabledById       String?
   archivedAt         DateTime?
   lastLoginAt        DateTime?
+  // Screenshot guard (docs/gaps/screenshot-guard.md). A student may take screenshots only when the Super admin allows it.
+  screenshotsAllowed    Boolean   @default(false)
+  // Set when a recognised screenshot key was reported; every request of the account is refused until it is cleared.
+  accessSuspendedAt     DateTime?
+  accessSuspendedReason String? // SCREENSHOT
+  accessSuspendedMethod String?
+  accessSuspendedPath   String?
+  accessSuspendedById   String? // null = suspended automatically by a detection
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
@@ -43,6 +51,7 @@ model User {
   sandboxes    Sandbox[]
   grants       UserAccessGrant[]
   ownedCohorts Classroom[]       @relation("CohortOwner")
+  securityEvents SecurityEvent[]
 
   @@unique([cohortId, studentCode])
   @@index([appRole, status])

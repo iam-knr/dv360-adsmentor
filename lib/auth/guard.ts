@@ -14,7 +14,13 @@ export type GuardDecision =
   | { type: 'unauthorized' }
   | { type: 'password-change-required' };
 
-const PUBLIC_EXACT = new Set(['/', '/sim/login', '/sim/session-expired', '/api/health']);
+const PUBLIC_EXACT = new Set([
+  '/',
+  '/sim/login',
+  '/sim/session-expired',
+  '/sim/suspended',
+  '/api/health',
+]);
 const PUBLIC_PREFIXES = ['/api/auth', '/api/sim/engine', '/components'];
 
 /** Paths a person who must change the password may still reach. */

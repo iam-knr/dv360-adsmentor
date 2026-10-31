@@ -15,7 +15,10 @@ import { DvGrid, type DvColumn } from '@/components/dv/DvGrid';
 import { DvModal } from '@/components/dv/DvModal';
 import { DvPageHeader } from '@/components/dv/DvPageHeader';
 import { DvTextField } from '@/components/dv/DvTextField';
+import Chip from '@mui/material/Chip';
 import { bulkAccountsAction } from '@/lib/actions/accounts';
+import { bulkSecurityAction } from '@/lib/actions/security';
+import { SecurityUnreadLink } from './SecurityWatch';
 import { OneTimeSecret } from './OneTimeSecret';
 
 export interface AccountListRow {
@@ -28,6 +31,9 @@ export interface AccountListRow {
   lastLogin: string;
   sandbox: string;
   isSelf: boolean;
+  /** screenshot guard: access suspended after a screenshot attempt */
+  suspended?: boolean;
+  screenshotsAllowed?: boolean;
 }
 
 const ROLE = { USER: 'Student', ADMIN: 'Retired', SUPER_ADMIN: 'Super admin' } as const;
@@ -38,7 +44,15 @@ const STATUS = {
   ARCHIVED: 'Archived',
 } as const;
 
-type Dialog = null | 'disable' | 'enable' | 'reset' | 'delete';
+type Dialog =
+  | null
+  | 'disable'
+  | 'enable'
+  | 'reset'
+  | 'delete'
+  | 'allowShots'
+  | 'disallowShots'
+  | 'restoreAccess';
 
 export interface AccountsListProps {
   rows: AccountListRow[];
@@ -47,6 +61,8 @@ export interface AccountsListProps {
   pageSize: number;
   search: string;
   showArchived: boolean;
+  /** the "Suspended only" filter is on */
+  suspendedOnly?: boolean;
 }
 
 export function AccountsList({
@@ -56,6 +72,7 @@ export function AccountsList({
   pageSize,
   search,
   showArchived,
+  suspendedOnly = false,
 }: AccountsListProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -77,6 +94,7 @@ export function AccountsList({
     const p = new URLSearchParams({
       ...(q ? { q } : {}),
       ...(showArchived ? { archived: '1' } : {}),
+      ...(suspendedOnly ? { suspended: '1' } : {}),
       page: String(page),
       pageSize: String(pageSize),
     });
@@ -107,7 +125,25 @@ export function AccountsList({
       ),
     },
     { id: 'appRole', header: 'Level', width: 100, accessor: (r) => ROLE[r.appRole] },
-    { id: 'status', header: 'Status', width: 90, accessor: (r) => STATUS[r.status] },
+    {
+      id: 'status',
+      header: 'Status',
+      width: 190,
+      type: 'custom',
+      cell: (r) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+          <span>{STATUS[r.status]}</span>
+          {r.suspended ? (
+            <Chip
+              size="small"
+              color="error"
+              label="Suspended (screenshot)"
+              data-testid="suspended-chip"
+            />
+          ) : null}
+        </Box>
+      ),
+    },
     { id: 'sandbox', header: 'Sandbox', width: 110 },
     // secondary columns only when there is room: below about 1280 px the table fits without a sideways scroll
     ...(wide
@@ -129,6 +165,25 @@ export function AccountsList({
   const confirm = () => {
     if (!dialog) return;
     start(async () => {
+      if (dialog === 'allowShots' || dialog === 'disallowShots' || dialog === 'restoreAccess') {
+        const res = await bulkSecurityAction(
+          ids,
+          dialog === 'allowShots'
+            ? 'ALLOW_SCREENSHOTS'
+            : dialog === 'disallowShots'
+              ? 'DISALLOW_SCREENSHOTS'
+              : 'RESTORE_ACCESS',
+        );
+        if (!res.ok) {
+          setError(res.error);
+          return;
+        }
+        close();
+        setSelection(new Set());
+        setResult({ done: res.data.done.length, skipped: res.data.skipped });
+        router.refresh();
+        return;
+      }
       const action =
         dialog === 'disable'
           ? ({ type: 'DISABLE' } as const)
@@ -160,6 +215,9 @@ export function AccountsList({
     enable: `Enable ${ids.length} accounts?`,
     reset: `Reset ${ids.length} passwords?`,
     delete: `Delete ${ids.length} accounts?`,
+    allowShots: `Allow screenshots for ${ids.length} accounts?`,
+    disallowShots: `Disallow screenshots for ${ids.length} accounts?`,
+    restoreAccess: `Restore access for ${ids.length} accounts?`,
   };
 
   return (
@@ -168,6 +226,7 @@ export function AccountsList({
         title="Accounts"
         actions={
           <>
+            <SecurityUnreadLink />
             <Button variant="outlined" href="/api/manage/accounts.csv">
               Export CSV
             </Button>
@@ -201,6 +260,15 @@ export function AccountsList({
             />
           }
           label="Show archived"
+        />
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={suspendedOnly}
+              onChange={(e) => go({ suspended: e.target.checked ? '1' : undefined, page: '1' })}
+            />
+          }
+          label="Suspended only"
         />
       </Box>
       {result ? (
@@ -245,6 +313,15 @@ export function AccountsList({
           </Button>
           <Button size="small" onClick={() => setDialog('reset')}>
             Reset password
+          </Button>
+          <Button size="small" onClick={() => setDialog('allowShots')}>
+            Allow screenshots
+          </Button>
+          <Button size="small" onClick={() => setDialog('disallowShots')}>
+            Disallow screenshots
+          </Button>
+          <Button size="small" onClick={() => setDialog('restoreAccess')}>
+            Restore access
           </Button>
           <Button size="small" color="error" onClick={() => setDialog('delete')}>
             Delete
@@ -291,7 +368,13 @@ export function AccountsList({
                 ? 'Reset passwords'
                 : dialog === 'enable'
                   ? 'Enable'
-                  : 'Disable',
+                  : dialog === 'allowShots'
+                    ? 'Allow'
+                    : dialog === 'disallowShots'
+                      ? 'Disallow'
+                      : dialog === 'restoreAccess'
+                        ? 'Restore access'
+                        : 'Disable',
           onClick: () => {
             if (dialog === 'delete' && typed !== 'DELETE') {
               setError('Type DELETE to confirm.');
@@ -335,7 +418,13 @@ export function AccountsList({
           <Typography>
             {dialog === 'disable'
               ? 'These accounts cannot sign in until they are enabled again.'
-              : 'These accounts can sign in again.'}
+              : dialog === 'allowShots'
+                ? 'These students will not be watched for screenshots or printing.'
+                : dialog === 'disallowShots'
+                  ? 'These students will be signed out and suspended if a screenshot attempt is detected.'
+                  : dialog === 'restoreAccess'
+                    ? 'Suspended students can sign in again. Accounts that are not suspended are skipped.'
+                    : 'These accounts can sign in again.'}
           </Typography>
         )}
       </DvModal>

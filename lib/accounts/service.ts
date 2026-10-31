@@ -15,6 +15,7 @@ import {
   type ProvisionView,
 } from '@/lib/sandbox/provision';
 import { sandboxStateLabel } from '@/lib/sandbox/labels';
+import { screenshotMethodLabel } from '@/lib/security/screenshot-detect';
 import { auditActionLabel, isPlaceholderEmail } from './audit-labels';
 import { writeAccountAudit, type AccountAuditAction } from './audit';
 import { can, type AccountAction, type Actor, type Target } from './permissions';
@@ -50,6 +51,9 @@ export interface AccountRow {
   lastLoginAt: Date | null;
   lockedUntil: Date | null;
   sandbox: string;
+  /** screenshot guard */
+  screenshotsAllowed: boolean;
+  suspended: boolean;
 }
 
 function toTarget(u: {
@@ -647,6 +651,8 @@ export interface AccountListQuery {
   role?: AppRole[];
   status?: AccountRow['status'][];
   cohortId?: string[];
+  /** only suspended (true) or only not suspended (false) accounts */
+  suspended?: boolean;
   page?: number;
   pageSize?: number;
   sort?: 'name' | 'email' | 'appRole' | 'status' | 'lastLoginAt' | 'createdAt';
@@ -668,6 +674,7 @@ export async function listAccounts(
       // default filter: not archived (module 19 2.2)
       q.status?.length ? { status: { in: q.status } } : { status: { not: 'ARCHIVED' } },
       q.cohortId?.length ? { cohortId: { in: q.cohortId } } : {},
+      q.suspended === undefined ? {} : { accessSuspendedAt: q.suspended ? { not: null } : null },
       search
         ? {
             OR: [
@@ -698,6 +705,8 @@ export async function listAccounts(
         accessEndsAt: true,
         lastLoginAt: true,
         lockedUntil: true,
+        screenshotsAllowed: true,
+        accessSuspendedAt: true,
         cohort: { select: { name: true } },
         sandboxes: { select: { status: true, provisionState: true }, take: 1 },
       },
@@ -705,7 +714,8 @@ export async function listAccounts(
   ]);
   const rows = (
     users as unknown as Array<
-      Omit<AccountRow, 'cohortName' | 'sandbox'> & {
+      Omit<AccountRow, 'cohortName' | 'sandbox' | 'suspended'> & {
+        accessSuspendedAt: Date | null;
         cohort: { name: string } | null;
         sandboxes: { status: string; provisionState: string }[];
       }
@@ -726,6 +736,8 @@ export async function listAccounts(
     accessEndsAt: u.accessEndsAt,
     lastLoginAt: u.lastLoginAt,
     lockedUntil: u.lockedUntil,
+    screenshotsAllowed: u.screenshotsAllowed,
+    suspended: !!u.accessSuspendedAt,
     sandbox: u.appRole !== 'USER' ? '' : sandboxStateLabel(u.sandboxes[0]?.provisionState),
   }));
   return { rows, total };
@@ -750,6 +762,10 @@ export async function getAccount(actor: Actor, id: string, db: Db = prisma) {
       passwordChangedAt: true,
       accessStartsAt: true,
       accessEndsAt: true,
+      screenshotsAllowed: true,
+      accessSuspendedAt: true,
+      accessSuspendedMethod: true,
+      accessSuspendedPath: true,
       createdAt: true,
       cohort: { select: { id: true, name: true, code: true } },
       createdBy: { select: { name: true } },
@@ -1109,6 +1125,10 @@ export function auditSummary(action: string, result: string, payload: AuditPaylo
   const ts = p.toStatus ?? p.newStatus;
   // the action label already says what happened to the status ("Archived account"), so "active to archived" is noise
   if (fs && ts && !STATUS_IN_LABEL.has(action)) bits.push(`${nice(fs)} to ${nice(ts)}`);
+  if (p.reason === 'SCREENSHOT_SUSPENSION') bits.push('access after a screenshot suspension');
+  if (p.reason === 'SCREENSHOT') bits.push('screenshot attempt');
+  if (typeof p.method === 'string') bits.push(screenshotMethodLabel(p.method));
+  if (typeof p.path === 'string' && action === 'SCREENSHOT_DETECTED') bits.push(`on ${p.path}`);
   if (p.reason === 'SANDBOX_PROVISION') bits.push('create or retry sandbox');
   if (p.reason === 'SANDBOX_REBUILD') bits.push("the student's work in it was deleted");
   if (p.mustChangePassword === true) bits.push('new password required at next sign-in');

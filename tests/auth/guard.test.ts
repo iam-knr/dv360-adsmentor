@@ -49,6 +49,7 @@ describe('middleware decisions', () => {
       '/',
       '/sim/login',
       '/sim/session-expired',
+      '/sim/suspended',
       '/api/auth/csrf',
       '/api/health',
       '/components',
@@ -161,7 +162,8 @@ describe('role map', () => {
   it('maps database values to lowercase session values and back (RC-016, RC-068)', () => {
     expect(toSessionRole('USER')).toBe('user');
     expect(toSessionRole('SUPER_ADMIN')).toBe('super_admin');
-    for (const r of ['user', 'super_admin'] as AppRole[]) expect(toSessionRole(toDbRole(r))).toBe(r);
+    for (const r of ['user', 'super_admin'] as AppRole[])
+      expect(toSessionRole(toDbRole(r))).toBe(r);
   });
   it('gives the retired ADMIN level no session', () => {
     expect(isRetiredRole('ADMIN')).toBe(true);

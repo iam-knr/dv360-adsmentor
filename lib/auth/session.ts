@@ -64,6 +64,7 @@ export async function requireUserOrRedirect(): Promise<SessionUser> {
   const r = await resolveSession();
   if (r.ok) return r.user;
   if (r.reason === 'none') redirect('/sim/login');
+  if (r.reason === 'suspended') redirect('/sim/suspended');
   redirect(`/sim/session-expired?reason=${r.reason}`);
 }
 
