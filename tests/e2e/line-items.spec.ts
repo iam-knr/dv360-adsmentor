@@ -304,7 +304,7 @@ test('PW-10-07: the audience picker offers Custom affinity and Custom intent and
   const rows = await db.targetingAssignment.findMany({
     where: { lineItemId: li.id, dimension: 'AUDIENCE_LIST' },
   });
-  expect(rows.map((r) => r.audienceSection)).toEqual(['CUSTOM', 'CUSTOM']);
+  expect(rows.map((r) => r.audienceSection)).toEqual(['CUSTOM_LIST', 'CUSTOM_LIST']);
   const names = await db.audience.findMany({
     where: { id: { in: rows.map((r) => r.refId ?? '') } },
     select: { name: true },
