@@ -22,16 +22,19 @@ import {
   listPlanDeals,
   listPlans,
   removePlan,
+  previewPlanForecast,
   savePlanColumns,
+  setPlanArchived,
   updatePlan,
   type ConvertResult,
   type CreatePlanInput,
   type PlanCampaignChoice,
   type PlanDealChoice,
   type PlanList,
+  type PreviewPlanInput,
   type UpdatePlanInput,
 } from './service';
-import type { PlanDto, PlanStatusKey } from './types';
+import type { PlanDto, PlanForecast, PlanStatusKey } from './types';
 
 const NO_SESSION: Result<never> = {
   ok: false,
@@ -149,4 +152,21 @@ export async function deleteCrossMediaReportAction(
 export async function listPlanCampaignsAction(aid: string): Promise<PlanCampaignChoice[]> {
   const user = await getSessionUser();
   return user ? soft(() => listPlanCampaigns(user, aid), []) : [];
+}
+
+export async function archivePlanAction(
+  aid: string,
+  id: string,
+  archived: boolean,
+): Promise<Result<{ status: PlanStatusKey }>> {
+  const user = await getSessionUser();
+  return user ? setPlanArchived(user, aid, id, archived) : NO_SESSION;
+}
+
+export async function previewPlanForecastAction(
+  aid: string,
+  input: PreviewPlanInput,
+): Promise<Result<{ forecast: PlanForecast; rowKeys: Record<string, string> }>> {
+  const user = await getSessionUser();
+  return user ? previewPlanForecast(user, aid, input) : NO_SESSION;
 }

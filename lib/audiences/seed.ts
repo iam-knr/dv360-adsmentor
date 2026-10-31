@@ -248,6 +248,214 @@ export async function seedAudiences(db: Db, input: AudienceSeedInput): Promise<n
         },
       });
     }
+    // ---- plan-parity: a fuller catalogue so no picker or list page looks empty ----------------------------------------
+    // Custom lists of every type, including Custom intent (YouTube), each with entries and sizes.
+    const custom: {
+      type: 'CUSTOM_AFFINITY' | 'CUSTOM_INTENT_DISPLAY_VIDEO' | 'CUSTOM_INTENT_YOUTUBE';
+      name: string;
+      display: number;
+      entries: { kind: 'INTEREST' | 'URL' | 'KEYWORD' | 'APP'; value: string }[];
+    }[] = [
+      {
+        type: 'CUSTOM_AFFINITY',
+        name: `${adv.name} Custom affinity: home cooks`,
+        display: 3_100_000,
+        entries: [
+          { kind: 'INTEREST', value: 'home cooking' },
+          { kind: 'INTEREST', value: 'recipes' },
+          { kind: 'URL', value: 'recipes.example.test' },
+        ],
+      },
+      {
+        type: 'CUSTOM_AFFINITY',
+        name: `${adv.name} Custom affinity: fitness enthusiasts`,
+        display: 1_450_000,
+        entries: [
+          { kind: 'INTEREST', value: 'running' },
+          { kind: 'INTEREST', value: 'home workouts' },
+          { kind: 'URL', value: 'fitness.example.test' },
+        ],
+      },
+      {
+        type: 'CUSTOM_INTENT_DISPLAY_VIDEO',
+        name: `${adv.name} Custom intent: compare broadband plans`,
+        display: 620_000,
+        entries: [
+          { kind: 'KEYWORD', value: 'best broadband plan' },
+          { kind: 'KEYWORD', value: 'fibre vs cable' },
+          { kind: 'URL', value: 'compare.example.test' },
+        ],
+      },
+      {
+        type: 'CUSTOM_INTENT_YOUTUBE',
+        name: `${adv.name} Custom intent: phone review viewers`,
+        display: 880_000,
+        entries: [
+          { kind: 'KEYWORD', value: 'phone review' },
+          { kind: 'KEYWORD', value: 'unboxing' },
+          { kind: 'URL', value: 'youtube.example.test/reviews' },
+        ],
+      },
+      {
+        type: 'CUSTOM_INTENT_YOUTUBE',
+        name: `${adv.name} Custom intent: travel vloggers`,
+        display: 410_000,
+        entries: [
+          { kind: 'KEYWORD', value: 'travel vlog' },
+          { kind: 'KEYWORD', value: 'budget trip' },
+        ],
+      },
+    ];
+    for (const [n, c] of custom.entries()) {
+      const row = await db.audience.create({
+        data: {
+          ...base,
+          name: c.name,
+          type: c.type,
+          status: 'ACTIVE',
+          ...sizeData(
+            spreadSizes(
+              c.display,
+              c.type === 'CUSTOM_INTENT_YOUTUBE'
+                ? { youtube: 1, mobileApp: 0.2, ctv: 0.3 }
+                : { youtube: 0.55, mobileApp: 0.45, ctv: 0.2 },
+            ),
+          ),
+          availableAt: created(35 - n),
+          createdAt: created(38 - n),
+        },
+        select: { id: true },
+      });
+      await db.customListEntry.createMany({
+        data: c.entries.map((e, ordinal) => ({
+          sandboxId,
+          audienceId: row.id,
+          kind: e.kind,
+          value: e.value,
+          ordinal,
+        })),
+      });
+    }
+    // More first-party lists: a second YouTube users list, another customer match upload, another lookalike
+    const cm2 = await db.audience.create({
+      data: {
+        ...base,
+        name: `${adv.name} Newsletter subscribers (customer match)`,
+        type: 'CUSTOMER_MATCH',
+        status: 'ACTIVE',
+        membershipDays: 540,
+        dataSource: 'UPLOAD',
+        consentAck: true,
+        config: { contactType: 'EMAIL' },
+        ...sizeData(spreadSizes(28_500)),
+        availableAt: created(33),
+        createdAt: created(36),
+      },
+      select: { id: true },
+    });
+    await db.customerMatchUpload.create({
+      data: {
+        sandboxId,
+        audienceId: cm2.id,
+        contactType: 'EMAIL',
+        fileName: 'newsletter.csv',
+        rowCount: 41_200,
+        matchedCount: 28_500,
+        matchRatePct: '69.17',
+        status: 'DONE',
+      },
+    });
+    await db.audience
+      .create({
+        data: {
+          ...base,
+          name: `${adv.name} Lookalike of newsletter subscribers`,
+          type: 'LOOKALIKE',
+          status: 'ACTIVE',
+          lookalikeReachPct: '2.5',
+          lookalikeCountries: ['IN'],
+          reachExpansion: '2.00',
+          ...sizeData(spreadSizes(920_000)),
+          availableAt: created(18),
+          createdAt: created(22),
+        },
+      })
+      .then((l) =>
+        db.audienceSeed.create({ data: { sandboxId, audienceId: l.id, seedAudienceId: cm2.id } }),
+      );
+    await db.audience.create({
+      data: {
+        ...base,
+        name: `${adv.name} Short video viewers`,
+        type: 'YOUTUBE_USERS',
+        source: 'YOUTUBE',
+        status: 'ACTIVE',
+        membershipDays: 30,
+        ...sizeData(spreadSizes(61_000, { youtube: 1, mobileApp: 0.3, ctv: 0.3 })),
+        availableAt: created(28),
+        createdAt: created(30),
+        config: { linkedAccountId: channel.id, action: 'VIEWED_ANY_VIDEO', videoIds: [] },
+      },
+    });
+    // A third combined list built from a custom list and a Google audience, and a third partner list
+    const aff0 = await db.audience.findFirst({
+      where: { advertiserId: adv.id, type: 'CUSTOM_AFFINITY' },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, sizeDisplay: true },
+    });
+    if (aff0 && inm) {
+      const gs = googleAudienceSize(inm.id, inm.kind);
+      const c3 = await db.audience.create({
+        data: {
+          ...base,
+          name: `${adv.name} Gadget fans in the market`,
+          type: 'COMBINED',
+          status: 'ACTIVE',
+          ...sizeData(
+            spreadSizes(combinedSize([[Number(aff0.sizeDisplay ?? 0)], [gs.display]], []), {
+              youtube: 0.6,
+              mobileApp: 0.5,
+              ctv: 0.2,
+            }),
+          ),
+          availableAt: created(8),
+          createdAt: created(8),
+        },
+        select: { id: true },
+      });
+      await db.combinedAudienceTerm.createMany({
+        data: [
+          {
+            sandboxId,
+            audienceId: c3.id,
+            mode: 'INCLUDE',
+            groupIndex: 0,
+            memberKind: 'AUDIENCE',
+            memberId: aff0.id,
+          },
+          {
+            sandboxId,
+            audienceId: c3.id,
+            mode: 'INCLUDE',
+            groupIndex: 1,
+            memberKind: 'GOOGLE_AUDIENCE',
+            memberId: inm.id,
+          },
+        ],
+      });
+    }
+    await db.audience.create({
+      data: {
+        ...base,
+        name: 'Travel intenders (commerce partner)',
+        type: 'PARTNER',
+        source: 'COMMERCE_PARTNER',
+        status: 'ACTIVE',
+        ...sizeData(spreadSizes(1_320_000)),
+        availableAt: created(60),
+        createdAt: created(60),
+      },
+    });
     seeded++;
   }
   return seeded;

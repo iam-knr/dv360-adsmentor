@@ -22,7 +22,8 @@ interface Built {
 // Module 09 (P4-06) adds seven YouTube line items and one Demand Gen line item and four ad group targeting rows after the plan is inserted.
 const YT_LINE_ITEMS = 8;
 /** Lists the module 14 seed adds per advertiser (lib/audiences/seed.ts): 2 small tag-based, processing, YouTube, lookalike, 2 combined, 2 partner. */
-const AUDIENCES_PER_ADVERTISER = 9;
+/** Lists seedAudiences adds per advertiser (plan-parity: custom affinity, custom intent, a third combined and more). */
+const AUDIENCES_PER_ADVERTISER = 19;
 const YT_TARGETING_ROWS = 4;
 
 describe('seeded sandboxes', () => {

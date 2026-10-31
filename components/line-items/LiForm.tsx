@@ -684,7 +684,15 @@ export function LiForm({
           ) : null}
           {/* Q5: the audience picker lists the advertiser of THIS line item; without it the API fell back to the first advertiser. */}
           <TargetingEditorContext.Provider
-            value={advertiserRowId ? { advertiserId: advertiserRowId } : {}}
+            value={
+              advertiserRowId
+                ? {
+                    advertiserId: advertiserRowId,
+                    partnerPublicId: partnerId,
+                    advertiserPublicId: advertiserId,
+                  }
+                : {}
+            }
           >
             <TargetingCard
               lineItemType={type}

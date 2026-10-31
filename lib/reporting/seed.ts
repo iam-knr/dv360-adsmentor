@@ -68,7 +68,9 @@ export async function seedReportReference(db: Db): Promise<ReportReferenceResult
   for (const [cur, rate] of Object.entries(fxJson.perUSD)) {
     if (cur === 'USD') continue;
     await db.fxRate.upsert({
-      where: { fromCurrency_toCurrency_validFrom: { fromCurrency: 'USD', toCurrency: cur, validFrom } },
+      where: {
+        fromCurrency_toCurrency_validFrom: { fromCurrency: 'USD', toCurrency: cur, validFrom },
+      },
       create: { fromCurrency: 'USD', toCurrency: cur, rate, validFrom },
       update: { rate },
     });
@@ -92,8 +94,22 @@ interface SeedReport {
 }
 
 const INSTANT: SeedReport[] = [
-  { name: 'Advertiser overview', template: 'advertiser-overview', dimensions: [], metrics: [], dateRange: 'LAST_7_DAYS', runs: 2 },
-  { name: 'IO pacing', template: 'io-pacing', dimensions: [], metrics: [], dateRange: 'MONTH_TO_DATE', runs: 1 },
+  {
+    name: 'Advertiser overview',
+    template: 'advertiser-overview',
+    dimensions: [],
+    metrics: [],
+    dateRange: 'LAST_7_DAYS',
+    runs: 2,
+  },
+  {
+    name: 'IO pacing',
+    template: 'io-pacing',
+    dimensions: [],
+    metrics: [],
+    dateRange: 'MONTH_TO_DATE',
+    runs: 1,
+  },
   {
     name: 'Creative performance',
     dimensions: ['creative'],
@@ -108,6 +124,60 @@ const INSTANT: SeedReport[] = [
     dateRange: 'LAST_30_DAYS',
     viz: { type: 'TIME_SERIES' },
     runs: 1,
+  },
+];
+
+/** plan-parity: more saved reports so the list, the run history and the previews have data (all synthetic). */
+const EXTRA_INSTANT: SeedReport[] = [
+  {
+    name: 'Campaign performance by device',
+    dimensions: ['campaign', 'device_type'],
+    metrics: ['impressions', 'clicks', 'click_rate_ctr', 'total_conversions'],
+    dateRange: 'LAST_30_DAYS',
+    runs: 2,
+  },
+  {
+    name: 'Exchange mix and viewability',
+    dimensions: ['exchange'],
+    metrics: ['impressions', 'clicks', 'viewable_impressions'],
+    dateRange: 'LAST_14_DAYS',
+    runs: 2,
+  },
+  {
+    name: 'Weekly delivery by line item',
+    dimensions: ['week', 'line_item'],
+    metrics: ['impressions', 'clicks'],
+    dateRange: 'LAST_30_DAYS',
+    runs: 1,
+  },
+  {
+    name: 'Geography: country and region',
+    dimensions: ['country', 'region'],
+    metrics: ['impressions', 'clicks', 'click_rate_ctr'],
+    dateRange: 'LAST_30_DAYS',
+    runs: 2,
+  },
+  {
+    name: 'Video completions by creative',
+    dimensions: ['creative'],
+    metrics: ['impressions', 'video_completions'],
+    dateRange: 'LAST_14_DAYS',
+    runs: 1,
+  },
+  {
+    name: 'Browser and environment',
+    dimensions: ['browser', 'environment'],
+    metrics: ['impressions', 'clicks'],
+    dateRange: 'LAST_7_DAYS',
+    runs: 1,
+  },
+  {
+    name: 'Daily clicks trend',
+    dimensions: ['date'],
+    metrics: ['clicks', 'click_rate_ctr'],
+    dateRange: 'LAST_14_DAYS',
+    viz: { type: 'TIME_SERIES' },
+    runs: 2,
   },
 ];
 
@@ -137,7 +207,24 @@ export interface SeedReportsInput {
 /** Saved reports with a few completed runs (the files are rebuilt on download when the store has none). */
 export async function seedReports(tx: Db, input: SeedReportsInput): Promise<number> {
   if (!input.ownerUserId) return 0;
-  const list = input.template === 'troubleshooting-lab' ? [LAB] : INSTANT;
+  const list = input.template === 'troubleshooting-lab' ? [LAB] : [...INSTANT, ...EXTRA_INSTANT];
+  // Real row counts: each saved report is run once against the metric history, so the run list shows result sizes.
+  const { runQuery } = await import('./engine/query');
+  const { loadWorld } = await import('./engine/world');
+  const world = await loadWorld(tx as never, input.sandboxId, input.partnerId).catch(() => null);
+  const countRows = async (def: ReportDefinition): Promise<number> => {
+    if (!world) return 0;
+    try {
+      const r = await runQuery(tx, input.sandboxId, input.partnerId, def, {
+        allowPartnerCost: false,
+        limit: 1_000,
+        world,
+      });
+      return r.rows.length;
+    } catch {
+      return 0;
+    }
+  };
   const partnerFilter = [{ field: 'partner', op: 'IN' as const, values: [input.partnerPublicId] }];
   let made = 0;
   const mk = async (
@@ -150,7 +237,10 @@ export async function seedReports(tx: Db, input: SeedReportsInput): Promise<numb
         sandboxId: input.sandboxId,
         partnerId: input.partnerId,
         ownerUserId: input.ownerUserId as string,
-        kind: def.kind === 'INSTANT' ? 'INSTANT' : (OFFLINE[def.offlineType ?? 'FLOODLIGHT'] ?? 'OFFLINE_FLOODLIGHT'),
+        kind:
+          def.kind === 'INSTANT'
+            ? 'INSTANT'
+            : (OFFLINE[def.offlineType ?? 'FLOODLIGHT'] ?? 'OFFLINE_FLOODLIGHT'),
         name: def.name,
         definition: def as unknown as Prisma.InputJsonValue,
         timeZone: def.timeZone,
@@ -166,8 +256,9 @@ export async function seedReports(tx: Db, input: SeedReportsInput): Promise<numb
       },
       select: { id: true },
     });
+    const sampleRows = await countRows(def);
     for (let i = 0; i < runs; i++) {
-      const end = addDays(input.today, -1 - i);
+      const end = addDays(input.today, -1 - i * 3);
       const days = Number(/(\d+)D_/.exec(def.dateRange)?.[1] ?? 7);
       await tx.reportRun.create({
         data: {
@@ -182,8 +273,8 @@ export async function seedReports(tx: Db, input: SeedReportsInput): Promise<numb
           format: 'CSV',
           fileName: `${def.name.replace(/\s+/g, '_')}_${end.replace(/-/g, '')}_1200.csv`,
           storageKey: `reports/${input.sandboxId}/seed-${rep.id}-${i}`,
-          sizeBytes: 2048n,
-          rowCount: 0,
+          sizeBytes: BigInt(Math.max(2048, 160 + sampleRows * 96)),
+          rowCount: sampleRows,
           definitionSnapshot: {
             ...def,
             dateRange: `${addDays(end, -(days - 1)).replace(/-/g, '')}:${end.replace(/-/g, '')}`,
@@ -241,6 +332,54 @@ export async function seedReports(tx: Db, input: SeedReportsInput): Promise<numb
           shareWith: [],
         },
       },
+    );
+  }
+  if (input.template !== 'troubleshooting-lab') {
+    await mk(
+      {
+        kind: 'OFFLINE',
+        offlineType: 'INVENTORY_AVAILABILITY',
+        name: 'Availability by exchange (weekly)',
+        timeZone: 'ADVERTISER',
+        dateRange: 'LAST_7_DAYS',
+        filters: partnerFilter,
+        dimensions: ['date', 'availability_exchange'],
+        metrics: ['available_impressions', 'bid_able_impressions'],
+        viz: { type: 'TABLE' },
+        template: 'availability-exchange',
+      },
+      2,
+      {
+        schedule: {
+          active: true,
+          timeZone: 'UTC',
+          repeats: 'WEEKLY',
+          every: 1,
+          starts: input.today,
+        },
+        delivery: {
+          format: 'CSV',
+          fileName: 'availability_exchange',
+          emailOwner: true,
+          attachment: true,
+          shareWith: [],
+        },
+      },
+    );
+    await mk(
+      {
+        kind: 'OFFLINE',
+        offlineType: 'FLOODLIGHT',
+        name: 'Floodlight order IDs',
+        timeZone: 'ADVERTISER',
+        dateRange: 'LAST_14_DAYS',
+        filters: partnerFilter,
+        dimensions: ['date', 'order_id', 'floodlight_activity'],
+        metrics: ['total_conversions', 'post_click_conversions', 'post_view_conversions'],
+        viz: { type: 'TABLE' },
+        template: 'floodlight-order-id',
+      },
+      1,
     );
   }
   return made;

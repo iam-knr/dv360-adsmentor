@@ -17,7 +17,8 @@ import {
   normalizePlanColumns,
 } from '@/lib/planning/columns';
 import type { PlanCampaignChoice } from '@/lib/planning/service';
-import { DateField } from './DateField';
+import { AD_FORMATS, DEAL_METHODS, type PlanRowDto } from '@/lib/planning/types';
+import { PlanDateRange } from './PlanDateRange';
 
 // ---- Modify columns -----------------------------------------------------------------------------
 
@@ -164,6 +165,7 @@ export function ModifyColumnsDialog({
 
 export function CopyPlanDialog({
   open,
+  today,
   defaults,
   busy,
   error,
@@ -171,6 +173,7 @@ export function CopyPlanDialog({
   onCancel,
 }: {
   open: boolean;
+  today: string;
   defaults: { name: string; start: string; end: string };
   busy: boolean;
   error?: string | undefined;
@@ -195,18 +198,13 @@ export function CopyPlanDialog({
           maxLength={100}
           onChange={(name) => setV((s) => ({ ...s, name }))}
         />
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <DateField
-            label="Start date"
-            value={v.start}
-            onChange={(start) => setV((s) => ({ ...s, start }))}
-          />
-          <DateField
-            label="End date"
-            value={v.end}
-            onChange={(end) => setV((s) => ({ ...s, end }))}
-          />
-        </Box>
+        <PlanDateRange
+          label="Dates"
+          start={v.start}
+          end={v.end}
+          today={today}
+          onChange={(start, end) => setV((s) => ({ ...s, start, end }))}
+        />
       </Box>
     </DvModal>
   );
@@ -305,6 +303,161 @@ export function RemovePlanDialog({
       secondary={{ label: 'Cancel', onClick: onCancel }}
     >
       <Typography>{name} will be removed. This can&apos;t be undone.</Typography>
+    </DvModal>
+  );
+}
+
+// ---- Add ad formats ------------------------------------------------------------------------------
+
+interface FormatLine {
+  key: number;
+  formatId: string;
+  budget: string;
+  cpm: string;
+}
+
+const FORMATS = AD_FORMATS.filter((f) => !DEAL_METHODS.includes(f.buyingMethod));
+
+/** "Select ad formats" (explore 19 section 3): pricing, ad format, budget, CPM (optional) and share per line. */
+export function AdFormatsDialog({
+  open,
+  currency,
+  planStart,
+  planEnd,
+  location,
+  fee,
+  onApply,
+  onCancel,
+}: {
+  open: boolean;
+  currency: string;
+  planStart: string;
+  planEnd: string;
+  location: string;
+  fee: number;
+  onApply: (rows: PlanRowDto[]) => void;
+  onCancel: () => void;
+}) {
+  const [lines, setLines] = useState<FormatLine[]>([
+    { key: 1, formatId: FORMATS[0]!.id, budget: '', cpm: '' },
+  ]);
+  const [error, setError] = useState<string | undefined>();
+  const set = (key: number, patch: Partial<FormatLine>) =>
+    setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l)));
+  const num = (v: string) => (v.trim() === '' || Number.isNaN(Number(v)) ? null : Number(v));
+  const total = lines.reduce((s, l) => s + (num(l.budget) ?? 0), 0);
+
+  const apply = () => {
+    if (lines.some((l) => !((num(l.budget) ?? 0) > 0))) {
+      setError('Enter a number greater than 0');
+      return;
+    }
+    onApply(
+      lines.map((l, i) => {
+        const f = AD_FORMATS.find((x) => x.id === l.formatId)!;
+        const net = num(l.budget) ?? 0;
+        return {
+          id: `fmt-${i}`,
+          ordinal: i,
+          name: f.label,
+          buyingMethod: f.buyingMethod,
+          dealId: null,
+          locations: [location],
+          startDate: planStart,
+          endDate: planEnd,
+          targeting: {},
+          audienceRefs: [],
+          budgetNet: net,
+          budgetTotal: Math.round(net * (1 + fee) * 100) / 100,
+          feePct: fee,
+          maxCpm: f.buyingMethod === 'OPEN_AUCTION' ? num(l.cpm) : null,
+          isCpmLocked: f.buyingMethod !== 'OPEN_AUCTION',
+          pricing: 'Auction',
+        } satisfies PlanRowDto;
+      }),
+    );
+  };
+
+  return (
+    <DvModal
+      open={open}
+      title="Select ad formats"
+      size="lg"
+      onClose={onCancel}
+      {...(error ? { error } : {})}
+      primary={{ label: 'Apply', onClick: apply }}
+      secondary={{ label: 'Cancel', onClick: onCancel }}
+    >
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {lines.map((l) => {
+          const share = total > 0 ? Math.round(((num(l.budget) ?? 0) / total) * 100) : 0;
+          return (
+            <Box
+              key={l.key}
+              role="group"
+              aria-label={`Ad format ${l.key}`}
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: '1.6fr 1fr 1fr 80px 40px',
+                gap: 2,
+                alignItems: 'start',
+              }}
+            >
+              <DvSelect
+                label="Ad format"
+                value={l.formatId}
+                options={FORMATS.map((f) => ({ value: f.id, label: f.label, secondLine: f.group }))}
+                onChange={(v) => set(l.key, { formatId: v })}
+              />
+              <DvTextField
+                label={`Budget (${currency})`}
+                numeric
+                value={l.budget}
+                onChange={(v) => set(l.key, { budget: v })}
+              />
+              <DvTextField
+                label={`CPM (Optional)`}
+                numeric
+                value={l.cpm}
+                onChange={(v) => set(l.key, { cpm: v })}
+              />
+              <Typography variant="body2" sx={{ pt: 4 }}>
+                {share}% share
+              </Typography>
+              <IconButton
+                aria-label={`Remove ad format ${l.key}`}
+                disabled={lines.length === 1}
+                onClick={() => setLines((ls) => ls.filter((x) => x.key !== l.key))}
+                sx={{ mt: 3 }}
+              >
+                <DvIcon name="delete" size={20} />
+              </IconButton>
+            </Box>
+          );
+        })}
+        <Box>
+          <Button
+            startIcon={<DvIcon name="add" size={18} />}
+            onClick={() =>
+              setLines((ls) => [
+                ...ls,
+                {
+                  key: Math.max(...ls.map((x) => x.key)) + 1,
+                  formatId: FORMATS[1]!.id,
+                  budget: '',
+                  cpm: '',
+                },
+              ])
+            }
+          >
+            Add ad format
+          </Button>
+        </Box>
+        <Typography variant="body2" data-testid="formats-total">
+          Total added budget: {total > 0 ? '100%' : '0%'} · Total plan budget {currency}
+          {total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </Typography>
+      </Box>
     </DvModal>
   );
 }
