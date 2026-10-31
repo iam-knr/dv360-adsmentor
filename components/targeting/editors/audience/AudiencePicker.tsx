@@ -33,6 +33,9 @@ const SUBTYPE_LABEL: Record<string, string> = {
   LOOKALIKE: 'Lookalike',
   COMBINED: 'Combined',
   CUSTOM: 'Custom',
+  CUSTOM_AFFINITY: 'Custom affinity',
+  CUSTOM_INTENT_DISPLAY_VIDEO: 'Custom intent (Display, Video)',
+  CUSTOM_INTENT_YOUTUBE: 'Custom intent (YouTube)',
 };
 
 /** Audience picker (module 10 2.5): type filter, eligibility chip, search, rows with path and ID, "None selected". */
