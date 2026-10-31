@@ -2,6 +2,7 @@
 
 // Negotiations list (module 13 S9): Import negotiation, status filter (default all six), 11 columns.
 import { useState, useTransition } from 'react';
+import { formatMoney } from '@/lib/money';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -48,7 +49,7 @@ const date = (iso: string) => new Date(iso).toLocaleString('en-GB', { timeZone: 
 const money = (n: number | null, code: string) =>
   n === null
     ? ''
-    : `${code === 'INR' ? '₹' : `${code} `}${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    : formatMoney(n, code);
 
 export function NegotiationsList({
   scope,

@@ -3,6 +3,7 @@
 // New instant deal (module 13 S5, frame F): seller cards, then name, commitment, targeting rows, advertiser access
 // and the forecast card. Accept needs the forecast of the same payload (INV-006).
 import { useMemo, useState } from 'react';
+import { formatMoney } from '@/lib/money';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -27,7 +28,7 @@ import type { InstantDealForecastView, SellerCard } from '@/lib/inventory/types'
 
 const DEFAULT_ROWS = ['Country & Region', 'Format', 'Verticals'];
 const money = (n: number, code: string) =>
-  `${code === 'INR' ? '₹' : `${code} `}${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  formatMoney(n, code);
 const compact = (n: number) =>
   new Intl.NumberFormat('en-IN', { notation: 'compact', maximumFractionDigits: 2 }).format(n);
 

@@ -308,6 +308,11 @@ export function IoForm({
             label="Status"
             value={value.status ?? 'DRAFT'}
             disabled={readOnly}
+            {...(mode === 'create'
+              ? {
+                  hint: 'New insertion orders start as Draft. Choose Active to start delivery on the flight start date.',
+                }
+              : {})}
             options={[
               { value: 'DRAFT', label: 'Draft' },
               { value: 'ACTIVE', label: 'Active' },

@@ -154,17 +154,19 @@ export interface YoutubeSeedInput {
 }
 
 /**
- * Per advertiser (the first): a default business name and logo, and the seven YouTube line items in its first brand
- * awareness insertion order. Skips an advertiser that already has YouTube line items. Returns advertisers seeded.
+ * First advertiser: a default business name and logo, and the seven YouTube line items in its first brand awareness
+ * insertion order, plus the Demand Gen line item. Every other advertiser gets one YouTube line item with an ad group and an ad, so a lift study or an
+ * experiment on any advertiser has a YouTube line item to measure (Q-lift). Skips an advertiser that already has
+ * YouTube line items. Returns advertisers seeded.
  */
 export async function seedYoutube(db: Db, input: YoutubeSeedInput): Promise<number> {
   const advertisers = await db.advertiser.findMany({
     where: { sandboxId: input.sandboxId },
     orderBy: { name: 'asc' },
-    take: 1,
   });
   let seeded = 0;
-  for (const adv of advertisers) {
+  for (const [advIndex, adv] of advertisers.entries()) {
+    const first = advIndex === 0;
     const has = await db.lineItem.count({
       where: { advertiserId: adv.id, type: { in: ['YT_VIDEO', 'YT_AUDIO'] } },
     });
@@ -199,7 +201,9 @@ export async function seedYoutube(db: Db, input: YoutubeSeedInput): Promise<numb
     const ns = `${input.sandboxId}:yt:${adv.id}`;
     const business = (adv.ytBusinessName ?? adv.name).slice(0, 25);
     const now = Date.now();
-    for (const [i, li] of LIS.entries()) {
+    // other advertisers: only the third line item (target frequency), which carries the plain ad group and ad
+    const lineItems = first ? [...LIS.entries()] : [[2, LIS[2]!] as const];
+    for (const [i, li] of lineItems) {
       const liId = stableId(ns, `li${i}`);
       await db.lineItem.create({
         data: {
@@ -399,7 +403,7 @@ export async function seedYoutube(db: Db, input: YoutubeSeedInput): Promise<numb
         }
       }
     }
-    await seedDemandGen(db, input, adv, io, business);
+    if (first) await seedDemandGen(db, input, adv, io, business);
     seeded++;
   }
   return seeded;

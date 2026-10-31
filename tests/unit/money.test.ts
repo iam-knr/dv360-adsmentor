@@ -37,3 +37,24 @@ describe('money', () => {
     expect(format(1234.5, 'SGD')).toBe('$1,234.50');
   });
 });
+
+import { formatMoney } from '@/lib/money';
+import { formatCurrency } from '@/components/dv/grid-format';
+import { money as expMoney } from '@/components/experiments/format';
+import { fmtMoney } from '@/lib/planning/table';
+
+describe('Q18 one formatter per currency', () => {
+  it('renders INR identically everywhere (rupee sign, Indian grouping)', () => {
+    const want = '₹11,02,900.00';
+    expect(formatMoney(1102900, 'INR')).toBe(want);
+    expect(formatMoney(1102900, '₹')).toBe(want);
+    expect(formatCurrency(1102900, 'INR')).toBe(want);
+    expect(formatCurrency(1102900, '₹')).toBe(want);
+    expect(expMoney(1102900, 'INR')).toBe(want);
+    expect(fmtMoney(1102900, 'INR')).toBe(want);
+  });
+  it('dashes for missing values and falls back for unknown codes', () => {
+    expect(formatMoney(null, 'INR')).toBe('-');
+    expect(formatMoney(1234.5, 'XYZ')).toBe('XYZ 1,234.50');
+  });
+});

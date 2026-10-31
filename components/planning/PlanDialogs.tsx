@@ -2,6 +2,7 @@
 
 // Dialogs of the plan page: Modify columns (S3), Make a copy (S5), Create campaign from plan (S6), Remove plan.
 import { useState } from 'react';
+import { formatMoney } from '@/lib/money';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
@@ -454,8 +455,7 @@ export function AdFormatsDialog({
           </Button>
         </Box>
         <Typography variant="body2" data-testid="formats-total">
-          Total added budget: {total > 0 ? '100%' : '0%'} · Total plan budget {currency}
-          {total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          Total added budget: {total > 0 ? '100%' : '0%'} · Total plan budget {formatMoney(total, currency)}
         </Typography>
       </Box>
     </DvModal>

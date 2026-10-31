@@ -88,6 +88,26 @@ export function LiTypePicker({
               <Typography variant="body2" color="text.secondary">
                 {LI_TYPE_DESCRIPTION[o.type]}
               </Typography>
+              {o.reason ? (
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  data-testid={`li-type-reason-${o.type}`}
+                  sx={{ display: 'block', mt: 1 }}
+                >
+                  {o.reason}
+                </Typography>
+              ) : null}
+              {o.prerequisite ? (
+                <Typography
+                  variant="caption"
+                  color="warning.dark"
+                  data-testid={`li-type-prereq-${o.type}`}
+                  sx={{ display: 'block', mt: 1 }}
+                >
+                  {o.prerequisite}
+                </Typography>
+              ) : null}
             </Box>
           );
           return o.reason ? (

@@ -141,7 +141,7 @@ async function removeAssignments(
         entityName: li.name,
         actorType: 'USER',
         userId: actor.id,
-        actorLabel: actor.email,
+        actorLabel: actor.name || actor.email,
         source: 'UI',
         summary: `Removed ${noun} "${listName}" from targeting`,
         occurredAt: new Date(),
