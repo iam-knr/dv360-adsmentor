@@ -15,11 +15,11 @@ export default async function SeedPage() {
   const user = await requireUserOrRedirect();
   if (toDbRole((user.actor ?? user).appRole) !== 'SUPER_ADMIN') notFound();
   return (
-    <SimCard title="Seed the demo class" width={560}>
+    <SimCard title="Seed demo data" width={560}>
       <Typography>
-        Creates the reference data, the Demo class cohort (three students, one sandbox each) and the
-        three template sandboxes. Safe to run again: it never changes an existing password and skips
-        sandboxes that are already up to date.
+        Creates the reference data, the Demo cohort (three demo students, one sandbox each) and the
+        three template sandboxes. Use it on a demo or test database. Safe to run again: it never
+        changes an existing password and skips sandboxes that are already up to date.
       </Typography>
       <SeedForm action={seedDemoAction} />
     </SimCard>

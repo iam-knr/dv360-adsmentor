@@ -40,7 +40,7 @@ export function SeedForm({
         hint="At least 10 characters. Used only for accounts that do not exist yet."
       />
       <Button type="submit" variant="contained" disabled={pending}>
-        {pending ? 'Seeding (about a minute)…' : 'Seed demo class and templates'}
+        {pending ? 'Seeding (about a minute)…' : 'Seed demo data and templates'}
       </Button>
       {state.lines?.length ? (
         <Typography component="pre" variant="caption" sx={{ m: 0, whiteSpace: 'pre-wrap' }}>

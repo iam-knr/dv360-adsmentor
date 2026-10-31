@@ -9,10 +9,13 @@ import { prisma } from '@/lib/db';
 import {
   enqueueProvisionSandbox,
   getProvisionView,
+  rebuildProvisionSandbox,
   retryProvisionSandbox,
   runProvisionStep,
   type ProvisionView,
 } from '@/lib/sandbox/provision';
+import { sandboxStateLabel } from '@/lib/sandbox/labels';
+import { auditActionLabel, isPlaceholderEmail } from './audit-labels';
 import { writeAccountAudit, type AccountAuditAction } from './audit';
 import { can, type AccountAction, type Actor, type Target } from './permissions';
 import {
@@ -723,14 +726,7 @@ export async function listAccounts(
     accessEndsAt: u.accessEndsAt,
     lastLoginAt: u.lastLoginAt,
     lockedUntil: u.lockedUntil,
-    sandbox:
-      u.appRole !== 'USER'
-        ? ''
-        : u.sandboxes[0]
-          ? u.sandboxes[0].provisionState === 'READY'
-            ? 'READY'
-            : u.sandboxes[0].provisionState
-          : 'NOT CREATED',
+    sandbox: u.appRole !== 'USER' ? '' : sandboxStateLabel(u.sandboxes[0]?.provisionState),
   }));
   return { rows, total };
 }
@@ -763,7 +759,14 @@ export async function getAccount(actor: Actor, id: string, db: Db = prisma) {
     where: { targetUserId: id },
     orderBy: { createdAt: 'desc' },
     take: 20,
-    select: { id: true, action: true, result: true, createdAt: true, actorUserId: true, payload: true },
+    select: {
+      id: true,
+      action: true,
+      result: true,
+      createdAt: true,
+      actorUserId: true,
+      payload: true,
+    },
   });
   const actorIds = [...new Set(log.map((r) => r.actorUserId).filter((v): v is string => !!v))];
   const actors = actorIds.length
@@ -778,8 +781,7 @@ export async function getAccount(actor: Actor, id: string, db: Db = prisma) {
     summary: auditSummary(r.action, r.result, r.payload as AuditPayload),
   }));
   const account = u!;
-  const sandbox =
-    account.appRole === 'USER' ? await getProvisionView(id, db) : null;
+  const sandbox = account.appRole === 'USER' ? await getProvisionView(id, db) : null;
   return { account, activity, sandbox };
 }
 
@@ -809,6 +811,35 @@ export async function retrySandbox(
     payload: { reason: 'SANDBOX_PROVISION' },
   });
   return retryProvisionSandbox(cohortId, id, { db, budgetMs: 25_000 });
+}
+
+/**
+ * "Rebuild sandbox" on the account page: throws away the student's work in a READY sandbox and builds it again from the
+ * template, through the same provisioning job as "Create / Retry". Only a READY sandbox is rebuilt: a queued or building
+ * one is left alone (the page already offers "Restart provisioning" for a stuck build), so a healthy build is never
+ * restarted. Audited as SANDBOX_REBUILT.
+ */
+export async function rebuildSandbox(
+  actor: Actor,
+  id: string,
+  db: Db = prisma,
+): Promise<ProvisionView> {
+  const user = await loadTarget(db, actor, id);
+  await authorise(db, actor, 'account.edit', 'ACCOUNT_UPDATED', user);
+  if (user.appRole !== 'USER' || user.status === 'ARCHIVED') throw new AccountError('ACC-022');
+  const before = await getProvisionView(id, db);
+  if (before.state !== 'READY') return before;
+  await writeAccountAudit(db, {
+    actorUserId: actor.id,
+    actorRole: actor.role,
+    classroomId: user.cohortId,
+    action: 'SANDBOX_REBUILT',
+    targetType: 'User',
+    targetId: id,
+    targetUserId: id,
+    payload: { reason: 'SANDBOX_REBUILD' },
+  });
+  return rebuildProvisionSandbox(id, { db, budgetMs: 25_000 });
 }
 
 /**
@@ -885,7 +916,7 @@ export async function getCohort(actor: Actor, id: string, db: Db = prisma) {
       name: u.name,
       status: u.status,
       lastLoginAt: u.lastLoginAt,
-      sandbox: u.sandboxes[0]?.provisionState ?? 'NOT CREATED',
+      sandbox: sandboxStateLabel(u.sandboxes[0]?.provisionState),
     })),
   };
 }
@@ -947,7 +978,12 @@ export async function updateCohort(
   }
   await db.$transaction(async (tx) => {
     const c = await tx.classroom.findFirst({
-      where: { AND: [cohortScopeWhere(actor), { id, archivedAt: null, code: { not: DEFAULT_COHORT_CODE } }] },
+      where: {
+        AND: [
+          cohortScopeWhere(actor),
+          { id, archivedAt: null, code: { not: DEFAULT_COHORT_CODE } },
+        ],
+      },
       select: { id: true, name: true, capacity: true },
     });
     if (!c) throw new AccountError('ACC-031');
@@ -960,7 +996,8 @@ export async function updateCohort(
     const used = await tx.user.count({
       where: { cohortId: id, appRole: 'USER', status: { in: [...CHARGED] } },
     });
-    if (capacity < used) throw new AccountError('ACC-034', `The cohort already has ${used} students.`);
+    if (capacity < used)
+      throw new AccountError('ACC-034', `The cohort already has ${used} students.`);
     if (name !== c.name) {
       const dup = await tx.classroom.findFirst({
         where: { ownerAdminId: actor.id, name, NOT: { id } },
@@ -985,13 +1022,22 @@ export async function updateCohort(
  * Archive a cohort. Its students are not deleted: they move to the default cohort and keep their sandboxes (a sandbox
  * is found by its owner, `resolveClassContext`).
  */
-export async function archiveCohort(actor: Actor, id: string, db: Db = prisma): Promise<{ moved: number }> {
+export async function archiveCohort(
+  actor: Actor,
+  id: string,
+  db: Db = prisma,
+): Promise<{ moved: number }> {
   if (!can(actor, 'cohort.edit', { role: 'USER', ownerAdminId: actor.id })) {
     return deny(db, actor, 'COHORT_ARCHIVED', null, 'FORBIDDEN');
   }
   return db.$transaction(async (tx) => {
     const c = await tx.classroom.findFirst({
-      where: { AND: [cohortScopeWhere(actor), { id, archivedAt: null, code: { not: DEFAULT_COHORT_CODE } }] },
+      where: {
+        AND: [
+          cohortScopeWhere(actor),
+          { id, archivedAt: null, code: { not: DEFAULT_COHORT_CODE } },
+        ],
+      },
       select: { id: true, name: true },
     });
     if (!c) throw new AccountError('ACC-031');
@@ -1025,42 +1071,33 @@ export interface AuditEntry {
   result: 'OK' | 'DENIED';
   actor: { id: string; name: string; email: string } | null;
   target: { id: string; name: string; email: string } | null;
+  /** What the row is about, as a link target: an account, a cohort, or nothing. */
+  targetRef: { kind: 'account' | 'cohort'; id: string | null; label: string; sub?: string } | null;
   targetLabel: string;
   summary: string;
 }
 
 type AuditPayload = Record<string, string | number | boolean | null> | null;
 
-const ACTION_TEXT: Record<string, string> = {
-  ACCOUNT_CREATED: 'Created account',
-  ACCOUNT_UPDATED: 'Updated account',
-  ACCOUNT_ROLE_CHANGED: 'Changed level',
-  ACCOUNT_DISABLED: 'Disabled account',
-  ACCOUNT_ENABLED: 'Enabled account',
-  ACCOUNT_LOCKED: 'Account locked after failed sign-ins',
-  ACCOUNT_UNLOCKED: 'Unlocked account',
-  ACCOUNT_COHORT_MOVED: 'Moved to another cohort',
-  ACCOUNT_ARCHIVED: 'Deleted account',
-  ACCOUNT_RESTORED: 'Restored account',
-  ACCOUNT_PURGED: 'Purged account',
-  ACCOUNTS_IMPORTED: 'Imported accounts',
-  PASSWORD_RESET: 'Reset password',
-  PASSWORD_CHANGED: 'Changed password',
-  SESSIONS_REVOKED: 'Signed out all devices',
-  COHORT_CREATED: 'Created cohort',
-  COHORT_UPDATED: 'Updated cohort',
-  COHORT_ARCHIVED: 'Archived cohort',
-  POLICY_CHANGED: 'Changed account policy',
-  AUTHZ_DENIED: 'Action refused',
+const LEVEL: Record<string, string> = {
+  USER: 'Student',
+  SUPER_ADMIN: 'Super admin',
+  ADMIN: 'Retired level',
 };
-
-const LEVEL: Record<string, string> = { USER: 'Student', SUPER_ADMIN: 'Super admin', ADMIN: 'Retired level' };
+const STATUS_IN_LABEL = new Set([
+  'ACCOUNT_ARCHIVED',
+  'ACCOUNT_RESTORED',
+  'ACCOUNT_DISABLED',
+  'ACCOUNT_ENABLED',
+  'ACCOUNT_LOCKED',
+  'ACCOUNT_UNLOCKED',
+]);
 const nice = (v: unknown) => String(v).toLowerCase().replace(/_/g, ' ');
 
 /** One readable line for an audit row (the raw payload is never shown). */
 export function auditSummary(action: string, result: string, payload: AuditPayload): string {
   const p = payload ?? {};
-  const base = ACTION_TEXT[action] ?? action.toLowerCase().replace(/_/g, ' ');
+  const base = auditActionLabel(action);
   const bits: string[] = [];
   if (result === 'DENIED' && typeof p.reason === 'string') bits.push(`refused (${p.reason})`);
   if (typeof p.cohortName === 'string') bits.push(`cohort "${p.cohortName}"`);
@@ -1070,8 +1107,10 @@ export function auditSummary(action: string, result: string, payload: AuditPaylo
   else if (to) bits.push(`as ${LEVEL[String(to)] ?? to}`);
   const fs = p.fromStatus ?? p.oldStatus;
   const ts = p.toStatus ?? p.newStatus;
-  if (fs && ts) bits.push(`${nice(fs)} to ${nice(ts)}`);
+  // the action label already says what happened to the status ("Archived account"), so "active to archived" is noise
+  if (fs && ts && !STATUS_IN_LABEL.has(action)) bits.push(`${nice(fs)} to ${nice(ts)}`);
   if (p.reason === 'SANDBOX_PROVISION') bits.push('create or retry sandbox');
+  if (p.reason === 'SANDBOX_REBUILD') bits.push("the student's work in it was deleted");
   if (p.mustChangePassword === true) bits.push('new password required at next sign-in');
   if (typeof p.count === 'number' && action.startsWith('COHORT')) bits.push(`${p.count} students`);
   if (typeof p.fileName === 'string') bits.push(p.fileName);
@@ -1129,22 +1168,56 @@ export async function listAudit(actor: Actor, query: AuditQuery = {}, db: Db = p
       },
     }),
     db.auditLog.count({ where }),
-    db.auditLog.findMany({ distinct: ['action'], select: { action: true }, orderBy: { action: 'asc' } }),
+    db.auditLog.findMany({
+      distinct: ['action'],
+      select: { action: true },
+      orderBy: { action: 'asc' },
+    }),
   ]);
-  const ids = [...new Set(rows.flatMap((r) => [r.actorUserId, r.targetUserId]).filter((v): v is string => !!v))];
+  const ids = [
+    ...new Set(
+      rows.flatMap((r) => [r.actorUserId, r.targetUserId]).filter((v): v is string => !!v),
+    ),
+  ];
   const users = ids.length
-    ? await db.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true, email: true } })
+    ? await db.user.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, name: true, email: true },
+      })
     : [];
   const byId = new Map(users.map((u) => [u.id, u]));
   const cohortIds = [
-    ...new Set(rows.filter((r) => r.targetType === 'Classroom' && r.targetId).map((r) => r.targetId as string)),
+    ...new Set(
+      rows
+        .filter((r) => r.targetType === 'Classroom' && r.targetId)
+        .map((r) => r.targetId as string),
+    ),
   ];
   const cohorts = cohortIds.length
-    ? await db.classroom.findMany({ where: { id: { in: cohortIds } }, select: { id: true, name: true } })
+    ? await db.classroom.findMany({
+        where: { id: { in: cohortIds } },
+        select: { id: true, name: true },
+      })
     : [];
   const cohortName = new Map(cohorts.map((c) => [c.id, c.name]));
   const entries: AuditEntry[] = rows.map((r) => {
     const target = r.targetUserId ? (byId.get(r.targetUserId) ?? null) : null;
+    let targetRef: AuditEntry['targetRef'] = null;
+    if (r.targetUserId) {
+      // a person: the name (and a real email); a placeholder address or a missing row reads "Former account"
+      const real = target && !isPlaceholderEmail(target.email);
+      targetRef = target
+        ? {
+            kind: 'account',
+            id: target.id,
+            label: target.name.trim() || 'Former account',
+            ...(real ? { sub: target.email } : {}),
+          }
+        : { kind: 'account', id: null, label: 'Former account' };
+    } else if (r.targetType === 'Classroom' && r.targetId) {
+      const name = cohortName.get(r.targetId);
+      targetRef = { kind: 'cohort', id: name ? r.targetId : null, label: name ?? 'Former cohort' };
+    }
     return {
       id: r.id,
       createdAt: r.createdAt,
@@ -1152,11 +1225,12 @@ export async function listAudit(actor: Actor, query: AuditQuery = {}, db: Db = p
       result: r.result,
       actor: r.actorUserId ? (byId.get(r.actorUserId) ?? null) : null,
       target,
-      targetLabel: target
-        ? `${target.name} (${target.email})`
-        : r.targetType === 'Classroom' && r.targetId
-          ? `Cohort ${cohortName.get(r.targetId) ?? ''}`.trim()
-          : '',
+      targetRef,
+      targetLabel: targetRef
+        ? targetRef.kind === 'cohort'
+          ? `Cohort ${targetRef.label}`
+          : targetRef.label
+        : '',
       summary: auditSummary(r.action, r.result, r.payload as AuditPayload),
     };
   });
@@ -1165,7 +1239,7 @@ export async function listAudit(actor: Actor, query: AuditQuery = {}, db: Db = p
     total,
     page,
     pages: Math.max(1, Math.ceil(total / AUDIT_PAGE_SIZE)),
-    actions: actions.map((a) => a.action),
+    actions: actions.map((a) => ({ code: a.action, label: auditActionLabel(a.action) })),
   };
 }
 

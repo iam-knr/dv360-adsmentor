@@ -47,7 +47,7 @@ describe('demo class bootstrap', () => {
       where: { code: DEMO_CLASS.code },
       include: { members: { include: { user: true } }, ownerAdmin: true },
     });
-    expect(classroom.name).toBe('Demo class');
+    expect(classroom.name).toBe('Demo cohort');
     expect(classroom.ownerAdmin.appRole).toBe('SUPER_ADMIN');
     expect(classroom.members).toHaveLength(3);
     expect(classroom.members.every((m) => m.user.appRole === 'USER')).toBe(true);

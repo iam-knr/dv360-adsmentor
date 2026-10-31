@@ -44,11 +44,11 @@ test('the Super admin seeds the demo cohort and the templates, and a short passw
   await page.goto('/manage/seed');
   await expect(page).toHaveTitle(/Seed/);
   await page.getByLabel(/Password for new demo accounts/).fill('short');
-  await page.getByRole('button', { name: /Seed demo class/ }).click();
+  await page.getByRole('button', { name: /Seed demo data/ }).click();
   await expect(page.getByText('The password needs at least 10 characters.')).toBeVisible();
 
   await page.getByLabel(/Password for new demo accounts/).fill('demo-class-pass-1');
-  await page.getByRole('button', { name: /Seed demo class/ }).click();
+  await page.getByRole('button', { name: /Seed demo data/ }).click();
   await expect(page.getByText('Seeding finished.')).toBeVisible({ timeout: 150_000 });
   const demo = await db.classroom.findUnique({ where: { code: 'DEMO' } });
   expect(demo).not.toBeNull();

@@ -87,6 +87,7 @@ export default async function AccountDetailPage({
         <DvSectionCard title="Sandbox">
           <SandboxSection
             id={a.id}
+            studentName={a.name}
             initial={data.sandbox ?? { state: 'NOT_CREATED', percent: 0, message: 'Not created' }}
             canRecover={a.status !== 'ARCHIVED' && perm('account.edit')}
           />
