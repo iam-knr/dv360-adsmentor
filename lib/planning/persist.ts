@@ -2,6 +2,7 @@
 import type { Plan, PlanForecast as PlanForecastRow, PlanRow, Prisma } from '@prisma/client';
 import { DEFAULT_DEMOGRAPHICS, type PlanDemographics } from './countries';
 import type { ForecastInput } from './forecast';
+import type { TargetingCriteria } from '../targeting/types';
 import type { PlanAdditional, PlanBuyingMethodKey, PlanForecast, PlanRowDto } from './types';
 import { LOCKED_CPM_METHODS } from './types';
 
@@ -19,11 +20,18 @@ export function demographicsOf(plan: Pick<Plan, 'demographics'>): PlanDemographi
   };
 }
 
-export const additionalOf = (plan: Plan): PlanAdditional => ({
-  frequencyGoal: plan.frequencyGoal,
-  reachBasis: plan.reachBasis,
-  includeYoutube: plan.includeYoutube,
-});
+export const additionalOf = (plan: Plan): PlanAdditional => {
+  const extra = (plan.additionalSettings ?? {}) as Partial<PlanAdditional>;
+  return {
+    frequencyGoal: plan.frequencyGoal,
+    reachBasis: plan.reachBasis,
+    includeYoutube: plan.includeYoutube,
+    inventoryQuality: extra.inventoryQuality ?? 'AUTHORIZED_AND_NON_PARTICIPATING',
+    publicInventory: extra.publicInventory ?? true,
+    viewability: extra.viewability ?? 'NONE',
+    brandSuitability: extra.brandSuitability ?? 'NO_RESTRICTIONS',
+  };
+};
 
 export function rowDto(r: PlanRow): PlanRowDto {
   return {
@@ -72,7 +80,7 @@ export function forecastInputOf(
       budgetNet: num(r.budgetNet),
       feePct: num(r.feePct),
       maxCpm: r.maxCpm == null ? null : num(r.maxCpm),
-      audienceRefs: Array.isArray(r.audienceRefs) ? (r.audienceRefs as string[]) : [],
+      audienceRefs: audienceRefsOf(r),
     })),
   };
 }
@@ -136,4 +144,18 @@ export function forecastFromRow(r: PlanForecastRow): PlanForecast {
     tabs: (r.tabs ?? {}) as unknown as PlanForecast['tabs'],
     inputsHash: r.inputsHash ?? '',
   };
+}
+
+/** Targeting a plan row carries: the shared targeting panel's criteria (gap p4-08 #2). Older rows have `{}`. */
+export function criteriaOf(r: { targeting?: unknown }): TargetingCriteria {
+  const t = (r.targeting ?? {}) as { criteria?: TargetingCriteria };
+  return t.criteria && typeof t.criteria === 'object' ? t.criteria : {};
+}
+
+/** Lists that narrow the row's audience: the older free-text tags plus every list included in the panel. */
+export function audienceRefsOf(r: { targeting?: unknown; audienceRefs?: unknown }): string[] {
+  const tags = Array.isArray(r.audienceRefs) ? (r.audienceRefs as string[]) : [];
+  const a = criteriaOf(r).audienceLists?.include;
+  const ids = a ? [...a.firstPartyGroups.flat(), ...a.google, ...a.combined, ...a.custom] : [];
+  return [...new Set([...tags, ...ids])];
 }

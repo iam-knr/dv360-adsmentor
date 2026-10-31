@@ -17,6 +17,7 @@ import {
   type ServiceCtx,
 } from '@/lib/campaigns/service-kit';
 import { addDaysIso } from '@/lib/metrics/date-range';
+import { persistTargeting } from '@/lib/targeting';
 import type { Issue } from '@/lib/validation/types';
 import {
   countryForCurrency,
@@ -40,6 +41,8 @@ import {
 import { PLAN_PARAMS } from './params';
 import {
   additionalOf,
+  audienceRefsOf,
+  criteriaOf,
   dbDate,
   demographicsOf,
   forecastFromRow,
@@ -63,6 +66,7 @@ import {
   type PlanBuyingMethodKey,
   type PlanChannelKey,
   type PlanDto,
+  type PlanForecast as PlanForecastDto,
   type PlanListRow,
   type PlanRowInput,
   type PlanStatusKey,
@@ -140,6 +144,7 @@ async function toDto(
     version: plan.version,
     canWrite: canWritePlans(ctx.user),
     simToday: today,
+    advertiserRowId: adv.id,
   };
 }
 
@@ -162,7 +167,8 @@ export async function listPlans(
   return readCtx(user, async (tx) => {
     const adv = await loadAdvertiser(tx, aid);
     const where: Prisma.PlanWhereInput = { advertiserId: adv.id };
-    if (q.status && q.status.length && q.status.length < 2) where.status = { in: q.status };
+    // The list page loads every status and filters in the browser; Archived is unticked by default there.
+    if (q.status && q.status.length) where.status = { in: q.status };
     const plans = await tx.plan.findMany({ where, orderBy: { name: 'asc' } });
     const rows: PlanListRow[] = plans.map((p) => ({
       id: p.id,
@@ -204,6 +210,8 @@ export interface CreatePlanInput {
   end?: string;
   demographics?: PlanDemographics;
   channels?: PlanChannelKey[];
+  /** Optional sub-location of the wizard's second step (kept in the plan's additional settings). */
+  subLocation?: string;
 }
 
 /** PLN-001, 4.2: defaults of a new plan. */
@@ -255,6 +263,11 @@ export async function createPlan(
                 frequencyGoal: 3,
                 reachBasis: 'CENSUS',
                 includeYoutube: true,
+                inventoryQuality: 'AUTHORIZED_AND_NON_PARTICIPATING',
+                publicInventory: true,
+                viewability: 'NONE',
+                brandSuitability: 'NO_RESTRICTIONS',
+                ...(input.subLocation?.trim() ? { subLocation: input.subLocation.trim() } : {}),
               },
               savedAt: new Date(),
               savedAtSim: ctx.simNow,
@@ -265,6 +278,36 @@ export async function createPlan(
       return { id: created.id, publicId: created.publicId.toString() };
     });
     return { data };
+  });
+}
+
+export interface NewPlanDefaults {
+  name: string;
+  location: string;
+  currencyCode: string;
+  start: string;
+  end: string;
+  simToday: string;
+  canWrite: boolean;
+}
+
+/** What the New plan wizard starts from (explore 19: next calendar month, advertiser currency and country). */
+export async function getNewPlanDefaults(user: SessionUser, aid: string): Promise<NewPlanDefaults> {
+  return readCtx(user, async (tx, ctx) => {
+    const adv = await loadAdvertiser(tx, aid);
+    const today = simToday(ctx, adv);
+    const [y, m] = today.split('-').map(Number) as [number, number];
+    const first = new Date(Date.UTC(m === 12 ? y + 1 : y, m === 12 ? 0 : m, 1));
+    const last = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0));
+    return {
+      name: defaultPlanName(today),
+      location: countryForCurrency(adv.currencyCode).code,
+      currencyCode: adv.currencyCode,
+      start: first.toISOString().slice(0, 10),
+      end: last.toISOString().slice(0, 10),
+      simToday: today,
+      canWrite: canWritePlans(user),
+    };
   });
 }
 
@@ -428,8 +471,7 @@ function rowsChanged(existing: PlanRow[], input: PlanRowInput[]): boolean {
       r.budgetNet !== Number(e.budgetNet) ||
       (r.maxCpm ?? null) !== (e.maxCpm == null ? null : Number(e.maxCpm)) ||
       JSON.stringify(r.locations ?? e.locations) !== JSON.stringify(e.locations) ||
-      JSON.stringify(r.audienceRefs ?? e.audienceRefs ?? []) !==
-        JSON.stringify(e.audienceRefs ?? []) ||
+      JSON.stringify(audienceRefsOf(r)) !== JSON.stringify(e.audienceRefs ?? []) ||
       JSON.stringify(r.targeting ?? e.targeting ?? {}) !== JSON.stringify(e.targeting ?? {})
     );
   });
@@ -459,7 +501,7 @@ async function writeRows(
       startDate: dbDate(r.startDate),
       endDate: dbDate(r.endDate),
       targeting: (r.targeting ?? {}) as Prisma.InputJsonValue,
-      audienceRefs: (r.audienceRefs ?? []) as Prisma.InputJsonValue,
+      audienceRefs: audienceRefsOf(r) as Prisma.InputJsonValue,
       pricing: methodPricing(r.buyingMethod),
       dealId: r.dealId ?? null,
       feePct: fee,
@@ -588,6 +630,131 @@ export async function removePlan(
   });
 }
 
+/** Archive hides a plan from the default list; Unarchive brings it back (Trafficked when it was converted). */
+export async function setPlanArchived(
+  user: SessionUser,
+  aid: string,
+  id: string,
+  archived: boolean,
+): Promise<Result<{ status: PlanStatusKey }>> {
+  return asResult(async () => {
+    const status = await writeCtx(user, async (tx, ctx) => {
+      const adv = await loadAdvertiser(tx, aid);
+      const plan = await loadPlanRow(tx, adv.id, id);
+      if (archived && plan.status === 'ARCHIVED') return plan.status;
+      if (!archived && plan.status !== 'ARCHIVED') return plan.status;
+      const next: PlanStatusKey = archived
+        ? 'ARCHIVED'
+        : plan.convertedCampaignId
+          ? 'TRAFFICKED'
+          : 'PLANNED';
+      await withChangeLog(
+        changeCtx(ctx, tx),
+        {
+          type: 'PLAN',
+          id: plan.id,
+          publicId: plan.publicId,
+          name: plan.name,
+          chain: { advertiserId: adv.id },
+        },
+        (t) =>
+          t.plan.update({
+            where: { id: plan.id },
+            data: { status: next, version: { increment: 1 } },
+            select: { id: true },
+          }),
+        { summary: archived ? 'Plan archived' : 'Plan restored' },
+      );
+      return next;
+    });
+    return { data: { status } };
+  });
+}
+
+export interface PreviewPlanInput {
+  id: string;
+  location: string;
+  dates: { start: string; end: string };
+  demographics: PlanDemographics;
+  additional: PlanAdditional;
+  rows: PlanRowInput[];
+}
+
+/**
+ * Forecast of an unsaved draft (gap p4-08 #10): the same pure model as Save, nothing is written. Rows that fail their
+ * own rules are left out, so a half-filled row never blocks the preview.
+ */
+export async function previewPlanForecast(
+  user: SessionUser,
+  aid: string,
+  input: PreviewPlanInput,
+): Promise<Result<{ forecast: PlanForecastDto; rowKeys: Record<string, string> }>> {
+  return asResult(async () => {
+    const data = await readCtx(user, async (tx, ctx) => {
+      const adv = await loadAdvertiser(tx, aid);
+      const plan = await loadPlanRow(tx, adv.id, input.id);
+      const seed = await marketSeed(tx, ctx.sandboxId);
+      const fee = PLAN_PARAMS.fees.default;
+      const usable = input.rows.filter(
+        (r, i) =>
+          planRowIssues(
+            {
+              name: r.name,
+              buyingMethod: r.buyingMethod,
+              dealId: r.dealId ?? null,
+              start: r.startDate,
+              end: r.endDate,
+              budgetNet: r.budgetNet,
+              maxCpm: r.maxCpm ?? null,
+              planStart: input.dates.start,
+              planEnd: input.dates.end,
+            },
+            i,
+          ).length === 0,
+      );
+      if (
+        planHeaderIssues({
+          name: plan.name || 'x',
+          location: input.location,
+          start: input.dates.start,
+          end: input.dates.end,
+          ageMin: input.demographics.ageMin,
+          ageMax: input.demographics.ageMax,
+          today: simToday(ctx, adv),
+          checkStart: false,
+          frequencyGoal: input.additional.frequencyGoal,
+        }).some((i) => i.blocking) ||
+        usable.length === 0
+      )
+        throw fail([]);
+      const keyOf = (r: PlanRowInput, i: number) => r.id ?? `draft-${i}`;
+      const f = forecastPlan({
+        seed,
+        planId: plan.id,
+        country: input.location,
+        currency: plan.currencyCode,
+        demographics: input.demographics,
+        reachBasis: input.additional.reachBasis,
+        includeYoutube: input.additional.includeYoutube,
+        startDate: input.dates.start,
+        endDate: input.dates.end,
+        asOf: ctx.simNow.toISOString(),
+        rows: usable.map((r) => ({
+          key: keyOf(r, input.rows.indexOf(r)),
+          name: r.name,
+          buyingMethod: r.buyingMethod,
+          budgetNet: r.budgetNet,
+          feePct: fee,
+          maxCpm: r.buyingMethod === 'OPEN_AUCTION' ? (r.maxCpm ?? null) : null,
+          audienceRefs: audienceRefsOf(r),
+        })),
+      });
+      return { forecast: f, rowKeys: {} };
+    });
+    return { data };
+  });
+}
+
 // ---------------------------------------------------------------------------------------------
 // Convert to campaign (4.7)
 // ---------------------------------------------------------------------------------------------
@@ -630,10 +797,6 @@ export async function convertPlan(
 
       const total = plan.rows.reduce((s, r) => s + Number(r.budgetTotal), 0);
       const digitalOnly = plan.channels.every((c) => c === 'DIGITAL');
-      const geo = await tx.targetingOption.findFirst({
-        where: { dimension: 'GEOGRAPHY', code: plan.locationCountry },
-        select: { id: true },
-      });
       const start = iso(plan.startDate);
       const end = iso(plan.endDate);
       const cctx = changeCtx(ctx, tx, { ...(input.note ? { note: input.note } : {}) });
@@ -715,17 +878,22 @@ export async function convertPlan(
               },
               select: { id: true },
             });
-            if (geo)
-              await t.targetingAssignment.create({
-                data: {
-                  sandboxId: ctx.sandboxId,
-                  ownerType: 'LINE_ITEM',
-                  lineItemId: created.id,
-                  dimension: 'GEOGRAPHY',
-                  mode: 'INCLUDE',
-                  optionId: geo.id,
-                },
-              });
+            // Every dimension of the row's targeting panel goes to the draft (gap p4-08 #2). A row without its own
+            // geography gets the plan country, as before.
+            const criteria = structuredClone(criteriaOf(r));
+            if (!criteria.geography?.regions?.length)
+              criteria.geography = {
+                ...criteria.geography,
+                regions: (r.locations.length ? r.locations : [plan.locationCountry]).map((id) => ({
+                  id,
+                  mode: 'INCLUDE' as const,
+                })),
+              };
+            await persistTargeting(t, created.id, {
+              version: 1,
+              lineItemType: 'DISPLAY',
+              criteria,
+            });
             return created;
           },
         );

@@ -9,6 +9,9 @@ import type { VerificationProvider } from '@/lib/targeting/types';
  */
 export interface TargetingEditorContextValue {
   advertiserId?: string;
+  /** Public ids, for the "create a custom list" links of the audience picker. */
+  partnerPublicId?: string;
+  advertiserPublicId?: string;
   /** Campaign landing page URLs and keywords: the URL suggestions card shows only when one exists (AC-10-05). */
   landingUrls?: string[];
   campaignKeywords?: string[];

@@ -2,7 +2,7 @@
 
 // Plan page, "Adjust your plan and view forecast" (module 04 S2): header, settings strip, forecast, line item table.
 // The page keeps a draft of the header and rows; Save sends the draft and receives the stored plan with a fresh forecast.
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -29,10 +29,12 @@ import { useUnsavedGuard } from '@/lib/hooks/useUnsavedGuard';
 import { AppLink } from '@/lib/routes/AppLink';
 import { campaignPath } from '@/lib/routes/paths';
 import {
+  archivePlanAction,
   convertPlanAction,
   copyPlanAction,
   downloadPlanCsvAction,
   listPlanCampaignsAction,
+  previewPlanForecastAction,
   removePlanAction,
   savePlanColumnsAction,
   updatePlanAction,
@@ -49,14 +51,19 @@ import { planPagePath, plansListPath } from '@/lib/planning/paths';
 import { PLN_MSG } from '@/lib/planning/rules';
 import type { PlanCampaignChoice } from '@/lib/planning/service';
 import {
+  INVENTORY_QUALITY_LABEL,
   LOCKED_CPM_METHODS,
+  VIEWABILITY_LABEL,
+  type InventoryQuality,
   type PlanAdditional,
   type PlanDto,
+  type PlanForecast,
   type PlanRowDto,
   type PlanRowInput,
 } from '@/lib/planning/types';
-import { DateField } from './DateField';
+import { PlanDateRange } from './PlanDateRange';
 import {
+  AdFormatsDialog,
   ConvertPlanDialog,
   CopyPlanDialog,
   ModifyColumnsDialog,
@@ -143,12 +150,15 @@ export function PlanPage({
   const [forecasting, setForecasting] = useState(false);
   const [menu, setMenu] = useState<HTMLElement | null>(null);
   const [dialog, setDialog] = useState<
-    null | 'columns' | 'copy' | 'convert' | 'remove' | 'demographics' | 'additional'
+    null | 'columns' | 'copy' | 'convert' | 'remove' | 'demographics' | 'additional' | 'formats'
   >(null);
+  const [preview, setPreview] = useState<PlanForecast | null>(null);
+  const [previewing, setPreviewing] = useState(false);
   const [editRow, setEditRow] = useState<PlanRowDto | null>(null);
   const [campaigns, setCampaigns] = useState<PlanCampaignChoice[]>([]);
 
-  const locked = plan.locked || plan.status === 'TRAFFICKED';
+  const archived = plan.status === 'ARCHIVED';
+  const locked = plan.locked || plan.status !== 'PLANNED';
   const editable = !locked && plan.canWrite && !viewer.readOnly;
   const dirty = useMemo(
     () => JSON.stringify(draftOf(plan)) !== JSON.stringify(draft),
@@ -161,6 +171,51 @@ export function PlanPage({
 
   // Fee is the plan default for new rows; existing rows keep theirs.
   const defaultFee = plan.rows[0]?.feePct ?? 0.1;
+
+  const rowInputs = (keepTmpIds: boolean): PlanRowInput[] =>
+    draft.rows.map((r) => ({
+      ...(r.id.startsWith('tmp-') && !keepTmpIds ? {} : { id: r.id }),
+      name: r.name,
+      buyingMethod: r.buyingMethod,
+      dealId: r.dealId,
+      locations: r.locations,
+      startDate: r.startDate,
+      endDate: r.endDate,
+      targeting: r.targeting,
+      audienceRefs: r.audienceRefs,
+      budgetNet: r.budgetNet,
+      maxCpm: r.maxCpm,
+    }));
+
+  // Live forecast of the unsaved draft (gap p4-08 #10): debounced, never written. The server drops half-filled rows.
+  const draftKey = JSON.stringify(draft);
+  useEffect(() => {
+    if (!editable || !dirty) {
+      setPreview(null);
+      return;
+    }
+    let live = true;
+    setPreviewing(true);
+    const timer = setTimeout(() => {
+      void previewPlanForecastAction(advertiserId, {
+        id: plan.id,
+        location: draft.location,
+        dates: { start: draft.start, end: draft.end },
+        demographics: draft.demographics,
+        additional: draft.additional,
+        rows: rowInputs(true),
+      }).then((res) => {
+        if (!live) return;
+        setPreviewing(false);
+        setPreview(res.ok ? res.data.forecast : null);
+      });
+    }, 500);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey, editable, dirty]);
 
   const save = () =>
     start(async () => {
@@ -198,6 +253,7 @@ export function PlanPage({
       }
       setPlan(res.data.plan);
       setDraft(draftOf(res.data.plan));
+      setPreview(null);
       toast.show({ message: 'Plan saved' });
     });
 
@@ -265,6 +321,15 @@ export function PlanPage({
       router.push(plansListPath(partnerId, advertiserId));
     });
 
+  const archive = (value: boolean) =>
+    start(async () => {
+      setMenu(null);
+      const res = await archivePlanAction(advertiserId, plan.id, value);
+      if (!res.ok) return setPageError(res.issues[0]?.message);
+      setPlan((p) => ({ ...p, status: res.data.status }));
+      toast.show({ message: value ? 'Plan archived' : 'Plan restored' });
+    });
+
   const saveColumns = async (order: string[]) => {
     setDialog(null);
     setColumns(order);
@@ -304,6 +369,23 @@ export function PlanPage({
       };
     });
     setEditRow(null);
+  };
+  const duplicateRow = (r: PlanRowDto) => {
+    setDraft((d) => ({
+      ...d,
+      rows: [...d.rows, { ...r, id: `tmp-${++tmp}`, ordinal: d.rows.length }],
+    }));
+    setEditRow(null);
+  };
+  const addFormats = (added: PlanRowDto[]) => {
+    setDraft((d) => ({
+      ...d,
+      rows: [
+        ...d.rows,
+        ...added.map((r, i) => ({ ...r, id: `tmp-${++tmp}`, ordinal: d.rows.length + i })),
+      ],
+    }));
+    setDialog(null);
   };
   const deleteRow = () => {
     if (editRow) set({ rows: draft.rows.filter((x) => x.id !== editRow.id) });
@@ -354,6 +436,12 @@ export function PlanPage({
           {pageError}
         </DvBanner>
       ) : null}
+      {archived ? (
+        <DvBanner kind="info" level="inline">
+          This plan is archived and read-only. Restore it from the more actions menu to work on it
+          again.
+        </DvBanner>
+      ) : null}
       {plan.status === 'TRAFFICKED' ? (
         <DvBanner kind="info" level="inline">
           This plan is trafficked.{' '}
@@ -379,6 +467,7 @@ export function PlanPage({
         </Box>
         {viewer.limitedAccess ? <DvStatusChip kind="new" label="Limited Access" /> : null}
         {plan.status === 'TRAFFICKED' ? <DvStatusChip kind="new" label="Trafficked" /> : null}
+        {archived ? <DvStatusChip kind="new" label="Archived" /> : null}
         <Typography variant="caption" data-testid="saved-label" color="text.secondary">
           {savedLabel(plan)}
         </Typography>
@@ -409,6 +498,13 @@ export function PlanPage({
         </IconButton>
         <Menu anchorEl={menu} open={Boolean(menu)} onClose={() => setMenu(null)}>
           <MenuItem onClick={() => void download()}>Download (.csv)</MenuItem>
+          <MenuItem
+            disabled={!plan.canWrite || viewer.readOnly || dirty}
+            title={dirty ? 'Save your changes first.' : undefined}
+            onClick={() => archive(!archived)}
+          >
+            {archived ? 'Restore plan' : 'Archive plan'}
+          </MenuItem>
           <MenuItem
             disabled={!plan.canWrite || viewer.readOnly}
             onClick={() => {
@@ -452,19 +548,14 @@ export function PlanPage({
             onChange={(location) => set({ location })}
           />
         </Box>
-        <DateField
-          label="Start date"
-          value={draft.start}
+        <PlanDateRange
+          label="Dates"
+          start={draft.start}
+          end={draft.end}
+          today={plan.simToday}
           disabled={!editable}
-          error={errors['dates.start']}
-          onChange={(start) => set({ start })}
-        />
-        <DateField
-          label="End date"
-          value={draft.end}
-          disabled={!editable}
-          error={errors['dates.end']}
-          onChange={(end) => set({ end })}
+          error={errors['dates.start'] ?? errors['dates.end']}
+          onChange={(start, end) => set({ start, end })}
         />
         <Box>
           <Typography variant="caption" color="text.secondary" component="div">
@@ -499,14 +590,23 @@ export function PlanPage({
         ) : null}
       </Box>
 
+      {preview ? (
+        <DvBanner kind="info" level="inline">
+          Preview of your unsaved changes. Save to keep this forecast.
+        </DvBanner>
+      ) : null}
       <PlanSummary
-        forecast={plan.forecast}
+        forecast={preview ?? plan.forecast}
         demographics={draft.demographics}
         currency={cur}
-        forecasting={forecasting}
+        forecasting={forecasting || previewing}
         hasRows={plan.rows.length > 0}
       />
-      <PlanForecastTabs forecast={plan.forecast} stale={stale} emptyState={detailEmpty} />
+      <PlanForecastTabs
+        forecast={preview ?? plan.forecast}
+        stale={stale}
+        emptyState={detailEmpty}
+      />
 
       {/* Line items */}
       <Box component="section" aria-label="Plan line items">
@@ -515,9 +615,22 @@ export function PlanPage({
             Plan line items
           </Typography>
           {editable ? (
-            <Button variant="outlined" startIcon={<DvIcon name="add" size={18} />} onClick={addRow}>
-              Add plan line item
-            </Button>
+            <>
+              <Button
+                variant="outlined"
+                startIcon={<DvIcon name="add" size={18} />}
+                onClick={() => setDialog('formats')}
+              >
+                Add ad formats
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<DvIcon name="add" size={18} />}
+                onClick={addRow}
+              >
+                Add plan line item
+              </Button>
+            </>
           ) : null}
           <Button
             variant="outlined"
@@ -543,6 +656,10 @@ export function PlanPage({
 
       <PlanRowSlideOver
         advertiserId={advertiserId}
+        advertiserRowId={plan.advertiserRowId}
+        partnerId={partnerId}
+        today={plan.simToday}
+        onDuplicate={duplicateRow}
         row={editRow}
         planStart={draft.start}
         planEnd={draft.end}
@@ -552,6 +669,18 @@ export function PlanPage({
         onCancel={() => setEditRow(null)}
         onDelete={deleteRow}
       />
+      {dialog === 'formats' ? (
+        <AdFormatsDialog
+          open
+          currency={cur}
+          planStart={draft.start}
+          planEnd={draft.end}
+          location={draft.location}
+          fee={defaultFee}
+          onApply={addFormats}
+          onCancel={() => setDialog(null)}
+        />
+      ) : null}
       {dialog === 'columns' ? (
         <ModifyColumnsDialog
           open
@@ -563,6 +692,7 @@ export function PlanPage({
       {dialog === 'copy' ? (
         <CopyPlanDialog
           open
+          today={plan.simToday}
           defaults={copyDefaults}
           busy={busy}
           error={pageError}
@@ -607,6 +737,9 @@ export function PlanPage({
         onCancel={() => setDialog(null)}
       >
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, p: 4 }}>
+          <DvBanner kind="info" level="inline">
+            Note that any changes you make to the plan settings will not affect your campaign.
+          </DvBanner>
           <DvTextField
             label="Frequency goal"
             numeric
@@ -627,6 +760,59 @@ export function PlanPage({
               { value: 'CENSUS', label: 'Census population' },
               { value: 'DIGITAL', label: 'Digital population' },
             ]}
+          />
+          <DvSelect
+            label="Inventory source quality"
+            value={draft.additional.inventoryQuality ?? 'AUTHORIZED_AND_NON_PARTICIPATING'}
+            options={(Object.keys(INVENTORY_QUALITY_LABEL) as InventoryQuality[]).map((v) => ({
+              value: v,
+              label: INVENTORY_QUALITY_LABEL[v],
+            }))}
+            onChange={(v) =>
+              set({ additional: { ...draft.additional, inventoryQuality: v as InventoryQuality } })
+            }
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={draft.additional.publicInventory ?? true}
+                onChange={(e) =>
+                  set({ additional: { ...draft.additional, publicInventory: e.target.checked } })
+                }
+              />
+            }
+            label="Public inventory"
+          />
+          <DvSelect
+            label="Viewability"
+            value={draft.additional.viewability ?? 'NONE'}
+            options={(Object.keys(VIEWABILITY_LABEL) as (keyof typeof VIEWABILITY_LABEL)[]).map(
+              (v) => ({ value: v, label: VIEWABILITY_LABEL[v] }),
+            )}
+            onChange={(v) =>
+              set({
+                additional: {
+                  ...draft.additional,
+                  viewability: v as NonNullable<PlanAdditional['viewability']>,
+                },
+              })
+            }
+          />
+          <DvSelect
+            label="Brand suitability"
+            value={draft.additional.brandSuitability ?? 'NO_RESTRICTIONS'}
+            options={[
+              { value: 'NO_RESTRICTIONS', label: 'No restrictions' },
+              { value: 'EXCLUDE_SENSITIVE', label: 'Exclude sensitive content' },
+            ]}
+            onChange={(v) =>
+              set({
+                additional: {
+                  ...draft.additional,
+                  brandSuitability: v as NonNullable<PlanAdditional['brandSuitability']>,
+                },
+              })
+            }
           />
           <FormControlLabel
             control={
