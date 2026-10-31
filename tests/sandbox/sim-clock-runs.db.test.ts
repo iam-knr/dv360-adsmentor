@@ -11,7 +11,13 @@ import { ensureCaughtUp, MAX_OWED_TICKS, runDueTicks } from '@/lib/engine/server
 import { createCreative } from '@/lib/creatives/service';
 import { createInsertionOrder } from '@/lib/insertion-orders/service';
 import { newIoValue } from '@/lib/insertion-orders/wire';
-import { assignCreatives, createLineItem, getDraftInit, listLineItems, setLineItemStatus } from '@/lib/line-items/service';
+import {
+  assignCreatives,
+  createLineItem,
+  getDraftInit,
+  listLineItems,
+  setLineItemStatus,
+} from '@/lib/line-items/service';
 import {
   ACTIVE_WINDOW_MS,
   AUTOSTART_ENV,
@@ -27,7 +33,11 @@ import {
   startSandboxClock,
 } from '@/lib/sandbox/clock-run';
 import { getSandboxClockView } from '@/lib/sandbox/clock-view';
-import { getProvisionView, enqueueProvisionSandbox, runProvisionStep } from '@/lib/sandbox/provision';
+import {
+  getProvisionView,
+  enqueueProvisionSandbox,
+  runProvisionStep,
+} from '@/lib/sandbox/provision';
 import { partnerIdOf } from '@/lib/seed/sandbox';
 import { seedReferenceData } from '@/lib/seed/reference-db';
 import { clearSandboxData } from '@/lib/seed/write';
@@ -78,7 +88,9 @@ afterAll(async () => {
   await prisma.appMeta.deleteMany({ where: { key: { startsWith: 'sandbox-clock:' } } });
   await prisma.appMeta.deleteMany({ where: { key: SPEED_META_KEY } });
   for (const id of sandboxIds) {
-    await prisma.$transaction((tx) => clearSandboxData(tx, id), { timeout: 120_000 }).catch(() => undefined);
+    await prisma
+      .$transaction((tx) => clearSandboxData(tx, id), { timeout: 120_000 })
+      .catch(() => undefined);
     await prisma.$executeRawUnsafe(`DELETE FROM "SimJob" WHERE "sandboxId" = $1`, id);
     await prisma.$executeRawUnsafe(`DELETE FROM "SimTickLog" WHERE "sandboxId" = $1`, id);
   }
@@ -99,13 +111,19 @@ describe('speed setting', () => {
   });
 
   it('is the default 10, an env value, or a setting that wins; an invalid value falls back', async () => {
-    expect(await getSandboxSpeed(prisma, {})).toMatchObject({ minutesPerSimDay: 10, source: 'default', speedX: 144 });
+    expect(await getSandboxSpeed(prisma, {})).toMatchObject({
+      minutesPerSimDay: 10,
+      source: 'default',
+      speedX: 144,
+    });
     expect(await getSandboxSpeed(prisma, { SANDBOX_SIM_MINUTES_PER_DAY: '30' })).toMatchObject({
       minutesPerSimDay: 30,
       source: 'env',
       speedX: 48,
     });
-    expect(await getSandboxSpeed(prisma, { SANDBOX_SIM_MINUTES_PER_DAY: '0' })).toMatchObject({ source: 'default' });
+    expect(await getSandboxSpeed(prisma, { SANDBOX_SIM_MINUTES_PER_DAY: '0' })).toMatchObject({
+      source: 'default',
+    });
     await prisma.appMeta.upsert({
       where: { key: SPEED_META_KEY },
       create: { key: SPEED_META_KEY, value: '5' },
@@ -176,11 +194,15 @@ describe('load protection', () => {
   async function owe(id: string, ticks: number, now: number) {
     await prisma.simClock.update({
       where: { sandboxId: id },
-      data: { state: 'RUNNING', lastAdvanceRealAt: new Date(now - ticks * PER_TICK_MS), remainderMs: 0 },
+      data: {
+        state: 'RUNNING',
+        lastAdvanceRealAt: new Date(now - ticks * PER_TICK_MS),
+        remainderMs: 0,
+      },
     });
   }
 
-  it('the timer skips a sandbox whose student was not seen in 7 days; the student\'s own call catches up', async () => {
+  it("the timer skips a sandbox whose student was not seen in 7 days; the student's own call catches up", async () => {
     const id = student.sandboxId;
     const now = Date.now();
     await owe(id, 10, now);
@@ -189,35 +211,60 @@ describe('load protection', () => {
       data: { lastSeenAt: new Date(now - ACTIVE_WINDOW_MS - 3_600_000) },
     });
     const before = Number((await clockOf(id)).tickIndex);
-    const idle = await runDueTicks(Number.MAX_SAFE_INTEGER, { now, activeWithinMs: ACTIVE_WINDOW_MS });
+    const idle = await runDueTicks(Number.MAX_SAFE_INTEGER, {
+      now,
+      activeWithinMs: ACTIVE_WINDOW_MS,
+    });
     expect(idle.stillDue).not.toBeGreaterThan(Number.MAX_SAFE_INTEGER);
     expect(Number((await clockOf(id)).tickIndex)).toBe(before);
     // active again: the timer moves it
-    await prisma.user.update({ where: { id: student.userId }, data: { lastSeenAt: new Date(now - 3_600_000) } });
+    await prisma.user.update({
+      where: { id: student.userId },
+      data: { lastSeenAt: new Date(now - 3_600_000) },
+    });
     await runDueTicks(Number.MAX_SAFE_INTEGER, { now, activeWithinMs: ACTIVE_WINDOW_MS });
     expect(Number((await clockOf(id)).tickIndex)).toBe(before + 10);
     // the student's own lazy path works regardless of the window
     await owe(id, 4, now);
-    await prisma.user.update({ where: { id: student.userId }, data: { lastSeenAt: new Date(now - 30 * 86_400_000) } });
+    await prisma.user.update({
+      where: { id: student.userId },
+      data: { lastSeenAt: new Date(now - 30 * 86_400_000) },
+    });
     // lazy path: a page load runs a few ticks within its 800 ms budget (about 0.3 s per tick on this sandbox)
     const lazy = await ensureCaughtUp(id, { now });
     expect(lazy.ticks).toBeGreaterThanOrEqual(1);
     expect(lazy.ticks).toBeLessThanOrEqual(4);
   });
 
-  it('a long inactive sandbox catches up in chunks of at most 96 ticks, and debt beyond 7 days is not owed', { timeout: 240_000 }, async () => {
-    const id = student.sandboxId;
-    const now = Date.now();
-    await prisma.user.update({ where: { id: student.userId }, data: { lastSeenAt: new Date(now) } });
-    await owe(id, 5000, now); // about 35 simulated days
-    const before = Number((await clockOf(id)).tickIndex);
-    const first = await runDueTicks(Number.MAX_SAFE_INTEGER, { now, activeWithinMs: ACTIVE_WINDOW_MS });
-    expect(first.ticks).toBe(96);
-    expect(Number((await clockOf(id)).tickIndex)).toBe(before + 96);
-    const second = await runDueTicks(Number.MAX_SAFE_INTEGER, { now, activeWithinMs: ACTIVE_WINDOW_MS });
-    expect(second.ticks).toBe(MAX_OWED_TICKS - 96); // 168 owed in total, the rest was forgiven
-    expect((await runDueTicks(Number.MAX_SAFE_INTEGER, { now, activeWithinMs: ACTIVE_WINDOW_MS })).ticks).toBe(0);
-  });
+  it(
+    'a long inactive sandbox catches up in chunks of at most 96 ticks, and debt beyond 7 days is not owed',
+    { timeout: 240_000 },
+    async () => {
+      const id = student.sandboxId;
+      const now = Date.now();
+      await prisma.user.update({
+        where: { id: student.userId },
+        data: { lastSeenAt: new Date(now) },
+      });
+      await owe(id, 5000, now); // about 35 simulated days
+      const before = Number((await clockOf(id)).tickIndex);
+      const first = await runDueTicks(Number.MAX_SAFE_INTEGER, {
+        now,
+        activeWithinMs: ACTIVE_WINDOW_MS,
+      });
+      expect(first.ticks).toBe(96);
+      expect(Number((await clockOf(id)).tickIndex)).toBe(before + 96);
+      const second = await runDueTicks(Number.MAX_SAFE_INTEGER, {
+        now,
+        activeWithinMs: ACTIVE_WINDOW_MS,
+      });
+      expect(second.ticks).toBe(MAX_OWED_TICKS - 96); // 168 owed in total, the rest was forgiven
+      expect(
+        (await runDueTicks(Number.MAX_SAFE_INTEGER, { now, activeWithinMs: ACTIVE_WINDOW_MS }))
+          .ticks,
+      ).toBe(0);
+    },
+  );
 });
 
 describe('Super admin pause and resume', () => {
@@ -228,13 +275,22 @@ describe('Super admin pause and resume', () => {
     const paused = await setSandboxClockRunning(actor, student.userId, false);
     expect(paused).toMatchObject({ state: 'PAUSED', pausedByAdmin: true });
     const tick = Number((await clockOf(id)).tickIndex);
-    await prisma.simClock.updateMany({ where: { sandboxId: id }, data: { lastAdvanceRealAt: new Date(Date.now() - 600_000) } });
+    await prisma.simClock.updateMany({
+      where: { sandboxId: id },
+      data: { lastAdvanceRealAt: new Date(Date.now() - 600_000) },
+    });
     await runDueTicks(Number.MAX_SAFE_INTEGER, { activeWithinMs: ACTIVE_WINDOW_MS });
     expect(Number((await clockOf(id)).tickIndex)).toBe(tick);
     const resumed = await setSandboxClockRunning(actor, student.userId, true);
     expect(resumed).toMatchObject({ state: 'RUNNING', pausedByAdmin: false });
     const actions = (
-      await prisma.auditLog.findMany({ where: { targetUserId: student.userId, action: { in: ['SANDBOX_PAUSED', 'SANDBOX_RESUMED'] } }, orderBy: { createdAt: 'asc' } })
+      await prisma.auditLog.findMany({
+        where: {
+          targetUserId: student.userId,
+          action: { in: ['SANDBOX_PAUSED', 'SANDBOX_RESUMED'] },
+        },
+        orderBy: { createdAt: 'asc' },
+      })
     ).map((r) => r.action);
     expect(actions).toEqual(['SANDBOX_PAUSED', 'SANDBOX_RESUMED']);
     await expect(
@@ -257,7 +313,10 @@ describe('what a student builds delivers (both advertisers)', () => {
       partnerId: partnerIdOf(id),
       dvRole: 'STANDARD',
     };
-    const advertisers = await prisma.advertiser.findMany({ where: { sandboxId: id }, orderBy: { id: 'asc' } });
+    const advertisers = await prisma.advertiser.findMany({
+      where: { sandboxId: id },
+      orderBy: { id: 'asc' },
+    });
     expect(advertisers.length).toBeGreaterThanOrEqual(2);
     const clock = await clockOf(id);
     const simNow = new Date(clock.simStart.getTime() + Number(clock.tickIndex) * 3_600_000);
@@ -283,7 +342,12 @@ describe('what a student builds delivers (both advertisers)', () => {
       const draft = {
         ...init.value,
         budget: { mode: 'AMOUNT' as const, amount: 100000 },
-        pacing: { ...init.value.pacing, period: 'DAILY' as const, type: 'EVEN' as const, dailyAmount: 20000 },
+        pacing: {
+          ...init.value.pacing,
+          period: 'DAILY' as const,
+          type: 'EVEN' as const,
+          dailyAmount: 20000,
+        },
         bid: { ...init.value.bid, mode: 'FIXED' as const, optimizedTowards: null, fixedCpm: 400 },
         euPoliticalAds: 'NO' as const,
       };
@@ -304,17 +368,28 @@ describe('what a student builds delivers (both advertisers)', () => {
     }
     // three simulated days, through the timer path (the student is active)
     const now = Date.now();
-    await prisma.user.update({ where: { id: student.userId }, data: { lastSeenAt: new Date(now) } });
+    await prisma.user.update({
+      where: { id: student.userId },
+      data: { lastSeenAt: new Date(now) },
+    });
     await prisma.simClock.update({
       where: { sandboxId: id },
-      data: { state: 'RUNNING', lastAdvanceRealAt: new Date(now - 72 * PER_TICK_MS), remainderMs: 0 },
+      data: {
+        state: 'RUNNING',
+        lastAdvanceRealAt: new Date(now - 72 * PER_TICK_MS),
+        remainderMs: 0,
+      },
     });
     let total = 0;
     for (let i = 0; i < 4 && total < 72; i++) {
-      total += (await runDueTicks(Number.MAX_SAFE_INTEGER, { now, activeWithinMs: ACTIVE_WINDOW_MS })).ticks;
+      total += (
+        await runDueTicks(Number.MAX_SAFE_INTEGER, { now, activeWithinMs: ACTIVE_WINDOW_MS })
+      ).ticks;
     }
     expect(total).toBe(72);
-    const to = new Date(Date.parse(`${today}T00:00:00Z`) + 5 * 86_400_000).toISOString().slice(0, 10);
+    const to = new Date(Date.parse(`${today}T00:00:00Z`) + 5 * 86_400_000)
+      .toISOString()
+      .slice(0, 10);
     for (const { adv, li, io } of lis) {
       // the list column the student looks at (instant report data) and History / Troubleshooter data react
       const list = await listLineItems(user, { kind: 'io', id: io }, {}, { from: today, to });

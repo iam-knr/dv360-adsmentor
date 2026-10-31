@@ -24,7 +24,7 @@ export const ACTIVE_WINDOW_ENV = 'SANDBOX_ACTIVE_WINDOW_DAYS';
 /** Validates a speed: whole minutes per sim day, at most the tick cap of the engine (2 minutes per day) and a real day. */
 export function parseMinutesPerSimDay(raw: unknown): number | null {
   if (raw === undefined || raw === null || raw === '') return null;
-  const n = typeof raw === 'number' ? raw : Number(String(raw).trim());
+  const n = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(raw.trim()) : NaN;
   if (!Number.isInteger(n) || n < 1 || n > 1440 || !speedAllowed(n)) return null;
   return n;
 }
@@ -45,7 +45,8 @@ export async function getSandboxSpeed(
 ): Promise<SandboxSpeed> {
   const row = await db.appMeta.findUnique({ where: { key: SPEED_META_KEY } }).catch(() => null);
   const fromSetting = parseMinutesPerSimDay(row?.value);
-  if (fromSetting) return { minutesPerSimDay: fromSetting, source: 'setting', speedX: speedX(fromSetting) };
+  if (fromSetting)
+    return { minutesPerSimDay: fromSetting, source: 'setting', speedX: speedX(fromSetting) };
   const fromEnv = parseMinutesPerSimDay(env[SPEED_ENV]);
   if (fromEnv) return { minutesPerSimDay: fromEnv, source: 'env', speedX: speedX(fromEnv) };
   const d = DEFAULT_MINUTES_PER_SIM_DAY;
@@ -118,7 +119,10 @@ export async function adminResumeSandbox(
   opts: { now?: number; env?: Record<string, string | undefined> } = {},
 ): Promise<boolean> {
   await db.appMeta.deleteMany({ where: { key: adminPauseKey(sandboxId) } });
-  return startSandboxClock(db, sandboxId, { ...opts, env: { ...(opts.env ?? process.env), [AUTOSTART_ENV]: '1' } });
+  return startSandboxClock(db, sandboxId, {
+    ...opts,
+    env: { ...(opts.env ?? process.env), [AUTOSTART_ENV]: '1' },
+  });
 }
 
 /** A rebuild starts from scratch: an earlier pause does not carry over. */
@@ -143,7 +147,11 @@ export interface ResumeExistingResult {
  */
 export async function resumeExistingSandboxes(
   db: Db,
-  opts: { now?: number; env?: Record<string, string | undefined>; log?: (line: string) => void } = {},
+  opts: {
+    now?: number;
+    env?: Record<string, string | undefined>;
+    log?: (line: string) => void;
+  } = {},
 ): Promise<ResumeExistingResult> {
   const env = opts.env ?? process.env;
   const log = opts.log ?? (() => undefined);
@@ -169,7 +177,13 @@ export async function resumeExistingSandboxes(
         respectedAdminPause++;
         continue;
       }
-      if (await startSandboxClock(db, c.id, { now: now.getTime(), env, speed: speed.minutesPerSimDay }))
+      if (
+        await startSandboxClock(db, c.id, {
+          now: now.getTime(),
+          env,
+          speed: speed.minutesPerSimDay,
+        })
+      )
         resumed++;
     }
     await db.appMeta.upsert({
@@ -183,7 +197,10 @@ export async function resumeExistingSandboxes(
     where: { state: 'RUNNING', minutesPerSimDay: { not: speed.minutesPerSimDay } },
     data: { minutesPerSimDay: speed.minutesPerSimDay },
   });
-  if (retimed.count > 0) log(`  sandbox clocks: ${retimed.count} retimed to ${speed.minutesPerSimDay} min/sim day`);
-  log(`  sandbox clocks: ${resumed} resumed at ${speed.minutesPerSimDay} min/sim day (${speed.source}), ${respectedAdminPause} admin-paused kept`);
+  if (retimed.count > 0)
+    log(`  sandbox clocks: ${retimed.count} retimed to ${speed.minutesPerSimDay} min/sim day`);
+  log(
+    `  sandbox clocks: ${resumed} resumed at ${speed.minutesPerSimDay} min/sim day (${speed.source}), ${respectedAdminPause} admin-paused kept`,
+  );
   return { skipped: false, resumed, respectedAdminPause };
 }

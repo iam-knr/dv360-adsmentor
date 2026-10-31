@@ -52,6 +52,8 @@ export async function countClocks(db: PrismaClient = prisma) {
     else if (r.state === 'PAUSED') out.paused += r._count._all;
     else out.other += r._count._all;
   }
-  out.adminPaused = await db.appMeta.count({ where: { key: { startsWith: 'sandbox-clock:admin-paused:' } } });
+  out.adminPaused = await db.appMeta.count({
+    where: { key: { startsWith: 'sandbox-clock:admin-paused:' } },
+  });
   return out;
 }

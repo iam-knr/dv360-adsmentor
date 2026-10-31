@@ -50,7 +50,11 @@ export function SandboxClockControl({
       <Typography data-testid="sandbox-clock-state">Clock: {label}</Typography>
       {canEdit && state !== 'LOCKED' ? (
         <Box sx={{ mt: 1 }}>
-          <Button variant="outlined" onClick={() => setOpen(true)} data-testid="sandbox-clock-toggle">
+          <Button
+            variant="outlined"
+            onClick={() => setOpen(true)}
+            data-testid="sandbox-clock-toggle"
+          >
             {verb} clock
           </Button>
         </Box>
