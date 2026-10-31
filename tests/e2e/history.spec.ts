@@ -141,7 +141,7 @@ test('PW-05-1 an inline budget edit shows on the IO and advertiser History with 
   await expect(card.getByTestId('day-header')).toHaveText('1 change to insertion order');
   const row = card.getByTestId('history-change');
   await expect(row).toContainText('IST');
-  await expect(row).toContainText(w.email);
+  await expect(row).toContainText('Sam Student');
   await row.getByRole('button', { name: 'Expand description' }).click();
   await expect(row.getByTestId('change-lines')).toContainText('7000');
 

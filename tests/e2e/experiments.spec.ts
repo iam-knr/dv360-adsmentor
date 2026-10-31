@@ -286,8 +286,8 @@ test('E2E-EXP-06: lift study for an eligible IO, eligibility rail, list text, re
   await chooseIo(page, 'Lift IO ok');
   const rail = page.getByTestId('eligibility-rail');
   await expect(rail.getByTestId('elig-BRAND_LIFT')).toContainText('Eligible');
-  await expect(rail.getByTestId('required-BRAND_LIFT')).toContainText('470,000.00');
-  await expect(rail.getByTestId('yours-BRAND_LIFT')).toContainText('630,000.00');
+  await expect(rail.getByTestId('required-BRAND_LIFT')).toContainText('4,70,000.00');
+  await expect(rail.getByTestId('yours-BRAND_LIFT')).toContainText('6,30,000.00');
   await expect(page.getByTestId('measurable-BRAND_LIFT')).toHaveText('1');
   await page.getByRole('checkbox', { name: 'Brand lift' }).check();
   await fillSurvey(page);
@@ -298,7 +298,7 @@ test('E2E-EXP-06: lift study for an eligible IO, eligibility rail, list text, re
   await page.getByRole('checkbox', { name: 'Favorability' }).uncheck();
   // Enhanced strength is YouTube only and triples the requirement
   await page.getByRole('radio', { name: /Enhanced lift/ }).check();
-  await expect(rail.getByTestId('required-BRAND_LIFT')).toContainText('1,410,000.00');
+  await expect(rail.getByTestId('required-BRAND_LIFT')).toContainText('14,10,000.00');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
   await expect(page.getByText('Enhanced lift is only available for YouTube and needs 3 times the standard budget.')).toBeVisible();
   await page.getByRole('radio', { name: /Standard lift/ }).check();

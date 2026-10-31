@@ -175,7 +175,7 @@ test('E2E-RPT-02: build from scratch, undo and redo, bulk edit, save, rename, sa
   await page.getByLabel('Dimensions (one per line)').fill('Advertiser');
   await page.getByLabel('Metrics (one per line)').fill('Impressions\nClicks\nNot a field');
   await page.getByRole('button', { name: 'Apply' }).click();
-  await expect(page.getByText('Unknown fields: Not a field')).toBeVisible();
+  await expect(page.getByText(/Unknown fields: "Not a field"/)).toBeVisible();
   await page.getByLabel('Metrics (one per line)').fill('Impressions\nClicks');
   await page.getByRole('button', { name: 'Apply' }).click();
   await expect(page.getByTestId('zone-chip-advertiser')).toBeVisible();
