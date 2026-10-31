@@ -79,7 +79,7 @@ describe('demo class bootstrap', () => {
         status: 'ACTIVE',
       });
       expect(s.name).toMatch(/^Sandbox ST-00\d$/);
-      expect(await prisma.lineItem.count({ where: { sandboxId: s.id } })).toBe(36 + 8); // plan + module 09 YouTube seed
+      expect(await prisma.lineItem.count({ where: { sandboxId: s.id } })).toBe(36 + 9); // plan + module 09 YouTube seed (8 on the first advertiser, 1 on the second)
       const partner = await prisma.partner.findFirstOrThrow({ where: { sandboxId: s.id } });
       expect(partner.name).toBe(s.name);
       const grants = await prisma.userAccessGrant.findMany({ where: { sandboxId: s.id } });

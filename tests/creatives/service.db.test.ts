@@ -108,7 +108,7 @@ describe('create (AC 3, 4, 5)', () => {
         'Archived is false',
       ]),
     );
-    expect(create!.user).toBe(`${w.tag}-user@example.test`);
+    expect(create!.user).toBe(`User ${w.tag}`); // display name, not the email (Q15)
     // the engine's approvals are system rows in the same History
     expect(h.rows.some((r) => r.user === 'CREATIVE_APPROVAL_SYNC')).toBe(true);
   });

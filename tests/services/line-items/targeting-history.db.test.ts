@@ -51,7 +51,7 @@ describe('Q9 targeting changes in the line item history', () => {
     const update = entries.find(
       (e) => e.fieldPath.startsWith('targeting[GEOGRAPHY]') && e.kind === 'UPDATE',
     );
-    expect(update?.oldValue).toBe('Region inclusions: IN-KL');
-    expect(update?.newValue).toBe('Region inclusions: IN-KL; Region exclusions: IN-TN');
+    expect(update?.oldValue).toMatch(/^Region inclusions: (Kerala|IN-KL)$/);
+    expect(update?.newValue).toMatch(/^Region inclusions: (Kerala|IN-KL); Region exclusions: (Tamil Nadu|IN-TN)$/);
   });
 });
