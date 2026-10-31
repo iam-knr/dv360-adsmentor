@@ -71,7 +71,7 @@ export function audienceMeta(row: AudienceRow, nowMs: number): AudienceMeta {
     id: row.id,
     name: row.name,
     kind,
-    ...(row.type === 'YOUTUBE_USERS'
+    ...(row.type === 'YOUTUBE_USERS' || row.type === 'CUSTOM_INTENT_YOUTUBE'
       ? { eligibleTypes: ['YT_VIDEO', 'YT_AUDIO', 'YT_ON_CTV'] as LiType[] }
       : {}),
     ...(waitMs > 0 ? { availableInHours: Math.ceil(waitMs / 3_600_000) } : {}),

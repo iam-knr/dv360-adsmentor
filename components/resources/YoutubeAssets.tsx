@@ -80,12 +80,12 @@ export function YoutubeAssets({
   };
   return (
     <>
-      <DvPageHeader title="YouTube assets" limitedAccess={viewer.limitedAccess}>
+      <DvPageHeader title="Location & sitelink assets" limitedAccess={viewer.limitedAccess}>
         <DvTabs
           tabs={Object.entries(TAB_LABEL).map(([id, label]) => ({ id, label }))}
           value={tab}
           onChange={(id) => router.push(`${basePath}?tab=${id}`)}
-          ariaLabel="YouTube assets"
+          ariaLabel="Location & sitelink assets"
         />
       </DvPageHeader>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 2 }}>
@@ -104,7 +104,7 @@ export function YoutubeAssets({
         </Button>
       </Box>
       <DvGrid
-        ariaLabel="YouTube assets"
+        ariaLabel="Location & sitelink assets"
         rows={shown.slice((page.page - 1) * page.size, page.page * page.size)}
         columns={columns}
         getRowId={(r) => r.id}

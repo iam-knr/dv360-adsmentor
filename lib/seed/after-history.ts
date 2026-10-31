@@ -5,7 +5,7 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { seedBulk } from '../bulk/seed';
 import { seedExperiments } from '../experiments/seed';
-import { seedPlans } from '../planning/seed';
+import { seedCrossMediaReports, seedPlans } from '../planning/seed';
 import { seedReports } from '../reporting/seed';
 import type { TemplateKey } from './knobs';
 
@@ -36,8 +36,10 @@ export async function seedPostHistory(
       template,
       today,
     });
-  // Module 04 (P4-08): twelve plans per advertiser with forecast snapshots.
+  // Module 04 (P4-08): plans per advertiser in every status with forecast snapshots, plus Cross-media reach reports.
   await seedPlans(tx, { sandboxId, template, seedValue, today });
+  // Cross-media reach reports with results, built on the same history (gap p4-08 #4 stays: no per-IO reach snapshot).
+  await seedCrossMediaReports(tx, { sandboxId, ownerUserId: input.ownerUserId, seedValue, today });
   // Module 11 (P4-10a): bulk job history, saved column views and chart views.
   await seedBulk(tx, { sandboxId, ownerUserId: input.ownerUserId, now: new Date() });
   // Module 17 (P4-10b): two A/B tests and three lift studies per advertiser, built on the history above.

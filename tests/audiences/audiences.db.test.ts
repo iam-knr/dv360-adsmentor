@@ -516,12 +516,19 @@ describe('seed (M14-01)', () => {
       expect(await run()).toBe(1);
       const rows = await prisma.audience.findMany({ where: { advertiserId: sw.advertiserId } });
       const count = (t: string) => rows.filter((r) => r.type === t).length;
-      expect(count('COMBINED')).toBe(2);
-      expect(count('PARTNER')).toBe(2);
-      expect(count('YOUTUBE_USERS')).toBe(1);
+      expect(count('COMBINED')).toBe(3);
+      expect(count('PARTNER')).toBe(3);
+      expect(count('YOUTUBE_USERS')).toBe(2);
+      // plan-parity: custom lists of every type, each with entries, so the picker has every category
+      expect(count('CUSTOM_AFFINITY')).toBe(2);
+      expect(count('CUSTOM_INTENT_DISPLAY_VIDEO')).toBe(1);
+      expect(count('CUSTOM_INTENT_YOUTUBE')).toBe(2);
+      expect(count('LOOKALIKE')).toBe(3);
+      const yt = rows.find((r) => r.type === 'CUSTOM_INTENT_YOUTUBE');
+      expect(await prisma.customListEntry.count({ where: { audienceId: yt?.id ?? '' } })).toBeGreaterThan(0);
       expect(rows.filter((r) => r.status === 'PROCESSING' && r.name.endsWith('Wishlist visitors'))).toHaveLength(1);
       expect(rows.some((r) => r.type === 'TAG_BASED' && Number(r.sizeDisplay) < 1000)).toBe(true);
-      expect(await prisma.customerMatchUpload.count({ where: { sandboxId: sw.sandboxId } })).toBe(1);
+      expect(await prisma.customerMatchUpload.count({ where: { sandboxId: sw.sandboxId } })).toBe(2);
       expect(await prisma.audienceTagRule.count({ where: { sandboxId: sw.sandboxId } })).toBeGreaterThanOrEqual(3);
       expect(await run()).toBe(0);
       expect(await prisma.audience.count({ where: { advertiserId: sw.advertiserId } })).toBe(rows.length);

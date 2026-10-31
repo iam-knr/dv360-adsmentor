@@ -135,7 +135,7 @@ test.describe('PW-01-1 shell tour (STANDARD student)', () => {
       'aria-current',
       'page',
     );
-    await expect(page.getByTestId('coming-soon')).toHaveAttribute('data-module', '02');
+    await expect(page.getByRole('heading', { name: 'Advertiser configurations' })).toBeVisible();
 
     // Advertisers list (P3-03 item 8) → advertiser level
     await nav.getByRole('link', { name: 'Advertisers' }).click();
@@ -275,6 +275,7 @@ test.describe('RT 9 smoke over routes.md section 3', () => {
     '/audience/{x}/explorerlis',
     '/audience/{kind}/{x}/details',
     '/ll/{x}',
+    '/templates/{x}', // a targeting template is looked up by id (nav-wire-b, covered by nav-wire-b.spec.ts)
     '/pr/{x}/marketplace/plan',
     '/cross-media-reach/{x}',
     '/reporting/instant/{x}',

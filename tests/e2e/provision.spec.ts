@@ -72,11 +72,30 @@ const sandboxOf = (userId: string) =>
   db.sandbox.findFirst({ where: { ownerUserId: userId, kind: 'STUDENT' } });
 
 /** The student signs in, passes /sim/welcome and reaches the sandbox home, then opens a campaign, a line item, a report. */
-async function studentWalksTheSandbox(page: Page, s: { id: string; email: string; password: string }) {
+async function studentWalksTheSandbox(
+  page: Page,
+  s: { id: string; email: string; password: string },
+) {
   await signIn(page, s.email, s.password);
   // /sim/welcome shows the build and drives it; it opens the sandbox home when the sandbox is ready
   await expect(page).toHaveURL(/\/sim\/welcome$|\/p\/[^/]+\/home_v3$/);
-  await expect(page).toHaveURL(/\/p\/[^/]+\/home_v3$/, { timeout: 360_000 });
+  // A FAILED build is final for the welcome page, so say so at once with the stored error instead of waiting out the
+  // URL timeout (docs/gaps/fix-prov-flake.md: the flake was a build that failed 5 s in and was then waited on for 6 min)
+  await expect
+    .poll(
+      async () => {
+        const row = await sandboxOf(s.id);
+        if (row?.provisionState === 'FAILED')
+          throw new Error(`The sandbox build FAILED: ${row.provisionError ?? '(no message)'}`);
+        return /\/p\/[^/]+\/home_v3$/.test(page.url());
+      },
+      {
+        timeout: 360_000,
+        intervals: [1_000, 2_000, 5_000],
+        message: 'student reaches the sandbox home',
+      },
+    )
+    .toBe(true);
   await expect(page).toHaveTitle('Overview - DV360 Simulator by Adsmetor');
 
   const sandbox = await sandboxOf(s.id);
@@ -165,7 +184,10 @@ test('E2E-ADM-02 the account page takes over a build that stopped, and the stude
     windows: 'none',
   });
   classroomIds.push(cohort.id);
-  await db.classroom.update({ where: { id: cohort.id }, data: { defaultSeedTemplate: 'starter-agency' } });
+  await db.classroom.update({
+    where: { id: cohort.id },
+    data: { defaultSeedTemplate: 'starter-agency' },
+  });
   const made = await createAccount(db, {
     tag: 'prov-stuck',
     role: 'USER',
@@ -190,7 +212,9 @@ test('E2E-ADM-02 the account page takes over a build that stopped, and the stude
   await db.$executeRaw`UPDATE "Sandbox" SET "provisionState" = 'SEEDING'::"ProvisionState", "updatedAt" = now() - interval '5 minutes' WHERE "id" = ${sb.id}`;
 
   await page.goto(`/manage/accounts/${student.id}`);
-  const restart = page.getByRole('button', { name: /Create sandbox|Retry provisioning|Restart provisioning/ });
+  const restart = page.getByRole('button', {
+    name: /Create sandbox|Retry provisioning|Restart provisioning/,
+  });
   await expect(restart).toBeVisible();
 
   // The account page drives the build itself (it polls POST /api/manage/accounts/:id/provision), so the build that stopped

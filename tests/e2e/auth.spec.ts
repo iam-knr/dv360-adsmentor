@@ -79,12 +79,12 @@ test.describe('sign in', () => {
     await signedIn(page, student.user.email, student.password);
     await expect(page).toHaveURL(/\/sim\/welcome$/);
     await expect(page.getByRole('heading', { name: 'Welcome, Sam Student' })).toBeVisible();
-    await expect(page.getByRole('img', { name: 'AdsMentor' })).toBeVisible();
+    await expect(page.getByRole('img', { name: 'Adsmetor' })).toBeVisible();
   });
 
-  test('the login page uses the AdsMentor logo and the exact field labels', async ({ page }) => {
+  test('the login page uses the Adsmetor logo and the exact field labels', async ({ page }) => {
     await page.goto('/sim/login');
-    const logo = page.getByRole('img', { name: 'AdsMentor' });
+    const logo = page.getByRole('img', { name: 'Adsmetor' });
     await expect(logo).toBeVisible();
     expect(await logo.getAttribute('src')).toContain('/brand/adsmentor-logo-horizontal.png');
     expect(await logo.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBeGreaterThan(0);

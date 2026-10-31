@@ -34,13 +34,13 @@ export function SimHeader({ user }: SimHeaderProps) {
       <Link
         href={homeHrefFor(user?.appRole)}
         aria-label={
-          user?.appRole === 'super_admin' ? 'AdsMentor, back to accounts' : 'AdsMentor, home'
+          user?.appRole === 'super_admin' ? 'Adsmetor, back to accounts' : 'Adsmetor, home'
         }
         style={{ display: 'inline-flex', lineHeight: 0 }}
       >
         <Image
           src="/brand/adsmentor-logo-horizontal.png"
-          alt="AdsMentor"
+          alt="Adsmetor"
           width={130}
           height={40}
           priority

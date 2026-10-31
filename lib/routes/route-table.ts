@@ -445,6 +445,7 @@ const PAGES: Row[] = [
     'RO',
   ],
   [`${A}/marketplace/plans`, `${AA}/(advertiser)/marketplace/plans`, 'A', '04', 'Plans', 'RO'],
+  [`${A}/marketplace/plan/new`, `${FA}/marketplace/plan/new`, 'F', '04', 'New plan', 'STD'],
   [
     `${A}/pr/{x}/marketplace/plan`,
     `${FA}/pr/[planId]/marketplace/plan`,
@@ -515,7 +516,7 @@ const PAGES: Row[] = [
     `${AA}/(advertiser)/location-extension`,
     'A',
     '15',
-    'YouTube assets',
+    'Location & sitelink assets',
     'RO',
   ],
   [

@@ -17,11 +17,13 @@ import {
   getPlan,
   getPlanColumns,
   listPlans,
+  previewPlanForecast,
   removePlan,
+  setPlanArchived,
   savePlanColumns,
   updatePlan,
 } from '@/lib/planning/service';
-import { seedPlans } from '@/lib/planning/seed';
+import { seedCrossMediaReports, seedPlans } from '@/lib/planning/seed';
 import { dropWorld } from '../db/helpers';
 import { createCreativeWorld, setSimHours, userFor } from '../creatives/helpers';
 
@@ -132,7 +134,7 @@ describe('createPlan / updatePlan', () => {
 
 describe('seed, lock and copy', () => {
   let pastId = '';
-  it('seeds 12 plans with 8 past and a forecast each', async () => {
+  it('seeds 22 plans per advertiser in every status, each with a forecast', async () => {
     await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('app.sandbox_id', ${w.sandboxId}, true)`;
       const n = await seedPlans(tx, {
@@ -141,17 +143,29 @@ describe('seed, lock and copy', () => {
         seedValue: 7,
         today: '2026-01-01',
       });
-      expect(n).toBeGreaterThanOrEqual(12);
+      expect(n).toBeGreaterThanOrEqual(22);
     });
     const list = await listPlans(user(), aid());
+    // 10 past plans (one Trafficked) and 2 archived past plans; the rest start today or later
     const seeded = list.rows.filter((r) => r.startDate < '2026-01-01');
-    expect(seeded.length).toBe(8);
-    expect(list.rows.filter((r) => r.status === 'TRAFFICKED')).toHaveLength(1);
+    expect(seeded.length).toBe(12);
+    expect(list.rows.filter((r) => r.status === 'TRAFFICKED')).toHaveLength(2);
+    expect(list.rows.filter((r) => r.status === 'ARCHIVED')).toHaveLength(2);
+    expect(new Set(list.rows.map((r) => r.currencyCode)).size).toBe(1);
     pastId = (seeded.find((r) => r.status === 'PLANNED') as { id: string }).id;
     const forecasts = await prisma.planForecast.count({ where: { sandboxId: w.sandboxId } });
-    expect(forecasts).toBeGreaterThanOrEqual(12);
+    expect(forecasts).toBeGreaterThanOrEqual(22);
     const filtered = await listPlans(user(), aid(), { status: ['TRAFFICKED'] });
     expect(filtered.rows.every((r) => r.status === 'TRAFFICKED')).toBe(true);
+    const countries = await prisma.plan.findMany({
+      where: { sandboxId: w.sandboxId },
+      select: { locationCountry: true },
+    });
+    expect(new Set(countries.map((c) => c.locationCountry)).size).toBeGreaterThanOrEqual(6);
+    const rowsWithPanel = await prisma.planRow.count({
+      where: { sandboxId: w.sandboxId, NOT: { audienceRefs: { equals: [] } } },
+    });
+    expect(rowsWithPanel).toBeGreaterThan(0);
   });
 
   it('a past-dated plan is locked (PLN-002, AC-04-6)', async () => {
@@ -323,5 +337,166 @@ describe('cross-media reach', () => {
   it('a partner scope sees every advertiser report', async () => {
     const res = await listCrossMediaReports(user(), { partnerId: w.partnerId });
     expect(res.partner).toBe(true);
+  });
+});
+
+describe('plan-parity: archive, live preview, wizard fields, targeting copy', () => {
+  it('archive hides the plan from edits and restore brings it back', async () => {
+    const created = must(await createPlan(user(), aid(), { name: 'Archive me' }));
+    const a = must(await setPlanArchived(user(), aid(), created.id, true));
+    expect(a.status).toBe('ARCHIVED');
+    const locked = await updatePlan(user(), aid(), { id: created.id, name: 'Nope' });
+    expect(issues(locked)[0]?.code).toBe('PLN-002');
+    expect(
+      (await listPlans(user(), aid(), { status: ['ARCHIVED'] })).rows.map((r) => r.id),
+    ).toContain(created.id);
+    const b = must(await setPlanArchived(user(), aid(), created.id, false));
+    expect(b.status).toBe('PLANNED');
+    must(await updatePlan(user(), aid(), { id: created.id, name: 'Back again' }));
+  });
+
+  it('the wizard fields reach the stored plan and Additional Settings persist', async () => {
+    const created = must(
+      await createPlan(user(), aid(), {
+        name: 'Wizard plan',
+        location: 'US',
+        channels: ['DIGITAL', 'TV'],
+        demographics: { genders: ['FEMALE'], ageMin: 25, ageMax: 44 },
+        subLocation: 'Texas',
+        start: '2026-02-01',
+        end: '2026-02-28',
+      }),
+    );
+    const plan = await getPlan(user(), aid(), created.id);
+    expect(plan.header).toMatchObject({
+      location: 'US',
+      channels: ['DIGITAL', 'TV'],
+      demographics: { genders: ['FEMALE'], ageMin: 25, ageMax: 44 },
+      dates: { start: '2026-02-01', end: '2026-02-28' },
+    });
+    const saved = must(
+      await updatePlan(user(), aid(), {
+        id: created.id,
+        additional: {
+          frequencyGoal: 5,
+          reachBasis: 'DIGITAL',
+          includeYoutube: false,
+          inventoryQuality: 'AUTHORIZED',
+          publicInventory: false,
+          viewability: 'MRC_50',
+          brandSuitability: 'EXCLUDE_SENSITIVE',
+        },
+      }),
+    );
+    expect(saved.plan.header.additional).toMatchObject({
+      frequencyGoal: 5,
+      reachBasis: 'DIGITAL',
+      includeYoutube: false,
+      inventoryQuality: 'AUTHORIZED',
+      publicInventory: false,
+      viewability: 'MRC_50',
+      brandSuitability: 'EXCLUDE_SENSITIVE',
+    });
+  });
+
+  it('the live preview forecasts an unsaved draft and writes nothing', async () => {
+    const created = must(await createPlan(user(), aid(), { name: 'Preview plan' }));
+    const before = await prisma.planForecast.count({ where: { planId: created.id } });
+    const p = must(
+      await previewPlanForecast(user(), aid(), {
+        id: created.id,
+        location: 'SG',
+        dates: { start: '2026-01-02', end: '2026-02-01' },
+        demographics: { genders: ['MALE', 'FEMALE', 'UNKNOWN'], ageMin: 18, ageMax: 64 },
+        additional: { frequencyGoal: 3, reachBasis: 'CENSUS', includeYoutube: true },
+        rows: [row('A', '2026-01-02', '2026-02-01', 20000)],
+      }),
+    );
+    expect(p.forecast.reachPct).toBeGreaterThan(0);
+    const bigger = must(
+      await previewPlanForecast(user(), aid(), {
+        id: created.id,
+        location: 'SG',
+        dates: { start: '2026-01-02', end: '2026-02-01' },
+        demographics: { genders: ['MALE', 'FEMALE', 'UNKNOWN'], ageMin: 18, ageMax: 64 },
+        additional: { frequencyGoal: 3, reachBasis: 'CENSUS', includeYoutube: true },
+        rows: [row('A', '2026-01-02', '2026-02-01', 40000)],
+      }),
+    );
+    expect(bigger.forecast.reachPct).toBeGreaterThanOrEqual(p.forecast.reachPct);
+    expect(await prisma.planForecast.count({ where: { planId: created.id } })).toBe(before);
+  });
+
+  it('Create campaign copies every supported targeting dimension to the drafts (gap p4-08 #2)', async () => {
+    const created = must(await createPlan(user(), aid(), { name: 'Targeted plan' }));
+    const { dates } = (await getPlan(user(), aid(), created.id)).header;
+    must(
+      await updatePlan(user(), aid(), {
+        id: created.id,
+        rows: [
+          {
+            ...row('Targeted', dates.start, dates.end),
+            targeting: {
+              version: 1,
+              lineItemType: 'DISPLAY',
+              criteria: {
+                keywords: { include: ['sports', 'travel'], exclude: ['gossip'] },
+                environment: { web: true, app: false },
+                demographics: {
+                  gender: ['FEMALE'],
+                  ageRange: [25, 45],
+                  ageUnknown: false,
+                  parental: [],
+                  income: [],
+                },
+                audienceLists: {
+                  include: { firstPartyGroups: [], google: ['7000037'], combined: [], custom: [] },
+                  exclude: { firstParty: [], google: [] },
+                },
+              },
+            },
+          },
+        ],
+      }),
+    );
+    const saved = await getPlan(user(), aid(), created.id);
+    expect(saved.rows[0]?.audienceRefs).toEqual(['7000037']);
+    const out = must(await convertPlan(user(), aid(), { id: created.id, target: 'CAMPAIGN' }));
+    const rows = await prisma.targetingAssignment.findMany({
+      where: { lineItemId: out.lineItemIds[0] as string },
+      select: { dimension: true, mode: true, valueText: true },
+    });
+    const dims = new Set(rows.map((r) => r.dimension));
+    expect(dims.has('GEOGRAPHY')).toBe(true);
+    expect(dims.has('KEYWORD')).toBe(true);
+    expect(dims.has('AUDIENCE_LIST')).toBe(true);
+    expect(dims.has('AGE')).toBe(true);
+    expect(dims.has('ENVIRONMENT')).toBe(true);
+  });
+});
+
+describe('plan-parity: Cross-media reach seed', () => {
+  it('writes finished reports with results at advertiser and partner scope', async () => {
+    const made = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT set_config('app.sandbox_id', ${w.sandboxId}, true)`;
+      return seedCrossMediaReports(tx, {
+        sandboxId: w.sandboxId,
+        ownerUserId: user().id,
+        seedValue: 7,
+        today: '2026-01-01',
+      });
+    });
+    expect(made).toBeGreaterThanOrEqual(3);
+    const reports = await prisma.crossMediaReachReport.findMany({
+      where: { sandboxId: w.sandboxId, name: { contains: 'reach' } },
+    });
+    expect(reports.every((r) => r.status === 'DONE' && r.result !== null)).toBe(true);
+    const unique = reports.map(
+      (r) => (r.result as { combined: { uniqueReachPct: number } }).combined.uniqueReachPct,
+    );
+    expect(unique.every((u) => u > 0 && u <= 100)).toBe(true);
+    expect(reports.some((r) => r.advertiserId === null)).toBe(true);
+    const list = await listCrossMediaReports(user(), { partnerId: w.partnerId });
+    expect(list.rows.length).toBeGreaterThanOrEqual(made);
   });
 });

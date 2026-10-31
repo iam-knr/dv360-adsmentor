@@ -5,7 +5,7 @@ import { advertiserPath } from '@/lib/routes/paths';
 import { requireView } from '@/lib/scope/guard';
 import { resolveAdvertiser } from '@/lib/scope/resolve';
 
-export const metadata = { title: 'YouTube assets' };
+export const metadata = { title: 'Location & sitelink assets' };
 
 export default async function Page({
   params,

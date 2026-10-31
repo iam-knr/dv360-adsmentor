@@ -1,7 +1,7 @@
 // P4-08, module 04 6.1: PW-04-1 Plans list, PW-04-2 plan edit, PW-04-3 locked plan, PW-04-4 convert,
 // PW-04-5 remove and the dirty guard, PW-04-6 Cross-media reach. Synthetic data only.
 import { PrismaClient } from '@prisma/client';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { cleanup } from '../auth/fixtures';
 import { createShellWorld, type ShellWorld } from '../shell/e2e-world';
 import { seedPlans } from '../../lib/planning/seed';
@@ -54,11 +54,37 @@ async function signIn(page: Page, world: ShellWorld = w) {
   await page.waitForURL((url) => !url.pathname.startsWith('/sim/login'));
 }
 
+/** New plan through the two-step wizard (explore 19 section 3) with its defaults. */
 async function newPlan(page: Page) {
   await page.goto(`${adv()}/marketplace/plans`);
   await page.getByRole('button', { name: 'New plan' }).click();
+  await page.waitForURL(/\/marketplace\/plan\/new/);
+  await expect(page.getByTestId('wizard-step')).toContainText('Step 1 of 2');
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await expect(page.getByTestId('wizard-step')).toContainText('Step 2 of 2');
+  await page.getByRole('button', { name: 'Next: Add products' }).click();
   await page.waitForURL(/\/pr\/\d+\/marketplace\/plan/);
   await expect(page.getByTestId('plan-page')).toBeVisible();
+}
+
+/** Types a date range into the DvDateRange popover of the group `label` inside `scope`. */
+async function setRange(
+  page: Page,
+  scope: Locator | Page,
+  label: string,
+  start: string,
+  end: string,
+) {
+  await scope.getByRole('group', { name: label }).getByRole('button').first().click();
+  const pop = page.getByRole('dialog', { name: 'Select date range' });
+  const from = pop.getByLabel('Start date');
+  await from.fill(start);
+  await from.press('Enter');
+  const to = pop.getByLabel('End date');
+  await to.fill(end);
+  await to.press('Enter');
+  await pop.getByRole('button', { name: 'Apply' }).click();
+  await expect(pop).toBeHidden();
 }
 
 async function addRow(page: Page, name: string, budget: string, method?: string) {
@@ -84,8 +110,9 @@ test('PW-04-1: Plans list filters, sorts, pages, creates a plan; read-only and R
   await expect(page.getByRole('button', { name: 'Status: 2 selected' })).toBeVisible();
   await expect(page.getByText('Plan', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('Details', { exact: true }).first()).toBeVisible();
-  await expect(page.getByTestId('plan-link')).toHaveCount(12);
-  await expect(page.getByText('1 - 12 of 12')).toBeVisible();
+  // 22 seeded plans, 2 of them archived and hidden by default
+  await expect(page.getByTestId('plan-link')).toHaveCount(20);
+  await expect(page.getByText('1 - 20 of 20')).toBeVisible();
 
   // default sort is Name A to Z
   const names = await page.getByTestId('plan-link').allInnerTexts();
@@ -97,7 +124,19 @@ test('PW-04-1: Plans list filters, sorts, pages, creates a plan; read-only and R
   await page.getByRole('button', { name: 'Apply' }).click();
   await expect(page.getByRole('button', { name: 'Status: Planned' })).toBeVisible();
   await expect(page).toHaveURL(/f\.status=PLANNED/);
-  await expect(page.getByTestId('plan-link')).toHaveCount(11);
+  await expect(page.getByTestId('plan-link')).toHaveCount(18);
+
+  // Archived plans sit behind the Archived status
+  await page.getByRole('button', { name: 'Status: Planned' }).click();
+  await page.getByRole('checkbox', { name: 'Planned' }).uncheck();
+  await page.getByRole('checkbox', { name: 'Archived' }).check();
+  await page.getByRole('button', { name: 'Apply' }).click();
+  await expect(page.getByTestId('plan-link')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Status: Archived' }).click();
+  await page.getByRole('checkbox', { name: 'Archived' }).uncheck();
+  await page.getByRole('checkbox', { name: 'Planned' }).check();
+  await page.getByRole('button', { name: 'Apply' }).click();
+  await expect(page.getByRole('button', { name: 'Status: Planned' })).toBeVisible();
 
   // Start date toggles ascending then descending, dates read Mar 1, 2026
   const start = page.getByRole('columnheader', { name: /Start date/ });
@@ -152,7 +191,7 @@ test('PW-04-2: build a plan, save, read the forecast, switch tiles, tabs, column
   await expect(panel.getByText('Enter a number greater than 0')).toBeVisible();
   await panel.getByLabel('Name').fill('Out of range');
   await panel.getByLabel('Budget (net)').fill('1000');
-  await panel.getByLabel('End date').fill('2030-01-01');
+  await setRange(page, panel, 'Date range', '2026-02-01', '2026-12-01');
   await panel.getByRole('button', { name: 'Apply' }).click();
   await expect(panel.getByText('Line item dates must fall within the plan dates.')).toBeVisible();
   await panel.getByRole('button', { name: 'Cancel' }).click();
@@ -254,7 +293,7 @@ test('PW-04-3: a past-dated plan is locked; Make a copy opens an editable copy w
 
   await page.getByRole('button', { name: 'Make a copy' }).click();
   const dlg = page.getByRole('dialog', { name: 'Make a copy' });
-  await expect(dlg.getByLabel('Start date')).toHaveValue('2026-01-02');
+  await expect(dlg.getByRole('group', { name: 'Dates' })).toContainText('Jan 2');
   await dlg.getByRole('button', { name: 'Copy' }).click();
   await page.waitForURL(/\/pr\/\d+\/marketplace\/plan/);
   await expect(page.getByLabel('Plan name')).toHaveCount(1);
@@ -266,7 +305,7 @@ test('PW-04-3: a past-dated plan is locked; Make a copy opens an editable copy w
   // a start date in the past is refused by PLN-021
   await page.getByRole('button', { name: 'Copy', exact: true }).click();
   const again = page.getByRole('dialog', { name: 'Make a copy' });
-  await again.getByLabel('Start date').fill('2025-12-01');
+  await setRange(page, again, 'Dates', '2025-12-01', '2025-12-31');
   await again.getByRole('button', { name: 'Copy' }).click();
   await expect(again.getByText('Choose a start date that has not passed.')).toBeVisible();
 });
@@ -427,4 +466,236 @@ test('PW-04-6: Cross-media reach, empty state, create at advertiser and partner 
   await page.getByRole('option', { name: 'Australia' }).click();
   await page.getByRole('button', { name: 'Close' }).click();
   await expect(page.getByRole('dialog', { name: 'Unsaved Changes' })).toBeVisible();
+});
+
+// ---- plan-parity: wizard, every kind of field edited and reloaded, live preview, archive, targeting ----------------
+
+test('PW-04-7: the New plan wizard saves every answer; they survive a reload', async ({ page }) => {
+  await signIn(page);
+  await page.goto(`${adv()}/marketplace/plans`);
+  await page.getByRole('button', { name: 'New plan' }).click();
+  await page.waitForURL(/\/marketplace\/plan\/new/);
+
+  // step 1: name, location and currency, channels (Digital always included, Linear TV added)
+  await expect(page.getByRole('checkbox', { name: /^Digital/ })).toBeDisabled();
+  await page.getByRole('textbox', { name: 'Name' }).fill('Wizard plan one');
+  await page.getByRole('combobox', { name: 'Country/Region' }).click();
+  await page.getByRole('option', { name: 'Australia' }).click();
+  await page.getByRole('combobox', { name: 'Currency' }).click();
+  await page.getByRole('option', { name: 'Australian dollar (AUD)' }).click();
+  await page.getByRole('checkbox', { name: /^Linear TV/ }).check();
+  // validation of step 1
+  await page.getByRole('textbox', { name: 'Name' }).fill('');
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await expect(page.getByText('Enter a value')).toBeVisible();
+  await page.getByRole('textbox', { name: 'Name' }).fill('Wizard plan one');
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+
+  // step 2: summary, dates, demographics, sub-location
+  await expect(page.getByTestId('wizard-summary')).toContainText('Digital, Linear TV');
+  await expect(page.getByTestId('wizard-summary')).toContainText('Australia | AUD');
+  await setRange(page, page, 'Dates', '2026-03-02', '2026-03-29');
+  await expect(page.getByTestId('plan-days')).toHaveText('28 days');
+  await page.getByRole('radio', { name: 'Specific age and gender' }).check();
+  await page.getByRole('combobox', { name: 'Age from' }).click();
+  await page.getByRole('option', { name: '25', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Age to' }).click();
+  await page.getByRole('option', { name: '45', exact: true }).click();
+  await page.getByRole('checkbox', { name: 'Male', exact: true }).uncheck();
+  await page.getByRole('textbox', { name: 'Sub-location' }).fill('Victoria');
+  await page.getByRole('button', { name: 'Next: Add products' }).click();
+  await page.waitForURL(/\/pr\/\d+\/marketplace\/plan/);
+
+  const check = async () => {
+    await expect(page.getByLabel('Plan name')).toHaveValue('Wizard plan one');
+    await expect(page.getByRole('combobox', { name: 'Location' })).toContainText('Australia');
+    await expect(page.getByRole('group', { name: 'Dates' })).toContainText('Mar 2 - 29, 2026');
+    await expect(page.getByRole('button', { name: /On-target demographics/ })).toContainText(
+      'Female',
+    );
+    await expect(page.getByText('Currency: AUD')).toBeVisible();
+  };
+  await check();
+  await page.reload();
+  await check();
+  const stored = await db.plan.findFirstOrThrow({
+    where: { sandboxId: w.sandboxId, name: 'Wizard plan one' },
+  });
+  expect(stored.channels).toEqual(['DIGITAL', 'TV']);
+  expect(stored.locationCountry).toBe('AU');
+  expect((stored.additionalSettings as { subLocation?: string }).subLocation).toBe('Victoria');
+
+  // Cancel on the wizard returns to the list without creating a plan
+  await page.goto(`${adv()}/marketplace/plan/new`);
+  await page.getByRole('textbox', { name: 'Name' }).fill('Never saved');
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await page
+    .getByRole('dialog', { name: 'Unsaved Changes' })
+    .getByRole('button', { name: 'Discard changes' })
+    .click();
+  await page.waitForURL(/\/marketplace\/plans$/);
+  expect(await db.plan.count({ where: { sandboxId: w.sandboxId, name: 'Never saved' } })).toBe(0);
+});
+
+test('PW-04-8: every kind of field is edited, saved and still there after a reload', async ({
+  page,
+}) => {
+  await signIn(page);
+  await newPlan(page);
+  await addRow(page, 'Row to edit', '10000');
+  await addRow(page, 'Row to delete', '3000');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByText('Plan saved')).toBeVisible();
+
+  // header: name, location, dates, demographics, Additional Settings
+  await page.getByLabel('Plan name').fill('Edited everything');
+  await page.getByRole('combobox', { name: 'Location' }).click();
+  await page.getByRole('option', { name: 'Germany' }).click();
+  await setRange(page, page, 'Dates', '2026-02-02', '2026-03-15');
+  await page.getByRole('button', { name: /On-target demographics/ }).click();
+  const demo = page.getByRole('dialog', { name: 'On-target demographics' });
+  await demo.getByRole('checkbox', { name: 'Male', exact: true }).uncheck();
+  await demo.getByRole('checkbox', { name: '18-24' }).uncheck();
+  await demo.getByRole('checkbox', { name: '65+' }).uncheck();
+  await demo.getByRole('button', { name: 'Apply' }).click();
+  await page.getByRole('button', { name: 'Additional Settings' }).click();
+  const extra = page.getByRole('dialog', { name: 'Additional Settings' });
+  await expect(extra.getByText('will not affect your campaign')).toBeVisible();
+  await extra.getByLabel('Frequency goal').fill('6');
+  await extra.getByRole('combobox', { name: 'Inventory source quality' }).click();
+  await page.getByRole('option', { name: 'Authorized Publishers', exact: true }).click();
+  await extra.getByRole('combobox', { name: 'Viewability' }).click();
+  await page.getByRole('option', { name: /Viewable at least 50%/ }).click();
+  await extra.getByRole('checkbox', { name: 'Public inventory' }).uncheck();
+  await extra.getByRole('button', { name: 'Done' }).click();
+
+  // a row: name, dates, budget, max CPM, and the targeting panel (keywords + demographics)
+  await page.getByText('Row to edit').first().click();
+  const row = page.getByRole('dialog', { name: 'Plan line item' });
+  await row.getByLabel('Name').fill('Row edited');
+  await row.getByLabel('Budget (net)').fill('15000');
+  await row.getByLabel('Max CPM').fill('2.5');
+  await setRange(page, row, 'Date range', '2026-02-02', '2026-03-01');
+  await row.getByRole('button', { name: 'Add targeting' }).click();
+  await page.getByRole('menuitem', { name: /Keywords/ }).click();
+  const kw = page.getByRole('dialog').last();
+  await kw.getByRole('textbox').first().fill('running shoes');
+  await kw.getByRole('textbox').first().press('Enter');
+  await kw.getByRole('button', { name: 'Apply' }).click();
+  await expect(row.getByTestId('target-row-KEYWORDS')).toBeVisible();
+  await row.getByRole('button', { name: 'Apply' }).click();
+
+  // duplicate a row from its panel, delete another
+  await page.getByText('Row edited').first().click();
+  await page
+    .getByRole('dialog', { name: 'Plan line item' })
+    .getByRole('button', { name: 'Duplicate line item' })
+    .click();
+  await page.getByText('Row to delete').first().click();
+  await page
+    .getByRole('dialog', { name: 'Plan line item' })
+    .getByRole('button', { name: 'Delete' })
+    .click();
+
+  // ad formats: Add ad formats dialog adds two rows at once
+  await page.getByRole('button', { name: 'Add ad formats' }).click();
+  const formats = page.getByRole('dialog', { name: 'Select ad formats' });
+  await formats.getByLabel('Budget (INR)').first().fill('4000');
+  await formats.getByRole('button', { name: 'Add ad format' }).click();
+  await formats.getByLabel('Budget (INR)').nth(1).fill('4000');
+  await expect(formats.getByText('50% share').first()).toBeVisible();
+  await formats.getByRole('button', { name: 'Apply' }).click();
+
+  // the live preview shows a forecast of the unsaved draft, and says so
+  await expect(page.getByText('Preview of your unsaved changes')).toBeVisible({ timeout: 10_000 });
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByText('Plan saved')).toBeVisible();
+  await expect(page.getByText('Preview of your unsaved changes')).toHaveCount(0);
+
+  const verify = async () => {
+    await expect(page.getByLabel('Plan name')).toHaveValue('Edited everything');
+    await expect(page.getByRole('combobox', { name: 'Location' })).toContainText('Germany');
+    await expect(page.getByRole('group', { name: 'Dates' })).toContainText('Feb 2 - Mar 15, 2026');
+    await expect(page.getByRole('button', { name: /On-target demographics/ })).toContainText(
+      'Female',
+    );
+    await expect(page.getByText('Row edited', { exact: true })).toHaveCount(1);
+    await expect(page.getByText('Copy of Row edited')).toHaveCount(1);
+    await expect(page.getByText('Row to delete')).toHaveCount(0);
+    await expect(page.getByText('Open auction display')).toBeVisible();
+    await expect(page.getByText('Open auction video')).toBeVisible();
+  };
+  await verify();
+  await page.reload();
+  await verify();
+  const stored = await db.plan.findFirstOrThrow({
+    where: { sandboxId: w.sandboxId, name: 'Edited everything' },
+    include: { rows: { orderBy: { ordinal: 'asc' } } },
+  });
+  expect(stored.locationCountry).toBe('DE');
+  expect(stored.frequencyGoal).toBe(6);
+  expect(stored.additionalSettings).toMatchObject({
+    inventoryQuality: 'AUTHORIZED',
+    publicInventory: false,
+    viewability: 'MRC_50',
+  });
+  const edited = stored.rows.find((r) => r.name === 'Row edited');
+  expect(Number(edited?.budgetNet)).toBe(15000);
+  expect(Number(edited?.maxCpm)).toBe(2.5);
+  expect(JSON.stringify(edited?.targeting)).toContain('running shoes');
+  expect(stored.rows).toHaveLength(4);
+
+  // reopen the row: the targeting row is still on the panel after the reload
+  await page.getByText('Row edited', { exact: true }).click();
+  await expect(
+    page.getByRole('dialog', { name: 'Plan line item' }).getByTestId('target-row-KEYWORDS'),
+  ).toBeVisible();
+});
+
+test('PW-04-9: Archive hides a plan behind the Archived filter, Restore brings it back; Create campaign copies the targeting', async ({
+  page,
+}) => {
+  await signIn(page);
+  await newPlan(page);
+  await page.getByLabel('Plan name').fill('Archive and convert');
+  await addRow(page, 'Targeted row', '9000');
+  await page.getByText('Targeted row').first().click();
+  const row = page.getByRole('dialog', { name: 'Plan line item' });
+  await row.getByRole('button', { name: 'Add targeting' }).click();
+  await page.getByRole('menuitem', { name: /Keywords/ }).click();
+  const kw = page.getByRole('dialog').last();
+  await kw.getByRole('textbox').first().fill('trail running');
+  await kw.getByRole('textbox').first().press('Enter');
+  await kw.getByRole('button', { name: 'Apply' }).click();
+  await row.getByRole('button', { name: 'Apply' }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByText('Plan saved')).toBeVisible();
+
+  // archive (needs a saved plan), the page turns read-only
+  await page.getByRole('button', { name: 'More actions' }).click();
+  await page.getByRole('menuitem', { name: 'Archive plan' }).click();
+  await expect(page.getByText('Plan archived').first()).toBeVisible();
+  await expect(page.getByText('This plan is archived and read-only.')).toBeVisible();
+  await expect(page.getByLabel('Plan name')).toBeDisabled();
+  await page.reload();
+  await expect(page.getByText('This plan is archived and read-only.')).toBeVisible();
+  await page.getByRole('button', { name: 'More actions' }).click();
+  await page.getByRole('menuitem', { name: 'Restore plan' }).click();
+  await expect(page.getByText('Plan restored').first()).toBeVisible();
+  await expect(page.getByLabel('Plan name')).toBeEnabled();
+
+  // convert: the line item draft carries the keyword and the plan country
+  await page.getByRole('button', { name: 'Create campaign' }).click();
+  await page
+    .getByRole('dialog', { name: 'Create campaign from plan' })
+    .getByRole('button', { name: 'Create' })
+    .click();
+  await expect(page.getByText('Plan trafficked.')).toBeVisible();
+  const campaign = await db.campaign.findFirstOrThrow({
+    where: { sandboxId: w.sandboxId, name: 'Archive and convert' },
+  });
+  const li = await db.lineItem.findFirstOrThrow({ where: { campaignId: campaign.id } });
+  const rows = await db.targetingAssignment.findMany({ where: { lineItemId: li.id } });
+  expect(rows.map((r) => r.dimension)).toEqual(expect.arrayContaining(['GEOGRAPHY', 'KEYWORD']));
+  expect(rows.find((r) => r.dimension === 'KEYWORD')?.valueText).toBe('trail running');
 });

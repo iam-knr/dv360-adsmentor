@@ -103,7 +103,7 @@ test('E2E-POL-01 S3: the logo and Back to accounts lead a Super admin out of My 
   await page.getByRole('link', { name: 'Back to accounts' }).click();
   await expect(page).toHaveURL(/\/manage\/accounts/);
   await page.goto('/sim/me/password');
-  await page.getByRole('link', { name: /AdsMentor, back to accounts/ }).click();
+  await page.getByRole('link', { name: /Adsmetor, back to accounts/ }).click();
   await expect(page).toHaveURL(/\/manage\/accounts/);
 
   const st = await student('pol-home');

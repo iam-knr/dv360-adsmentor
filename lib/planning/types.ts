@@ -1,7 +1,7 @@
 // Wire and domain types of module 04 (spec 4.1 to 4.3, 4.9). Dates are YYYY-MM-DD, instants ISO strings.
 import type { PlanDemographics } from './countries';
 
-export type PlanStatusKey = 'PLANNED' | 'TRAFFICKED';
+export type PlanStatusKey = 'PLANNED' | 'TRAFFICKED' | 'ARCHIVED';
 export type PlanBuyingMethodKey =
   | 'OPEN_AUCTION'
   | 'PROGRAMMATIC_GUARANTEED'
@@ -37,10 +37,28 @@ export const CHANNEL_LABEL: Record<PlanChannelKey, string> = {
   CROSS_MEDIA: 'Cross-media',
 };
 
+export type InventoryQuality = 'AUTHORIZED_AND_NON_PARTICIPATING' | 'AUTHORIZED';
+export type ViewabilityGoal = 'NONE' | 'MRC_50' | 'PREDICTED_70';
+
+export const INVENTORY_QUALITY_LABEL: Record<InventoryQuality, string> = {
+  AUTHORIZED_AND_NON_PARTICIPATING: 'Authorized and Non-Participating Publishers',
+  AUTHORIZED: 'Authorized Publishers',
+};
+export const VIEWABILITY_LABEL: Record<ViewabilityGoal, string> = {
+  NONE: 'No restrictions',
+  MRC_50: 'Viewable at least 50% (Open Measurement)',
+  PREDICTED_70: 'Predicted viewability 70% or higher',
+};
+
+/** Additional Settings (explore 19 section 3). The last three do not change the forecast; they are kept on the plan. */
 export interface PlanAdditional {
   frequencyGoal: number;
   reachBasis: ReachBasisKey;
   includeYoutube: boolean;
+  inventoryQuality?: InventoryQuality;
+  publicInventory?: boolean;
+  viewability?: ViewabilityGoal;
+  brandSuitability?: 'NO_RESTRICTIONS' | 'EXCLUDE_SENSITIVE';
 }
 
 export interface PlanListRow {
@@ -162,4 +180,70 @@ export interface PlanDto {
   version: number;
   canWrite: boolean;
   simToday: string;
+  /** Row id of the advertiser: the key the audience catalogue and the targeting editors use. */
+  advertiserRowId: string;
 }
+
+/** Ad formats of the "Add ad formats" dialog (explore 19 section 3): label, buying method and row name. */
+export interface AdFormatDef {
+  id: string;
+  group: string;
+  label: string;
+  buyingMethod: PlanBuyingMethodKey;
+}
+export const AD_FORMATS: readonly AdFormatDef[] = [
+  {
+    id: 'oa-display',
+    group: 'Open auction',
+    label: 'Open auction display',
+    buyingMethod: 'OPEN_AUCTION',
+  },
+  {
+    id: 'oa-video',
+    group: 'Open auction',
+    label: 'Open auction video',
+    buyingMethod: 'OPEN_AUCTION',
+  },
+  {
+    id: 'oa-audio',
+    group: 'Open auction',
+    label: 'Open auction audio',
+    buyingMethod: 'OPEN_AUCTION',
+  },
+  {
+    id: 'yt-skippable',
+    group: 'YouTube & partners',
+    label: 'YouTube skippable in-stream',
+    buyingMethod: 'OPEN_AUCTION',
+  },
+  {
+    id: 'yt-bumper',
+    group: 'YouTube & partners',
+    label: 'YouTube bumper',
+    buyingMethod: 'OPEN_AUCTION',
+  },
+  {
+    id: 'yt-reserve',
+    group: 'YouTube & partners',
+    label: 'YouTube reserve',
+    buyingMethod: 'YOUTUBE_RESERVE',
+  },
+  {
+    id: 'deal-pg',
+    group: 'Existing deals',
+    label: 'Programmatic guaranteed deal',
+    buyingMethod: 'PROGRAMMATIC_GUARANTEED',
+  },
+  {
+    id: 'deal-pd',
+    group: 'Existing deals',
+    label: 'Preferred deal',
+    buyingMethod: 'PREFERRED_DEAL',
+  },
+  {
+    id: 'deal-pa',
+    group: 'Existing deals',
+    label: 'Private auction deal',
+    buyingMethod: 'PRIVATE_AUCTION',
+  },
+];

@@ -269,7 +269,7 @@ export const ADVERTISER_TREE: NavNode[] = [
       },
       {
         key: 'resources.ytAssets',
-        label: 'YouTube assets',
+        label: 'Location & sitelink assets',
         href: a('location-extension'),
         match: ['/location-extension'],
       },

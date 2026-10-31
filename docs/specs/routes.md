@@ -225,6 +225,7 @@ Tabs shown by LI type: YouTube video/audio: Ad groups, Line item details, Troubl
 | `[A]/marketplace/featured-v3` | `$A/(advertiser)/marketplace/featured-v3` | A | Marketplace, tab Featured | Advertiser | 09 | RO / STD |
 | `[A]/marketplace-discovery` | `$A/(advertiser)/marketplace-discovery` | A | Marketplace, tab Discover. Item detail slide-over `?sim_panel=item:{id}` | Advertiser | 09 | RO / STD |
 | `[A]/marketplace/plans` | `$A/(advertiser)/marketplace/plans` | A | Plans list. "New plan" creates an untitled plan and redirects to the plan page | Advertiser | 09, 13 | RO / STD |
+| `[A]/marketplace/plan/new` | `$A/marketplace/plan/new` | F | New plan wizard, two steps: Select channels, then dates and demographics (explore 19 section 3). "Next: Add products" saves the plan and opens the plan page | Advertiser | 13 | STD / STD |
 | `[A]/pr/{planId}/marketplace/plan` | `$A/pr/[planId]/marketplace/plan` | F | "Adjust your plan and view forecast" (full screen, X close) | Advertiser | 13 | RO / STD |
 | `[A]/marketplace/negotiations` | `$A/(advertiser)/marketplace/negotiations` | A | Negotiations list, Import negotiation | Advertiser | 09 | RO / STD |
 | `[A]/cross-media-reach` | `$A/(advertiser)/cross-media-reach` | A | Cross-media reach reports (advertiser scope) | Advertiser | 13 | REP / STD |

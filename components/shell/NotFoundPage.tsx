@@ -39,7 +39,7 @@ export async function NotFoundPage() {
       {/* eslint-disable-next-line @next/next/no-img-element -- static brand asset, same file as the app bar */}
       <img
         src="/brand/adsmentor-logo-horizontal.png"
-        alt="AdsMentor"
+        alt="Adsmetor"
         height={48}
         style={{ height: 48, width: 'auto' }}
       />
