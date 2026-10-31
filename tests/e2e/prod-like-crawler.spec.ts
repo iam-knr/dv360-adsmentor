@@ -29,13 +29,6 @@ const FORBIDDEN = 'You do not have access to this page.';
  * listed in routes.md. The nav and not-built work belongs to the follow-up sessions named in docs/gaps/prod-crash.md.
  */
 export const KNOWN_GAPS: Record<string, string> = {
-  '/users': 'placeholder, module 02 (top bar "User management")',
-  '/email-preferences': 'placeholder, module 02',
-  '/p/{pid}/advertisers/new': 'placeholder, module 02',
-  '/p/{pid}/details': 'placeholder, module 02 (Basic details)',
-  '/p/{pid}/targeting': 'placeholder, module 02',
-  '/p/{pid}/third-party-configuration': 'placeholder, module 02 (Advertiser configurations)',
-  '/p/{pid}/brand/controls': 'placeholder, module 02 (Brand controls)',
   '/p/{pid}/a/{aid}/templates': 'placeholder, module 10 (Targeting templates)',
   '/p/{pid}/a/{aid}/templates/new': 'placeholder, module 10',
   '/p/{pid}/a/{aid}/details': 'placeholder, module 03',

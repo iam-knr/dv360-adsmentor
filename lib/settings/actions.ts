@@ -23,6 +23,7 @@ import {
 } from './partner';
 import { requestPolicyCertificate, decidePolicyCertificate } from './policy';
 import type { AlertPrefInput, UserAccessInput } from './rules';
+import { saveTargetingDefaults } from './targeting-defaults';
 import { createUser, deleteUser, saveEmailPreferences, updateUser } from './users';
 import type { Result } from './kit';
 
@@ -110,3 +111,9 @@ export const deleteUserAction = async (id: string) =>
   withUser((u) => deleteUser(u, id), ['/users']);
 export const saveEmailPreferencesAction = async (input: { alerts: boolean; news: boolean }) =>
   withUser((u) => saveEmailPreferences(u, input));
+
+export const saveTargetingDefaultsAction = async (
+  pid: string,
+  input: Parameters<typeof saveTargetingDefaults>[2],
+  meta: { expectedVersion?: number; note?: string } = {},
+) => withUser((u) => saveTargetingDefaults(u, pid, input, meta), ['/p']);
