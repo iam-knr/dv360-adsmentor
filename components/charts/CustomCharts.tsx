@@ -251,8 +251,23 @@ export function useCustomCharts(scope: Scope, scopeId: string): CustomChartsApi 
     history.current.future = [];
     setDraft(next.map((c, i) => ({ ...c, ordinal: i })));
   };
-  const add = (spec: Omit<ChartCardSpec, 'id' | 'ordinal'>) =>
-    set([...(draft ?? []), { ...spec, id: newCardId(), ordinal: 0 }]);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [justAdded, setJustAdded] = useState<string | null>(null);
+  /** `base` is the list to extend when the draft is not in state yet (a suggestion chip opens Customize and adds). */
+  const add = (spec: Omit<ChartCardSpec, 'id' | 'ordinal'>, base?: ChartCardSpec[]) => {
+    const id = newCardId();
+    set([...(base ?? draft ?? []), { ...spec, id, ordinal: 0 }]);
+    // Q11: the card lands at the end of a horizontal strip, so say so and scroll it into view
+    setNotice(`Added "${spec.title}" at the end of the chart strip.`);
+    setJustAdded(id);
+  };
+  useEffect(() => {
+    if (!justAdded) return;
+    document
+      .querySelector(`[data-chart-card="${justAdded}"]`)
+      ?.scrollIntoView?.({ behavior: 'smooth', inline: 'end', block: 'nearest' });
+    setJustAdded(null);
+  }, [justAdded]);
   const move = (i: number, d: -1 | 1) => {
     const list = [...(draft ?? [])];
     const j = i + d;
@@ -277,7 +292,8 @@ export function useCustomCharts(scope: Scope, scopeId: string): CustomChartsApi 
     }
   };
 
-  const create = async (text: string) => {
+  const create = async (text: string, base?: ChartCardSpec[]) => {
+    setNotice(null);
     const res = await fetch('/api/dv/charts/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -288,7 +304,7 @@ export function useCustomCharts(scope: Scope, scopeId: string): CustomChartsApi 
       message?: string;
     } | null;
     if (json?.data) {
-      add(json.data);
+      add(json.data, base);
       setMessage(null);
       setPrompt('');
     } else setMessage(json?.message ?? 'I could not build a chart from that.');
@@ -337,22 +353,23 @@ export function useCustomCharts(scope: Scope, scopeId: string): CustomChartsApi 
   const list = draft ?? saved;
   const canEdit = !viewer.readOnly && !readOnly;
   const cards = list.map((c, i) => (
-    <DvChartCard
-      key={c.id}
-      title={c.title}
-      locked={c.kind === 'BUILT_IN'}
-      menu={
-        editing
-          ? [
-              { label: 'Remove', onClick: () => set(list.filter((x) => x.id !== c.id)) },
-              { label: 'Move earlier', onClick: () => move(i, -1) },
-              { label: 'Move later', onClick: () => move(i, 1) },
-            ]
-          : undefined
-      }
-    >
-      <CardBody spec={c} scope={scope} scopeId={scopeId} />
-    </DvChartCard>
+    <Box key={c.id} data-chart-card={c.id} sx={{ flexShrink: 0 }}>
+      <DvChartCard
+        title={c.title}
+        locked={c.kind === 'BUILT_IN'}
+        menu={
+          editing
+            ? [
+                { label: 'Remove', onClick: () => set(list.filter((x) => x.id !== c.id)) },
+                { label: 'Move earlier', onClick: () => move(i, -1) },
+                { label: 'Move later', onClick: () => move(i, 1) },
+              ]
+            : undefined
+        }
+      >
+        <CardBody spec={c} scope={scope} scopeId={scopeId} />
+      </DvChartCard>
+    </Box>
   ));
 
   const panel = (
@@ -452,6 +469,7 @@ export function useCustomCharts(scope: Scope, scopeId: string): CustomChartsApi 
               onClick={() => {
                 setDraft(null);
                 setMessage(null);
+                setNotice(null);
               }}
             >
               ✕
@@ -461,6 +479,11 @@ export function useCustomCharts(scope: Scope, scopeId: string): CustomChartsApi 
           {message ? (
             <Typography role="alert" color="error" variant="body2">
               {message}
+            </Typography>
+          ) : null}
+          {notice && !message ? (
+            <Typography role="status" variant="body2" data-testid="chart-notice">
+              {notice}
             </Typography>
           ) : null}
           {list
@@ -514,7 +537,7 @@ export function useCustomCharts(scope: Scope, scopeId: string): CustomChartsApi 
       if (canEdit) {
         history.current = { past: [], future: [] };
         setDraft(saved);
-        void create(text);
+        void create(text, saved);
       }
     },
     onTour: () => setTour(0),

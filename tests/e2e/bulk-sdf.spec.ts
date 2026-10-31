@@ -201,11 +201,18 @@ test('PW-11-12 custom charts: add a starter chart, save and it is still there af
   await page.getByRole('button', { name: 'Create' }).click();
   // the prompt answers asynchronously: wait for the new card before saving
   await expect(page.getByRole('heading', { name: /CPM and CTR by day/ })).toBeVisible();
+  // Q11: Create says where the chart went instead of silently appending it to the end of the strip
+  await expect(page.getByTestId('chart-notice')).toContainText('Added "');
   await page.getByRole('button', { name: 'Save charts' }).click();
   await expect(page.getByRole('region', { name: 'Customize charts' })).toHaveCount(0);
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Daily Revenue Trend' })).toBeVisible();
   await expect(page.getByRole('heading', { name: /CPM and CTR by day/ })).toBeVisible();
+  // Q11: a suggestion chip opens Customize and adds its chart on top of the saved ones
+  await page.getByRole('button', { name: 'Bubble chart of CPA vs conversions' }).click();
+  await expect(page.getByRole('region', { name: 'Customize charts' })).toBeVisible();
+  await expect(page.getByTestId('chart-notice')).toContainText('Added "');
+  await expect(page.getByRole('heading', { name: 'Daily Revenue Trend' })).toBeVisible();
 });
 
 test('PW-11-15 a read-only person cannot edit in bulk but can still download SDF', async ({
