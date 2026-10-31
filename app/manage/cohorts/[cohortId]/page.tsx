@@ -25,7 +25,7 @@ export default async function CohortPage({ params }: { params: Promise<{ cohortI
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, maxWidth: 900 }}>
       <Typography variant="body2">
-        <Link href="/manage/cohorts">Cohorts</Link>
+        <Link href="/manage/cohorts">Back to cohorts</Link>
       </Typography>
       <CohortDetail
         id={cohort.id}

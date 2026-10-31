@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
+import { BackLink } from '@/components/sim/BackLink';
 import { ProfileForm } from '@/components/sim/ProfileForm';
 import { SimCard } from '@/components/sim/SimCard';
 import { requireUserOrRedirect } from '@/lib/auth/session';
@@ -15,6 +16,7 @@ export default async function MePage() {
   const user = await requireUserOrRedirect();
   return (
     <SimCard title="My account">
+      <BackLink role={(user.actor ?? user).appRole} />
       <Box
         component="dl"
         sx={{

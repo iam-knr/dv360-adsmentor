@@ -401,7 +401,9 @@ describe('bulk (M19-AC19 to AC21)', () => {
       type: 'DISABLE',
     });
     expect(res.done).toEqual([a.user.id, b.user.id]);
-    expect(res.skipped).toEqual([{ id: 'missing-id', code: 'ACC-022', message: 'Account not found.' }]);
+    expect(res.skipped).toEqual([
+      { id: 'missing-id', code: 'ACC-022', message: 'Account not found.' },
+    ]);
 
     const en = await bulkAccounts(superA, [a.user.id, b.user.id], { type: 'ENABLE' });
     expect(en.done).toHaveLength(2);
@@ -486,10 +488,70 @@ describe('audit', () => {
     expect(disabled.actor?.id).toBe(superA.id);
     expect(disabled.actor?.email).toContain('@example.test');
     expect(disabled.target?.email).toBe(u.email);
-    expect(disabled.summary).toBe('Disabled account: active to disabled');
+    expect(disabled.summary).toBe('Disabled account');
     expect(JSON.stringify(rows.map((r) => r.summary))).not.toContain('{');
-    expect((await listAudit(superA, { action: 'ACCOUNT_DISABLED' })).rows.every((r) => r.action === 'ACCOUNT_DISABLED')).toBe(true);
+    expect(
+      (await listAudit(superA, { action: 'ACCOUNT_DISABLED' })).rows.every(
+        (r) => r.action === 'ACCOUNT_DISABLED',
+      ),
+    ).toBe(true);
     expect(await code(listAudit(retired).then(() => undefined))).toBe('FORBIDDEN');
+  });
+
+  it('S4: archive reads "Archived account" without "active to archived", and the filter has labels', async () => {
+    const u = await newUser(superA, cohortA, 'aud-arch');
+    await deleteAccount(superA, u.id, { confirm: 'DELETE' });
+    const { rows, actions } = await listAudit(superA, { q: u.email });
+    const archived = rows.find((r) => r.action === 'ACCOUNT_ARCHIVED')!;
+    expect(archived.summary).toBe('Archived account');
+    expect(archived.summary).not.toMatch(/active to archived/i);
+    const entry = actions.find((a) => a.code === 'ACCOUNT_ARCHIVED');
+    expect(entry?.label).toBe('Archived account');
+    for (const a of actions) expect(a.label).not.toMatch(/[A-Z]+_[A-Z]+/);
+  });
+
+  it('S5: a placeholder address is never the target; the person is shown by name', async () => {
+    const u = await newUser(superA, cohortA, 'aud-ph');
+    await setAccountStatus(superA, u.id, 'disable');
+    await prisma.user.update({
+      where: { id: u.id },
+      data: { email: `archived-${uniq('x')}@example.invalid`, name: 'Pat Placeholder' },
+    });
+    const { rows } = await listAudit(superA, { q: 'Pat Placeholder' });
+    const row = rows.find((r) => r.action === 'ACCOUNT_DISABLED')!;
+    expect(row.targetRef).toMatchObject({ kind: 'account', id: u.id, label: 'Pat Placeholder' });
+    expect(row.targetRef?.sub).toBeUndefined();
+    expect(row.targetLabel).not.toContain('invalid');
+    // a target whose account row is gone reads "Former account"
+    await prisma.auditLog.create({
+      data: {
+        action: 'ACCOUNT_LOCKED',
+        targetType: 'User',
+        targetId: 'gone',
+        targetUserId: 'gone',
+        payload: {},
+      },
+    });
+    const gone = (await listAudit(superA, { action: 'ACCOUNT_LOCKED' })).rows.find(
+      (r) => r.target === null && r.targetRef,
+    );
+    expect(gone?.targetRef).toMatchObject({ kind: 'account', id: null, label: 'Former account' });
+    await prisma.auditLog.deleteMany({ where: { targetUserId: 'gone' } });
+  });
+
+  it('S6: a cohort entry has a cohort target that links by id', async () => {
+    const name = `Audit cohort ${uniq('c')}`;
+    const c = await createCohort(superA, { name, capacity: 5 });
+    const { rows } = await listAudit(superA, { action: 'COHORT_CREATED' });
+    const row = rows.find((r) => r.targetRef?.id === c.id)!;
+    expect(row.targetRef).toMatchObject({ kind: 'cohort', id: c.id, label: name });
+  });
+
+  it('S8: the account list uses one state vocabulary', async () => {
+    const u = await newUser(superA, cohortA, 'aud-vocab');
+    const { rows } = await listAccounts(superA, { search: u.email });
+    expect(['Queued', 'Building', 'Ready', 'Failed', 'Not created']).toContain(rows[0]?.sandbox);
+    expect(rows[0]?.sandbox).not.toMatch(/BACKFILLING|SEEDING|PENDING/);
   });
 
   it('writes a summary for every action it knows', () => {
@@ -505,7 +567,7 @@ describe('audit', () => {
     expect(auditSummary('AUTHZ_DENIED', 'DENIED', { reason: 'ACCOUNT_CREATED:ACC-020' })).toBe(
       'Action refused: refused (ACCOUNT_CREATED:ACC-020)',
     );
-    expect(auditSummary('SOMETHING_NEW', 'OK', null)).toBe('something new');
+    expect(auditSummary('SOMETHING_NEW', 'OK', null)).toBe('Something new');
   });
 
   it('every audit payload is free of secrets', async () => {
