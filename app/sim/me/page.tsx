@@ -7,10 +7,11 @@ import { ProfileForm } from '@/components/sim/ProfileForm';
 import { SimCard } from '@/components/sim/SimCard';
 import { requireUserOrRedirect } from '@/lib/auth/session';
 import { updateProfileAction } from './actions';
+import { APP_ROLE_LABEL } from '@/lib/accounts/role-labels';
 
 export const metadata: Metadata = { title: 'My account | DV360 Simulator by Adsmetor' };
 
-const ROLE_LABEL = { user: 'User', admin: 'Admin', super_admin: 'Super admin' } as const;
+const ROLE_LABEL = APP_ROLE_LABEL;
 
 export default async function MePage() {
   const user = await requireUserOrRedirect();
