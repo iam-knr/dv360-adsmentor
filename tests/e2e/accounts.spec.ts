@@ -294,7 +294,7 @@ test('E2E-ACC-07 the audit log names the actor and the target and reads as sente
   await expect(row).toContainText(sa.user.email);
   await expect(row).toContainText('Audited Student');
   await expect(row).toContainText(st.user.email);
-  await expect(row).toContainText('active to disabled');
+  await expect(row).toContainText('Disabled account');
   // no raw JSON
   expect(await table.innerText()).not.toMatch(/[{}"]/);
   await expect(page.getByLabel('Action')).toBeVisible();

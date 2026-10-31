@@ -13,5 +13,8 @@ export async function GET(req: NextRequest) {
     action: p.get('action') ?? undefined,
     page: Number(p.get('page')) || 1,
   });
-  return NextResponse.json({ rows, total, page, pages }, { headers: { 'Cache-Control': 'no-store' } });
+  return NextResponse.json(
+    { rows, total, page, pages },
+    { headers: { 'Cache-Control': 'no-store' } },
+  );
 }

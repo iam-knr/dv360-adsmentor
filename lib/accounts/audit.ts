@@ -23,7 +23,8 @@ export type AccountAuditAction =
   | 'COHORT_UPDATED'
   | 'COHORT_ARCHIVED'
   | 'POLICY_CHANGED'
-  | 'AUTHZ_DENIED';
+  | 'AUTHZ_DENIED'
+  | 'SANDBOX_REBUILT';
 
 export const ACCOUNT_AUDIT_KEYS = [
   'fromRole',

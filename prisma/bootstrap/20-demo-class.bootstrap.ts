@@ -1,4 +1,4 @@
-// Demo cohort for local work and CI (build-plan P3-05b item 5): cohort "Demo class" owned by the Super admin, three
+// Demo cohort for local work and CI (build-plan P3-05b item 5): cohort "Demo cohort" owned by the Super admin, three
 // student accounts and a sandbox per student built from `starter-agency`. There are no class windows (ADM-FIX).
 // Idempotent. Skipped when NODE_ENV=production (or on Vercel) unless SEED_DEMO=1. Passwords come from SEED_STUDENT_PASSWORD;
 // without it a random value is printed once to the terminal of a non-production run and never to production logs (module 19 4.4).
@@ -9,7 +9,7 @@ import { shouldBootstrapDemoClass, isProductionEnvironment } from '../../lib/see
 import { seedReferenceData } from '../../lib/seed/reference-db';
 import { partnerIdOf, provisionSandbox, seedValueFor } from '../../lib/seed/sandbox';
 
-export const DEMO_CLASS = { name: 'Demo class', code: 'DEMO' } as const;
+export const DEMO_CLASS = { name: 'Demo cohort', code: 'DEMO' } as const;
 export const DEMO_STUDENTS = [1, 2, 3].map((n) => ({
   email: `student${n}@example.test`,
   name: `Demo Student ${n}`,
