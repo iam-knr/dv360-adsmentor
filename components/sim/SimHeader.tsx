@@ -31,7 +31,7 @@ export function SimHeader({ user }: SimHeaderProps) {
     >
       <Image
         src="/brand/adsmentor-logo-horizontal.png"
-        alt="AdsMentor"
+        alt="Adsmetor"
         width={130}
         height={40}
         priority

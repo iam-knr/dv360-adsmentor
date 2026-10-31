@@ -145,7 +145,9 @@ export async function getFloodlightGroup(
 export async function listPartnerFloodlightGroups(
   user: SessionUser,
   pid: string,
-): Promise<{ id: string; name: string; advertiser: string; conversions: number }[]> {
+): Promise<
+  { id: string; name: string; advertiser: string; advertiserId: string; conversions: number }[]
+> {
   const ctx = await serviceCtx(user);
   assertResourceRead(ctx);
   return withSandbox(ctx.sandboxId, async (tx) => {
@@ -156,7 +158,7 @@ export async function listPartnerFloodlightGroups(
       select: {
         publicId: true,
         name: true,
-        advertiser: { select: { name: true } },
+        advertiser: { select: { name: true, publicId: true } },
         _count: { select: { activities: true } },
       },
     });
@@ -164,6 +166,7 @@ export async function listPartnerFloodlightGroups(
       id: g.publicId.toString(),
       name: g.name,
       advertiser: g.advertiser.name,
+      advertiserId: g.advertiser.publicId.toString(),
       conversions: g._count.activities,
     }));
   });

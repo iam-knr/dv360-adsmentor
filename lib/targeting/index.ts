@@ -110,7 +110,12 @@ export async function loadTargetingState(db: Db, liId: string): Promise<Targetin
 export async function loadTemplateState(
   db: Db,
   templateId: string,
-): Promise<{ state: TargetingState; lineItemType: string; name: string; optimizedTargeting: boolean } | null> {
+): Promise<{
+  state: TargetingState;
+  lineItemType: string;
+  name: string;
+  optimizedTargeting: boolean;
+} | null> {
   const template = await db.targetingTemplate.findUnique({
     where: { id: templateId },
     select: { lineItemType: true, name: true, optimizedTargeting: true },
@@ -129,7 +134,10 @@ export async function loadTemplateState(
   };
 }
 
-type Owner = { kind: 'LINE_ITEM'; id: string } | { kind: 'AD_GROUP'; id: string };
+type Owner =
+  | { kind: 'LINE_ITEM'; id: string }
+  | { kind: 'AD_GROUP'; id: string }
+  | { kind: 'TEMPLATE'; id: string };
 
 async function persistRows(
   tx: Prisma.TransactionClient,
@@ -148,7 +156,12 @@ async function persistRows(
       })
     : [];
   const optionId = new Map(options.map((o) => [`${o.dimension}:${o.code}`, o.id]));
-  const ownerKey = owner.kind === 'LINE_ITEM' ? { lineItemId: owner.id } : { adGroupId: owner.id };
+  const ownerKey =
+    owner.kind === 'LINE_ITEM'
+      ? { lineItemId: owner.id }
+      : owner.kind === 'TEMPLATE'
+        ? { templateId: owner.id }
+        : { adGroupId: owner.id };
 
   await tx.targetingAssignment.deleteMany({
     where: { ...ownerKey, ownerType: owner.kind, dimension: { notIn: [...NOT_CARD] } },
@@ -188,6 +201,19 @@ export async function persistTargeting(
     select: { sandboxId: true },
   });
   await persistRows(tx, { kind: 'LINE_ITEM', id: liId }, li.sandboxId, state);
+}
+
+/** Replaces the template's own card rows (module 10 2.7). Locked advertiser rows are never copied into a template. */
+export async function persistTemplateTargeting(
+  tx: Prisma.TransactionClient,
+  templateId: string,
+  state: TargetingState,
+): Promise<void> {
+  const t = await tx.targetingTemplate.findUniqueOrThrow({
+    where: { id: templateId },
+    select: { sandboxId: true },
+  });
+  await persistRows(tx, { kind: 'TEMPLATE', id: templateId }, t.sandboxId, state);
 }
 
 /** Ad group targeting (module 09 2.4): the ad group's own rows, no advertiser locks (P4-06). */

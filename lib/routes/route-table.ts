@@ -515,7 +515,7 @@ const PAGES: Row[] = [
     `${AA}/(advertiser)/location-extension`,
     'A',
     '15',
-    'YouTube assets',
+    'Location & sitelink assets',
     'RO',
   ],
   [
