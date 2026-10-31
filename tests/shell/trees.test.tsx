@@ -38,7 +38,7 @@ const ADVERTISER_STANDARD = [
   'Reports > Instant & offline, Cross-media reach',
   'Experiments',
   'Targeting templates',
-  'Resources > Brand controls, Channels & keywords, Floodlight group, YouTube assets, YouTube creator partnerships, Location lists, Custom bidding',
+  'Resources > Brand controls, Channels & keywords, Floodlight group, Location & sitelink assets, YouTube creator partnerships, Location lists, Custom bidding',
   'Advertiser settings > Basic details, Targeting rules, Data manager, Alert preferences, Policy center',
   'History',
 ];

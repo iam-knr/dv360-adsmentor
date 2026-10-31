@@ -20,6 +20,7 @@ import {
 } from './resources';
 import { partnerRegistry } from './partner';
 import { planRegistry } from './plan';
+import { targetingTemplateRegistry } from './template';
 import { adGroupRegistry, adRegistry } from './youtube';
 
 export const REGISTRIES: Partial<Record<EntityType, EntityRegistry>> = {
@@ -42,6 +43,7 @@ export const REGISTRIES: Partial<Record<EntityType, EntityRegistry>> = {
   LIFT_STUDY: liftStudyRegistry,
   AD_GROUP: adGroupRegistry,
   AD: adRegistry,
+  TARGETING_TEMPLATE: targetingTemplateRegistry,
 };
 
 export class MissingRegistryError extends Error {

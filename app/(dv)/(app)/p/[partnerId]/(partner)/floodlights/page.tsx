@@ -12,6 +12,9 @@ export default async function Page({ params }: { params: Promise<{ partnerId: st
   const partner = await resolvePartner(partnerId);
   if (!partner) notFound();
   return (
-    <PartnerFloodlightGroups rows={await listPartnerFloodlightGroups(user, partner.publicId)} />
+    <PartnerFloodlightGroups
+      partnerId={partner.publicId}
+      rows={await listPartnerFloodlightGroups(user, partner.publicId)}
+    />
   );
 }

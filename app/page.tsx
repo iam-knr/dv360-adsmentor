@@ -22,7 +22,7 @@ export default async function HomePage() {
       {/* eslint-disable-next-line @next/next/no-img-element -- static brand asset */}
       <img
         src="/brand/adsmentor-logo-horizontal.png"
-        alt="AdsMentor"
+        alt="Adsmetor"
         style={{ height: 48, width: 'auto' }}
       />
       <Typography variant="h4" component="h1">

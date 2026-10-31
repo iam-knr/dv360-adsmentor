@@ -17,6 +17,7 @@ import { DvSectionCard } from '@/components/dv/DvSectionCard';
 import { DvSelect } from '@/components/dv/DvSelect';
 import { DvTextField } from '@/components/dv/DvTextField';
 import { TargetingCard } from '@/components/targeting';
+import { TargetingEditorContext } from '@/components/targeting/editors/apps-urls/context';
 import {
   YtBidCard,
   YtBudgetPacingCard,
@@ -681,12 +682,17 @@ export function LiForm({
               {config.targetingNote}
             </Typography>
           ) : null}
-          <TargetingCard
-            lineItemType={type}
-            value={value.targetingState}
-            onChange={(targetingState) => set({ targetingState })}
-            readOnly={ro}
-          />
+          {/* Q5: the audience picker lists the advertiser of THIS line item; without it the API fell back to the first advertiser. */}
+          <TargetingEditorContext.Provider
+            value={advertiserRowId ? { advertiserId: advertiserRowId } : {}}
+          >
+            <TargetingCard
+              lineItemType={type}
+              value={value.targetingState}
+              onChange={(targetingState) => set({ targetingState })}
+              readOnly={ro}
+            />
+          </TargetingEditorContext.Provider>
         </DvSectionCard>
 
         <DvSectionCard title="Integration details" layout="settings">
