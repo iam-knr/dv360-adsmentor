@@ -4,10 +4,15 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Typography from '@mui/material/Typography';
 import { useProvisionDriver, type ProvisionViewJson } from '@/components/sim/useProvisionDriver';
+import { FAILED_SANDBOX_MESSAGE, sandboxStateLabel } from '@/lib/sandbox/labels';
+import { BuildProgress } from './BuildProgress';
+import { RebuildSandbox } from './RebuildSandbox';
 import { SandboxRecovery } from './SandboxRecovery';
 
 export interface SandboxSectionProps {
   id: string;
+  /** Shown in the rebuild confirmation. */
+  studentName?: string;
   initial: ProvisionViewJson;
   /** The Super admin may edit this account (and it is not archived): the recovery button shows. */
   canRecover: boolean;
@@ -18,7 +23,12 @@ export interface SandboxSectionProps {
  * at a time through POST /api/manage/accounts/:id/provision, and shows the state and percentage as they move; at READY or
  * FAILED it stops and refreshes the page.
  */
-export function SandboxSection({ id, initial, canRecover }: SandboxSectionProps) {
+export function SandboxSection({
+  id,
+  studentName = 'the student',
+  initial,
+  canRecover,
+}: SandboxSectionProps) {
   const router = useRouter();
   const { view, setView, busy } = useProvisionDriver(
     `/api/manage/accounts/${id}/provision`,
@@ -37,25 +47,31 @@ export function SandboxSection({ id, initial, canRecover }: SandboxSectionProps)
         : view.state === 'QUEUED' || view.state === 'BUILDING'
           ? ('restart' as const)
           : undefined;
+  const inProgress = view.state === 'QUEUED' || view.state === 'BUILDING';
   return (
     <>
-      <Typography>
-        State: {view.state === 'NOT_CREATED' ? 'NOT CREATED' : view.state}
-        {view.state === 'BUILDING' ? ` (${view.percent}%)` : ''}
-      </Typography>
-      {view.state === 'BUILDING' && view.message ? (
-        <Typography variant="body2" color="text.secondary">
-          {view.message}
-          {view.simDate ? ` (${view.simDate})` : ''}
-        </Typography>
+      <Typography>State: {sandboxStateLabel(view.state)}</Typography>
+      {inProgress ? (
+        <BuildProgress percent={view.percent} step={view.message} simDate={view.simDate} />
       ) : null}
-      {view.error ? (
-        <Typography role="alert" color="error">
-          Error: {view.error}
-        </Typography>
+      {view.state === 'FAILED' ? (
+        <div role="alert">
+          <Typography color="error">{FAILED_SANDBOX_MESSAGE}</Typography>
+          {view.error ? (
+            <details data-testid="sandbox-error-details">
+              <summary>Details</summary>
+              <Typography variant="body2" component="pre" sx={{ whiteSpace: 'pre-wrap', m: 0 }}>
+                {view.error}
+              </Typography>
+            </details>
+          ) : null}
+        </div>
       ) : null}
       {action && canRecover ? (
         <SandboxRecovery id={id} action={action} busy={busy} onView={setView} />
+      ) : null}
+      {view.state === 'READY' && canRecover ? (
+        <RebuildSandbox id={id} studentName={studentName} onView={setView} />
       ) : null}
     </>
   );

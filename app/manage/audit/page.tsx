@@ -4,8 +4,9 @@ import Button from '@mui/material/Button';
 import Link from '@mui/material/Link';
 import Typography from '@mui/material/Typography';
 import { DvPageHeader } from '@/components/dv/DvPageHeader';
-import { listAudit } from '@/lib/accounts/service';
+import { listAudit, type AuditEntry } from '@/lib/accounts/service';
 import { pageActor } from '@/lib/accounts/session-actor';
+import { isPlaceholderEmail } from '@/lib/accounts/audit-labels';
 import { formatDateTime } from '@/lib/auth/messages';
 
 export const metadata: Metadata = { title: 'Audit log | DV360 Simulator by Adsmetor' };
@@ -21,15 +22,61 @@ function who(p: { name: string; email: string } | null) {
   return p ? (
     <>
       {p.name}
-      <br />
-      <Typography component="span" variant="caption" color="text.secondary">
-        {p.email}
-      </Typography>
+      {isPlaceholderEmail(p.email) ? null : (
+        <>
+          <br />
+          <Typography component="span" variant="caption" color="text.secondary">
+            {p.email}
+          </Typography>
+        </>
+      )}
     </>
   ) : (
     <Typography component="span" color="text.secondary">
       System
     </Typography>
+  );
+}
+
+function targetCell(t: AuditEntry['targetRef']) {
+  if (!t)
+    return (
+      <Typography component="span" color="text.secondary">
+        -
+      </Typography>
+    );
+  const href =
+    t.id === null
+      ? null
+      : t.kind === 'cohort'
+        ? `/manage/cohorts/${t.id}`
+        : `/manage/accounts/${t.id}`;
+  const label = (
+    <>
+      {t.kind === 'cohort' ? 'Cohort: ' : null}
+      {t.label}
+    </>
+  );
+  return (
+    <>
+      {href ? (
+        <Link href={href} underline="hover">
+          {label}
+        </Link>
+      ) : (
+        <Typography component="span" color="text.secondary">
+          {label}
+        </Typography>
+      )}
+      {t.sub ? (
+        <>
+          <br />
+          <Typography component="span" variant="caption" color="text.secondary">
+            {t.sub}
+          </Typography>
+        </>
+      ) : null}
+    </>
   );
 }
 
@@ -70,14 +117,17 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
           <select name="action" defaultValue={sp.action ?? ''} aria-label="Action">
             <option value="">All</option>
             {actions.map((a) => (
-              <option key={a} value={a}>
-                {a}
+              <option key={a.code} value={a.code}>
+                {a.label}
               </option>
             ))}
           </select>
         </label>
         <Button type="submit" variant="outlined">
           Filter
+        </Button>
+        <Button href={`/api/manage/audit.csv${qs(1)}`} variant="text">
+          Export CSV
         </Button>
       </Box>
       <Typography variant="body2" sx={{ mb: 2 }}>
@@ -104,7 +154,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
             <th>When</th>
             <th>Who did it</th>
             <th>What happened</th>
-            <th>Account</th>
+            <th>Target</th>
           </tr>
         </thead>
         <tbody>
@@ -116,15 +166,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                 {r.summary}
                 {r.result === 'DENIED' ? ' (denied)' : ''}
               </td>
-              <td>
-                {r.target ? (
-                  <Link href={`/manage/accounts/${r.target.id}`} underline="hover">
-                    {who(r.target)}
-                  </Link>
-                ) : (
-                  r.targetLabel
-                )}
-              </td>
+              <td>{targetCell(r.targetRef)}</td>
             </tr>
           ))}
         </tbody>

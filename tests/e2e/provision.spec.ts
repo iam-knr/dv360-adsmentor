@@ -143,7 +143,7 @@ test('E2E-ADM-01 the Super admin adds a student; the sandbox builds; the student
     .poll(async () => (await sandboxOf(student.id))?.provisionState, { timeout: 60_000 })
     .toBe('READY');
   await page.goto(`/manage/accounts/${student.id}`);
-  await expect(page.getByText('State: READY')).toBeVisible();
+  await expect(page.getByText('State: Ready')).toBeVisible();
   // nothing to create or retry once it is ready
   await expect(page.getByRole('button', { name: /sandbox|provisioning/i })).toHaveCount(0);
 });
@@ -198,7 +198,7 @@ test('E2E-ADM-02 the account page takes over a build that stopped, and the stude
   await expect
     .poll(async () => (await sandboxOf(student.id))?.provisionState, { timeout: 360_000 })
     .toBe('READY');
-  await expect(page.getByText('State: READY')).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText('State: Ready')).toBeVisible({ timeout: 30_000 });
 
   const ctx = await browser.newContext({ baseURL: test.info().project.use.baseURL });
   await ownAddress(ctx);
@@ -222,7 +222,7 @@ test('E2E-ADM-03 the account page follows the build to READY without a reload, a
   await page.goto(`/manage/accounts/${student.id}`);
   await page.evaluate(() => ((window as unknown as { __kept?: number }).__kept = 1));
   await expect(page.getByRole('heading', { name: 'Watched Student' })).toBeVisible();
-  await expect(page.getByText('State: READY')).toBeVisible({ timeout: 360_000 });
+  await expect(page.getByText('State: Ready')).toBeVisible({ timeout: 360_000 });
   // the same document: the page was never reloaded
   expect(await page.evaluate(() => (window as unknown as { __kept?: number }).__kept)).toBe(1);
   expect((await sandboxOf(student.id))?.provisionState).toBe('READY');
