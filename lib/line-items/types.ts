@@ -31,6 +31,10 @@ export interface LineItemRow {
   cpa: number | null;
   customValueCost: number | null;
   trueViewViews?: number;
+  /** Search filters (module 01): pacing type and the flight the line item runs in (own or the IO's). */
+  pacingType?: string;
+  flightStart?: string | null;
+  flightEnd?: string | null;
 }
 
 export type LiListScope =
@@ -43,6 +47,8 @@ export interface LiListQuery {
   q?: string;
   status?: LiStatus[];
   type?: LiType[];
+  /** `d` list param: date range of the metrics (routes.md 6.1). */
+  d?: string | null;
   page?: number;
   pageSize?: number;
   sort?: { field: 'name' | 'publicId' | 'status' | 'type'; dir: 'asc' | 'desc' };
@@ -56,6 +62,8 @@ export interface LiListResult {
   totalsRow: { impressions: number; revenue: number; clicks: number; conversions: number };
   currency: CurrencyCode;
   asOf: string;
+  /** Sim date in the advertiser time zone, when the sandbox has a clock. */
+  simToday?: string;
 }
 
 /** Everything the form needs to edit a stored line item (module 08 4 `LineItemDetail`). */

@@ -2,7 +2,7 @@
 
 // Campaigns list (module 06 2.1): Campaign and Delivery column groups, `Status: Active` default filter, row hover
 // Activate / Pause. Numbers arrive in the rows (getGridMetrics on the server); "-" when there is no data.
-import { useMemo, useState, useTransition } from 'react';
+import { useMemo, useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -44,15 +44,21 @@ export function CampaignsList({
   advertiserId,
   currency,
   rows,
+  initialStatus,
+  filterChips,
 }: {
   partnerId: string;
   advertiserId: string;
   currency: string;
   rows: CampaignRow[];
+  /** `f.status` of the URL (Search links): the select starts there. */
+  initialStatus?: string | null;
+  /** Chips of the other `f.*` filters (lib/search/list-filters.ts). */
+  filterChips?: ReactNode;
 }) {
   const { viewer } = useViewer();
   const router = useRouter();
-  const [filter, setFilter] = useState('ACTIVE');
+  const [filter, setFilter] = useState(initialStatus ?? 'ACTIVE');
   const [page, setPage] = useState({ page: 1, size: 20 });
   const [, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -117,16 +123,19 @@ export function CampaignsList({
           </>
         }
       />
-      <Box sx={{ mb: 2, maxWidth: 240 }}>
-        <DvSelect
-          ariaLabel="Status filter"
-          value={filter}
-          options={FILTERS}
-          onChange={(v) => {
-            setFilter(v);
-            setPage({ page: 1, size: page.size });
-          }}
-        />
+      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+        <Box sx={{ width: 240 }}>
+          <DvSelect
+            ariaLabel="Status filter"
+            value={filter}
+            options={FILTERS}
+            onChange={(v) => {
+              setFilter(v);
+              setPage({ page: 1, size: page.size });
+            }}
+          />
+        </Box>
+        {filterChips}
       </Box>
       {error ? (
         <Typography role="alert" color="error">

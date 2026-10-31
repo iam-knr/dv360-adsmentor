@@ -2,7 +2,7 @@
 
 // Line items grid at IO, campaign and advertiser level (module 08 2.6): status dot with hover Activate / Pause,
 // alert bell, performance columns and a totals row. The IO tab has New line item.
-import { useMemo, useState, useTransition } from 'react';
+import { useMemo, useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -47,6 +47,8 @@ export function LiGrid({
   result,
   embedded = false,
   archived = false,
+  initialStatus,
+  filterChips,
 }: {
   partnerId: string;
   advertiserId: string;
@@ -56,10 +58,14 @@ export function LiGrid({
   embedded?: boolean;
   /** Archived list (`f.status=ARCHIVED`, module 08 AC-08-26): only archived rows, row action Unarchive. */
   archived?: boolean;
+  /** `f.status` of the URL (Search links), the select starts there. */
+  initialStatus?: string | null;
+  /** Chips of the other `f.*` filters (lib/search/list-filters.ts). */
+  filterChips?: ReactNode;
 }) {
   const { viewer } = useViewer();
   const router = useRouter();
-  const [filter, setFilter] = useState(archived ? 'ARCHIVED' : 'ACTIVE');
+  const [filter, setFilter] = useState(archived ? 'ARCHIVED' : (initialStatus ?? 'ACTIVE'));
   const [page, setPage] = useState({ page: 1, size: 50 });
   const [error, setError] = useState<string | null>(null);
   const [selection, setSelection] = useState<Set<string>>(new Set());
@@ -209,16 +215,19 @@ export function LiGrid({
         />
       )}
       {archived ? null : (
-        <Box sx={{ mb: 2, maxWidth: 240 }}>
-          <DvSelect
-            ariaLabel="Status filter"
-            value={filter}
-            options={FILTERS}
-            onChange={(v) => {
-              setFilter(v);
-              setPage({ page: 1, size: page.size });
-            }}
-          />
+        <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+          <Box sx={{ width: 240 }}>
+            <DvSelect
+              ariaLabel="Status filter"
+              value={filter}
+              options={FILTERS}
+              onChange={(v) => {
+                setFilter(v);
+                setPage({ page: 1, size: page.size });
+              }}
+            />
+          </Box>
+          {filterChips}
         </Box>
       )}
       {error ? (
