@@ -51,6 +51,8 @@ export interface MaybeAdvanceResult {
 export interface MaybeAdvanceOptions {
   /** The caller's sandbox, when they are a student whose sandbox is READY. */
   sandboxId?: string | null;
+  /** Only builds of this cohort (tests; the page-load callers move every cohort). */
+  classroomId?: string;
   db?: Db;
   now?: number;
   globalIntervalMs?: number;
@@ -72,9 +74,12 @@ export async function maybeAdvance(opts: MaybeAdvanceOptions = {}): Promise<Mayb
     return result;
   result.global = true;
   const deadline = Date.now() + (opts.budgetMs ?? GLOBAL_BUDGET_MS);
-  result.provisioning = await advanceProvisioning(deadline, { db, limit: 2, orphans: false }).catch(
-    () => undefined,
-  );
+  result.provisioning = await advanceProvisioning(deadline, {
+    db,
+    limit: 2,
+    orphans: false,
+    ...(opts.classroomId ? { classroomId: opts.classroomId } : {}),
+  }).catch(() => undefined);
   if (Date.now() < deadline - 5_000) {
     const ticks = await runDueTicks(deadline, { maxSandboxes: 5 }).catch(() => undefined);
     if (ticks) result.ticks = ticks.ticks;

@@ -73,13 +73,17 @@ async function student(tag: string, ownerAdminId: string): Promise<Student> {
 
 let a: Student;
 let b: Student;
+const rlsEnabledHere: string[] = [];
 
 beforeAll(async () => {
   process.env.SANDBOX_ENGINE_DAYS = '3';
   await ensureReferenceData(prisma);
-  // what Supabase does
+  // what Supabase does. The tables that had RLS off are put back in afterAll: the schema checks of other files
+  // (tests/db/extended.db.test.ts) depend on that state and the files run in an order that changes between runs.
   const tables = await prisma.$queryRaw<{ tablename: string }[]>`
-    SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'`;
+    SELECT c.relname AS tablename FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname <> '_prisma_migrations' AND NOT c.relrowsecurity`;
+  rlsEnabledHere.push(...tables.map((t) => t.tablename));
   for (const t of tables) {
     await prisma.$executeRawUnsafe(`ALTER TABLE "${t.tablename}" ENABLE ROW LEVEL SECURITY`);
   }
@@ -90,6 +94,8 @@ beforeAll(async () => {
 }, 600_000);
 
 afterAll(async () => {
+  for (const t of rlsEnabledHere)
+    await prisma.$executeRawUnsafe(`ALTER TABLE "${t}" DISABLE ROW LEVEL SECURITY`);
   for (const id of sandboxIds) {
     await prisma.$transaction((tx) => clearSandboxData(tx, id), { timeout: 120_000 });
     await prisma.userAccessGrant.deleteMany({ where: { sandboxId: id } });

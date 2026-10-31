@@ -34,11 +34,21 @@ const classroomIds: string[] = [];
 const sandboxIds: string[] = [];
 let classroomId: string;
 
-async function queuedStudent(tag: string) {
-  const { user } = await createAccount(prisma, { tag, role: 'USER', cohortId: classroomId });
-  await prisma.classroomMember.create({ data: { classroomId, userId: user.id } });
+let adminId: string;
+
+/** A cohort of its own: the global run moves every cohort's builds, so a test counts only what is in its cohort. */
+async function newCohort(tag: string) {
+  const id = (await createClassroom(prisma, { tag, ownerAdminId: adminId })).id;
+  classroomIds.push(id);
+  await prisma.classroom.update({ where: { id }, data: { defaultSeedTemplate: 'starter-agency' } });
+  return id;
+}
+
+async function queuedStudent(tag: string, cohortId: string = classroomId) {
+  const { user } = await createAccount(prisma, { tag, role: 'USER', cohortId });
+  await prisma.classroomMember.create({ data: { classroomId: cohortId, userId: user.id } });
   userIds.push(user.id);
-  const sandboxId = (await enqueueProvisionSandbox(classroomId, user.id)).sandboxId as string;
+  const sandboxId = (await enqueueProvisionSandbox(cohortId, user.id)).sandboxId as string;
   sandboxIds.push(sandboxId);
   return { userId: user.id, sandboxId };
 }
@@ -48,12 +58,17 @@ beforeAll(async () => {
   await seedReferenceData(prisma);
   const a = await createAccount(prisma, { tag: uniq('pd-admin'), role: 'SUPER_ADMIN' });
   userIds.push(a.user.id);
+  adminId = a.user.id;
   classroomId = (await createClassroom(prisma, { tag: 'pd', ownerAdminId: a.user.id })).id;
   classroomIds.push(classroomId);
   await prisma.classroom.update({
     where: { id: classroomId },
     data: { defaultSeedTemplate: 'starter-agency' },
   });
+  // Older queued builds in another cohort, like the leftovers other test files leave in CI: a run that is not scoped
+  // to a test's cohort would spend its slots on these.
+  const decoys = await newCohort('pd-decoy');
+  for (const tag of ['pd-decoy-1', 'pd-decoy-2', 'pd-decoy-3']) await queuedStudent(tag, decoys);
 }, 300_000);
 
 afterAll(async () => {
@@ -88,10 +103,11 @@ describe('claimSlot', () => {
 describe('maybeAdvance', () => {
   it('runs once for two simultaneous callers and starts a queued build exactly once', async () => {
     await prisma.appMeta.deleteMany({ where: { key: GLOBAL_KEY } });
-    const { userId } = await queuedStudent('pd-race');
+    const cohort = await newCohort('pd-race');
+    const { userId } = await queuedStudent('pd-race', cohort);
     const [a, b] = await Promise.all([
-      maybeAdvance({ budgetMs: 60_000 }),
-      maybeAdvance({ budgetMs: 60_000 }),
+      maybeAdvance({ budgetMs: 60_000, classroomId: cohort }),
+      maybeAdvance({ budgetMs: 60_000, classroomId: cohort }),
     ]);
     expect([a.global, b.global].filter(Boolean)).toHaveLength(1);
     expect(seedsFor(userId)).toBe(1);
@@ -111,14 +127,17 @@ describe('maybeAdvance', () => {
   }, 300_000);
 
   it('continues an abandoned BACKFILLING build', async () => {
-    const { sandboxId } = await queuedStudent('pd-back');
+    const cohort = await newCohort('pd-back');
+    const { sandboxId } = await queuedStudent('pd-back', cohort);
     await runProvisionStep(sandboxId, { budgetMs: 1 }); // seeds, starts the history job, stops
     const stuck = await prisma.sandbox.findUniqueOrThrow({ where: { id: sandboxId } });
     expect(stuck.provisionState).toBe('BACKFILLING');
     // a live build (fresh heartbeat) is left alone
-    expect((await advanceProvisioning(Date.now() + 60_000, { classroomId })).stepped).toBe(0);
+    expect((await advanceProvisioning(Date.now() + 60_000, { classroomId: cohort })).stepped).toBe(
+      0,
+    );
     await prisma.$executeRaw`UPDATE "Sandbox" SET "updatedAt" = now() - interval '5 minutes' WHERE "id" = ${sandboxId}`;
-    const r = await advanceProvisioning(Date.now() + 120_000, { classroomId });
+    const r = await advanceProvisioning(Date.now() + 120_000, { classroomId: cohort });
     expect(r.stepped).toBeGreaterThan(0);
     expect(
       (await prisma.sandbox.findUniqueOrThrow({ where: { id: sandboxId } })).provisionState,
