@@ -197,12 +197,20 @@ export function TopBar() {
           unoptimized
           style={{ height: 28, width: 'auto' }}
         />
-        <Typography variant="h5" component="span" noWrap>
+        <Typography
+          variant="h5"
+          component="span"
+          noWrap
+          // Q13: below 1200 px the name would push the tools off the right edge; the logo carries the brand
+          sx={{ '@media (max-width:1199px)': { display: 'none' } }}
+        >
           {PRODUCT_NAME}
         </Typography>
       </Box>
       <BarIcon label="Home" icon="home" href={home} />
-      <DvBreadcrumbs crumbs={crumbs} />
+      <Box sx={{ minWidth: 0, overflow: 'hidden', flex: '0 1 auto' }}>
+        <DvBreadcrumbs crumbs={crumbs} />
+      </Box>
       <Box sx={{ flex: 1 }} />
       <Box
         role="toolbar"
@@ -311,13 +319,20 @@ export function TopBar() {
                 sx={{ px: 4, py: 2, borderTop: '1px solid', borderColor: 'divider' }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Typography variant="overline" color={n.severity === 'WARNING' ? 'warning.main' : 'text.secondary'}>
+                  <Typography
+                    variant="overline"
+                    color={n.severity === 'WARNING' ? 'warning.main' : 'text.secondary'}
+                  >
                     {n.kind}
                   </Typography>
                   <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
                     {n.ageLabel}
                   </Typography>
-                  <IconButton size="small" aria-label={`Dismiss ${n.title}`} onClick={() => dismiss(n.id)}>
+                  <IconButton
+                    size="small"
+                    aria-label={`Dismiss ${n.title}`}
+                    onClick={() => dismiss(n.id)}
+                  >
                     <DvIcon name="close" size={16} />
                   </IconButton>
                 </Box>
@@ -326,7 +341,12 @@ export function TopBar() {
                   {n.body}
                 </Typography>
                 {n.learnMoreRoute ? (
-                  <MuiLink component={AppLink} href={n.learnMoreRoute} onClick={close} underline="hover">
+                  <MuiLink
+                    component={AppLink}
+                    href={n.learnMoreRoute}
+                    onClick={close}
+                    underline="hover"
+                  >
                     Learn more
                   </MuiLink>
                 ) : null}
@@ -339,13 +359,22 @@ export function TopBar() {
             No notifications
           </Typography>
         ) : inbox.length === 0 ? null : (
-          <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0, maxHeight: 360, overflowY: 'auto' }}>
+          <Box
+            component="ul"
+            sx={{ listStyle: 'none', m: 0, p: 0, maxHeight: 360, overflowY: 'auto' }}
+          >
             {inbox.map((m) => (
               <Box
                 component="li"
                 key={m.id}
                 data-testid="inbox-item"
-                sx={{ px: 4, py: 2, borderTop: '1px solid', borderColor: 'divider', fontWeight: m.read ? 400 : 500 }}
+                sx={{
+                  px: 4,
+                  py: 2,
+                  borderTop: '1px solid',
+                  borderColor: 'divider',
+                  fontWeight: m.read ? 400 : 500,
+                }}
               >
                 {m.href ? (
                   <MuiLink component={AppLink} href={m.href} onClick={close} underline="hover">

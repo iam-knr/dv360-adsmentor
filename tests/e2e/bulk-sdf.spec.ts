@@ -209,7 +209,7 @@ test('PW-11-12 custom charts: add a starter chart, save and it is still there af
   await expect(page.getByRole('heading', { name: 'Daily Revenue Trend' })).toBeVisible();
   await expect(page.getByRole('heading', { name: /CPM and CTR by day/ })).toBeVisible();
   // Q11: a suggestion chip opens Customize and adds its chart on top of the saved ones
-  await page.getByRole('button', { name: 'Bubble chart of CPA vs conversions' }).click();
+  await page.getByRole('button', { name: /Bubble chart of CPA vs conversions/ }).click();
   await expect(page.getByRole('region', { name: 'Customize charts' })).toBeVisible();
   await expect(page.getByTestId('chart-notice')).toContainText('Added "');
   await expect(page.getByRole('heading', { name: 'Daily Revenue Trend' })).toBeVisible();
