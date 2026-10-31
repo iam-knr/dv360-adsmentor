@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import { getSessionUser } from '@/lib/auth/session';
 import { homeFor } from '@/lib/scope/home';
 
@@ -19,12 +20,7 @@ export default async function HomePage() {
       component="main"
       sx={{ p: 8, display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element -- static brand asset */}
-      <img
-        src="/brand/adsmentor-logo-horizontal.png"
-        alt="Adsmetor"
-        style={{ height: 48, width: 'auto' }}
-      />
+      <BrandLogo height={48} />
       <Typography variant="h4" component="h1">
         DV360 Simulator by Adsmetor
       </Typography>
