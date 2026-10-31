@@ -4,6 +4,7 @@
 // routes. Spend chart, toolbar (date range, local time zone, system changes, download, expand all), year headings and
 // day cards, notes slide-over, Load more. State lives in the URL (`d`, `tz`, `s`, `sim_panel`).
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { formatMoney } from '@/lib/money';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -196,13 +197,7 @@ export function HistoryPage({ entity, initial, initialParams, title }: HistoryPa
     setDays((cur) => cur.map((d) => (d.date === date ? { ...d, notesCount: count } : d)));
   }, []);
 
-  const money = useMemo(() => {
-    try {
-      return new Intl.NumberFormat('en-US', { style: 'currency', currency: data.currency });
-    } catch {
-      return new Intl.NumberFormat('en-US');
-    }
-  }, [data.currency]);
+  const money = useMemo(() => ({ format: (n: number) => formatMoney(n, data.currency) }), [data.currency]);
   const total = data.spend.reduce((sum, p) => sum + p.amount, 0);
   const years = [...new Set(days.map((d) => d.date.slice(0, 4)))];
   const today = parseIsoDate(data.today) ?? new Date();

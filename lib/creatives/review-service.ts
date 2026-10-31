@@ -2,6 +2,7 @@ import 'server-only';
 // Review side of the creative module: status tab, appeals, appeal history, creative History (module 12 S4, S5, S7, S9).
 import type { Prisma } from '@prisma/client';
 import type { SessionUser } from '@/lib/auth/types';
+import { actorText } from '@/lib/history/lines';
 import { historyWhere, renderLine, withChangeLog, type FieldDef } from '@/lib/changelog';
 import { creativeRegistry } from '@/lib/changelog/registries/creative';
 import type { Tx } from '@/lib/db';
@@ -503,7 +504,7 @@ export async function getCreativeHistory(
         user:
           g.actorType === 'SYSTEM'
             ? (SYSTEM_LABEL[g.systemActor ?? ''] ?? g.systemActor ?? 'System')
-            : (g.actorLabel ?? 'Unknown'),
+            : actorText(g, user),
         summary: g.summary,
         lines: g.entries.map((e) =>
           renderLine(e, defs.get(e.fieldPath) ?? approvalDef(e.fieldPath)),

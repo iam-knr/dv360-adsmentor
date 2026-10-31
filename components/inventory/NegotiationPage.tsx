@@ -2,6 +2,7 @@
 
 // Negotiation page (module 13 S10): Terms · Conversation · Actions (Counter, Accept, Decline).
 import { useState } from 'react';
+import { formatMoney } from '@/lib/money';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -33,7 +34,7 @@ const STATUS_LABEL: Record<string, string> = {
   EXPIRED: 'Expired',
 };
 const money = (n: number, code: string) =>
-  `${code === 'INR' ? '₹' : `${code} `}${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  formatMoney(n, code);
 const date = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString('en-GB', { timeZone: 'UTC' }) : '-';
 

@@ -3,6 +3,7 @@
 // Deal page (module 13 S4): Overview · Access · Settings · History. The tab is `?activeTab=`. Students change the
 // status, the frequency cap and the advertiser access; everything else is the seller's and read only (RC, C2).
 import { useState } from 'react';
+import { formatMoney } from '@/lib/money';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -50,7 +51,7 @@ const num = (n: number | null) => (n === null ? '-' : n.toLocaleString('en-IN'))
 const money = (n: number | null, code: string) =>
   n === null
     ? '-'
-    : `${code === 'INR' ? '₹' : `${code} `}${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    : formatMoney(n, code);
 
 function Fact({ label, value }: { label: string; value: React.ReactNode }) {
   return (

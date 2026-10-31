@@ -4,6 +4,7 @@
 // sim clock chip between Search and the bell, the wordmark text, a controlled search overlay (opened by `/`) and a
 // hamburger that hides on frames without a left nav (PR deviation note). Crumbs reuse DvBreadcrumbs.
 import { useEffect, useState, type ReactNode } from 'react';
+import { APP_ROLE_LABEL } from '@/lib/accounts/role-labels';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import Avatar from '@mui/material/Avatar';
@@ -38,7 +39,7 @@ import { useViewer } from './ViewerProvider';
 export const NOTIFICATION_POLL_MS = 30_000;
 
 export const PRODUCT_NAME = 'DV360 Simulator by Adsmetor';
-const ROLE_LABEL = { user: 'Student', super_admin: 'Super admin' } as const;
+const ROLE_LABEL = APP_ROLE_LABEL;
 
 function BarIcon({
   label,

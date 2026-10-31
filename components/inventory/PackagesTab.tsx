@@ -3,6 +3,7 @@
 // My inventory, Packages (module 13 S2): Package · Details · Rate · Delivery · Dates, row menu with
 // "Assign to line items…" and "Remove".
 import { useState } from 'react';
+import { formatMoney } from '@/lib/money';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
@@ -20,7 +21,7 @@ import { InventoryHeader } from './InventoryHeader';
 
 const date = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { timeZone: 'UTC' });
 const money = (n: number, code: string) =>
-  `${code === 'INR' ? '₹' : `${code} `}${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  formatMoney(n, code);
 
 export function PackagesTab({
   scope,

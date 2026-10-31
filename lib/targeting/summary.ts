@@ -158,11 +158,13 @@ export function summarizeTargeting(dim: MatrixDimension, c: TargetingCriteria): 
       const g = c.geography;
       if (!g) return null;
       const inc = g.regions.filter((r) => r.mode === 'INCLUDE').map((r) => r.label ?? r.id);
+      const exc = g.regions.filter((r) => r.mode === 'EXCLUDE').map((r) => r.label ?? r.id);
       const points = g.radius?.points.length ?? 0;
       if (!inc.length && !points && !g.regions.length) return 'All locations';
       return (
         [
           inc.length ? `Region inclusions: ${inc.join(', ')}` : '',
+          exc.length ? `Region exclusions: ${exc.join(', ')}` : '',
           points ? `${plural(points, 'radius target')}` : '',
         ]
           .filter(Boolean)

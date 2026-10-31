@@ -28,13 +28,23 @@ export function entryLines(registry: EntityRegistry | null, entries: StoredEntry
   return entries.map((e) => renderLine(e, fieldDefFor(registry, e.fieldPath)));
 }
 
-/** Who made a change: a user's email, or the system actor's label (SIM_SEED rows are hidden and never reach here). */
-export function actorText(g: {
-  actorType: 'USER' | 'SYSTEM';
-  actorLabel: string | null;
-  systemActor: string | null;
-}): string {
-  if (g.actorType === 'USER') return g.actorLabel ?? 'Unknown';
+/**
+ * Who made a change: the user's display name, or the system actor's label (SIM_SEED rows are hidden and never reach
+ * here). Rows written with an email label read as the viewer's display name when the viewer made the change (Q15).
+ */
+export function actorText(
+  g: {
+    actorType: 'USER' | 'SYSTEM';
+    actorLabel: string | null;
+    systemActor: string | null;
+    userId?: string | null;
+  },
+  viewer?: { id: string; name: string | null } | null,
+): string {
+  if (g.actorType === 'USER') {
+    if (viewer?.name && g.userId && g.userId === viewer.id) return viewer.name;
+    return g.actorLabel ?? 'Unknown';
+  }
   return SYSTEM_ACTOR_LABELS[g.systemActor as SystemActor] ?? g.systemActor ?? 'System';
 }
 
