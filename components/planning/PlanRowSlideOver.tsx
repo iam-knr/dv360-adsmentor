@@ -1,12 +1,17 @@
 'use client';
 
-// Plan line item slide-over (module 04 S4): name, buying method, deal, locations, dates, audience tags, budget, fee,
-// max CPM. Apply validates with the PLN rules, then hands the row back to the page's draft.
+// Plan line item slide-over (module 04 S4): name, buying method, deal, locations, dates, targeting (the shared
+// targeting panel in plan mode, gap p4-08 #2), budget, fee, max CPM. Apply validates with the PLN rules, then hands
+// the row back to the page's draft. Duplicate copies the row into the draft.
 import { useEffect, useState } from 'react';
 import Autocomplete from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
+import { TargetingCard } from '@/components/targeting/TargetingCard';
+import { TargetingEditorContext } from '@/components/targeting/editors/apps-urls/context';
+import type { TargetingState } from '@/lib/targeting/types';
 import { DvSelect, DvSlideOver, DvTextField } from '@/components/dv';
 import { DvIcon } from '@/components/icons';
 import { listPlanDealsAction } from '@/lib/planning/actions';
@@ -21,13 +26,28 @@ import {
   type PlanBuyingMethodKey,
   type PlanRowDto,
 } from '@/lib/planning/types';
-import { DateField } from './DateField';
+import { PlanDateRange } from './PlanDateRange';
 
 const num = (s: string): number | null =>
   s.trim() === '' || Number.isNaN(Number(s)) ? null : Number(s);
 
+/** The line item type the panel edits rows as; Create campaign makes Display drafts (spec 4.7). */
+export const PLAN_ROW_LI_TYPE = 'DISPLAY';
+
+export function rowTargetingState(row: Pick<PlanRowDto, 'targeting'>): TargetingState {
+  const t = row.targeting as Partial<TargetingState>;
+  return {
+    version: 1,
+    lineItemType: PLAN_ROW_LI_TYPE,
+    criteria: t.criteria && typeof t.criteria === 'object' ? t.criteria : {},
+  };
+}
+
 export function PlanRowSlideOver({
   advertiserId,
+  advertiserRowId,
+  partnerId,
+  today,
   row,
   planStart,
   planEnd,
@@ -36,8 +56,12 @@ export function PlanRowSlideOver({
   onApply,
   onCancel,
   onDelete,
+  onDuplicate,
 }: {
   advertiserId: string;
+  advertiserRowId: string;
+  partnerId: string;
+  today: string;
   row: PlanRowDto | null;
   planStart: string;
   planEnd: string;
@@ -46,6 +70,7 @@ export function PlanRowSlideOver({
   onApply: (row: PlanRowDto) => void;
   onCancel: () => void;
   onDelete: () => void;
+  onDuplicate: (row: PlanRowDto) => void;
 }) {
   const [draft, setDraft] = useState<PlanRowDto | null>(row);
   const [budget, setBudget] = useState('');
@@ -126,6 +151,17 @@ export function PlanRowSlideOver({
       {...(readOnly ? {} : { onDelete })}
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, p: 4 }}>
+        {!readOnly && !draft.id.startsWith('tmp-') ? (
+          <Box>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => onDuplicate({ ...draft, name: `Copy of ${draft.name}`.slice(0, 200) })}
+            >
+              Duplicate line item
+            </Button>
+          </Box>
+        ) : null}
         <DvTextField
           label="Name"
           required
@@ -164,36 +200,42 @@ export function PlanRowSlideOver({
           onChange={(_e, v) => set({ locations: v })}
           renderInput={(p) => <TextField {...p} label="Locations" />}
         />
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <DateField
-            label="Start date"
-            value={draft.startDate}
-            disabled={readOnly}
-            error={errors['dates'] ?? errors['dates.start']}
-            onChange={(v) => set({ startDate: v })}
-          />
-          <DateField
-            label="End date"
-            value={draft.endDate}
-            disabled={readOnly}
-            error={errors['dates.end']}
-            onChange={(v) => set({ endDate: v })}
-          />
-        </Box>
-        <DvTextField
-          label="Audience tags"
-          hint="Comma separated. Each tag narrows the addressable audience."
-          value={draft.audienceRefs.join(', ')}
+        <PlanDateRange
+          label="Date range"
+          start={draft.startDate}
+          end={draft.endDate}
+          today={today}
           disabled={readOnly}
-          onChange={(v) =>
-            set({
-              audienceRefs: v
-                .split(',')
-                .map((s) => s.trim())
-                .filter(Boolean),
-            })
-          }
+          error={errors['dates'] ?? errors['dates.end'] ?? errors['dates.start']}
+          onChange={(startDate, endDate) => set({ startDate, endDate })}
         />
+        <Box>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            Targeting
+          </Typography>
+          <TargetingEditorContext.Provider
+            value={{
+              advertiserId: advertiserRowId,
+              partnerPublicId: partnerId,
+              advertiserPublicId: advertiserId,
+            }}
+          >
+            <TargetingCard
+              lineItemType={PLAN_ROW_LI_TYPE}
+              value={rowTargetingState(draft)}
+              readOnly={readOnly}
+              onChange={(state) =>
+                set({
+                  targeting: {
+                    version: 1,
+                    lineItemType: PLAN_ROW_LI_TYPE,
+                    criteria: state.criteria,
+                  },
+                })
+              }
+            />
+          </TargetingEditorContext.Provider>
+        </Box>
         <DvTextField
           label="Budget (net)"
           required

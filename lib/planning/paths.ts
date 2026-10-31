@@ -10,6 +10,8 @@ export interface PlanScope {
 
 export const plansListPath = (pid: string, aid: string): string =>
   advertiserPath(pid, aid, 'marketplace', 'plans');
+export const newPlanPath = (pid: string, aid: string): string =>
+  advertiserPath(pid, aid, 'marketplace', 'plan', 'new');
 export const planPagePath = (pid: string, aid: string, planPublicId: string): string =>
   advertiserPath(pid, aid, 'pr', planPublicId, 'marketplace', 'plan');
 

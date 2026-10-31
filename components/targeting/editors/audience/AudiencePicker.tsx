@@ -22,18 +22,30 @@ export interface AudiencePickerProps {
   items: CatalogueItem[];
   lineItemType: LiType | null;
   initial: string[];
+  /** Categories listed in the type filter whether or not they have lists, in this order. */
+  categories?: PickerCategory[];
   onApply: (ids: string[]) => void;
   onCancel: () => void;
 }
 
-const SUBTYPE_LABEL: Record<string, string> = {
+export const SUBTYPE_LABEL: Record<string, string> = {
   ...GOOGLE_KIND_LABEL,
   FIRST_PARTY: 'First-party',
   PARTNER: 'Partner',
   LOOKALIKE: 'Lookalike',
   COMBINED: 'Combined',
   CUSTOM: 'Custom',
+  CUSTOM_AFFINITY: 'Custom affinity',
+  CUSTOM_INTENT_DISPLAY_VIDEO: 'Custom intent (Display and Video)',
+  CUSTOM_INTENT_YOUTUBE: 'Custom intent (YouTube)',
 };
+
+/** A category the picker always offers, even when the advertiser has no list in it yet. */
+export interface PickerCategory {
+  value: string;
+  /** Link to the Audiences form that creates a list of this category. */
+  createHref?: string;
+}
 
 /** Audience picker (module 10 2.5): type filter, eligibility chip, search, rows with path and ID, "None selected". */
 export function AudiencePicker({
@@ -42,6 +54,7 @@ export function AudiencePicker({
   items,
   lineItemType,
   initial,
+  categories = [],
   onApply,
   onCancel,
 }: AudiencePickerProps) {
@@ -54,7 +67,13 @@ export function AudiencePicker({
     () => items.filter((i) => eligibleFor(i.meta, lineItemType)),
     [items, lineItemType],
   );
-  const types = useMemo(() => [...new Set(eligible.map((i) => i.subtype))], [eligible]);
+  const types = useMemo(() => {
+    const present = new Set(eligible.map((i) => i.subtype));
+    const fixed = categories.map((c) => c.value);
+    return [...fixed, ...[...present].filter((t) => !fixed.includes(t))];
+  }, [eligible, categories]);
+  const countOf = (t: string) => eligible.filter((i) => i.subtype === t).length;
+  const category = categories.find((c) => c.value === type);
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     return eligible.filter(
@@ -83,7 +102,10 @@ export function AudiencePicker({
               onChange={setType}
               options={[
                 { value: 'ALL', label: 'All types' },
-                ...types.map((t) => ({ value: t, label: SUBTYPE_LABEL[t] ?? t })),
+                ...types.map((t) => ({
+                  value: t,
+                  label: `${SUBTYPE_LABEL[t] ?? t} (${countOf(t)})`,
+                })),
               ]}
             />
             {lineItemType ? (
@@ -117,7 +139,17 @@ export function AudiencePicker({
             ))}
             {shown.length === 0 ? (
               <Typography variant="body2" color="text.secondary" sx={{ p: 1 }}>
-                No audiences match.
+                {category && !query.trim()
+                  ? `No ${SUBTYPE_LABEL[category.value] ?? 'audiences'} lists yet for this line item.`
+                  : 'No audiences match.'}
+                {category?.createHref && !query.trim() ? (
+                  <>
+                    {' '}
+                    <a href={category.createHref} target="_blank" rel="noreferrer">
+                      Create a {SUBTYPE_LABEL[category.value]?.toLowerCase()} list
+                    </a>
+                  </>
+                ) : null}
               </Typography>
             ) : null}
           </Box>

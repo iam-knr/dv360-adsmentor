@@ -8,6 +8,19 @@ import { audienceMeta, readAudiences } from '../load';
 
 export const dynamic = 'force-dynamic';
 
+/** Breadcrumb under a list's name in the picker (module 14 S1 type names). */
+const TYPE_PATH: Record<string, string> = {
+  TAG_BASED: 'Tag-based',
+  CUSTOMER_MATCH: 'Customer match',
+  YOUTUBE_USERS: 'YouTube users',
+  LOOKALIKE: 'Lookalike',
+  COMBINED: 'Combined',
+  PARTNER: 'Partner',
+  CUSTOM_AFFINITY: 'Custom affinity',
+  CUSTOM_INTENT_DISPLAY_VIDEO: 'Custom intent (Display and Video)',
+  CUSTOM_INTENT_YOUTUBE: 'Custom intent (YouTube)',
+};
+
 export interface CatalogueItem {
   id: string;
   name: string;
@@ -28,9 +41,9 @@ export async function GET(req: Request) {
     return {
       id: r.id,
       name: r.name,
-      path: `${r.name} » ${r.type}`,
+      path: `${TYPE_PATH[r.type] ?? r.type} » ${r.name}`,
       meta,
-      subtype: r.type === 'PARTNER' ? 'PARTNER' : meta.kind,
+      subtype: r.type === 'PARTNER' || r.type.startsWith('CUSTOM_') ? r.type : meta.kind,
     };
   });
   const google: CatalogueItem[] = GOOGLE_AUDIENCES.map((g) => ({

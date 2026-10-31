@@ -52,6 +52,23 @@ test.beforeAll(async () => {
   await db.partnerExchange.create({
     data: { sandboxId: w.sandboxId, partnerId: partner.id, exchangeId: exchange.id },
   });
+  // Custom lists of every type for the audience picker (plan-parity: Custom affinity and Custom intent)
+  for (const [name, type] of [
+    ['PW Custom affinity: gadget fans', 'CUSTOM_AFFINITY'],
+    ['PW Custom intent: buying a phone', 'CUSTOM_INTENT_DISPLAY_VIDEO'],
+    ['PW Custom intent YouTube: phone reviews', 'CUSTOM_INTENT_YOUTUBE'],
+  ] as const)
+    await db.audience.create({
+      data: {
+        sandboxId: w.sandboxId,
+        advertiserId: io.advertiserId,
+        name,
+        type,
+        status: 'ACTIVE',
+        sizeDisplay: 2_000_000n,
+        sizeYoutube: 900_000n,
+      },
+    });
   await db.creative.create({
     data: {
       sandboxId: w.sandboxId,
@@ -243,4 +260,57 @@ test('PW-08-17: a read-only user sees the details page without Save', async ({ p
   await expect(page.locator('#name')).toBeVisible();
   await expect(page.locator('#name')).toHaveAttribute('readonly', '');
   await expect(page.getByRole('button', { name: 'Save' })).toHaveCount(0);
+});
+
+test('PW-10-07: the audience picker offers Custom affinity and Custom intent and a line item saves them', async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto(newLi(w.ids.ioId, '?type=DISPLAY'));
+  await page.locator('#name').fill('PW custom lists LI');
+  await page.getByRole('radio', { name: /Does not contain EU political ads/ }).check();
+  await page.getByRole('button', { name: 'Add targeting' }).click();
+  await page.getByRole('menuitem', { name: /Audience lists/ }).click();
+  const editor = page.getByRole('dialog').last();
+  // the Create link of the Custom lists section points at the Audiences module forms
+  await expect(editor.getByRole('link', { name: 'Create a custom list' })).toHaveAttribute(
+    'href',
+    /customaudience\/affinity\/new/,
+  );
+  await editor.getByRole('button', { name: 'Select Custom lists' }).click();
+  const picker = page.getByRole('dialog').last();
+  await picker.getByRole('combobox', { name: 'Audience type' }).click();
+  await expect(page.getByRole('option', { name: 'Custom affinity (1)' })).toBeVisible();
+  await expect(
+    page.getByRole('option', { name: 'Custom intent (Display and Video) (1)' }),
+  ).toBeVisible();
+  // the YouTube intent list is not offered to a Display line item
+  await expect(page.getByRole('option', { name: /Custom intent \(YouTube\)/ })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await picker.getByRole('checkbox', { name: 'PW Custom affinity: gadget fans' }).check();
+  await picker.getByRole('checkbox', { name: 'PW Custom intent: buying a phone' }).check();
+  await expect(picker.getByRole('checkbox', { name: /YouTube: phone reviews/ })).toHaveCount(0);
+  await picker.getByRole('button', { name: 'Apply' }).click();
+  const included = editor.getByRole('list', { name: 'Included Custom lists' });
+  await expect(included).toContainText('PW Custom affinity: gadget fans');
+  await expect(included).toContainText('PW Custom intent: buying a phone');
+  await editor.getByRole('button', { name: 'Apply' }).click();
+  await page.getByRole('button', { name: 'Create' }).click();
+  await page.waitForURL(/\/li\/\d+\/details/);
+
+  const li = await db.lineItem.findFirstOrThrow({
+    where: { name: 'PW custom lists LI', sandboxId: w.sandboxId },
+  });
+  const rows = await db.targetingAssignment.findMany({
+    where: { lineItemId: li.id, dimension: 'AUDIENCE_LIST' },
+  });
+  expect(rows.map((r) => r.audienceSection)).toEqual(['CUSTOM', 'CUSTOM']);
+  const names = await db.audience.findMany({
+    where: { id: { in: rows.map((r) => r.refId ?? '') } },
+    select: { name: true },
+  });
+  expect(names.map((n) => n.name).sort()).toEqual([
+    'PW Custom affinity: gadget fans',
+    'PW Custom intent: buying a phone',
+  ]);
 });

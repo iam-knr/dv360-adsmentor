@@ -11,15 +11,13 @@ import {
   DvFilterBar,
   DvGrid,
   DvPageHeader,
-  useToast,
   type DvColumn,
   type FilterField,
   type FilterValue,
 } from '@/components/dv';
 import { useViewer } from '@/components/shell/ViewerProvider';
 import { AppLink } from '@/lib/routes/AppLink';
-import { createPlanAction } from '@/lib/planning/actions';
-import { planPagePath } from '@/lib/planning/paths';
+import { newPlanPath, planPagePath } from '@/lib/planning/paths';
 import type { PlanList } from '@/lib/planning/service';
 import { fmtDate } from '@/lib/planning/table';
 import type { PlanListRow, PlanStatusKey } from '@/lib/planning/types';
@@ -27,8 +25,11 @@ import type { PlanListRow, PlanStatusKey } from '@/lib/planning/types';
 const STATUS_LABEL: Record<PlanStatusKey, string> = {
   PLANNED: 'Planned',
   TRAFFICKED: 'Trafficked',
+  ARCHIVED: 'Archived',
 };
-const ALL: PlanStatusKey[] = ['PLANNED', 'TRAFFICKED'];
+/** Every status the filter offers; Archived is off by default so the chip reads "Status: 2 selected". */
+const ALL: PlanStatusKey[] = ['PLANNED', 'TRAFFICKED', 'ARCHIVED'];
+const DEFAULT_STATUS: PlanStatusKey[] = ['PLANNED', 'TRAFFICKED'];
 const FIELDS: FilterField[] = [
   {
     id: 'status',
@@ -55,7 +56,7 @@ function readUrl(): { status: PlanStatusKey[]; sort: Sort; rows: number; page: n
   const sortId: SortId = sid === 'startDate' || sid === 'endDate' ? sid : 'name';
   const rows = Number(p.get('rows'));
   return {
-    status: status.length ? status : ALL,
+    status: status.length ? status : DEFAULT_STATUS,
     sort: { id: sortId, dir: sdir === 'desc' ? 'desc' : 'asc' },
     rows: [20, 50, 100].includes(rows) ? rows : 20,
     page: Math.max(1, Number(p.get('page')) || 1),
@@ -73,7 +74,6 @@ export function PlansList({
   initial: PlanList;
 }) {
   const router = useRouter();
-  const toast = useToast();
   const { viewer } = useViewer();
   const writable = initial.canWrite && !viewer.readOnly;
   const [url] = useState(readUrl);
@@ -93,7 +93,10 @@ export function PlansList({
   }) => {
     const p = new URLSearchParams(window.location.search);
     for (const k of ['f.status', 'sort', 'rows', 'page', 'q']) p.delete(k);
-    if (next.status.length < ALL.length) next.status.forEach((s) => p.append('f.status', s));
+    const isDefault =
+      next.status.length === DEFAULT_STATUS.length &&
+      DEFAULT_STATUS.every((s) => next.status.includes(s));
+    if (!isDefault) next.status.forEach((s) => p.append('f.status', s));
     if (next.sort.id !== 'name' || next.sort.dir !== 'asc')
       p.set('sort', `${next.sort.id}:${next.sort.dir}`);
     if (next.rows !== 20) p.set('rows', String(next.rows));
@@ -177,15 +180,8 @@ export function PlansList({
     },
   ];
 
-  const newPlan = () =>
-    startNew(async () => {
-      const res = await createPlanAction(advertiserId);
-      if (!res.ok) {
-        toast.show({ message: res.issues[0]?.message ?? "Couldn't create the plan." });
-        return;
-      }
-      router.push(planPagePath(partnerId, advertiserId, res.data.publicId));
-    });
+  // New plan opens the two-step wizard (explore 19 section 3); the plan is saved by "Next: Add products".
+  const newPlan = () => startNew(() => router.push(newPlanPath(partnerId, advertiserId)));
 
   const value: FilterValue[] = [{ fieldId: 'status', values: status }];
   const noPlans = initial.rows.length === 0;
@@ -214,7 +210,7 @@ export function PlansList({
           placeholder="Search by name or ID"
           onChange={(f, t) => {
             const next = (f.find((x) => x.fieldId === 'status')?.values ?? []) as PlanStatusKey[];
-            const s = next.length ? next : ALL;
+            const s = next.length ? next : DEFAULT_STATUS;
             setStatus(s);
             setText(t);
             setPage(1);

@@ -81,7 +81,8 @@ test.beforeAll(async () => {
   // What Supabase does when "enable RLS" is on: every table, ENABLE (not FORCE); the owner role is exempt.
   const tables = await db.$queryRaw<{ tablename: string }[]>`
     SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'`;
-  for (const t of tables) await db.$executeRawUnsafe(`ALTER TABLE "${t.tablename}" ENABLE ROW LEVEL SECURITY`);
+  for (const t of tables)
+    await db.$executeRawUnsafe(`ALTER TABLE "${t.tablename}" ENABLE ROW LEVEL SECURITY`);
   // the first sign in of the bootstrapped Super admin asks for a new password; that flow has its own tests
   await db.user.updateMany({
     where: { email: ADMIN_EMAIL },
@@ -125,6 +126,51 @@ test('PROD-LIKE crawler: a freshly provisioned student opens every linked page w
     where: { ownerUserId: second.id, kind: 'STUDENT' },
   });
   expect(sandbox.provisionState).toBe('READY');
+
+  // plan-parity: the production build path (provisioning job, not db:seed) writes the fuller demo data
+  const types = await db.audience.groupBy({
+    by: ['type'],
+    where: { sandboxId: sandbox.id },
+    _count: true,
+  });
+  const have = new Set(types.map((t) => t.type));
+  for (const t of [
+    'TAG_BASED',
+    'CUSTOMER_MATCH',
+    'YOUTUBE_USERS',
+    'LOOKALIKE',
+    'COMBINED',
+    'PARTNER',
+    'CUSTOM_AFFINITY',
+    'CUSTOM_INTENT_DISPLAY_VIDEO',
+    'CUSTOM_INTENT_YOUTUBE',
+  ] as const)
+    expect(have.has(t), `audience type ${t}`).toBe(true);
+  const advertiserCount = await db.advertiser.count({ where: { sandboxId: sandbox.id } });
+  const plans = await db.plan.groupBy({
+    by: ['status'],
+    where: { sandboxId: sandbox.id },
+    _count: true,
+  });
+  expect(plans.map((p) => p.status).sort()).toEqual(['ARCHIVED', 'PLANNED', 'TRAFFICKED']);
+  expect(plans.reduce((n, p) => n + p._count, 0)).toBeGreaterThanOrEqual(20 * advertiserCount);
+  expect(await db.planForecast.count({ where: { sandboxId: sandbox.id } })).toBeGreaterThanOrEqual(
+    20 * advertiserCount,
+  );
+  expect(
+    await db.crossMediaReachReport.count({ where: { sandboxId: sandbox.id, status: 'DONE' } }),
+  ).toBeGreaterThanOrEqual(3);
+  expect(
+    await db.report.count({ where: { sandboxId: sandbox.id, kind: 'INSTANT' } }),
+  ).toBeGreaterThanOrEqual(8);
+  expect(
+    await db.report.count({ where: { sandboxId: sandbox.id, kind: { not: 'INSTANT' } } }),
+  ).toBeGreaterThanOrEqual(2);
+  expect(
+    await db.reportRun.count({
+      where: { sandboxId: sandbox.id, status: 'DONE', rowCount: { gt: 0 } },
+    }),
+  ).toBeGreaterThanOrEqual(10);
   const partner = await db.partner.findFirstOrThrow({ where: { sandboxId: sandbox.id } });
   const advertiser = await db.advertiser.findFirstOrThrow({
     where: { sandboxId: sandbox.id },
@@ -177,14 +223,24 @@ test('PROD-LIKE crawler: a freshly provisioned student opens every linked page w
 
   // 2. route-table rows that need no id of their own
   const fixed = ROUTE_TABLE.filter(
-    (r) => !r.path.includes('{x}') && !r.path.includes('{kind}') && !r.path.includes('{ioId}') && !r.path.includes('{liId}'),
+    (r) =>
+      !r.path.includes('{x}') &&
+      !r.path.includes('{kind}') &&
+      !r.path.includes('{ioId}') &&
+      !r.path.includes('{liId}'),
   );
   const urls = new Map<string, { from: string; expect404: boolean }>();
   for (const [path, from] of links) urls.set(path, { from, expect404: false });
   for (const r of fixed) {
-    const path = r.path.replace('{pid}', ids.pid).replace('{aid}', ids.aid).replace('{cid}', ids.cid);
+    const path = r.path
+      .replace('{pid}', ids.pid)
+      .replace('{aid}', ids.aid)
+      .replace('{cid}', ids.cid);
     if (!urls.has(path)) {
-      urls.set(path, { from: `routes.md row (${r.view})`, expect404: r.frame === '404' || !canView('STANDARD', r.view) });
+      urls.set(path, {
+        from: `routes.md row (${r.view})`,
+        expect404: r.frame === '404' || !canView('STANDARD', r.view),
+      });
     }
   }
   urls.delete('/sim/logout');
@@ -204,7 +260,8 @@ test('PROD-LIKE crawler: a freshly provisioned student opens every linked page w
       continue;
     }
     if (code >= 500) problems.push(`${name}: HTTP ${code}`);
-    else if (code === 403 || body.includes(FORBIDDEN)) problems.push(`${name}: 403 "You do not have access"`);
+    else if (code === 403 || body.includes(FORBIDDEN))
+      problems.push(`${name}: 403 "You do not have access"`);
     else if (body.includes(ERROR_TEXT)) problems.push(`${name}: error boundary "${ERROR_TEXT}"`);
     else if (code === 404 || NOT_FOUND.test(body) || /Page not found/i.test(body)) {
       if (KNOWN_GAPS[key]) seenGaps.add(key);
@@ -213,14 +270,17 @@ test('PROD-LIKE crawler: a freshly provisioned student opens every linked page w
       if (KNOWN_GAPS[key]) seenGaps.add(key);
       else problems.push(`${name}: "Not built yet" placeholder`);
     } else if (KNOWN_GAPS[key]) {
-      problems.push(`${name}: listed in KNOWN_GAPS but the page works now; remove it from the list`);
+      problems.push(
+        `${name}: listed in KNOWN_GAPS but the page works now; remove it from the list`,
+      );
     }
   }
   console.log(`prod-like crawler visited ${urls.size} urls in ${Date.now() - consoleStart} ms`);
   for (const key of Object.keys(KNOWN_GAPS)) {
     if (!seenGaps.has(key) && !problems.some((p) => p.includes('KNOWN_GAPS'))) {
       // gap not reached by this crawl: stale entry
-      if (![...urls.keys()].some((u) => generic(u) === key)) problems.push(`KNOWN_GAPS entry ${key} is not a url of the crawl`);
+      if (![...urls.keys()].some((u) => generic(u) === key))
+        problems.push(`KNOWN_GAPS entry ${key} is not a url of the crawl`);
     }
   }
   expect(problems).toEqual([]);
