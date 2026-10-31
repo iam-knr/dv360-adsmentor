@@ -108,7 +108,7 @@ export function changeCtx(
   return {
     sandboxId: ctx.sandboxId,
     classroomId: ctx.classroomId,
-    actor: { type: 'USER', userId: actor.id, label: actor.email },
+    actor: { type: 'USER', userId: actor.id, label: actor.name || actor.email },
     tx,
     ...(extra.note?.trim() ? { note: extra.note.trim() } : {}),
     ...(extra.source ? { source: extra.source } : {}),

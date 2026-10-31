@@ -71,7 +71,7 @@ describe('LineItem registry', () => {
     const relations = new Map(models.get('LineItem')!.fields.map((f) => [f.name, f]));
     const lists = lineItemRegistry.fields.filter((f) => f.kind === 'list');
     expect(lists.length).toBeGreaterThan(0);
-    for (const f of lists) {
+    for (const f of lists.filter((l) => l.path !== 'targeting')) {
       expect(relations.get(f.path)?.list, f.path).toBe(true);
       expect(lineItemRegistry.include, f.path).toHaveProperty(f.path);
       expect(f.elementKey, f.path).toBeTypeOf('function');

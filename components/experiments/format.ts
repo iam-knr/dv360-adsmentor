@@ -1,3 +1,4 @@
+import { formatMoney } from '@/lib/money';
 // Display helpers of the experiment pages.
 type LiftStatus = 'ELIGIBLE' | 'NOT_ELIGIBLE' | 'IN_PROGRESS' | 'COMPLETE' | 'PAUSED' | 'ENDED';
 
@@ -16,10 +17,7 @@ export function dateRangeText(start: string, end: string | null): string {
   return `${fmtDay(start)} – ${fmtDay(end)}`;
 }
 
-export const money = (n: number | null | undefined, code: string): string =>
-  n === null || n === undefined
-    ? '-'
-    : `${code} ${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+export const money = (n: number | null | undefined, code: string): string => formatMoney(n, code);
 
 export const STATUS_AB: Record<string, string> = { ACTIVE: 'Active', COMPLETED: 'Completed', SCHEDULED: 'Scheduled' };
 

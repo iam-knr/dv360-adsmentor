@@ -349,4 +349,30 @@ describe('worker (V-11-14, AC-11-21)', () => {
     expect(capped).toBe(false);
     expect(rows[0]!.requestedAt >= rows.at(-1)!.requestedAt).toBe(true);
   });
+
+  it('Q17: names the partner and advertiser by numeric public id, not an id fragment', async () => {
+    const { rows } = await listJobs(user());
+    const partner = await prisma.partner.findUniqueOrThrow({ where: { id: w.partnerId } });
+    const adv = await prisma.advertiser.findUniqueOrThrow({ where: { id: w.advertiserId } });
+    const mine = rows.find((r) => r.advertiserId === adv.publicId.toString());
+    expect(mine?.partnerId).toBe(partner.publicId.toString());
+    for (const r of rows) {
+      expect(r.partnerId).toMatch(/^\d+$/);
+      if (r.advertiserId) expect(r.advertiserId).toMatch(/^\d+$/);
+    }
+  });
+
+  it('Q16: job times follow the sandbox sim clock', async () => {
+    await prisma.simClock.update({
+      where: { sandboxId: w.sandboxId },
+      data: { simStart: new Date('2026-03-01T00:00:00Z'), tickIndex: 5 },
+    });
+    await mustRun(user(), {
+      entity: 'lineItem',
+      ids: [li1],
+      params: { op: 'DUPLICATE', copies: 1 },
+    });
+    const { rows } = await listJobs(user());
+    expect(rows[0]!.requestedAt.startsWith('2026-03-01T05:00')).toBe(true);
+  });
 });

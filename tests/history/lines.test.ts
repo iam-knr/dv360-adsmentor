@@ -41,3 +41,11 @@ describe('ageLabel (AC-05-25)', () => {
     expect(ageLabel(new Date('2026-03-26T12:00:30Z'), now)).toBe('0 m');
   });
 });
+
+describe('Q15 viewer display name', () => {
+  it('shows the viewer display name instead of the email on the viewer own changes', () => {
+    const g = { actorType: 'USER' as const, actorLabel: 'sam@example.test', systemActor: null, userId: 'u1' };
+    expect(actorText(g, { id: 'u1', name: 'test manual' })).toBe('test manual');
+    expect(actorText(g, { id: 'u2', name: 'other' })).toBe('sam@example.test');
+  });
+});

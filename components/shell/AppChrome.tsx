@@ -18,7 +18,15 @@ export function AppChrome({ children }: { children: ReactNode }) {
   return (
     <ScopeRegistryProvider>
       <ChromeStateProvider>
-        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100vh',
+            // clip, not hidden: a hidden box can still be scrolled by focus, which left the bar cut off (Q13)
+            overflow: 'clip',
+          }}
+        >
           <TopBar />
           <Box sx={{ display: 'flex', flex: 1, minHeight: 0 }}>
             <Box sx={{ display: 'flex', flex: 1, minWidth: 0 }}>{children}</Box>

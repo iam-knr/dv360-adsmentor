@@ -5,6 +5,15 @@ import type { DateRange, MetricLevel } from './types';
 
 const HOUR_MS = 3_600_000;
 
+/** The sandbox sim instant `simStart + tickIndex hours` (ENG 1.2); real time when the sandbox has no clock. */
+export async function simNowFor(tx: Tx, sandboxId: string): Promise<Date> {
+  const clock = await tx.simClock.findUnique({
+    where: { sandboxId },
+    select: { simStart: true, tickIndex: true },
+  });
+  return clock ? new Date(clock.simStart.getTime() + Number(clock.tickIndex) * HOUR_MS) : new Date();
+}
+
 /** Sim date of `simNow = simStart + tickIndex hours` (ENG 1.2) in `timeZone`. */
 export async function simTodayFor(tx: Tx, sandboxId: string, timeZone: string): Promise<string> {
   const clock = await tx.simClock.findUnique({

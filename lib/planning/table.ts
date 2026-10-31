@@ -1,3 +1,4 @@
+import { formatMoney } from '@/lib/money';
 // Cell text of the plan line item table (module 04 2.2), shared by the grid and the CSV download so both show the
 // same column order and values.
 import { planCountry } from './countries';
@@ -13,8 +14,7 @@ export function fmtDate(isoDate: string): string {
 
 export function fmtMoney(n: number | null | undefined, code: string): string {
   if (n === null || n === undefined) return '-';
-  const f = Math.abs(n) >= 100_000 ? 0 : 2;
-  return `${code}${n.toLocaleString('en-US', { minimumFractionDigits: f, maximumFractionDigits: f })}`;
+  return formatMoney(n, code);
 }
 
 export function fmtCompact(n: number): string {

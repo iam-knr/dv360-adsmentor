@@ -5,6 +5,7 @@ import type { BulkAction, BulkResultKind, BulkSource, Prisma } from '@prisma/cli
 import type { SessionUser } from '@/lib/auth/types';
 import { fileStore } from '@/lib/creatives/storage';
 import { withSandbox, type Tx } from '@/lib/db';
+import { simNowFor } from '@/lib/metrics/clock';
 import { LIMITS } from '@/lib/validation/constants/limits';
 import {
   assertRead,
@@ -52,6 +53,9 @@ export async function createJob(tx: Tx, ctx: ServiceCtx, job: NewJob): Promise<{
   const actor = ctx.user.actor ?? ctx.user;
   return tx.bulkJob.create({
     data: {
+      // Q16: the job list shows the simulator clock like every other list
+      requestedAt: ctx.simNow,
+      updatedAt: ctx.simNow,
       sandboxId: ctx.sandboxId,
       advertiserId: job.advertiserId,
       partnerId: await partnerIdOf(tx, job.advertiserId, ctx.user.partnerId),
@@ -76,9 +80,11 @@ export interface FinishInfo {
 }
 
 export async function finishJob(tx: Tx, jobId: string, info: FinishInfo): Promise<void> {
+  const job = await tx.bulkJob.findUnique({ where: { id: jobId }, select: { sandboxId: true } });
   await tx.bulkJob.update({
     where: { id: jobId },
     data: {
+      ...(job ? { updatedAt: await simNowFor(tx, job.sandboxId) } : {}),
       status: info.status,
       errorSummary: info.errorSummary ?? null,
       ...(info.resultKind ? { resultKind: info.resultKind } : {}),
@@ -114,7 +120,29 @@ export async function putResult(
 
 type JobRowDb = Prisma.BulkJobGetPayload<{ include: { items: false } }>;
 
-function rowOf(j: JobRowDb): BulkJobRow {
+/** Numeric public ids of the partners and advertisers named by the jobs (Q17), keyed by internal id. */
+async function publicIdMaps(tx: Tx, jobs: { partnerId: string; advertiserId: string | null }[]) {
+  const partnerIds = [...new Set(jobs.map((j) => j.partnerId).filter(Boolean))];
+  const advertiserIds = [...new Set(jobs.map((j) => j.advertiserId).filter((x): x is string => !!x))];
+  const [partners, advertisers] = await Promise.all([
+    partnerIds.length
+      ? tx.partner.findMany({ where: { id: { in: partnerIds } }, select: { id: true, publicId: true } })
+      : [],
+    advertiserIds.length
+      ? tx.advertiser.findMany({
+          where: { id: { in: advertiserIds } },
+          select: { id: true, publicId: true },
+        })
+      : [],
+  ]);
+  return {
+    partners: new Map(partners.map((p) => [p.id, p.publicId.toString()])),
+    advertisers: new Map(advertisers.map((a) => [a.id, a.publicId.toString()])),
+  };
+}
+type PublicIds = Awaited<ReturnType<typeof publicIdMaps>>;
+
+function rowOf(j: JobRowDb, ids: PublicIds): BulkJobRow {
   const payload = (j.payload ?? {}) as Partial<JobPayload>;
   const action: BulkJobRow['action'] =
     j.status !== 'COMPLETED'
@@ -128,8 +156,8 @@ function rowOf(j: JobRowDb): BulkJobRow {
     id: j.id,
     publicId: j.publicId.toString(),
     requestedAt: j.requestedAt.toISOString(),
-    partnerId: j.partnerId,
-    advertiserId: j.advertiserId,
+    partnerId: ids.partners.get(j.partnerId) ?? j.partnerId,
+    advertiserId: j.advertiserId ? (ids.advertisers.get(j.advertiserId) ?? j.advertiserId) : null,
     description: j.description,
     source: j.source,
     sourceLabel: SOURCE_LABEL[j.source] ?? j.source,
@@ -152,8 +180,10 @@ export async function listJobs(
       orderBy: [{ requestedAt: 'desc' }, { id: 'desc' }],
       take: LIMITS.BULK_STATUS_ROWS + 1,
     });
+    const shown = rows.slice(0, LIMITS.BULK_STATUS_ROWS);
+    const ids = await publicIdMaps(tx, shown);
     return {
-      rows: rows.slice(0, LIMITS.BULK_STATUS_ROWS).map(rowOf),
+      rows: shown.map((r) => rowOf(r, ids)),
       capped: rows.length > LIMITS.BULK_STATUS_ROWS,
     };
   });
@@ -171,7 +201,7 @@ export async function getJob(user: SessionUser, jobId: string): Promise<BulkJobD
     if (!j) throw new ServiceFailure('NOT_FOUND');
     const { items, ...rest } = j;
     return {
-      ...rowOf(rest),
+      ...rowOf(rest, await publicIdMaps(tx, [rest])),
       action2: j.action,
       items: items.map((i) => ({
         entityType: i.entityType,
