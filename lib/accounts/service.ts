@@ -16,6 +16,8 @@ import {
 } from '@/lib/sandbox/provision';
 import { sandboxStateLabel } from '@/lib/sandbox/labels';
 import { screenshotMethodLabel } from '@/lib/security/screenshot-detect';
+import { adminPauseSandbox, adminResumeSandbox } from '@/lib/sandbox/clock-run';
+import { getSandboxClockView, type SandboxClockView } from '@/lib/sandbox/clock-view';
 import { auditActionLabel, isPlaceholderEmail } from './audit-labels';
 import { writeAccountAudit, type AccountAuditAction } from './audit';
 import { can, type AccountAction, type Actor, type Target } from './permissions';
@@ -856,6 +858,40 @@ export async function rebuildSandbox(
     payload: { reason: 'SANDBOX_REBUILD' },
   });
   return rebuildProvisionSandbox(id, { db, budgetMs: 25_000 });
+}
+
+/**
+ * Super admin "Pause" / "Resume" of a student's sandbox clock (docs/gaps/sim-clock-runs.md). A pause sticks: it leaves a
+ * marker that the READY hook, the deploy-time resume and the timer all respect; only "Resume" removes it. Audited.
+ */
+export async function setSandboxClockRunning(
+  actor: Actor,
+  id: string,
+  running: boolean,
+  db: Db = prisma,
+): Promise<SandboxClockView> {
+  const user = await loadTarget(db, actor, id);
+  await authorise(db, actor, 'account.edit', 'ACCOUNT_UPDATED', user);
+  if (user.appRole !== 'USER' || user.status === 'ARCHIVED') throw new AccountError('ACC-022');
+  const sb = await db.sandbox.findFirst({
+    where: { ownerUserId: id, kind: 'STUDENT', status: { not: 'ARCHIVED' } },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true, provisionState: true },
+  });
+  if (!sb || sb.provisionState !== 'READY') throw new AccountError('ACC-022');
+  if (running) await adminResumeSandbox(db, sb.id);
+  else await adminPauseSandbox(db, sb.id);
+  await writeAccountAudit(db, {
+    actorUserId: actor.id,
+    actorRole: actor.role,
+    classroomId: user.cohortId,
+    action: running ? 'SANDBOX_RESUMED' : 'SANDBOX_PAUSED',
+    targetType: 'User',
+    targetId: id,
+    targetUserId: id,
+    payload: { reason: running ? 'SANDBOX_CLOCK_RESUME' : 'SANDBOX_CLOCK_PAUSE' },
+  });
+  return (await getSandboxClockView(id, db)) as SandboxClockView;
 }
 
 /**

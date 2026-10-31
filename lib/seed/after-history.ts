@@ -3,6 +3,7 @@
 // (knobs.engineDays), they run after that history exists: provisionSandbox calls this once the fast-forward is done,
 // or the engine runtime calls it when a chunked history job finishes (lib/engine/server.ts).
 import type { Prisma, PrismaClient } from '@prisma/client';
+import { startSandboxClock } from '../sandbox/clock-run';
 import { seedBulk } from '../bulk/seed';
 import { seedExperiments } from '../experiments/seed';
 import { seedCrossMediaReports, seedPlans } from '../planning/seed';
@@ -73,5 +74,7 @@ export async function finishBackfill(
     where: { id: sandboxId },
     data: { provisionState: 'READY', provisionError: null },
   });
+  // The history is built; from here the sandbox runs (docs/gaps/sim-clock-runs.md). Accounting point = now: no debt.
+  await startSandboxClock(db, sandboxId).catch(() => undefined);
   return true;
 }

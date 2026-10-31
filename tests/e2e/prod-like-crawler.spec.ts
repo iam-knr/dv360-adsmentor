@@ -296,3 +296,41 @@ test('PROD-LIKE crawler: a freshly provisioned student opens every linked page w
   expect(problems).toEqual([]);
   await ctxB.close();
 });
+
+// sim-clock-runs: a sandbox built by the real job runs; the production timer (POST /api/sim/engine/tick with the cron
+// secret) advances it and writes delivery rows. The line item level proof (both advertisers) is the db test
+// tests/sandbox/sim-clock-runs.db.test.ts.
+test('PROD-LIKE clock: a freshly provisioned sandbox runs at 144x and the timer advances it', async ({
+  request,
+}) => {
+  test.setTimeout(180_000);
+  const sandbox = await db.sandbox.findFirstOrThrow({
+    where: { kind: 'STUDENT', provisionState: 'READY', owner: { email: { endsWith: DOMAIN } } },
+    include: { clock: true, owner: true },
+    orderBy: { createdAt: 'desc' },
+  });
+  expect(sandbox.clock?.state).toBe('RUNNING');
+  expect(sandbox.clock?.minutesPerSimDay).toBe(10);
+  // 10 real minutes owed = 24 ticks at 1 sim day per 10 minutes; the student was seen a moment ago
+  const before = Number(sandbox.clock?.tickIndex);
+  await db.simClock.update({
+    where: { sandboxId: sandbox.id },
+    data: { lastAdvanceRealAt: new Date(Date.now() - 10 * 60_000), remainderMs: 0 },
+  });
+  await db.user.update({ where: { id: sandbox.ownerUserId as string }, data: { lastSeenAt: new Date() } });
+  const secret = process.env.CRON_SECRET ?? 'e2e-demo-cron-secret';
+  const res = await request.post('/api/sim/engine/tick', {
+    headers: { authorization: `Bearer ${secret}` },
+  });
+  expect(res.ok()).toBe(true);
+  const body = (await res.json()) as { ticks: number };
+  expect(body.ticks).toBeGreaterThan(0);
+  const after = await db.simClock.findUniqueOrThrow({ where: { sandboxId: sandbox.id } });
+  expect(Number(after.tickIndex)).toBeGreaterThan(before);
+  expect(after.state).toBe('RUNNING');
+  // the ticks wrote hourly delivery rows after the old end of the history
+  const metrics = await db.simHourlyMetric.count({
+    where: { sandboxId: sandbox.id, simHour: { gt: new Date(sandbox.clock!.simStart.getTime() + before * 3_600_000) } },
+  });
+  expect(metrics).toBeGreaterThan(0);
+});

@@ -7,6 +7,7 @@ import { useProvisionDriver, type ProvisionViewJson } from '@/components/sim/use
 import { FAILED_SANDBOX_MESSAGE, sandboxStateLabel } from '@/lib/sandbox/labels';
 import { BuildProgress } from './BuildProgress';
 import { RebuildSandbox } from './RebuildSandbox';
+import { SandboxClockControl, type SandboxClockControlProps } from './SandboxClockControl';
 import { SandboxRecovery } from './SandboxRecovery';
 
 export interface SandboxSectionProps {
@@ -16,6 +17,8 @@ export interface SandboxSectionProps {
   initial: ProvisionViewJson;
   /** The Super admin may edit this account (and it is not archived): the recovery button shows. */
   canRecover: boolean;
+  /** Clock facts of the READY sandbox (Pause / Resume for a Super admin). */
+  clock?: Omit<SandboxClockControlProps, 'id' | 'studentName' | 'canEdit'> | null;
 }
 
 /**
@@ -28,6 +31,7 @@ export function SandboxSection({
   studentName = 'the student',
   initial,
   canRecover,
+  clock,
 }: SandboxSectionProps) {
   const router = useRouter();
   const { view, setView, busy } = useProvisionDriver(
@@ -66,6 +70,9 @@ export function SandboxSection({
             </details>
           ) : null}
         </div>
+      ) : null}
+      {view.state === 'READY' && clock ? (
+        <SandboxClockControl id={id} studentName={studentName} canEdit={canRecover} {...clock} />
       ) : null}
       {action && canRecover ? (
         <SandboxRecovery id={id} action={action} busy={busy} onView={setView} />

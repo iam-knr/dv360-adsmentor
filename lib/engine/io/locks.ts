@@ -50,17 +50,25 @@ export async function lockClock(tx: Tx, sandboxId: string): Promise<ClockRow | n
  * taken later, per sandbox, by lockClock. Frozen, resetting and unprovisioned sandboxes are never listed (a closed
  * class window freezes the sandbox and pauses its clock, lib/access/windows.ts).
  */
-export async function listDueSandboxes(tx: Tx, nowMs: number, limit: number): Promise<string[]> {
+export async function listDueSandboxes(
+  tx: Tx,
+  nowMs: number,
+  limit: number,
+  activeWithinMs?: number,
+): Promise<string[]> {
   const now = new Date(nowMs);
+  const seenSince = activeSince(nowMs, activeWithinMs);
   const rows = await tx.$queryRaw<{ sandboxId: string }[]>`
     SELECT c."sandboxId"
     FROM "SimClock" c
     JOIN "Sandbox" s ON s."id" = c."sandboxId"
+    LEFT JOIN "User" u ON u."id" = s."ownerUserId"
     WHERE c."state" = 'RUNNING'
       AND s."status" = 'ACTIVE'
       AND s."provisionState" = 'READY'
       AND s."frozenAt" IS NULL
       AND c."lastAdvanceRealAt" IS NOT NULL
+      AND (${seenSince}::timestamp IS NULL OR u."lastSeenAt" >= ${seenSince}::timestamp)
       AND (EXTRACT(EPOCH FROM (${now}::timestamp - c."lastAdvanceRealAt")) * 1000 + c."remainderMs")
           >= c."minutesPerSimDay" * 2500
     ORDER BY (EXTRACT(EPOCH FROM (${now}::timestamp - c."lastAdvanceRealAt")) * 1000 + c."remainderMs")
@@ -69,14 +77,29 @@ export async function listDueSandboxes(tx: Tx, nowMs: number, limit: number): Pr
   return rows.map((r) => r.sandboxId);
 }
 
-export async function countDueSandboxes(tx: Tx, nowMs: number): Promise<number> {
+/**
+ * Load protection: with `activeWithinMs` only sandboxes whose owner was seen within that window are listed (the timer
+ * never works for abandoned sandboxes; a student's own page load still catches theirs up). Undefined = no filter.
+ */
+function activeSince(nowMs: number, activeWithinMs?: number): Date | null {
+  return activeWithinMs === undefined ? null : new Date(nowMs - activeWithinMs);
+}
+
+export async function countDueSandboxes(
+  tx: Tx,
+  nowMs: number,
+  activeWithinMs?: number,
+): Promise<number> {
   const now = new Date(nowMs);
+  const seenSince = activeSince(nowMs, activeWithinMs);
   const rows = await tx.$queryRaw<{ n: number }[]>`
     SELECT count(*)::int AS n
     FROM "SimClock" c
     JOIN "Sandbox" s ON s."id" = c."sandboxId"
+    LEFT JOIN "User" u ON u."id" = s."ownerUserId"
     WHERE c."state" = 'RUNNING' AND s."status" = 'ACTIVE' AND s."provisionState" = 'READY'
       AND s."frozenAt" IS NULL AND c."lastAdvanceRealAt" IS NOT NULL
+      AND (${seenSince}::timestamp IS NULL OR u."lastSeenAt" >= ${seenSince}::timestamp)
       AND (EXTRACT(EPOCH FROM (${now}::timestamp - c."lastAdvanceRealAt")) * 1000 + c."remainderMs")
           >= c."minutesPerSimDay" * 2500`;
   return rows[0]?.n ?? 0;

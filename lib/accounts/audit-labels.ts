@@ -27,6 +27,8 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   ACCOUNT_SUSPENDED: 'Suspended account (screenshot attempt)',
   SCREENSHOTS_ALLOWED: 'Allowed screenshots',
   SCREENSHOTS_DISALLOWED: 'Disallowed screenshots',
+  SANDBOX_PAUSED: 'Paused sandbox clock',
+  SANDBOX_RESUMED: 'Resumed sandbox clock',
 };
 
 /** Plain label for an action code; an unknown code is lower-cased with spaces instead of being shown raw. */

@@ -29,6 +29,7 @@ import {
   type TemplateKey,
 } from '@/lib/seed';
 import { finishBackfill } from '@/lib/seed/after-history';
+import { clearAdminPause, startSandboxClock } from './clock-run';
 
 type Db = PrismaClient;
 
@@ -301,6 +302,12 @@ export async function runProvisionStep(
           force: true,
         });
         await ensureStudentGrant(db, sandboxId, sb.ownerUserId);
+        // engineDays 0 reaches READY inside provisionSandbox; with a history job finishBackfill starts the clock
+        const done = await db.sandbox.findUnique({
+          where: { id: sandboxId },
+          select: { provisionState: true },
+        });
+        if (done?.provisionState === 'READY') await startSandboxClock(db, sandboxId).catch(() => undefined);
       } catch (err) {
         // provisionSandbox sets FAILED itself when its own work fails; this covers an error before it got that far
         await db.sandbox.updateMany({
@@ -402,6 +409,7 @@ export async function rebuildProvisionSandbox(
     },
   });
   if (flipped.count === 0) return getProvisionView(userId, db);
+  await clearAdminPause(db, row.id).catch(() => undefined); // a rebuild starts clean
   return runProvisionStep(row.id, opts);
 }
 
