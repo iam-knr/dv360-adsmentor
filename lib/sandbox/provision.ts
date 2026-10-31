@@ -216,18 +216,22 @@ export async function enqueueProvisionSandbox(
 
 // ---- steps -----------------------------------------------------------------------------------------------------
 
-/** A student is STANDARD on their own partner (RC-047). */
+/**
+ * A student is STANDARD on their own partner (RC-047). Steps overlap (the `after()` step of enqueue, the welcome page's
+ * POST, a page-load run), so this must be idempotent under concurrency: a check followed by a create lets two callers
+ * both create, the loser hits the unique index `(userId, sandboxId, partnerId, advertiserId) NULLS NOT DISTINCT` and
+ * its error used to end the whole build as FAILED (docs/gaps/fix-prov-flake.md). `ON CONFLICT DO NOTHING` never throws
+ * for the duplicate.
+ */
 async function ensureStudentGrant(db: Db, sandboxId: string, userId: string | null): Promise<void> {
   if (!userId) return;
   const partnerId = partnerIdOf(sandboxId);
   const partner = await db.partner.findUnique({ where: { id: partnerId }, select: { id: true } });
   if (!partner) return;
-  const grant = await db.userAccessGrant.findFirst({
-    where: { userId, sandboxId, partnerId, advertiserId: null },
-    select: { id: true },
+  await db.userAccessGrant.createMany({
+    data: [{ userId, sandboxId, partnerId, role: 'STANDARD' }],
+    skipDuplicates: true,
   });
-  if (!grant)
-    await db.userAccessGrant.create({ data: { userId, sandboxId, partnerId, role: 'STANDARD' } });
 }
 
 /** A BACKFILLING sandbox whose history job is gone (the function died between the two writes) gets a new one. */
