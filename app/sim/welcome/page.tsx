@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { ProvisionProgress } from '@/components/sim/ProvisionProgress';
 import { SimCard } from '@/components/sim/SimCard';
 import { requireUserOrRedirect } from '@/lib/auth/session';
+import { scheduleMaybeAdvance } from '@/lib/sandbox/maybe-advance';
 import { getProvisionView } from '@/lib/sandbox/provision';
 import { homeFor } from '@/lib/scope/home';
 
@@ -15,6 +16,8 @@ export default async function WelcomePage() {
   const user = await requireUserOrRedirect();
   // A Super admin has no sandbox of their own: the console is their home.
   if (user.appRole !== 'user' && !user.viewAs) redirect('/manage');
+  // the progress below drives this student's build; this also moves everyone else's (docs/gaps/prov-drive.md)
+  scheduleMaybeAdvance();
   const view = await getProvisionView(user.id);
   if (view.state === 'READY' && user.sandboxId && user.partnerId) redirect(await homeFor(user));
   if (view.state === 'NOT_CREATED' && !user.classroomId) notFound();

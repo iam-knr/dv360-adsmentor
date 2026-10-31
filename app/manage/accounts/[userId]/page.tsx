@@ -4,7 +4,7 @@ import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
 import Typography from '@mui/material/Typography';
 import { AccountActions } from '@/components/manage/AccountActions';
-import { SandboxRecovery } from '@/components/manage/SandboxRecovery';
+import { SandboxSection } from '@/components/manage/SandboxSection';
 import { DvSectionCard } from '@/components/dv/DvSectionCard';
 import { can, type Target } from '@/lib/accounts/permissions';
 import { AccountError } from '@/lib/accounts/rules';
@@ -34,16 +34,6 @@ export default async function AccountDetailPage({
   }
   const a = data.account;
   const target: Target = { id: a.id, role: a.appRole };
-  // "Create sandbox" / "Retry provisioning" / "Restart provisioning" show for every student whose sandbox is not ready, so
-  // a missing, failed or stuck build can always be recovered from here.
-  const sandboxAction =
-    data.sandbox?.state === 'NOT_CREATED'
-      ? ('create' as const)
-      : data.sandbox?.state === 'FAILED'
-        ? ('retry' as const)
-        : data.sandbox?.state === 'QUEUED' || data.sandbox?.state === 'BUILDING'
-          ? ('restart' as const)
-          : undefined;
   const perm = (action: Parameters<typeof can>[1]) => can(actor, action, target);
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, maxWidth: 800 }}>
@@ -95,19 +85,11 @@ export default async function AccountDetailPage({
       </DvSectionCard>
       {a.appRole === 'USER' ? (
         <DvSectionCard title="Sandbox">
-          <Typography>
-            State:{' '}
-            {data.sandbox?.state === 'NOT_CREATED' ? 'NOT CREATED' : (data.sandbox?.state ?? '-')}
-            {data.sandbox?.state === 'BUILDING' ? ` (${data.sandbox.percent}%)` : ''}
-          </Typography>
-          {data.sandbox?.error ? (
-            <Typography role="alert" color="error">
-              Error: {data.sandbox.error}
-            </Typography>
-          ) : null}
-          {sandboxAction && a.status !== 'ARCHIVED' && perm('account.edit') ? (
-            <SandboxRecovery id={a.id} action={sandboxAction} />
-          ) : null}
+          <SandboxSection
+            id={a.id}
+            initial={data.sandbox ?? { state: 'NOT_CREATED', percent: 0, message: 'Not created' }}
+            canRecover={a.status !== 'ARCHIVED' && perm('account.edit')}
+          />
         </DvSectionCard>
       ) : null}
       <DvSectionCard title="Activity">

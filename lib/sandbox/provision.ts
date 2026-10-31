@@ -9,7 +9,9 @@ import 'server-only';
 //               then the seeds that read the history run and the sandbox is READY
 //
 // Whoever calls `runProvisionStep` drives it: the engine timer (`advanceProvisioning` from the tick route), the
-// student's /sim/welcome page (POST /api/sim/provision) and the "Create / Retry sandbox" action on the account page.
+// student's /sim/welcome page (POST /api/sim/provision), the Super admin's account page (POST
+// /api/manage/accounts/:id/provision), "Create / Retry sandbox", and any page load (`maybeAdvance`,
+// docs/gaps/prov-drive.md). The timer is not required.
 // Every step is re-entrant: the claim is one conditional UPDATE, a crashed step is taken over after STALE_MS, a failed
 // one stays FAILED with its message until someone retries. The history comes from `engineDays` of engine ticks
 // (docs/gaps/eng-ff.md); the measured cost is about a minute of engine time per sandbox, so a build takes two steps.
@@ -379,12 +381,15 @@ export async function retryProvisionSandbox(
  */
 export async function advanceProvisioning(
   deadline: number,
-  opts: { db?: Db; limit?: number; classroomId?: string } = {},
+  opts: { db?: Db; limit?: number; classroomId?: string; orphans?: boolean } = {},
 ): Promise<{ started: number; stepped: number }> {
   const db = opts.db ?? prisma;
   const limit = opts.limit ?? 3;
   let started = 0;
-  const orphans = await findStudentsWithoutSandbox(db, limit, opts.classroomId);
+  // `orphans: false` (the lazy page-load path) only moves builds that exist; starting students who have no sandbox is
+  // left to the timer and to the student's own welcome page
+  const orphans =
+    opts.orphans === false ? [] : await findStudentsWithoutSandbox(db, limit, opts.classroomId);
   for (const u of orphans) {
     const v = await enqueueProvisionSandbox(u.cohortId, u.id, db).catch(() => undefined);
     if (v?.sandboxId) started++;
@@ -397,6 +402,12 @@ export async function advanceProvisioning(
       OR: [
         { provisionState: 'PENDING' },
         { provisionState: 'SEEDING', updatedAt: { lt: new Date(Date.now() - STALE_MS) } },
+        // a history job whose step ended (or whose function died) has no heartbeat any more: continue it here, so the
+        // build does not wait for the engine's own job loop (a step is safe to repeat: the clock row locks the job)
+        {
+          provisionState: 'BACKFILLING',
+          updatedAt: { lt: new Date(Date.now() - FORCE_RESTART_AFTER_MS) },
+        },
       ],
     },
     select: { id: true },

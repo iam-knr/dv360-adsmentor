@@ -1,6 +1,6 @@
 // M18-05 and ADM-FIX: the Super admin adds a student, the student's sandbox is built, and the student signs in, lands on
 // /sim/welcome, reaches the sandbox home and opens a campaign, a line item and a report. A second test makes a build
-// that stopped (a SEEDING row whose heartbeat is old) and recovers it with "Restart provisioning" on the account
+// that stopped (a SEEDING row whose heartbeat is old) and the account page takes it over by itself (the "Restart provisioning" button stays for FAILED builds) on the account
 // page. Waits are polls on real state (expect.poll, toPass, toHaveURL), never a fixed sleep or a reload. The server runs
 // with SANDBOX_ENGINE_DAYS=3 (playwright.config.ts) so the engine part of the build takes seconds; production builds 90.
 import { PrismaClient } from '@prisma/client';
@@ -148,7 +148,7 @@ test('E2E-ADM-01 the Super admin adds a student; the sandbox builds; the student
   await expect(page.getByRole('button', { name: /sandbox|provisioning/i })).toHaveCount(0);
 });
 
-test('E2E-ADM-02 "Restart provisioning" recovers a build that stopped, and the student gets in', async ({
+test('E2E-ADM-02 the account page takes over a build that stopped, and the student gets in', async ({
   page,
   browser,
 }) => {
@@ -193,26 +193,47 @@ test('E2E-ADM-02 "Restart provisioning" recovers a build that stopped, and the s
   const restart = page.getByRole('button', { name: /Create sandbox|Retry provisioning|Restart provisioning/ });
   await expect(restart).toBeVisible();
 
-  // Each attempt clicks, waits for that server action to answer (no navigation or reload in the middle of the build),
-  // then reads the database; it is repeated until the sandbox is READY.
-  await expect(async () => {
-    if ((await sandboxOf(student.id))?.provisionState !== 'READY') {
-      const button = page.getByRole('button', { name: /Create sandbox|Retry provisioning|Restart provisioning/ });
-      if (await button.count()) {
-        const answered = page.waitForResponse(
-          (r) => r.request().method() === 'POST' && r.url().includes('/manage/accounts/'),
-          { timeout: 120_000 },
-        );
-        await button.first().click();
-        await answered;
-      }
-    }
-    expect((await sandboxOf(student.id))?.provisionState).toBe('READY');
-  }).toPass({ timeout: 360_000, intervals: [500, 2_000, 5_000] });
+  // The account page drives the build itself (it polls POST /api/manage/accounts/:id/provision), so the build that stopped
+  // is taken over without a click; the button stays for the cases the page cannot recover (FAILED, missing).
+  await expect
+    .poll(async () => (await sandboxOf(student.id))?.provisionState, { timeout: 360_000 })
+    .toBe('READY');
+  await expect(page.getByText('State: READY')).toBeVisible({ timeout: 30_000 });
 
   const ctx = await browser.newContext({ baseURL: test.info().project.use.baseURL });
   await ownAddress(ctx);
   const sp = await ctx.newPage();
   await studentWalksTheSandbox(sp, student);
+  await ctx.close();
+});
+
+test('E2E-ADM-03 the account page follows the build to READY without a reload, and the student gets in', async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(480_000);
+  const sa = await createAccount(db, { tag: 'prov-super3', role: 'SUPER_ADMIN' });
+  userIds.push(sa.user.id);
+  await signIn(page, sa.user.email, sa.password);
+  await page.waitForURL('**/manage/accounts');
+  const student = await addStudent(page, 'Watched Student');
+
+  // the page polls and drives the build itself (POST /api/manage/accounts/:id/provision): no click, no reload
+  await page.goto(`/manage/accounts/${student.id}`);
+  await page.evaluate(() => ((window as unknown as { __kept?: number }).__kept = 1));
+  await expect(page.getByRole('heading', { name: 'Watched Student' })).toBeVisible();
+  await expect(page.getByText('State: READY')).toBeVisible({ timeout: 360_000 });
+  // the same document: the page was never reloaded
+  expect(await page.evaluate(() => (window as unknown as { __kept?: number }).__kept)).toBe(1);
+  expect((await sandboxOf(student.id))?.provisionState).toBe('READY');
+  // nothing to create or retry once it is ready, and the polling has stopped
+  await expect(page.getByRole('button', { name: /sandbox|provisioning/i })).toHaveCount(0);
+
+  const ctx = await browser.newContext({ baseURL: test.info().project.use.baseURL });
+  await ownAddress(ctx);
+  const sp = await ctx.newPage();
+  await signIn(sp, student.email, student.password);
+  await expect(sp).toHaveURL(/\/p\/[^/]+\/home_v3$/);
+  await expect(sp).toHaveTitle('Overview - DV360 Simulator by Adsmetor');
   await ctx.close();
 });

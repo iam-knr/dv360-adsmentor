@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
 import { SimHeader } from '@/components/sim/SimHeader';
+import { scheduleMaybeAdvance } from '@/lib/sandbox/maybe-advance';
 import { requireUserOrRedirect } from '@/lib/auth/session';
 
 export const dynamic = 'force-dynamic';
@@ -20,6 +21,8 @@ export default async function ManageLayout({ children }: { children: ReactNode }
   const who = user.actor ?? user;
   // The route guard in middleware.ts already sends students away; this is the authoritative check (module 19 4.6).
   if (who.appRole !== 'super_admin') notFound();
+  // any console page load keeps queued builds and the engine moving without the timer (docs/gaps/prov-drive.md)
+  scheduleMaybeAdvance();
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <SimHeader user={{ name: who.name, appRole: who.appRole }} />
