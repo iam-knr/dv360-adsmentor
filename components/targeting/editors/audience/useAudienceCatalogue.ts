@@ -31,6 +31,13 @@ const EMPTY: AudienceCatalogue = { firstParty: [], combined: [], custom: [], goo
 /** Lists the picker offers. The Google catalogue is bundled, so it is there before the advertiser lists load. */
 export function useAudienceCatalogue(advertiserId?: string): AudienceCatalogue {
   const [data, setData] = useState<AudienceCatalogue>(EMPTY);
+  const [focusTick, setFocusTick] = useState(0);
+  // A custom list created in another tab shows up when the student comes back to this one.
+  useEffect(() => {
+    const onFocus = () => setFocusTick((n) => n + 1);
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
   useEffect(() => {
     const ctl = new AbortController();
     const q = advertiserId ? `?advertiserId=${encodeURIComponent(advertiserId)}` : '';
@@ -41,7 +48,7 @@ export function useAudienceCatalogue(advertiserId?: string): AudienceCatalogue {
       })
       .catch(() => undefined);
     return () => ctl.abort();
-  }, [advertiserId]);
+  }, [advertiserId, focusTick]);
   return data;
 }
 
