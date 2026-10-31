@@ -100,7 +100,7 @@ test('E2E-POL-01 S3: the logo and Back to accounts lead a Super admin out of My 
   const sa = await superAdmin();
   await signedIn(page, sa.user.email, sa.password);
   await page.goto('/sim/me');
-  await page.getByRole('link', { name: 'Back to accounts' }).click();
+  await page.getByRole('link', { name: 'Back to accounts', exact: true }).click();
   await expect(page).toHaveURL(/\/manage\/accounts/);
   await page.goto('/sim/me/password');
   await page.getByRole('link', { name: /Adsmetor, back to accounts/ }).click();
