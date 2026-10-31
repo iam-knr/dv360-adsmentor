@@ -324,9 +324,8 @@ export function AdvertiserDetailsForm({ details }: { details: AdvertiserDetails 
             label="Business name"
             value={draft.businessName ?? ''}
             maxLength={BUSINESS_NAME_MAX}
-            readOnly={!canEditAdmin}
+            readOnly={!canEdit}
             error={err('businessName')}
-            hint={`${(draft.businessName ?? '').length} / ${BUSINESS_NAME_MAX}`}
             onChange={(businessName) => set({ businessName })}
           />
         </DvSectionCard>
@@ -340,7 +339,7 @@ export function AdvertiserDetailsForm({ details }: { details: AdvertiserDetails 
           <DvTextField
             label="Integration code"
             value={draft.integrationCode ?? ''}
-            readOnly={!canEditAdmin}
+            readOnly={!canEdit}
             error={err('integrationCode')}
             onChange={(integrationCode) => set({ integrationCode })}
           />
@@ -411,6 +410,11 @@ export function AdvertiserDetailsForm({ details }: { details: AdvertiserDetails 
         onApply={applyPanel}
         applyDisabled={!canEditAdmin}
       >
+        {!canEditAdmin && !scheduled ? (
+          <DvBanner kind="info" level="inline">
+            Only an Admin can change these settings. You can view them here.
+          </DvBanner>
+        ) : null}
         <DvSelect
           label="Ad server"
           value={panelDraft.adServer}
@@ -443,6 +447,11 @@ export function AdvertiserDetailsForm({ details }: { details: AdvertiserDetails 
         onApply={applyPanel}
         applyDisabled={!canEditAdmin}
       >
+        {!canEditAdmin && !scheduled ? (
+          <DvBanner kind="info" level="inline">
+            Only an Admin can change these settings. You can view them here.
+          </DvBanner>
+        ) : null}
         <DvTextField
           label="Integral Ad Science client ID"
           type="number"
