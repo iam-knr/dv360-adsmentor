@@ -86,7 +86,7 @@ test.describe('sign in', () => {
     await page.goto('/sim/login');
     const logo = page.getByRole('img', { name: 'Adsmetor' });
     await expect(logo).toBeVisible();
-    expect(await logo.getAttribute('src')).toContain('/brand/adsmentor-logo-horizontal.png');
+    expect(await logo.getAttribute('src')).toContain('/brand/dv360-logo.png');
     expect(await logo.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBeGreaterThan(0);
     await expect(page.getByLabel('Email')).toBeVisible();
     await expect(page.getByLabel('Password')).toBeVisible();

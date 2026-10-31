@@ -24,11 +24,11 @@ test.describe('component gallery', () => {
     expect(problems).toEqual([]);
   });
 
-  test('the logo in the app bar is the Adsmentor image, not a Google asset', async ({ page }) => {
+  test('the app bar shows the DV360 logo lockup', async ({ page }) => {
     await page.goto('/components');
     const logo = page.locator('#shell img').first();
     await expect(logo).toBeVisible();
-    expect(await logo.getAttribute('src')).toContain('adsmentor-logo-horizontal.png');
+    expect(await logo.getAttribute('src')).toContain('dv360-logo.png');
     const naturalWidth = await logo.evaluate((img: HTMLImageElement) => img.naturalWidth);
     expect(naturalWidth).toBeGreaterThan(0);
   });

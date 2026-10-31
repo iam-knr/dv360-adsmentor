@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import Image from 'next/image';
 import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -15,6 +14,7 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Popover from '@mui/material/Popover';
 import Typography from '@mui/material/Typography';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import type { DvIconName } from '@/components/icons';
 import { DvIcon } from '@/components/icons';
 import { sizes } from '@/lib/theme/tokens';
@@ -187,17 +187,9 @@ export function DvAppBar({
         <Link
           href={homeHref}
           aria-label="DV360 Simulator by Adsmetor, Partner Overview"
-          sx={{ display: 'inline-flex', alignItems: 'center' }}
+          sx={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', color: 'text.primary' }}
         >
-          <Image
-            src="/brand/adsmentor-logo-horizontal.png"
-            alt=""
-            width={91}
-            height={28}
-            priority
-            unoptimized
-            style={{ height: 28, width: 'auto' }}
-          />
+          <BrandLogo height={34} alt="" />
         </Link>
         <DvTooltip title="Home">
           <IconButton aria-label="Home" component="a" href={homeHref}>

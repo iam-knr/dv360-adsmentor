@@ -17,16 +17,17 @@ import { renderDv } from './test-utils';
 const USER = { name: 'Sample Student', initials: 'SS', role: 'student' as const };
 
 describe('DvAppBar', () => {
-  it('renders the logo image (28 px high, linked home) and not a text wordmark', () => {
+  it('renders the DV360 logo lockup (34 px mark, Simulator, by Adsmetor), linked home', () => {
     renderDv(<DvAppBar crumbs={[]} unreadNotifications={0} onToggleNav={() => {}} user={USER} />);
     const link = screen.getByRole('link', {
       name: 'DV360 Simulator by Adsmetor, Partner Overview',
     });
     expect(link).toHaveAttribute('href', '/');
     const img = link.querySelector('img')!;
-    expect(img.getAttribute('src')).toContain('adsmentor-logo-horizontal.png');
-    expect(img).toHaveStyle({ height: '28px' });
-    expect(screen.queryByText('DV360 Simulator by Adsmetor')).not.toBeInTheDocument();
+    expect(img.getAttribute('src')).toContain('dv360-logo.png');
+    expect(img).toHaveStyle({ height: '34px' });
+    expect(within(link).getByText('Simulator')).toBeInTheDocument();
+    expect(within(link).getByText('by Adsmetor')).toBeInTheDocument();
   });
 
   it('is 56 px high with the icon group in spec order and the spec tooltip names', () => {
