@@ -376,6 +376,35 @@ export async function retryProvisionSandbox(
   return runProvisionStep(row.id, opts);
 }
 
+/**
+ * "Rebuild sandbox": puts a READY sandbox back to PENDING (counted as a reset) and runs a step, so the normal job
+ * deletes the student's work and builds it again from the template. Anything that is not READY is only reported: a
+ * healthy build is never restarted from here (use `retryProvisionSandbox` for a FAILED or stuck one).
+ */
+export async function rebuildProvisionSandbox(
+  userId: string,
+  opts: StepOptions = {},
+): Promise<ProvisionView> {
+  const db = opts.db ?? prisma;
+  const row = await db.sandbox.findFirst({
+    where: { ownerUserId: userId, kind: 'STUDENT', status: { not: 'ARCHIVED' } },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true },
+  });
+  if (!row) return viewOf(db, null);
+  const flipped = await db.sandbox.updateMany({
+    where: { id: row.id, provisionState: 'READY' },
+    data: {
+      provisionState: 'PENDING',
+      provisionError: null,
+      resetCount: { increment: 1 },
+      lastResetAt: new Date(),
+    },
+  });
+  if (flipped.count === 0) return getProvisionView(userId, db);
+  return runProvisionStep(row.id, opts);
+}
+
 // ---- timer -----------------------------------------------------------------------------------------------------
 
 /**

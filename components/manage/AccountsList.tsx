@@ -92,15 +92,20 @@ export function AccountsList({
       id: 'name',
       header: 'Name',
       type: 'custom',
-      width: 180,
+      width: 300,
       sticky: true,
+      // the email sits under the name so that accounts with the same display name can be told apart
       cell: (r) => (
-        <Link href={`/manage/accounts/${r.id}`} underline="hover">
-          {r.name}
-        </Link>
+        <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0, py: 1 }}>
+          <Link href={`/manage/accounts/${r.id}`} underline="hover">
+            {r.name}
+          </Link>
+          <Typography variant="caption" color="text.secondary" data-testid="account-email" noWrap>
+            {r.email}
+          </Typography>
+        </Box>
       ),
     },
-    { id: 'email', header: 'Email', width: 250 },
     { id: 'appRole', header: 'Level', width: 100, accessor: (r) => ROLE[r.appRole] },
     { id: 'status', header: 'Status', width: 90, accessor: (r) => STATUS[r.status] },
     { id: 'sandbox', header: 'Sandbox', width: 110 },

@@ -1,7 +1,9 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
+import { homeHrefFor } from '@/lib/auth/home-href';
 import type { AppRole } from '@/lib/auth/types';
 
 export interface SimHeaderProps {
@@ -29,14 +31,22 @@ export function SimHeader({ user }: SimHeaderProps) {
         borderColor: 'divider',
       }}
     >
-      <Image
-        src="/brand/adsmentor-logo-horizontal.png"
-        alt="Adsmetor"
-        width={130}
-        height={40}
-        priority
-        unoptimized
-      />
+      <Link
+        href={homeHrefFor(user?.appRole)}
+        aria-label={
+          user?.appRole === 'super_admin' ? 'Adsmetor, back to accounts' : 'Adsmetor, home'
+        }
+        style={{ display: 'inline-flex', lineHeight: 0 }}
+      >
+        <Image
+          src="/brand/adsmentor-logo-horizontal.png"
+          alt="Adsmetor"
+          width={130}
+          height={40}
+          priority
+          unoptimized
+        />
+      </Link>
       <Typography variant="cardTitle" component="span" sx={{ color: 'text.secondary' }}>
         DV360 Simulator
       </Typography>

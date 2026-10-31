@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { BackLink } from '@/components/sim/BackLink';
 import { PasswordForm } from '@/components/sim/PasswordForm';
 import { SimCard } from '@/components/sim/SimCard';
 import { safeNext } from '@/lib/auth/guard';
@@ -17,6 +18,7 @@ export default async function ChangePasswordPage({
   const own = user.actor ?? user;
   return (
     <SimCard title="Change password">
+      {user.mustChangePassword === true ? null : <BackLink role={own.appRole} />}
       <PasswordForm
         action={changePasswordAction}
         email={own.email}

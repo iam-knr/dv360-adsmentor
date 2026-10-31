@@ -40,7 +40,7 @@ export default async function CohortsPage() {
           <thead>
             <tr>
               <th>Name</th>
-              <th>Students</th>
+              <th>Seats used</th>
               <th>Created</th>
             </tr>
           </thead>

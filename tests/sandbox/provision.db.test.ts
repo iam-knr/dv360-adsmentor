@@ -1,6 +1,7 @@
 // M18-05: the sandbox provisioning job. Seeds with the engine's history mode (3 engine days here to keep it quick;
 // production uses 90, see lib/sandbox/provision.ts).
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { rebuildSandbox } from '@/lib/accounts/service';
 import { prisma } from '@/lib/db';
 import {
   advanceProvisioning,
@@ -9,6 +10,7 @@ import {
   HEARTBEAT_MS,
   STALE_MS,
   getProvisionView,
+  rebuildProvisionSandbox,
   retryProvisionSandbox,
   runProvisionStep,
 } from '@/lib/sandbox/provision';
@@ -208,9 +210,9 @@ describe('stuck builds (docs/gaps/eng-ff.md gap 10)', () => {
     await backdate(sandboxId, 10_000);
     // a live-looking claim is left alone: the step does not touch it
     expect((await runProvisionStep(sandboxId)).state).toBe('BUILDING');
-    expect((await prisma.sandbox.findUniqueOrThrow({ where: { id: sandboxId } })).provisionState).toBe(
-      'SEEDING',
-    );
+    expect(
+      (await prisma.sandbox.findUniqueOrThrow({ where: { id: sandboxId } })).provisionState,
+    ).toBe('SEEDING');
     await backdate(sandboxId, STALE_MS + 5_000);
     expect((await runProvisionStep(sandboxId)).state).toBe('READY');
   }, 600_000);
@@ -232,9 +234,9 @@ describe('stuck builds (docs/gaps/eng-ff.md gap 10)', () => {
     sandboxIds.push(sandboxId);
     await prisma.sandbox.update({ where: { id: sandboxId }, data: { provisionState: 'SEEDING' } });
     expect((await retryProvisionSandbox(classroomId, id)).state).toBe('BUILDING');
-    expect((await prisma.sandbox.findUniqueOrThrow({ where: { id: sandboxId } })).provisionState).toBe(
-      'SEEDING',
-    );
+    expect(
+      (await prisma.sandbox.findUniqueOrThrow({ where: { id: sandboxId } })).provisionState,
+    ).toBe('SEEDING');
     await prisma.sandbox.update({ where: { id: sandboxId }, data: { provisionState: 'PENDING' } });
     expect((await retryProvisionSandbox(classroomId, id)).state).toBe('READY');
     expect((await retryProvisionSandbox(classroomId, id)).state).toBe('READY');
@@ -266,4 +268,40 @@ describe('timer', () => {
     }
     expect((await getProvisionView(id)).state).toBe('READY');
   }, 900_000);
+});
+
+describe('rebuild (S7)', () => {
+  it('rebuilds a READY sandbox through the provisioning job, audits it, and leaves a queued one alone', async () => {
+    const id = await student('prov-rebuild');
+    const queued = await enqueueProvisionSandbox(classroomId, id);
+    const sandboxId = queued.sandboxId as string;
+    sandboxIds.push(sandboxId);
+    const actor = { id: admin.id, role: 'SUPER_ADMIN' as const };
+
+    // not READY: reported as it is, nothing restarted, nothing audited
+    const untouched = await rebuildSandbox(actor, id);
+    expect(untouched.state).toBe('QUEUED');
+    expect(
+      await prisma.auditLog.count({ where: { targetUserId: id, action: 'SANDBOX_REBUILT' } }),
+    ).toBe(0);
+    expect((await rebuildProvisionSandbox(id)).state).toBe('QUEUED');
+
+    expect((await runProvisionStep(sandboxId)).state).toBe('READY');
+    await prisma.campaign.count({ where: { sandboxId } });
+
+    const after = await rebuildSandbox(actor, id);
+    expect(['BUILDING', 'READY']).toContain(after.state);
+    const audit = await prisma.auditLog.findMany({
+      where: { targetUserId: id, action: 'SANDBOX_REBUILT' },
+    });
+    expect(audit).toHaveLength(1);
+    expect(audit[0]?.actorUserId).toBe(admin.id);
+    const sb = await prisma.sandbox.findUniqueOrThrow({ where: { id: sandboxId } });
+    expect(sb.resetCount).toBe(1);
+    expect(sb.lastResetAt).not.toBeNull();
+    // the same job finishes it
+    let view = after;
+    for (let i = 0; i < 6 && view.state !== 'READY'; i++) view = await runProvisionStep(sandboxId);
+    expect(view.state).toBe('READY');
+  }, 300_000);
 });
