@@ -58,6 +58,8 @@ interface RowModel {
   method: PlanBuyingMethodKey;
   cpm: number;
   fee: number;
+  /** Budget the row asks for, before Max CPM limits what it can win. */
+  requested: number;
   net: number;
   winShare: number;
   impr: number;
@@ -111,6 +113,7 @@ function buildRows(input: ForecastInput, target: number): RowModel[] {
       method: r.buyingMethod,
       cpm,
       fee: r.feePct ?? P.fees.default,
+      requested: Math.max(0, r.budgetNet),
       net,
       winShare,
       impr,
@@ -216,7 +219,9 @@ export function forecastPlan(input: ForecastInput): PlanForecast {
       maxCpm: locked ? null : r.maxCpm,
       viewableCpm: view > 0 ? round((gross / view) * 1000, 2) : 0,
       viewabilityRate: meas > 0 ? round((view / meas) * 100, 1) : null,
-      budgetSharePct: budgetShareBase > 0 ? round((r.net / (budgetShareBase || 1)) * 100, 1) : 0,
+      // share of the budget the plan asks for (a lone row is 100%), not of what a low Max CPM lets it spend
+      budgetSharePct: budgetShareBase > 0 ? round((r.requested / budgetShareBase) * 100, 1) : 0,
+      expectedSpendPct: round(r.winShare * 100, 1),
     };
   }
   const meanPerPerson = target > 0 ? agg.onTarget / target : 0;
@@ -316,6 +321,10 @@ export function forecastPlan(input: ForecastInput): PlanForecast {
       ? reachByFrequency(meanPerPerson, agg.reachPct)
       : reachByFrequency(0, 0),
     budget: round(agg.budget, 2),
+    plannedBudget: round(
+      rows.reduce((t, r) => t + r.requested * (1 + r.fee), 0),
+      2,
+    ),
     impressions: Math.round(agg.impressions),
     perRow,
     tabs,

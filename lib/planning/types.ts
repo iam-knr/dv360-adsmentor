@@ -122,6 +122,8 @@ export interface PlanRowForecast {
   viewabilityRate: number | null;
   /** Share of the plan budget (percent). */
   budgetSharePct: number;
+  /** Percent of the row budget expected to be spent: below 100 when Max CPM is under the expected CPM. */
+  expectedSpendPct?: number;
 }
 
 export type ForecastTabKey = 'REACH' | 'TRUEVIEW' | 'CONVERSIONS' | 'DEMOGRAPHICS' | 'DEVICES';
@@ -148,7 +150,10 @@ export interface PlanForecast {
   viewabilityRate: number | null;
   /** Reach at 1+ .. 10+ (percent of the target). */
   reachByFrequency: number[];
+  /** Spend the forecast expects, incl. fees: below `plannedBudget` when a Max CPM limits delivery. */
   budget: number;
+  /** What the line items ask for, incl. fees (the sum of the row budgets). Older snapshots have no value. */
+  plannedBudget?: number;
   impressions: number;
   perRow: Record<string, PlanRowForecast>;
   tabs: Record<ForecastTabKey, SeriesPoint[]>;

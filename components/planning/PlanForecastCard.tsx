@@ -149,6 +149,10 @@ function Tile({
   );
 }
 
+/** True when a Max CPM limits delivery, so the forecast spend is below the budget of the line items. */
+export const underSpends = (f: PlanForecast): boolean =>
+  f.plannedBudget !== undefined && f.budget < f.plannedBudget - 0.5;
+
 export function PlanSummary({
   forecast,
   demographics,
@@ -182,7 +186,7 @@ export function PlanSummary({
         {forecast && hasRows ? (
           <Typography variant="h5" component="h2" data-testid="forecast-headline">
             You could reach {fmtPct(forecast.reachPct)} of people {demographicsLabel(demographics)}{' '}
-            with {fmtMoney(forecast.budget, currency)}
+            with {fmtMoney(forecast.plannedBudget ?? forecast.budget, currency)}
           </Typography>
         ) : (
           <Typography variant="h5" component="h2">
@@ -207,6 +211,13 @@ export function PlanSummary({
           </Box>
         ) : null}
       </Box>
+      {forecast && hasRows && underSpends(forecast) ? (
+        <Typography variant="body2" color="text.secondary" data-testid="forecast-spend-note">
+          Expected spend is {fmtMoney(forecast.budget, currency)} of the{' '}
+          {fmtMoney(forecast.plannedBudget ?? forecast.budget, currency)} in your line items, because
+          a Max. CPM is below the expected CPM.
+        </Typography>
+      ) : null}
       {forecast ? (
         <Box
           data-testid="kpi-strip"

@@ -250,7 +250,7 @@ copyPlan(input: { id: Id; name?: string; startDate: IsoDate; endDate: IsoDate })
 removePlan(id: Id): Promise<Result<null>>
 interface PlanRowInput { id?: Id; name: string; buyingMethod: PlanBuyingMethod; dealId?: Id; locations: string[]; dates: { start: IsoDate; end: IsoDate }; targeting: Record<string, unknown>; budgetNet: Money; maxCpm?: Money }
 ```
-Defaults of a new plan: name `New Plan ({Mon D, YYYY})` with the sim date; location = country of the advertiser time zone/currency (fallback first `PlanCountry`); dates = sim tomorrow to tomorrow + 30 days; demographics Male and Female, 18 - 64; no rows; `status = PLANNED`; no forecast (`forecast: null`).
+Defaults of a new plan: name `New Plan ({Mon D, YYYY})` with the sim date; location = country of the advertiser time zone/currency (fallback first `PlanCountry`); dates = sim tomorrow to tomorrow + 30 days; demographics All people, 18 - 65+ (every gender, 18 to 65+; the wizard and the editor show the same label); no rows; `status = PLANNED`; no forecast (`forecast: null`).
 
 | Rule | ID | Text |
 |---|---|---|

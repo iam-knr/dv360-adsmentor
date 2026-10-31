@@ -62,7 +62,7 @@ describe('createPlan / updatePlan', () => {
     const plan = await getPlan(user(), aid(), created.id);
     expect(plan.header.name).toBe('New Plan (Jan 1, 2026)');
     expect(plan.header.dates).toEqual({ start: '2026-01-02', end: '2026-02-01' });
-    expect(plan.header.demographics).toMatchObject({ ageMin: 18, ageMax: 64 });
+    expect(plan.header.demographics).toMatchObject({ ageMin: 18, ageMax: 120 });
     expect(plan.status).toBe('PLANNED');
     expect(plan.forecast).toBeNull();
     expect(plan.rows).toHaveLength(0);

@@ -28,6 +28,8 @@ import type { PlanChannelKey } from '@/lib/planning/types';
 import { PlanDateRange } from './PlanDateRange';
 
 const AGE_LOW = [18, 25, 35, 45, 55, 65];
+/** Upper edges are the ends of the editor's brackets (24, 34 ... 64, 65+), so wizard and editor store the same values. */
+const AGE_HIGH = [24, 34, 44, 54, 64, 65];
 const ageLabel = (n: number, upper: boolean) => (upper ? (n >= 65 ? '65+' : String(n)) : String(n));
 
 export function NewPlanWizard({
@@ -78,7 +80,6 @@ export function NewPlanWizard({
       })),
     [defaults.currencyCode],
   );
-  const days = Math.round((Date.parse(end) - Date.parse(start)) / 86_400_000) + 1;
   const channels: PlanChannelKey[] = tv ? ['DIGITAL', 'TV'] : ['DIGITAL'];
 
   const next = () => {
@@ -228,9 +229,6 @@ export function NewPlanWizard({
                 setEnd(e);
               }}
             />
-            <Typography variant="caption" color="text.secondary">
-              {days} days
-            </Typography>
           </DvSectionCard>
           <DvSectionCard title="Demographics" layout="settings">
             <DvRadioGroup
@@ -253,7 +251,7 @@ export function NewPlanWizard({
                 <DvSelect
                   label="Age to"
                   value={String(ageMax)}
-                  options={AGE_LOW.map((n) => ({ value: String(n), label: ageLabel(n, true) }))}
+                  options={AGE_HIGH.map((n) => ({ value: String(n), label: ageLabel(n, true) }))}
                   onChange={(v) => setAgeMax(Number(v))}
                 />
                 <Box role="group" aria-label="Gender">

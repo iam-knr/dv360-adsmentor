@@ -699,3 +699,57 @@ test('PW-04-9: Archive hides a plan behind the Archived filter, Restore brings i
   expect(rows.map((r) => r.dimension)).toEqual(expect.arrayContaining(['GEOGRAPHY', 'KEYWORD']));
   expect(rows.find((r) => r.dimension === 'KEYWORD')?.valueText).toBe('trail running');
 });
+
+test('PW-04-9 (plan-fix2): rows follow plan edits, 100% budget share, Max CPM warning, Copy on the first click, trafficked state', async ({
+  page,
+}) => {
+  await signIn(page);
+  await newPlan(page);
+  // a row with a Max CPM far below the market
+  await page.getByRole('button', { name: 'Add plan line item' }).click();
+  const panel = page.getByRole('dialog', { name: 'Plan line item' });
+  await panel.getByLabel('Name').fill('Follow row');
+  await panel.getByLabel('Budget (net)').fill('40000');
+  await panel.getByLabel('Max CPM').fill('0.01');
+  await panel.getByRole('button', { name: 'Apply' }).click();
+  await expect(panel).toBeHidden();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByText('Plan saved')).toBeVisible();
+
+  // #3 the only row is 100% of the plan budget, #6 the cap is explained and the spend note names both figures
+  const row = page.getByRole('row', { name: /Follow row/ });
+  await expect(row).toContainText('100.0%');
+  await expect(page.getByText(/Max\. CPM .* is below the expected CPM/)).toBeVisible();
+  await expect(page.getByTestId('forecast-spend-note')).toBeVisible();
+
+  // #2 plan location and end date move the row that follows them
+  await page.getByRole('combobox', { name: 'Location' }).click();
+  await page.getByRole('option', { name: 'Singapore' }).click();
+  await setRange(page, page, 'Dates', '2026-01-02', '2026-03-15');
+  await expect(row).toContainText('Singapore');
+  await expect(row).toContainText('Mar 15, 2026');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByText('Plan saved')).toBeVisible();
+  await page.reload();
+  const again = page.getByRole('row', { name: /Follow row/ });
+  await expect(again).toContainText('Singapore');
+  await expect(again).toContainText('Mar 15, 2026');
+
+  // #9 the first click on Copy opens the dialog, also right after an edit
+  await page.getByLabel('Plan name').fill('Copy me once');
+  await page.getByRole('button', { name: 'Copy', exact: true }).click();
+  const dlg = page.getByRole('dialog', { name: 'Make a copy' });
+  await expect(dlg).toBeVisible();
+  await dlg.getByRole('button', { name: 'Cancel' }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByText('Plan saved')).toBeVisible();
+
+  // #7 Create campaign: the plan is Trafficked, not "start date has passed" (sim today is Jan 1, start Jan 2)
+  await page.getByRole('button', { name: 'Create campaign' }).click();
+  await page
+    .getByRole('dialog', { name: 'Create campaign from plan' })
+    .getByRole('button', { name: 'Create' })
+    .click();
+  await expect(page.getByText('Plan trafficked.')).toBeVisible();
+  await expect(page.getByText('Your start date has passed')).toHaveCount(0);
+});
