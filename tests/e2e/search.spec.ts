@@ -22,8 +22,11 @@ test.beforeAll(async () => {
     campaignId: io.campaignId,
     advertiserId: io.advertiserId,
   };
-  const soon = new Date(Date.now() + 3 * 86_400_000);
-  const start = new Date(Date.now() - 20 * 86_400_000);
+  // flights are relative to the sandbox sim clock, not the wall clock
+  const clock = await db.simClock.findUniqueOrThrow({ where: { sandboxId: w.sandboxId } });
+  const simNow = clock.simStart.getTime() + Number(clock.tickIndex) * 3_600_000;
+  const soon = new Date(simNow + 3 * 86_400_000);
+  const start = new Date(simNow - 20 * 86_400_000);
   await db.lineItem.updateMany({ where: { sandboxId: w.sandboxId }, data: { status: 'ACTIVE' } });
   await db.lineItem.create({
     data: { ...base, name: 'Zeta paused LI', type: 'DISPLAY', status: 'PAUSED' },
