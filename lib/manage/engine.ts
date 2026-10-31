@@ -3,6 +3,9 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { withBypass } from '@/lib/db';
+import { countClocks } from '@/lib/sandbox/clock-view';
+import { getSandboxSpeed, ACTIVE_WINDOW_MS, activeWindowMs } from '@/lib/sandbox/clock-run';
+import { prisma } from '@/lib/db';
 import { sandboxStateLabel, type SandboxStateLabel } from '@/lib/sandbox/labels';
 
 export interface ParamRow {
@@ -53,6 +56,30 @@ export function readEngineParams(): {
     tickMinutes:
       typeof parsed.tickMinutesSimulated === 'number' ? parsed.tickMinutesSimulated : null,
     raw: JSON.stringify(parsed, null, 2),
+  };
+}
+
+export interface ClockSummary {
+  running: number;
+  paused: number;
+  adminPaused: number;
+  minutesPerSimDay: number;
+  speedX: number;
+  source: 'setting' | 'env' | 'default';
+  activeDays: number;
+}
+
+/** Sandbox clocks by state and the speed setting, as one readable summary for the engine page. */
+export async function readClockSummary(): Promise<ClockSummary> {
+  const [c, speed] = await Promise.all([countClocks(prisma), getSandboxSpeed(prisma)]);
+  return {
+    running: c.running,
+    paused: c.paused,
+    adminPaused: c.adminPaused,
+    minutesPerSimDay: speed.minutesPerSimDay,
+    speedX: speed.speedX,
+    source: speed.source,
+    activeDays: Math.round(activeWindowMs() / 86_400_000) || ACTIVE_WINDOW_MS / 86_400_000,
   };
 }
 

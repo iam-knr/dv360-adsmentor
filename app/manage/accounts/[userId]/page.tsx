@@ -11,6 +11,7 @@ import { AccountError } from '@/lib/accounts/rules';
 import { DEFAULT_COHORT_CODE, getAccount } from '@/lib/accounts/service';
 import { pageActor } from '@/lib/accounts/session-actor';
 import { formatDateTime } from '@/lib/auth/messages';
+import { getSandboxClockView } from '@/lib/sandbox/clock-view';
 
 export const metadata: Metadata = { title: 'Account | DV360 Simulator by Adsmetor' };
 // the Create / Retry sandbox action runs a build step
@@ -33,6 +34,7 @@ export default async function AccountDetailPage({
     throw err;
   }
   const a = data.account;
+  const clock = a.appRole === 'USER' ? await getSandboxClockView(a.id) : null;
   const target: Target = { id: a.id, role: a.appRole };
   const perm = (action: Parameters<typeof can>[1]) => can(actor, action, target);
   return (
@@ -90,6 +92,7 @@ export default async function AccountDetailPage({
             studentName={a.name}
             initial={data.sandbox ?? { state: 'NOT_CREATED', percent: 0, message: 'Not created' }}
             canRecover={a.status !== 'ARCHIVED' && perm('account.edit')}
+            clock={clock}
           />
         </DvSectionCard>
       ) : null}

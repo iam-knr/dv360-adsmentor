@@ -12,6 +12,7 @@ import 'server-only';
 import { after } from 'next/server';
 import { prisma } from '@/lib/db';
 import { ensureCaughtUp, runDueTicks } from '@/lib/engine/server';
+import { activeWindowMs } from './clock-run';
 import { advanceProvisioning } from './provision';
 
 type Db = typeof prisma;
@@ -81,7 +82,7 @@ export async function maybeAdvance(opts: MaybeAdvanceOptions = {}): Promise<Mayb
     ...(opts.classroomId ? { classroomId: opts.classroomId } : {}),
   }).catch(() => undefined);
   if (Date.now() < deadline - 5_000) {
-    const ticks = await runDueTicks(deadline, { maxSandboxes: 5 }).catch(() => undefined);
+    const ticks = await runDueTicks(deadline, { maxSandboxes: 5, activeWithinMs: activeWindowMs() }).catch(() => undefined);
     if (ticks) result.ticks = ticks.ticks;
   }
   return result;

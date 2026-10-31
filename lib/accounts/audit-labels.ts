@@ -23,6 +23,8 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   POLICY_CHANGED: 'Changed account policy',
   AUTHZ_DENIED: 'Action refused',
   SANDBOX_REBUILT: 'Rebuilt sandbox',
+  SANDBOX_PAUSED: 'Paused sandbox clock',
+  SANDBOX_RESUMED: 'Resumed sandbox clock',
 };
 
 /** Plain label for an action code; an unknown code is lower-cased with spaces instead of being shown raw. */
