@@ -100,7 +100,7 @@ describe('getHistory', () => {
     expect(first.entityLabel).toBe('insertion order');
     expect(first.changes.map((c) => c.time)).toEqual(['14:30:00', '02:00:00']);
     expect(first.changes[0]!.tzLabel).toBe('IST');
-    expect(first.changes[0]!.user).toBe('sam@example.test');
+    expect(first.changes[0]!.user).toBe('Sam Student'); // the viewer's display name (Q15)
     expect(first.changes[0]!.lines).toEqual(['Budget changed from "Old" to "7000.00"']);
     // a day of mixed entity types has no entity label (header "n changes")
     expect(data.days[1]!.entityLabel).toBe('line item');

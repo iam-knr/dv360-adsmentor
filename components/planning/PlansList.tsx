@@ -3,6 +3,7 @@
 // Plans list (module 04 S1): status chip filter, two header bands, sort, pager, New plan. State lives in the URL
 // (`f.status`, `sort`, `rows`, `page`, `q`, RT 6.1); the whole list is loaded once and filtered in the browser.
 import { useMemo, useState, useTransition } from 'react';
+import { formatMoney } from '@/lib/money';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -44,7 +45,7 @@ type Sort = { id: SortId; dir: 'asc' | 'desc' };
 const money = (n: number | null, code: string) =>
   n === null
     ? '-'
-    : `${code}${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    : formatMoney(n, code);
 
 function readUrl(): { status: PlanStatusKey[]; sort: Sort; rows: number; page: number; q: string } {
   const p = new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search);

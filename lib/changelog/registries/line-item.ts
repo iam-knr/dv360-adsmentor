@@ -1,7 +1,11 @@
 // Line item registry (module 05 4.1, module 08 4.5 item 1). Every Prisma column of LineItem is registered or ignored;
 // child tables (creative assignments, partner costs, conversions, inventory rows) are list fields whose element
 // columns are registered in `line-item-child.ts`. tests/services/line-items/registry.db.test.ts proves it from the schema.
-import type { EntityRegistry, FieldDef } from '../registry-types';
+import type { EntityRegistry, FieldDef, Image } from '../registry-types';
+import type { Tx } from '@/lib/db';
+import { CARD_LABEL, rowsOf } from '@/lib/targeting/dimensions';
+import { loadTargetingState } from '@/lib/targeting';
+import { summarizeTargeting } from '@/lib/targeting/summary';
 import {
   creativeAssignmentFields,
   floodlightFields,
@@ -124,7 +128,35 @@ export const lineItemListFields: FieldDef[] = [
     elementNoun: 'inventory source',
     childFields: inventoryFields.filter((f) => !f.ignore),
   },
+  // Q9: one element per targeting row of the card, with its readable summary before and after. Loaded by
+  // `loadLineItemImage` below (not a relation), so a geography edit reads "Geography: Kerala to Kerala; exclusions ...".
+  {
+    path: 'targeting',
+    label: 'Targeting',
+    kind: 'list',
+    elementKey: (el) => String(el.dimension),
+    elementLabel: (el) => String(el.label),
+    elementNoun: 'targeting row',
+    childFields: [{ path: 'summary', label: 'Selection', kind: 'text' }],
+  },
 ];
+
+/** Default LineItem image plus the targeting rows as `{ dimension, label, summary }` elements. */
+export async function loadLineItemImage(tx: Tx, id: string): Promise<Image | null> {
+  const row = (await tx.lineItem.findUnique({
+    where: { id },
+    include: lineItemRegistry.include as never,
+  })) as Image | null;
+  if (!row) return null;
+  const state = await loadTargetingState(tx, id);
+  const targeting = rowsOf(state).flatMap((dimension) => {
+    const summary = summarizeTargeting(dimension, state.criteria);
+    return summary === null
+      ? []
+      : [{ dimension, label: CARD_LABEL[dimension] ?? dimension, summary }];
+  });
+  return { ...row, targeting };
+}
 
 export const lineItemRegistry: EntityRegistry = {
   entityType: 'LINE_ITEM',
@@ -137,5 +169,6 @@ export const lineItemRegistry: EntityRegistry = {
     lineItemFloodlightActivities: { orderBy: { activityId: 'asc' } },
     lineItemInventories: { orderBy: [{ kind: 'asc' }, { refId: 'asc' }] },
   },
+  load: loadLineItemImage,
   fields: [...lineItemColumnFields, ...lineItemListFields],
 };

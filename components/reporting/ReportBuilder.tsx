@@ -3,6 +3,7 @@
 // Instant report builder (module 16 S2): toolbar, filter bar, canvas, right panel with visualisation, drop zones and
 // the field picker. State is one `Model`; undo and redo keep a stack of earlier models.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { resolveField, unknownFieldMessage } from '@/lib/reporting/field-match';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -383,9 +384,7 @@ export function ReportBuilder(props: ReportBuilderProps) {
     const keys: string[] = [];
     const bad: string[] = [];
     for (const line of text.split('\n').map((l) => l.trim()).filter(Boolean)) {
-      const f = fields.find(
-        (x) => x.kind === kind && (x.key === line || x.label.toLowerCase() === line.toLowerCase()),
-      );
+      const f = resolveField(line, fields, kind);
       if (f) {
         if (!keys.includes(f.key)) keys.push(f.key);
       } else bad.push(line);
@@ -395,9 +394,15 @@ export function ReportBuilder(props: ReportBuilderProps) {
   const applyBulk = () => {
     const d = parseBulk(bulkDims, 'DIMENSION');
     const m = parseBulk(bulkMets, 'METRIC');
-    const bad = [...d.bad, ...m.bad];
-    if (bad.length) {
-      setBulkErr(`Unknown fields: ${bad.join(', ')}`);
+    if (d.bad.length || m.bad.length) {
+      setBulkErr(
+        [
+          d.bad.length ? unknownFieldMessage(d.bad, fields, 'DIMENSION') : '',
+          m.bad.length ? unknownFieldMessage(m.bad, fields, 'METRIC') : '',
+        ]
+          .filter(Boolean)
+          .join(' '),
+      );
       return;
     }
     const blocked = ruleCompatibility(d.keys, m.keys);

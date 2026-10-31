@@ -1,5 +1,7 @@
 /** Cell formats of design-system 2.4. en-US separators with the advertiser currency symbol (Q10). */
 
+import { formatMoney } from '@/lib/money';
+
 export const EMPTY_CELL = '-';
 
 const int = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
@@ -18,7 +20,7 @@ export function formatNumber(n: number | null | undefined): string {
 /** "₹12,000.00". */
 export function formatCurrency(n: number | null | undefined, symbol = '₹'): string {
   if (missing(n)) return EMPTY_CELL;
-  return `${n < 0 ? '-' : ''}${symbol}${two.format(Math.abs(n))}`;
+  return formatMoney(n, symbol);
 }
 
 /** Compact currency for cards: "₹450K". */

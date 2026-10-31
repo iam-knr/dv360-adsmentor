@@ -3,6 +3,7 @@ import 'server-only';
 // and deal groups. Reads run in the viewer's sandbox; every write goes through withChangeLog (4.6) and checks INV-010.
 import { Prisma } from '@prisma/client';
 import type { SessionUser } from '@/lib/auth/types';
+import { actorText } from '@/lib/history/lines';
 import { withChangeLog, historyWhere, renderLine } from '@/lib/changelog';
 import { dealRegistry } from '@/lib/changelog/registries/deal';
 import type { Tx } from '@/lib/db';
@@ -374,7 +375,7 @@ export async function getDealHistory(
       rows: groups.map((g) => ({
         id: g.id,
         date: g.occurredAt.toISOString(),
-        user: g.actorType === 'SYSTEM' ? (g.systemActor ?? 'System') : (g.actorLabel ?? 'Unknown'),
+        user: g.actorType === 'SYSTEM' ? (g.systemActor ?? 'System') : actorText(g, user),
         summary: g.summary,
         lines: g.entries.map((e) => renderLine(e, defs.get(e.fieldPath))),
       })),

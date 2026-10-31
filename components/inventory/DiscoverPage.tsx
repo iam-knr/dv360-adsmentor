@@ -4,6 +4,7 @@
 // as chips), Filter By panel, results grid, and the item slide-over (`?sim_panel=item:{id}`) with Scale and Google
 // audiences tabs and Assign.
 import { useCallback, useEffect, useState, useTransition } from 'react';
+import { formatMoney } from '@/lib/money';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
@@ -31,7 +32,7 @@ import { useParam } from './useParam';
 
 const compact = (n: number) =>
   new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }).format(n);
-const money = (n: number, code: string) => `${code === 'INR' ? '₹' : `${code} `}${n.toFixed(2)}`;
+const money = (n: number, code: string) => formatMoney(n, code);
 
 const FILTER_LABEL: Record<string, string> = {
   inventoryType: 'Inventory type',

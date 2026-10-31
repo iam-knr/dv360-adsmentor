@@ -52,3 +52,23 @@ export function format(amount: number, currency: CurrencyCode): string {
     maximumFractionDigits: d,
   }).format(amount);
 }
+
+const CODES = Object.keys(MINOR_DIGITS) as CurrencyCode[];
+const SYMBOL_TO_CODE: Record<string, CurrencyCode> = { '₹': 'INR' };
+
+/** True when the string is one of the currencies the simulator knows. */
+export function isCurrencyCode(code: string | null | undefined): code is CurrencyCode {
+  return !!code && (CODES as string[]).includes(code);
+}
+
+/**
+ * The one display formatter for money amounts everywhere in the UI (Q18).
+ * Accepts a currency code or the rupee sign; INR always renders as "₹1,23,456.50".
+ * Unknown codes fall back to "<CODE> 1,234.50".
+ */
+export function formatMoney(amount: number | null | undefined, currency: string | null | undefined): string {
+  if (amount === null || amount === undefined || Number.isNaN(amount)) return '-';
+  const code = currency ? (SYMBOL_TO_CODE[currency] ?? currency) : 'INR';
+  if (isCurrencyCode(code)) return format(amount, code);
+  return `${code} ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}

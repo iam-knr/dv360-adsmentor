@@ -504,7 +504,15 @@ export async function insertCreative(
     { type: 'CREATIVE', chain: { advertiserId: adv.id } },
     async (t) => {
       const row = await t.creative.create({
-        data: { sandboxId, advertiserId: adv.id, ...toColumns(resolved), dv360Review: 'PENDING' },
+        data: {
+          sandboxId,
+          advertiserId: adv.id,
+          ...toColumns(resolved),
+          dv360Review: 'PENDING',
+          // Q16: created and modified read in sim time like the other lists
+          createdAt: ctx.simNow,
+          updatedAt: ctx.simNow,
+        },
         select: { id: true, publicId: true },
       });
       const { plan, reviews } = await planReview(t, ctx, adv, row.id, resolved);
@@ -635,7 +643,12 @@ export async function updateCreative(
             stored.source === 'CM360' ? { name: resolved.name.trim() } : toColumns(resolved);
           await t.creative.update({
             where: { id: stored.id },
-            data: { ...cols, status: resolved.status ?? stored.status, version: { increment: 1 } },
+            data: {
+              ...cols,
+              status: resolved.status ?? stored.status,
+              version: { increment: 1 },
+              updatedAt: ctx.simNow,
+            },
           });
           if (stored.source !== 'CM360') {
             const extData = toExtData(resolved);

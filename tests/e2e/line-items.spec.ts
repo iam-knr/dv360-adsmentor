@@ -163,7 +163,11 @@ test('picker, validation message and creating a Display line item (PW-08-01, PW-
 
   // PW-08-04: a valid Display line item is created and its details page opens
   await page.locator('#name').fill('PW Display LI');
+  // Q7: the EU political ads error is shown after the failed save and goes as soon as an option is chosen
+  const euError = page.getByText('Select whether this line item has EU political ads');
+  await expect(euError.first()).toBeVisible();
   await page.getByRole('radio', { name: /Does not contain EU political ads/ }).check();
+  await expect(euError).toHaveCount(0);
   await page.getByRole('button', { name: 'Create' }).click();
   await page.waitForURL(/\/li\/\d+\/details/);
   const row = await db.lineItem.findFirst({

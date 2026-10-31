@@ -57,6 +57,8 @@ test('PW-07-04 an empty form shows the catalogue errors and stays on the page', 
   const c = await seedCampaign(db, w, 'PW07 Empty');
   await signIn(page, w);
   await page.goto(step2(c.publicId));
+  // Q20: the create form says new IOs are Draft and where to change it
+  await expect(page.getByText(/New insertion orders start as Draft/)).toBeVisible();
   await page.getByRole('button', { name: 'Create' }).click();
   await expect(page.getByText('Enter a value').first()).toBeVisible();
   await expect(page).toHaveURL(/\/ios\/new\?type=STANDARD&objective=BRAND_AWARENESS/);

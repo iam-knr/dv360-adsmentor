@@ -153,6 +153,23 @@ describe('V-10-17 summarizeTargeting goldens', () => {
     expect(summarizeTargeting('LIVESTREAM', { livestream: 'EXCLUDE' })).toBe('Exclude livestream');
     expect(summarizeTargeting('REWARDED', { rewarded: 'INCLUDE' })).toBe('Include rewarded');
   });
+  it('Q8 geography summary lists exclusions after inclusions', () => {
+    expect(
+      summarizeTargeting('GEOGRAPHY', {
+        geography: {
+          regions: [
+            { id: 'KL', label: 'Kerala', mode: 'INCLUDE' },
+            { id: 'TN', label: 'Tamil Nadu', mode: 'EXCLUDE' },
+          ],
+        },
+      }),
+    ).toBe('Region inclusions: Kerala; Region exclusions: Tamil Nadu');
+    expect(
+      summarizeTargeting('GEOGRAPHY', {
+        geography: { regions: [{ id: 'TN', label: 'Tamil Nadu', mode: 'EXCLUDE' }] },
+      }),
+    ).toBe('Region exclusions: Tamil Nadu');
+  });
   it('is null for a dimension that is not in the state', () => {
     for (const dim of ['ENVIRONMENT', 'DEVICE', 'LANGUAGE', 'CATEGORIES', 'DAY_TIME'] as const)
       expect(summarizeTargeting(dim, {})).toBeNull();

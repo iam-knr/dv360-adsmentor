@@ -65,8 +65,8 @@ export function BulkStatusTable({ initial, capped }: { initial: BulkJobRow[]; ca
               <TableCell>
                 {new Date(r.requestedAt).toLocaleString('en-GB', { timeZone: 'UTC' })}
               </TableCell>
-              <TableCell>{r.partnerId.slice(-6)}</TableCell>
-              <TableCell>{r.advertiserId?.slice(-6) ?? ''}</TableCell>
+              <TableCell>{r.partnerId}</TableCell>
+              <TableCell>{r.advertiserId ?? ''}</TableCell>
               <TableCell>{r.description}</TableCell>
               <TableCell>{r.sourceLabel}</TableCell>
               <TableCell>{r.user}</TableCell>

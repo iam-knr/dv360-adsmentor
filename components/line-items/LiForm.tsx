@@ -664,6 +664,8 @@ export function LiForm({
             onChange={(v) => {
               const next = { ...value, euPoliticalAds: v as 'YES' | 'NO' };
               setValue(next);
+              // Q7: the required-field error goes as soon as an option is chosen
+              setIssues((cur) => cur.filter((i) => i.path !== 'euPoliticalAds'));
               revalidate(next);
             }}
             options={[
