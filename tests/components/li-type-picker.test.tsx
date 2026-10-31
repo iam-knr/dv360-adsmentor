@@ -26,7 +26,8 @@ describe('Q6 line item type picker', () => {
       expect(screen.getByTestId(`li-type-reason-${o.type}`)).toHaveTextContent(o.reason!);
     }
     const dg = options.find((o) => o.type === 'DEMAND_GEN')!;
-    if (dg.enabled) expect(screen.getByTestId('li-type-prereq-DEMAND_GEN')).toHaveTextContent(dg.prerequisite!);
+    if (dg.enabled)
+      expect(screen.getByTestId('li-type-prereq-DEMAND_GEN')).toHaveTextContent(dg.prerequisite!);
     else expect(screen.getByTestId('li-type-reason-DEMAND_GEN')).toBeInTheDocument();
   });
 });

@@ -27,7 +27,9 @@ async function sideways(page: Page): Promise<string[]> {
     if (window.scrollX !== 0) out.push(`window:${window.scrollX}`);
     for (const el of Array.from(document.querySelectorAll<HTMLElement>('*'))) {
       if (el.scrollLeft !== 0 && getComputedStyle(el).direction !== 'rtl')
-        out.push(`${el.tagName.toLowerCase()}#${el.id}.${String(el.className).slice(0, 40)}:${el.scrollLeft}`);
+        out.push(
+          `${el.tagName.toLowerCase()}#${el.id}.${String(el.className).slice(0, 40)}:${el.scrollLeft}`,
+        );
     }
     return out;
   });

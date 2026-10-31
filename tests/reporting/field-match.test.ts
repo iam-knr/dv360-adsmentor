@@ -9,7 +9,10 @@ describe('Q10 report field names', () => {
   });
   it('does not guess for a partial name, it suggests the real ones', () => {
     expect(resolveField('Total Media Cost', FIELDS, 'METRIC')).toBeUndefined();
-    const near = nearestFields('Total Media Cost', FIELDS.filter((f) => f.kind === 'METRIC'));
+    const near = nearestFields(
+      'Total Media Cost',
+      FIELDS.filter((f) => f.kind === 'METRIC'),
+    );
     expect(near.map((f) => f.label)).toContain('Total Media Cost (Advertiser Currency)');
     const msg = unknownFieldMessage(['Total Media Cost'], FIELDS, 'METRIC');
     expect(msg).toContain('Unknown fields');

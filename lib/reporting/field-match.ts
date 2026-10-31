@@ -3,7 +3,11 @@ import type { ReportFieldDef } from './catalogue/types';
 
 type Named = Pick<ReportFieldDef, 'key' | 'label' | 'kind'>;
 
-const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const norm = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
 
 function distance(a: string, b: string): number {
   const prev = Array.from({ length: b.length + 1 }, (_, j) => j);

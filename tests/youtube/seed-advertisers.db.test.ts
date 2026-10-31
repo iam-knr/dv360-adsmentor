@@ -30,7 +30,10 @@ afterAll(async () => {
 
 describe('YouTube seed per advertiser', () => {
   it('gives every advertiser a YouTube line item', async () => {
-    const advertisers = await prisma.advertiser.findMany({ where: { sandboxId }, orderBy: { name: 'asc' } });
+    const advertisers = await prisma.advertiser.findMany({
+      where: { sandboxId },
+      orderBy: { name: 'asc' },
+    });
     expect(advertisers.length).toBeGreaterThan(1);
     for (const adv of advertisers) {
       const yt = await prisma.lineItem.count({ where: { advertiserId: adv.id, type: 'YT_VIDEO' } });
