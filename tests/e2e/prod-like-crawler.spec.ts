@@ -36,14 +36,6 @@ export const KNOWN_GAPS: Record<string, string> = {
   '/p/{pid}/targeting': 'placeholder, module 02',
   '/p/{pid}/third-party-configuration': 'placeholder, module 02 (Advertiser configurations)',
   '/p/{pid}/brand/controls': 'placeholder, module 02 (Brand controls)',
-  '/p/{pid}/a/{aid}/templates': 'placeholder, module 10 (Targeting templates)',
-  '/p/{pid}/a/{aid}/templates/new': 'placeholder, module 10',
-  '/p/{pid}/a/{aid}/details': 'placeholder, module 03',
-  '/p/{pid}/a/{aid}/targeting': 'placeholder, module 03',
-  '/p/{pid}/a/{aid}/data-manager': 'placeholder, module 03',
-  '/p/{pid}/a/{aid}/linked-accounts': 'placeholder, module 03',
-  '/p/{pid}/a/{aid}/policy-center': 'placeholder, module 03',
-  '/p/{pid}/a/{aid}/c/{cid}/explorercombined': 'placeholder, module 06 (Combined)',
 };
 
 let ipCounter = Math.floor(Math.random() * 200);
