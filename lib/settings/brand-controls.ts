@@ -2,22 +2,11 @@ import 'server-only';
 // Partner Brand controls (module 02 4.8, S7): four coverage bars per advertiser over its active line items.
 import { withSandbox } from '@/lib/db';
 import type { SessionUser } from '@/lib/auth/types';
+import { COVERAGE_KEYS, COVERAGE_LABEL, type CoverageKey } from './constants';
 import { asResult, loadPartner, serviceCtx, type Result } from './kit';
 
 export type BrandTab = 'DISPLAY_VIDEO' | 'YOUTUBE';
-export const COVERAGE_KEYS = [
-  'DIGITAL_CONTENT_LABELS',
-  'APPS_URL_CHANNEL',
-  'KEYWORDS',
-  'AUTHORIZED_SELLERS',
-] as const;
-export type CoverageKey = (typeof COVERAGE_KEYS)[number];
-export const COVERAGE_LABEL: Record<CoverageKey, string> = {
-  DIGITAL_CONTENT_LABELS: 'Digital content label exclusions',
-  APPS_URL_CHANNEL: 'Apps / URL and channel exclusions',
-  KEYWORDS: 'Keyword exclusions',
-  AUTHORIZED_SELLERS: 'Authorized sellers',
-};
+export { COVERAGE_KEYS, COVERAGE_LABEL, type CoverageKey };
 
 export interface Coverage {
   pct: number;

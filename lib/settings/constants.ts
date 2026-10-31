@@ -285,3 +285,18 @@ export const TIME_ZONES = [
   'Australia/Sydney',
   'UTC',
 ] as const;
+
+/** Module 02 4.8: the four coverage bars of Brand controls. */
+export const COVERAGE_KEYS = [
+  'DIGITAL_CONTENT_LABELS',
+  'APPS_URL_CHANNEL',
+  'KEYWORDS',
+  'AUTHORIZED_SELLERS',
+] as const;
+export type CoverageKey = (typeof COVERAGE_KEYS)[number];
+export const COVERAGE_LABEL: Record<CoverageKey, string> = {
+  DIGITAL_CONTENT_LABELS: 'Digital content label exclusions',
+  APPS_URL_CHANNEL: 'Apps / URL and channel exclusions',
+  KEYWORDS: 'Keyword exclusions',
+  AUTHORIZED_SELLERS: 'Authorized sellers',
+};
