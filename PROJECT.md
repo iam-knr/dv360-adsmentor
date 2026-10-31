@@ -32,7 +32,7 @@
 
 | # | Rule |
 |---|---|
-| R1 | Branding is **"DV360 Simulator by Adsmetor"**. Google logos and Google Account sign-in screens are not reproduced; the simulator uses its own Adsmetor login. |
+| R1 | Branding is **"DV360 Simulator by Adsmetor"**. Google Account sign-in screens are not reproduced; the simulator uses its own Adsmetor login. **Owner decision 31 Oct 2026:** the header uses the DV360 product mark (`public/brand/dv360-logo.png`, supplied by the owner) with the word "Simulator" next to it and a small "by Adsmetor" byline below (`components/brand/BrandLogo.tsx`); legal clearance for the mark stays with Adsmetor (R3). |
 | R2 | UI/UX, layout, navigation, fields and workflows replicate DV360 as closely as possible. The code is written from scratch (no copying Google's source code, scripts or image assets). Icons come from the open-source Material Symbols set. |
 | R3 | Access is **classroom-only**: instructor opens/closes access per session; no take-home access. Legal clearance is handled by Adsmetor. |
 | R4 | The demo account may be freely explored, including create / edit / save / activate / pause, to observe real behaviour. |

@@ -4,6 +4,7 @@
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
 import Typography from '@mui/material/Typography';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import { getSessionUser } from '@/lib/auth/session';
 import { homeFor } from '@/lib/scope/home';
 
@@ -36,13 +37,7 @@ export async function NotFoundPage() {
         textAlign: 'center',
       }}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element -- static brand asset, same file as the app bar */}
-      <img
-        src="/brand/adsmentor-logo-horizontal.png"
-        alt="Adsmetor"
-        height={48}
-        style={{ height: 48, width: 'auto' }}
-      />
+      <BrandLogo height={48} />
       <Typography variant="h4" component="h1">
         Page not found
       </Typography>
