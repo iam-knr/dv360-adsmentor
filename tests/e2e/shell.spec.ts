@@ -135,7 +135,7 @@ test.describe('PW-01-1 shell tour (STANDARD student)', () => {
       'aria-current',
       'page',
     );
-    await expect(page.getByTestId('coming-soon')).toHaveAttribute('data-module', '02');
+    await expect(page.getByRole('heading', { name: 'Advertiser configurations' })).toBeVisible();
 
     // Advertisers list (P3-03 item 8) → advertiser level
     await nav.getByRole('link', { name: 'Advertisers' }).click();
