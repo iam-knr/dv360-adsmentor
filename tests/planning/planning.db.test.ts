@@ -275,6 +275,17 @@ describe('convert, remove, columns, csv', () => {
 
 describe('cross-media reach', () => {
   let ioId = '';
+  beforeAll(async () => {
+    // this world counts as seeded (an unseeded one is healed on first list, see plan-fix2 #1 below)
+    await prisma.userPreference.create({
+      data: {
+        sandboxId: w.sandboxId,
+        userId: user().id,
+        key: 'seed:cross-media-reports',
+        value: true,
+      },
+    });
+  });
   it('lists options with zero-spend campaigns disabled (AC-04-24)', async () => {
     await setSimHours(w, 24);
     const opts = await getCrossMediaOptions(user(), {
@@ -498,5 +509,31 @@ describe('plan-parity: Cross-media reach seed', () => {
     expect(reports.some((r) => r.advertiserId === null)).toBe(true);
     const list = await listCrossMediaReports(user(), { partnerId: w.partnerId });
     expect(list.rows.length).toBeGreaterThanOrEqual(made);
+  });
+});
+
+describe('plan-fix2 #1: a sandbox built before the Cross-media seed', () => {
+  it('lists the seeded reports once, at partner and advertiser scope, and a report opens with data', async () => {
+    await prisma.crossMediaReachReport.deleteMany({ where: { sandboxId: w.sandboxId } });
+    await prisma.userPreference.deleteMany({
+      where: { sandboxId: w.sandboxId, key: 'seed:cross-media-reports' },
+    });
+    const partnerList = await listCrossMediaReports(user(), { partnerId: w.partnerId });
+    expect(partnerList.rows.length).toBeGreaterThanOrEqual(3);
+    const again = await listCrossMediaReports(user(), { partnerId: w.partnerId });
+    expect(again.rows).toHaveLength(partnerList.rows.length);
+    const advList = await listCrossMediaReports(user(), {
+      partnerId: w.partnerId,
+      advertiserId: w.advertiserId,
+    });
+    expect(advList.rows.length).toBeGreaterThan(0);
+    const detail = await getCrossMediaReport(user(), { partnerId: w.partnerId }, partnerList.rows[0]!.publicId);
+    expect(detail.status).toBe('DONE');
+  });
+
+  it('a student who deleted every report keeps the Welcome screen (no re-seed)', async () => {
+    await prisma.crossMediaReachReport.deleteMany({ where: { sandboxId: w.sandboxId } });
+    const list = await listCrossMediaReports(user(), { partnerId: w.partnerId });
+    expect(list.rows).toHaveLength(0);
   });
 });

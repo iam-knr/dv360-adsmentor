@@ -4,7 +4,8 @@ import 'server-only';
 import type { CrossMediaCountry, Prisma } from '@prisma/client';
 import type { SessionUser } from '@/lib/auth/types';
 import { peopleByIds } from '@/lib/accounts/directory';
-import { withSandbox, type Tx } from '@/lib/db';
+import { prisma, withSandbox, type Tx } from '@/lib/db';
+import { simToday } from '@/lib/seed/sandbox';
 import {
   asResult,
   forbidden,
@@ -26,6 +27,11 @@ import {
 } from './countries';
 import { crossMediaMath, type CrossMediaMath } from './cross-media';
 import { crossMediaIssues } from './rules';
+import {
+  CROSS_MEDIA_SEEDED_KEY,
+  markCrossMediaSeeded,
+  seedCrossMediaReports,
+} from './seed';
 import {
   SUB_LOCATION_FROM,
   TV_VENDOR,
@@ -99,7 +105,52 @@ export interface CrossMediaRow {
   advertiserName: string | null;
 }
 
+/**
+ * A sandbox built before the Cross-media seed existed has no report at all (plan-fix2 #1: the list showed only the
+ * Welcome screen). A marker (user preference) records that the seed ran, so a student who deletes every report keeps
+ * the Welcome screen; without the marker and without reports the sandbox is old: write what a new sandbox gets. Idempotent under concurrency (advisory
+ * lock, count checked inside it); runs as the owner role because the seed reads the whole metric history.
+ */
+export async function healCrossMediaSeed(sandboxId: string): Promise<number> {
+  return prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'cross-media-seed:' + sandboxId}))`;
+      const sb = await tx.sandbox.findUnique({
+        where: { id: sandboxId },
+        select: { ownerUserId: true, seedValue: true, provisionState: true },
+      });
+      if (!sb?.ownerUserId || sb.provisionState === 'SEEDING' || sb.provisionState === 'BACKFILLING')
+        return 0;
+      const marked = await tx.userPreference.count({
+        where: { sandboxId, userId: sb.ownerUserId, key: CROSS_MEDIA_SEEDED_KEY },
+      });
+      if (marked > 0) return 0;
+      // a sandbox seeded before the marker existed already has reports: only mark it
+      if ((await tx.crossMediaReachReport.count({ where: { sandboxId } })) > 0) {
+        await markCrossMediaSeeded(tx, sandboxId, sb.ownerUserId);
+        return 0;
+      }
+      return seedCrossMediaReports(tx, {
+        sandboxId,
+        ownerUserId: sb.ownerUserId,
+        seedValue: sb.seedValue ?? 0,
+        today: simToday(),
+      });
+    },
+    { timeout: 60_000, maxWait: 10_000 },
+  );
+}
+
 export async function listCrossMediaReports(
+  user: SessionUser,
+  scope: CrossMediaScopeIn,
+): Promise<{ rows: CrossMediaRow[]; canWrite: boolean; partner: boolean }> {
+  const first = await listOnce(user, scope);
+  if (first.rows.length > 0 || !user.sandboxId) return first;
+  return (await healCrossMediaSeed(user.sandboxId)) > 0 ? listOnce(user, scope) : first;
+}
+
+async function listOnce(
   user: SessionUser,
   scope: CrossMediaScopeIn,
 ): Promise<{ rows: CrossMediaRow[]; canWrite: boolean; partner: boolean }> {

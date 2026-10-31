@@ -184,6 +184,23 @@ test('PROD-LIKE crawler: a freshly provisioned student opens every linked page w
       .replace(`/a/${ids.aid}`, '/a/{aid}')
       .replace(`/c/${ids.cid}`, '/c/{cid}');
 
+  // plan-fix2 #1: a sandbox built before the Cross-media seed existed has no reports and no marker; opening the page
+  // must write them (self-heal), and the fresh path above already wrote them. Simulate the old sandbox first.
+  await db.crossMediaReachReport.deleteMany({ where: { sandboxId: sandbox.id } });
+  await db.userPreference.deleteMany({
+    where: { sandboxId: sandbox.id, key: 'seed:cross-media-reports' },
+  });
+  // plan-fix2 #1: Cross-media reach lists the seeded reports at partner and advertiser level, and a report opens with data
+  for (const base of [`/p/${ids.pid}`, `/p/${ids.pid}/a/${ids.aid}`]) {
+    await s.goto(`${base}/cross-media-reach`);
+    const links = s.getByTestId('cross-media-link');
+    await expect(links.first(), `${base} cross-media list`).toBeVisible({ timeout: 30_000 });
+    await expect(s.getByText('Welcome to Cross-media reach!')).toHaveCount(0);
+    await links.first().click();
+    await expect(s).toHaveURL(/cross-media-reach\/\d+$/);
+    await expect(s.getByText(/Combined/i).first()).toBeVisible({ timeout: 30_000 });
+  }
+
   // 1. links of the left menu and the top bar, at partner, advertiser and campaign level
   const links = new Map<string, string>(); // path -> where it was found
   const collect = async (where: string) => {
