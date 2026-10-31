@@ -3,6 +3,7 @@
 // within a time budget, at most 25 sandboxes per call, and reports how many are still due.
 import { NextResponse, type NextRequest } from 'next/server';
 import { runDueTicks, runRetention } from '@/lib/engine/server';
+import { activeWindowMs } from '@/lib/sandbox/clock-run';
 import { advanceProvisioning } from '@/lib/sandbox/provision';
 import { thawWindowFrozenSandboxes } from '@/lib/sandbox/thaw';
 import { budgetFrom, isAuthorised } from './auth';
@@ -18,7 +19,8 @@ export async function POST(req: NextRequest) {
   const url = new URL(req.url);
   const thawed = await thawWindowFrozenSandboxes(new Date()).catch(() => 0);
   const deadline = started + budgetFrom(url.searchParams);
-  const result = await runDueTicks(deadline);
+  // only sandboxes whose student was seen in the last week (docs/gaps/sim-clock-runs.md); abandoned ones wait
+  const result = await runDueTicks(deadline, { activeWithinMs: activeWindowMs() });
   // new students: seed queued sandboxes, start accounts that have none (module 18 4.4)
   const provisioning = await advanceProvisioning(deadline).catch(() => undefined);
   const trimmed = url.searchParams.get('retention') === '1' ? await runRetention() : undefined;

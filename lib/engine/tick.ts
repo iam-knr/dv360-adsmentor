@@ -153,6 +153,9 @@ export interface RunTickOptions {
   sliceKinds?: readonly string[];
 }
 
+/** Share of an insertion order's hourly allowance a line item that has not delivered yet may always use to probe. */
+const PROBE_SHARE = 0.1;
+
 export function runTick(
   world: World,
   state: SimStateData,
@@ -358,8 +361,15 @@ export function runTick(
     const ids = ioPart.map((r) => r.li.id);
     const weights = ids.map((id) => ioRun.weights[id] ?? 1 / ids.length);
     const caps = ioPart.map((r) => {
-      const c = (next.li[r.li.id] as LiState).lastCapacity;
-      return c >= 0 ? c * params.pacing.allocationHeadroom : Infinity;
+      const ls = next.li[r.li.id] as LiState;
+      const c = ls.lastCapacity;
+      if (c < 0) return Infinity;
+      const cap = c * params.pacing.allocationHeadroom;
+      // A line item that has never delivered keeps a probe share of the insertion order's allowance. Without it a first
+      // tick with no supply (a new creative still in review) records capacity 0, the allocation then gives it no
+      // allowance, its bids shrink with the allowance and the recorded capacity never recovers: a student's new line
+      // item would never serve (docs/gaps/sim-clock-runs.md).
+      return ls.spentFlight === 0 ? Math.max(cap, ioRun.allowance * PROBE_SHARE) : cap;
     });
     const paceShare = waterFill(ioRun.allowance, weights, caps);
     const segShare = waterFill(

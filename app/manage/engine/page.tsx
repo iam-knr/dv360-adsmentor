@@ -6,7 +6,7 @@ import { DvPageHeader } from '@/components/dv/DvPageHeader';
 import { DvSectionCard } from '@/components/dv/DvSectionCard';
 import { pageActor } from '@/lib/accounts/session-actor';
 import { formatDateTime } from '@/lib/auth/messages';
-import { readEngineParams, readEngineStatus } from '@/lib/manage/engine';
+import { readClockSummary, readEngineParams, readEngineStatus } from '@/lib/manage/engine';
 
 export const metadata: Metadata = { title: 'Engine | DV360 Simulator by Adsmetor' };
 export const dynamic = 'force-dynamic';
@@ -19,6 +19,7 @@ export default async function AdminEnginePage() {
   if (actor.role !== 'SUPER_ADMIN') notFound();
   const p = readEngineParams();
   const s = await readEngineStatus();
+  const k = await readClockSummary();
   const facts: [string, string][] = [
     ['Engine version', p.hash],
     ['Simulated clock', s.simNow ? formatDateTime(s.simNow) : 'Not started'],
@@ -28,6 +29,17 @@ export default async function AdminEnginePage() {
         ? `${p.tickMinutes} simulated minutes per tick, run on a timer and on page loads`
         : '-',
     ],
+    [
+      'Sandbox clocks',
+      `${k.running} running, ${k.paused} paused${k.adminPaused ? ` (${k.adminPaused} paused by a Super admin)` : ''}`,
+    ],
+    [
+      'Sandbox speed',
+      `1 simulated day per ${k.minutesPerSimDay} real minutes (${k.speedX}x), ${
+        k.source === 'default' ? 'default' : k.source === 'env' ? 'set by SANDBOX_SIM_MINUTES_PER_DAY' : 'set in settings'
+      }`,
+    ],
+    ['Timer scope', `Sandboxes whose student was seen in the last ${k.activeDays} days; others catch up when the student returns`],
     ['Last run', s.lastRunAt ? formatDateTime(s.lastRunAt) : 'Never'],
   ];
   return (
