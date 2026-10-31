@@ -1,8 +1,8 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import { homeHrefFor } from '@/lib/auth/home-href';
 import type { AppRole } from '@/lib/auth/types';
 
@@ -38,18 +38,8 @@ export function SimHeader({ user }: SimHeaderProps) {
         }
         style={{ display: 'inline-flex', lineHeight: 0 }}
       >
-        <Image
-          src="/brand/adsmentor-logo-horizontal.png"
-          alt="Adsmetor"
-          width={130}
-          height={40}
-          priority
-          unoptimized
-        />
+        <BrandLogo height={40} />
       </Link>
-      <Typography variant="cardTitle" component="span" sx={{ color: 'text.secondary' }}>
-        DV360 Simulator
-      </Typography>
       <Box sx={{ flex: 1 }} />
       {user ? (
         <>

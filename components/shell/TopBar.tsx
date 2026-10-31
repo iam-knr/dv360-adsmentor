@@ -5,7 +5,7 @@
 // hamburger that hides on frames without a left nav (PR deviation note). Crumbs reuse DvBreadcrumbs.
 import { useEffect, useState, type ReactNode } from 'react';
 import { APP_ROLE_LABEL } from '@/lib/accounts/role-labels';
-import Image from 'next/image';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
@@ -163,24 +163,7 @@ export function TopBar() {
           textDecoration: 'none',
         }}
       >
-        <Image
-          src="/brand/adsmentor-logo-horizontal.png"
-          alt=""
-          width={91}
-          height={28}
-          priority
-          unoptimized
-          style={{ height: 28, width: 'auto' }}
-        />
-        <Typography
-          variant="h5"
-          component="span"
-          noWrap
-          // Q13: below 1200 px the name would push the tools off the right edge; the logo carries the brand
-          sx={{ '@media (max-width:1199px)': { display: 'none' } }}
-        >
-          {PRODUCT_NAME}
-        </Typography>
+        <BrandLogo height={34} alt="" />
       </Box>
       <BarIcon label="Home" icon="home" href={home} />
       <Box sx={{ minWidth: 0, overflow: 'hidden', flex: '0 1 auto' }}>
