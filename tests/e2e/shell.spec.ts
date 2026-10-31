@@ -74,7 +74,8 @@ test.describe('PW-01-1 shell tour (STANDARD student)', () => {
     await expect(page).toHaveURL(P(w, '/home_v3'));
     const header = page.locator('header');
     await expect(header.getByRole('button', { name: 'Main menu' })).toBeVisible();
-    await expect(header.getByText('DV360 Simulator by Adsmetor')).toBeVisible();
+    await expect(header.getByTestId('brand-logo')).toContainText('Simulator');
+    await expect(header.getByTestId('brand-logo')).toContainText('by Adsmetor');
     await expect(header.getByRole('link', { name: 'Home', exact: true })).toHaveAttribute(
       'href',
       P(w, '/home_v3'),
