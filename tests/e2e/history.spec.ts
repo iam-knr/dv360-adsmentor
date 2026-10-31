@@ -300,6 +300,11 @@ test('PW-05-7 announcements reach the bell within the poll interval, dismiss per
   // dismiss hides it for this person and survives a reload
   await item.getByRole('button', { name: /^Dismiss/ }).click();
   await expect(page.getByTestId('announcement-item')).toHaveCount(0);
+  // the dismissal is saved by a server action: reloading before it lands brings the notice back (flaky on CI, seen on
+  // main 32ede4f and reproduced on 65a83ad), so wait for the row first
+  await expect
+    .poll(() => db.notificationDismissal.count({ where: { notification: { classroomId: w.classroomId } } }), { timeout: 15_000 })
+    .toBe(1);
   await page.reload();
   await expect(page.getByTestId('bell-dot')).toHaveCount(0);
 });
