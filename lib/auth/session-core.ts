@@ -9,7 +9,8 @@ import type { DvRole, SessionFailureReason, SessionUser } from './types';
 import { canViewAs, type ViewAsRequest } from './view-as';
 
 export type ResolvedSession =
-  { ok: true; user: SessionUser } | { ok: false; reason: SessionFailureReason };
+  | { ok: true; user: SessionUser }
+  | { ok: false; reason: SessionFailureReason };
 
 /** lastSeenAt is rewritten at most this often (module 19 4.5). */
 export const TOUCH_INTERVAL_MS = 5 * 60_000;
@@ -52,6 +53,7 @@ function build(user: UserRow, ctx: ClassContext, dvRole: DvRole): SessionUser {
     partnerId: ctx.partnerId,
     dvRole,
     mustChangePassword: user.mustChangePassword,
+    screenshotsAllowed: user.screenshotsAllowed,
     timeZone: ctx.timeZone,
   };
 }
@@ -78,6 +80,7 @@ export async function resolveSessionUser(
       sessionVersion: row.sessionVersion,
       activeSessionId: row.activeSessionId,
       lastSeenAt: row.lastSeenAt,
+      accessSuspendedAt: row.accessSuspendedAt,
     },
     policy,
     now,

@@ -25,6 +25,10 @@ export type AccountAuditAction =
   | 'POLICY_CHANGED'
   | 'AUTHZ_DENIED'
   | 'SANDBOX_REBUILT'
+  | 'SCREENSHOT_DETECTED'
+  | 'ACCOUNT_SUSPENDED'
+  | 'SCREENSHOTS_ALLOWED'
+  | 'SCREENSHOTS_DISALLOWED'
   | 'SANDBOX_PAUSED'
   | 'SANDBOX_RESUMED';
 
@@ -47,6 +51,10 @@ export const ACCOUNT_AUDIT_KEYS = [
   'cohortName',
   'forced',
   'until',
+  // screenshot guard: the recognised event only, never keystrokes
+  'method',
+  'path',
+  'screenshotsAllowed',
 ] as const;
 
 export interface AccountAuditInput {

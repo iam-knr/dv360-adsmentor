@@ -16,6 +16,7 @@ export default async function AccountsPage({
     page?: string;
     pageSize?: string;
     archived?: string;
+    suspended?: string;
   }>;
 }) {
   const actor = await pageActor();
@@ -23,12 +24,14 @@ export default async function AccountsPage({
   const page = Math.max(1, Number(sp.page) || 1);
   const pageSize = [20, 50, 100].includes(Number(sp.pageSize)) ? Number(sp.pageSize) : 20;
   const showArchived = sp.archived === '1';
+  const suspendedOnly = sp.suspended === '1';
   // the search lives in the URL (?q=) so that a search can be bookmarked and shared
   const q = (sp.q ?? sp.search ?? '').trim().slice(0, 100);
   const { rows, total } = await listAccounts(actor, {
     search: q || undefined,
     page,
     pageSize,
+    suspended: suspendedOnly ? true : undefined,
     status: showArchived ? ['ACTIVE', 'DISABLED', 'LOCKED', 'ARCHIVED'] : undefined,
   });
   const view: AccountListRow[] = rows.map((r) => ({
@@ -41,6 +44,8 @@ export default async function AccountsPage({
     lastLogin: r.lastLoginAt ? formatDate(r.lastLoginAt) : 'Never',
     sandbox: r.sandbox,
     isSelf: r.id === actor.id,
+    suspended: r.suspended,
+    screenshotsAllowed: r.screenshotsAllowed,
   }));
   return (
     <AccountsList
@@ -50,6 +55,7 @@ export default async function AccountsPage({
       pageSize={pageSize}
       search={q}
       showArchived={showArchived}
+      suspendedOnly={suspendedOnly}
     />
   );
 }

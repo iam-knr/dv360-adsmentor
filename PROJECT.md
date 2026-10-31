@@ -502,3 +502,8 @@ Owner decisions are listed with their conflict-log id (`docs/specs/conflicts.md`
 14. Any specific exercises you already teach that should become Phase 5 scenarios? Default: the 10 starters in module 18.
 15. How many cloud sessions can run in parallel on this account? The wave plan assumes up to 5 (build-plan P-12, R-03).
 16. ~~Who merges the pull requests?~~ The Cowork assistant may merge Phase 3+ build PRs under the conditions in build-plan 3.6 (P-13, ADR-046).
+
+---
+
+## Notes: screenshot guard (2026-10-31)
+Students whose `screenshotsAllowed` is false (the default) are watched for Print Screen, Win+Shift+S, the macOS Cmd+Shift+3/4/5/6 shortcuts and print attempts; a recognised event suspends the account (all sessions invalidated, sign in refused with the same message), writes an audit entry and raises a Super admin alert (`/manage/security`, banner, badge, 30 s toast poll). The Super admin restores access and switches screenshots on or off per student, in bulk from the Accounts list. **Honest scope: browsers cannot detect screenshots, so this is a tripwire and deterrent for keyboard routes only, not prevention; keystrokes are never logged (only method, page path and time of a recognised event).** No email service yet (follow-up). Details and limits: `docs/gaps/screenshot-guard.md`; spec: `docs/specs/modules/19-account-management.md` 2.5, 4.5, 4.11.

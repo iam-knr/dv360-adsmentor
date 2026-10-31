@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { DialogHost } from '@/components/shell/DialogHost';
 import { ViewerProvider } from '@/components/shell/ViewerProvider';
 import { SnackbarHost } from '@/components/dv';
+import { ScreenshotGuardMount } from '@/components/security/ScreenshotGuardMount';
 import { requireUserOrRedirect } from '@/lib/auth/session';
 import { scheduleMaybeAdvance } from '@/lib/sandbox/maybe-advance';
 import { getChromeData } from '@/lib/scope/chrome-data';
@@ -24,6 +25,7 @@ export default async function DvLayout({ children }: { children: ReactNode }) {
   const chrome = await getChromeData(user);
   return (
     <ViewerProvider value={{ viewer: toViewerInfo(user), chrome }}>
+      <ScreenshotGuardMount user={user} />
       <SnackbarHost>
         <DialogHost>{children}</DialogHost>
       </SnackbarHost>

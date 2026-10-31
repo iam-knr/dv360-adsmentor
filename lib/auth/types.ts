@@ -4,7 +4,12 @@
 // that level, and it has no session value.
 export type AppRole = 'user' | 'super_admin';
 export type DvRole =
-  'ADMIN' | 'STANDARD' | 'READ_ONLY' | 'REPORTING_ONLY' | 'PARTNER_CLIENT' | 'CREATIVE';
+  | 'ADMIN'
+  | 'STANDARD'
+  | 'READ_ONLY'
+  | 'REPORTING_ONLY'
+  | 'PARTNER_CLIENT'
+  | 'CREATIVE';
 
 export interface SessionUser {
   id: string;
@@ -20,11 +25,19 @@ export interface SessionUser {
   /** The signed in person when `viewAs` is set (or always, for convenience). Writes are logged with this id. */
   actor?: { id: string; email: string; name: string; appRole: AppRole };
   mustChangePassword?: boolean;
+  /** The Super admin allows this student to take screenshots (default false). Optional so fixtures need not set it. */
+  screenshotsAllowed?: boolean;
   /** Time zone of the resolved classroom (IANA). */
   timeZone?: string;
 }
 
-export type SessionFailureReason = 'none' | 'idle' | 'absolute' | 'revoked' | 'other-device';
+export type SessionFailureReason =
+  | 'none'
+  | 'idle'
+  | 'absolute'
+  | 'revoked'
+  | 'other-device'
+  | 'suspended';
 
 /** What the Auth.js session callback exposes (and what the edge middleware reads). */
 export interface SessionClaims {

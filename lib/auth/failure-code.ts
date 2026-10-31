@@ -22,6 +22,8 @@ export function messageForCode(code: string | null | undefined): string {
       return signInMessage({ ok: false, code: 'locked', minutes: Number(value) || 1 });
     case 'disabled':
       return signInMessage({ ok: false, code: 'disabled' });
+    case 'suspended':
+      return signInMessage({ ok: false, code: 'suspended' });
     case 'not_started':
     case 'ended':
       return signInMessage({ ok: false, code: kind, at: new Date(Number(value)), timeZone });

@@ -23,6 +23,10 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   POLICY_CHANGED: 'Changed account policy',
   AUTHZ_DENIED: 'Action refused',
   SANDBOX_REBUILT: 'Rebuilt sandbox',
+  SCREENSHOT_DETECTED: 'Screenshot attempt detected',
+  ACCOUNT_SUSPENDED: 'Suspended account (screenshot attempt)',
+  SCREENSHOTS_ALLOWED: 'Allowed screenshots',
+  SCREENSHOTS_DISALLOWED: 'Disallowed screenshots',
   SANDBOX_PAUSED: 'Paused sandbox clock',
   SANDBOX_RESUMED: 'Resumed sandbox clock',
 };

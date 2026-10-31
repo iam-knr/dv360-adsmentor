@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { PrismaClient } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { clearExpiredLock, registerUserFailure } from './lockout';
-import { acc071, acc072, ACC_070, SIM_001, simLocked } from './messages';
+import { acc071, acc072, ACC_070, ACC_SUSPENDED, SIM_001, simLocked } from './messages';
 import { needsRehash, hashPassword, verifyDummy, verifyPassword } from './password';
 import { getAccountPolicy } from './policy';
 import { toSessionRole } from './roles';
@@ -32,6 +32,7 @@ export type SignInFailure =
   | { ok: false; code: 'invalid' }
   | { ok: false; code: 'locked'; minutes: number }
   | { ok: false; code: 'disabled' }
+  | { ok: false; code: 'suspended' }
   | { ok: false; code: 'not_started'; at: Date; timeZone?: string }
   | { ok: false; code: 'ended'; at: Date; timeZone?: string };
 
@@ -45,6 +46,8 @@ export function signInMessage(failure: SignInFailure): string {
       return simLocked(failure.minutes);
     case 'disabled':
       return ACC_070;
+    case 'suspended':
+      return ACC_SUSPENDED;
     case 'not_started':
       return acc071(failure.at, failure.timeZone);
     case 'ended':
@@ -156,6 +159,11 @@ export async function authenticate(
   if (account.status === 'DISABLED') {
     if (Object.keys(reset).length) await db.user.update({ where: { id: account.id }, data: reset });
     return { ok: false, code: 'disabled' };
+  }
+  // Screenshot guard: a suspended student cannot sign in, and only learns why after the right password.
+  if (account.accessSuspendedAt && account.appRole === 'USER') {
+    if (Object.keys(reset).length) await db.user.update({ where: { id: account.id }, data: reset });
+    return { ok: false, code: 'suspended' };
   }
   const sid = randomUUID();
   const rehash =
