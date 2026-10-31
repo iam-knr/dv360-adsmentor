@@ -4,7 +4,7 @@ import { prisma, withSandbox, PUBLIC_ID_START } from '@/lib/db';
 import { buildSandboxPlan } from '@/lib/seed/plan';
 import { seedReferenceData } from '@/lib/seed/reference-db';
 import { provisionSandbox, partnerIdOf, type ProvisionResult } from '@/lib/seed/sandbox';
-import { hashValue } from '@/lib/seed/hash';
+import { diffParts, fingerprintOf, type FingerprintParts } from './fingerprint';
 import { buildHistory } from '@/lib/seed/history-stub';
 import { DELIVERY_STORIES, TEMPLATE_KEYS, type TemplateKey } from '@/lib/seed/knobs';
 import { EXCHANGES, TARGETING_OPTIONS } from '@/lib/seed/reference';
@@ -296,25 +296,26 @@ describe('seeded sandboxes', () => {
   }, 120_000);
 
   /** Rows of a sandbox without ids, sandbox ids and timestamps: what "the same world" means across two sandboxes. */
-  async function fingerprint(id: string): Promise<string> {
+  async function fingerprintParts(id: string): Promise<FingerprintParts> {
     const lis = await prisma.lineItem.findMany({
       where: { sandboxId: id },
-      orderBy: { name: 'asc' },
       include: { io: { select: { name: true } } },
     });
+    // line item names repeat across IOs (see fingerprint.ts), so every row carries its IO and the order is made canonical there
     const metrics = await prisma.$queryRaw<unknown[]>`
-      SELECT l.name, m."simDate", m."sliceKind", m."sliceKey", m.impressions, m.clicks, m."mediaCost", m."bidRequests", m."lostTargeting"
+      SELECT l.name, i.name AS io, m."simDate", m."sliceKind", m."sliceKey", m.impressions, m.clicks, m."mediaCost", m."bidRequests", m."lostTargeting"
       FROM "SimDailyMetric" m JOIN "LineItem" l ON l.id = m."lineItemId" AND l."sandboxId" = m."sandboxId"
-      WHERE m."sandboxId" = ${id} ORDER BY l.name, m."simDate", m."sliceKind", m."sliceKey"`;
+      JOIN "InsertionOrder" i ON i.id = l."ioId" AND i."sandboxId" = l."sandboxId"
+      WHERE m."sandboxId" = ${id}`;
     const hourly = await prisma.$queryRaw<unknown[]>`
-      SELECT l.name, h."simHour", h.impressions, h."mediaCost" FROM "SimHourlyMetric" h JOIN "LineItem" l ON l.id = h."lineItemId" AND l."sandboxId" = h."sandboxId"
-      WHERE h."sandboxId" = ${id} ORDER BY l.name, h."simHour"`;
+      SELECT l.name, i.name AS io, h."simHour", h.impressions, h."mediaCost" FROM "SimHourlyMetric" h JOIN "LineItem" l ON l.id = h."lineItemId" AND l."sandboxId" = h."sandboxId"
+      JOIN "InsertionOrder" i ON i.id = l."ioId" AND i."sandboxId" = l."sandboxId"
+      WHERE h."sandboxId" = ${id}`;
     const adv = await prisma.advertiser.findMany({
       where: { sandboxId: id },
-      orderBy: { name: 'asc' },
       select: { name: true, currencyCode: true, websiteUrl: true },
     });
-    return hashValue({
+    return {
       lis: lis.map((l) => ({
         name: l.name,
         io: l.io.name,
@@ -327,14 +328,18 @@ describe('seeded sandboxes', () => {
       metrics,
       hourly,
       adv,
-    });
+    };
   }
+  const fingerprint = async (id: string) => fingerprintOf(await fingerprintParts(id));
 
   it('determinism: the same template, seed and knobs give the same rows in two sandboxes; a different seed differs', async () => {
     const a = await fingerprint(sbx('starter-agency', SEED));
     const twin = await fingerprint(sbx('starter-agency', SEED, ' twin'));
     const other = await fingerprint(sbx('starter-agency', SEED + 1));
-    expect(twin).toBe(a);
+    if (twin !== a)
+      expect.fail(
+        `twin sandbox differs from the original in:\n${diffParts(await fingerprintParts(sbx('starter-agency', SEED)), await fingerprintParts(sbx('starter-agency', SEED, ' twin')))}`,
+      );
     expect(other).not.toBe(a);
     const idsA = await prisma.lineItem.findMany({
       where: { sandboxId: sbx('starter-agency', SEED) },
