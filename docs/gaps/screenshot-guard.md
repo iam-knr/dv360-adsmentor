@@ -60,3 +60,14 @@ Row level security: `SecurityEvent` and `User` are global tables read and writte
 * Email the Super admin on a suspension (needs an email provider).
 * Optional per-cohort default for the switch; cohort page bulk actions (not built: the cohort page has no member selection to hang them on).
 * A visible hint to students that screenshots are not allowed (left out so as not to advertise the exact list).
+
+## Update 1 Nov 2026: shortcuts the page cannot see
+
+Owner test: Print Screen is caught; Win+Shift+S, Ctrl+Shift+S and the Mac shortcuts were not.
+
+- **Why:** the operating system handles Win+Shift+S and macOS Cmd+Shift+3/4/5 itself and keeps the last key, so the page never receives the `S` or the digit. Matching `Meta+Shift+KeyS` (the first version) only works if the browser happens to see it.
+- **Ctrl+Shift+S** (Edge Web Capture, Firefox screenshot tool) is a browser shortcut that the page does see: now a direct match, method `BROWSER_CAPTURE`.
+- **Win/Cmd+Shift plus focus loss** (`SnipChordTracker`, method `SNIP_CHORD`): the page tracks only whether the Meta and Shift keys are down. When both are held, no other key is delivered, and the window then loses focus within 2 seconds (the snipping overlay takes focus), it counts as a probable snip. Nothing about typed keys is recorded or sent.
+- **Known false positives:** Win+Shift+Tab and Cmd+Shift+Tab (the switcher also takes focus and the OS keeps the Tab). Accepted for now; the Super admin can Restore access.
+- **Still not detectable:** snipping tools started from the Start menu or a taskbar icon, browser or OS extensions, screen recorders, remote desktop, phone cameras. A visible watermark with the student's email is the stronger deterrent for those and is a possible follow-up.
+- **Not tested on real hardware:** the CI browser is Linux Chromium. The owner's Windows machine is the real test of `SNIP_CHORD` (does the snipping overlay blur the page in Edge/Chrome on Windows 10 and 11?). If it does not blur, the next step is a Super admin "capture lab" page that shows which events the browser delivers for each shortcut, so the rule can be tuned from real data.

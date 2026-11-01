@@ -36,10 +36,27 @@ describe('ScreenshotGuard', () => {
     ['Win+Shift+S', { key: 'S', code: 'KeyS', metaKey: true, shiftKey: true }, 'WIN_SHIFT_S'],
     ['Cmd+Shift+4', { key: '$', code: 'Digit4', metaKey: true, shiftKey: true }, 'MAC_SHORTCUT'],
     ['Ctrl+P', { key: 'p', code: 'KeyP', ctrlKey: true }, 'PRINT_SHORTCUT'],
+    ['Ctrl+Shift+S', { key: 'S', code: 'KeyS', ctrlKey: true, shiftKey: true }, 'BROWSER_CAPTURE'],
   ])('reports %s', (_n, init, method) => {
     const { report } = setup();
     fireEvent.keyDown(window, init);
     expect(report).toHaveBeenCalledWith(method, expect.any(String));
+  });
+
+  it('reports Win/Cmd+Shift followed by the window losing focus (the OS keeps the last key)', () => {
+    const { report, navigate } = setup();
+    fireEvent.keyDown(window, { key: 'Meta', code: 'MetaLeft', metaKey: true });
+    fireEvent.keyDown(window, { key: 'Shift', code: 'ShiftLeft', metaKey: true, shiftKey: true });
+    window.dispatchEvent(new Event('blur'));
+    expect(report).toHaveBeenCalledWith('SNIP_CHORD', expect.any(String));
+    expect(navigate).toHaveBeenCalledWith('/sim/suspended');
+  });
+
+  it('does not report a plain blur (switching tabs or windows)', () => {
+    const { report, navigate } = setup();
+    window.dispatchEvent(new Event('blur'));
+    expect(report).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it('reports the print event', () => {

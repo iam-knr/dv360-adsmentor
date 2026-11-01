@@ -1,14 +1,15 @@
 'use client';
 
 // Screenshot guard for students (docs/gaps/screenshot-guard.md). HONEST SCOPE: a browser cannot see a screenshot.
-// This watches for the common keyboard routes (Print Screen, Win+Shift+S, the macOS Cmd+Shift+3/4/5/6 shortcuts,
-// print attempts), tells the server, and leaves the page. Phone cameras, screen recorders, remote desktop, tools
+// This watches for the common keyboard routes (Print Screen, Ctrl+Shift+S, Win+Shift+S and the macOS Cmd+Shift+3/4/5/6
+// shortcuts through modifiers plus focus loss, print attempts), tells the server, and leaves the page. Phone cameras, screen recorders, remote desktop, tools
 // started from a menu and extensions are not detected. Nothing typed is recorded: each key event is compared with
 // the list and dropped, and only a recognised event (method, page path, time) is sent.
 import { useEffect, useRef } from 'react';
 import {
   detectPrintEvent,
   detectScreenshotKey,
+  SnipChordTracker,
   type ScreenshotMethod,
 } from '@/lib/security/screenshot-detect';
 import { SCREENSHOT_EVENT_URL, SUSPENDED_PATH } from '@/lib/security/guard-policy';
@@ -64,8 +65,15 @@ export function ScreenshotGuard({ report, navigate }: ScreenshotGuardProps) {
       (reportRef.current ?? reportScreenshot)(method, path);
       (navigateRef.current ?? ((to: string) => window.location.replace(to)))(SUSPENDED_PATH);
     };
+    const chord = new SnipChordTracker();
     const onKey = (e: KeyboardEvent) => {
       const method = detectScreenshotKey(e);
+      if (method) trip(method);
+      else chord.key(e, Date.now());
+    };
+    // The OS keeps the last key of Win+Shift+S and Cmd+Shift+3/4/5 but the snipping overlay takes focus away.
+    const onBlur = () => {
+      const method = chord.blur(Date.now());
       if (method) trip(method);
     };
     const onPrint = (e: Event) => {
@@ -75,10 +83,12 @@ export function ScreenshotGuard({ report, navigate }: ScreenshotGuardProps) {
     window.addEventListener('keydown', onKey, true);
     window.addEventListener('keyup', onKey, true);
     window.addEventListener('beforeprint', onPrint);
+    window.addEventListener('blur', onBlur);
     return () => {
       window.removeEventListener('keydown', onKey, true);
       window.removeEventListener('keyup', onKey, true);
       window.removeEventListener('beforeprint', onPrint);
+      window.removeEventListener('blur', onBlur);
     };
   }, []);
 
