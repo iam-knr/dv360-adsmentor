@@ -37,7 +37,7 @@ import type { CampaignRow, EntityStatusKey } from '@/lib/campaigns/wire';
 import { AppLink } from '@/lib/routes/AppLink';
 import { advertiserPath, campaignPath } from '@/lib/routes/paths';
 import { CAMPAIGN_GOALS, CAMPAIGN_GOAL_LABEL } from '@/lib/validation/constants/goals-kpis';
-import { ListSubTabs, OpenIntelligenceOnLoad, useDateParam } from './ListChrome';
+import { ListSubTabs, useDateParam } from './ListChrome';
 
 const DOT: Record<EntityStatusKey, EntityStatus> = {
   DRAFT: 'draft',
@@ -154,7 +154,6 @@ export function CampaignsList({
 
   return (
     <>
-      <OpenIntelligenceOnLoad />
       <DvPageHeader title="Campaigns" limitedAccess={viewer.limitedAccess}>
         <ListSubTabs partnerId={partnerId} advertiserId={advertiserId} active="campaigns" />
       </DvPageHeader>

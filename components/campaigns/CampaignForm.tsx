@@ -220,7 +220,8 @@ export function CampaignForm({
     </Typography>
   );
 
-  const SHOWN = /^(name|status|goal|kpi\.type|kpi\.value|creativeTypes|plannedSpend|startDate|endDate|budgets\.\d+\.|frequencyCap\.maxImpressions|landingPageUrls\[|keywords)/;
+  const SHOWN =
+    /^(name|status|goal|kpi\.type|kpi\.value|creativeTypes|plannedSpend|startDate|endDate|budgets\.\d+\.|frequencyCap\.maxImpressions|landingPageUrls\[|keywords)/;
   const stray = issues.filter((i) => i.severity === 'error' && !SHOWN.test(i.path));
 
   const urls = value.landingPageUrls.length ? value.landingPageUrls : [''];

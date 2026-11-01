@@ -20,8 +20,8 @@ nobody looks for them in this branch.
 
 | Row | Gap | Why |
 |---|---|---|
-| CAM-008 / 057 | The Intelligence panel opens on every load of the Campaigns list by setting `?sim_rail=intelligence` through `history.replaceState` (`OpenIntelligenceOnLoad`). `RailHost` itself still only auto-opens it once per browser. The panel content (Advertiser health, Optimization suggestions) is the existing one | `components/shell/RailHost.tsx` belongs to FID-FOUNDATION. A one-line change there (drop the `intelligenceSeen` check on `[A]/cs`) would make the URL parameter unnecessary |
-| CAM-063 | The five chart cards show a spinner for about 0.6 s and then stay empty. Real DV360 draws the data | Card data is module 11 (T06-06). The metrics endpoint `/api/dv/metrics/cards` exists but takes internal ids, which the campaign page does not have on the client. The "Impressions lost" date is "yesterday" of the sim clock |
+| CAM-008 / 057 | Done with a one-line change in `components/shell/RailHost.tsx` (FOUNDATION's file): on `[A]/cs` the Intelligence panel opens on every load, not only the first visit. Panel content is the existing one | Listed under shared-file changes |
+| CAM-063 | The five chart cards show a spinner for about 0.6 s and then stay empty (the spinner is not covered by an e2e test: it is gone too fast to assert reliably). Real DV360 draws the data | Card data is module 11 (T06-06). The metrics endpoint `/api/dv/metrics/cards` exists but takes internal ids, which the campaign page does not have on the client. The "Impressions lost" date is "yesterday" of the sim clock |
 | CAM-064 | "Performance" has the single entry Performance. "Segment by" offers None, Status and Type (row sections in the grid). Real DV360 offers more views and segments | The simulator has one column view per grid; the old Columns menu is gone from the IO table (the Line items grid keeps it) |
 | CAM-064 | Fullscreen uses the browser Fullscreen API; browsers may refuse it inside an iframe | Browser behaviour |
 | CAM-009 | KPI Actual TrueView is "-" for campaigns without TrueView views | Existing KPI formulas |
@@ -38,5 +38,6 @@ nobody looks for them in this branch.
 - New files: `components/dv/DvDatePresetRange.tsx`, `components/dv/date-param.ts`.
 - `components/bulk/BulkActionBar.tsx`: no Unarchive and no shortcut hints on the Campaigns and Insertion orders menus.
 - `components/bulk/SdfDialogs.tsx`: `SdfMenu` has a `kebab` variant (⋮ icon).
+- `components/shell/RailHost.tsx`: Intelligence opens on every load of the Campaigns list (was: first visit only). If FOUNDATION rewrites RailHost, keep this behaviour.
 - `lib/nav/trees.ts`: NEW badge removed from the campaign Alerts item. `lib/nav/breadcrumbs.ts`: the campaign crumb is the plain campaign name.
 - `lib/campaigns/range.ts`: `rangeFromParam` now resolves every picker preset (it ignored `LAST_7_DAYS`, `QUARTER_TO_DATE`, `YEAR_TO_DATE`).

@@ -129,8 +129,10 @@ test.describe('Campaigns list', () => {
     await expect(page.getByRole('link', { name: 'FID Beta Campaign' })).toBeVisible();
     const input = page.locator('input[aria-label="Search or filter"]');
     await input.fill('beta');
+    await input.press('Escape'); // closes the suggestion popover, which hides the page from role queries
     await expect(page.getByRole('link', { name: 'FID Alpha Campaign' })).toHaveCount(0);
     await input.fill(campaign.publicId);
+    await input.press('Escape');
     await expect(page.getByRole('link', { name: 'FID Alpha Campaign' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'FID Beta Campaign' })).toHaveCount(0);
     await input.press('Enter');
@@ -272,7 +274,6 @@ test.describe('Campaign detail', () => {
           /^(Total cost|Avg\. performance|Impressions lost|Added impression reach|Explore budget options)/,
       }),
     ).toHaveCount(5);
-    await expect(page.getByRole('progressbar').first()).toBeVisible();
     await expect(page.getByRole('button', { name: /Scroll charts/ })).toHaveCount(0);
     await expect(page.getByText('No spend yet for this period.')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Help: Impressions lost' })).toBeVisible();

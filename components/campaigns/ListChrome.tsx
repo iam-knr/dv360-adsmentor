@@ -3,7 +3,7 @@
 // Shared chrome of the Campaigns and Insertion orders lists (fidelity audit CAM-003..008): the "Campaigns" and
 // "Insertion orders" sub-tabs, the `d` param writer of the date range dropdown, and the Intelligence panel that is
 // open when the page loads.
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { DvTabs } from '@/components/dv/DvTabs';
 import { confirmLeave } from '@/lib/hooks/useUnsavedGuard';
@@ -54,22 +54,4 @@ export function useDateParam(): (d: string) => void {
     },
     [router, pathname, search],
   );
-}
-
-/**
- * Real DV360 shows the Intelligence panel (Advertiser health, Optimization suggestions) every time the Campaigns list
- * loads. RailHost opens a panel from `?sim_rail=`; this sets it with a soft navigation. It only runs on mount.
- */
-export function OpenIntelligenceOnLoad() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const search = useSearchParams();
-  useEffect(() => {
-    if (search?.get('sim_rail')) return;
-    const qs = new URLSearchParams(search?.toString() ?? '');
-    qs.set('sim_rail', 'intelligence');
-    router.replace(`${pathname}?${qs.toString()}`, { scroll: false });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per load
-  }, []);
-  return null;
 }
