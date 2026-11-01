@@ -6,14 +6,12 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { APP_ROLE_LABEL } from '@/lib/accounts/role-labels';
 import { BrandLogo } from '@/components/brand/BrandLogo';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
-import Dialog from '@mui/material/Dialog';
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
-import InputBase from '@mui/material/InputBase';
 import Menu from '@mui/material/Menu';
 import MuiLink from '@mui/material/Link';
 import MenuItem from '@mui/material/MenuItem';
@@ -23,6 +21,7 @@ import { DvBreadcrumbs, DvTooltip } from '@/components/dv';
 import { DvIcon, type DvIconName } from '@/components/icons';
 import { dismissNotificationAction } from '@/lib/history/actions';
 import type { NotificationDto } from '@/lib/history/types';
+import { confirmLeave } from '@/lib/hooks/useUnsavedGuard';
 import { markInboxReadAction } from '@/lib/reporting/actions';
 import { sizes } from '@/lib/theme/tokens';
 import { topCrumbs } from '@/lib/nav/breadcrumbs';
@@ -32,6 +31,7 @@ import { withSimParams } from '@/lib/routes/sim-params';
 import { useHasNav, usePageScope } from '@/lib/scope/context';
 import { useChromeState } from './ChromeState';
 import { useShellDialogs } from './DialogHost';
+import { SearchOverlay, type SearchOverlayScope } from './SearchOverlay';
 import { SimClockChip } from './SimClockChip';
 import { useViewer } from './ViewerProvider';
 
@@ -70,38 +70,6 @@ function BarIcon({
   );
 }
 
-function SearchOverlay({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [q, setQ] = useState('');
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      sx={{
-        zIndex: (t) => t.zIndex.searchOverlay,
-        '& .MuiDialog-container': { alignItems: 'flex-start' },
-      }}
-      slotProps={{
-        paper: { 'aria-label': 'Search', sx: { width: 640, maxWidth: '95vw', mt: 16, p: 4 } },
-      }}
-    >
-      <InputBase
-        autoFocus
-        fullWidth
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Search the advertiser with phrases like 'paused line items'"
-        inputProps={{ 'aria-label': 'Search' }}
-        startAdornment={<DvIcon name="search" size={24} sx={{ mr: 3 }} />}
-        sx={{ typography: 'body1', mb: 4 }}
-      />
-      <Typography variant="body2">Search is not built yet (module 01, Phase 4).</Typography>
-      <Typography variant="caption" sx={{ display: 'block', mt: 4 }}>
-        Results come from the simulator&apos;s saved filters
-      </Typography>
-    </Dialog>
-  );
-}
-
 export function TopBar() {
   const { viewer, chrome } = useViewer();
   const inbox = chrome.inbox ?? [];
@@ -128,6 +96,13 @@ export function TopBar() {
   const { toggleNav } = useChromeState();
   const { openShortcuts, searchOpen, setSearchOpen } = useShellDialogs();
   const search = useSearchParams();
+  const router = useRouter();
+  const searchScope: SearchOverlayScope =
+    ids.partnerId && ids.advertiserId
+      ? { kind: 'advertiser', partnerId: ids.partnerId, advertiserId: ids.advertiserId }
+      : ids.partnerId
+        ? { kind: 'partner', partnerId: ids.partnerId }
+        : null;
   const [menu, setMenu] = useState<{
     id: 'bell' | 'users' | 'products' | 'avatar';
     el: HTMLElement;
@@ -421,7 +396,15 @@ export function TopBar() {
           </MenuItem>
         </Box>
       </Menu>
-      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <SearchOverlay
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        scope={searchScope}
+        onNavigate={(href) => {
+          const target = withSimParams(href, search?.toString() ?? null);
+          confirmLeave(() => router.push(target));
+        }}
+      />
     </Box>
   );
 }

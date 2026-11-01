@@ -2,7 +2,7 @@
 
 // Insertion orders grid (module 07 2.2): campaign tab and advertiser tab. The campaign tab has New insertion order;
 // the advertiser tab does not (AC-07-01). Inline Activate / Pause and inline Budget edit.
-import { useMemo, useState, useTransition } from 'react';
+import { useMemo, useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -48,6 +48,8 @@ export function IoList({
   rows,
   title = 'Insertion orders',
   embedded = false,
+  initialStatus,
+  filterChips,
 }: {
   partnerId: string;
   advertiserId: string;
@@ -57,10 +59,14 @@ export function IoList({
   rows: IoRow[];
   title?: string;
   embedded?: boolean;
+  /** `f.status` of the URL (Search links): the select starts there. */
+  initialStatus?: string | null;
+  /** Chips of the other `f.*` filters (lib/search/list-filters.ts). */
+  filterChips?: ReactNode;
 }) {
   const { viewer } = useViewer();
   const router = useRouter();
-  const [filter, setFilter] = useState('ACTIVE');
+  const [filter, setFilter] = useState(initialStatus ?? 'ACTIVE');
   const [page, setPage] = useState({ page: 1, size: 20 });
   const [error, setError] = useState<string | null>(null);
   const [selection, setSelection] = useState<Set<string>>(new Set());
@@ -167,6 +173,7 @@ export function IoList({
             }}
           />
         </Box>
+        {filterChips}
         {view.menu}
         {embedded ? null : <SdfMenu advertiserId={advertiserId} />}
         {campaignId ? (

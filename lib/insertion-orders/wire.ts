@@ -286,6 +286,7 @@ export interface IoRow {
   cpa: number | null;
   customImpressionValueCost: number | null;
   parentPaused: boolean;
+  pacingType?: 'AHEAD' | 'EVEN' | 'ASAP';
 }
 
 export interface SegmentDetail extends SegmentWire {

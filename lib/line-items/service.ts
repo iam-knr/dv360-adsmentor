@@ -7,6 +7,8 @@ import { prisma, withSandbox, type Tx } from '@/lib/db';
 import { withChangeLog, type ChangeCtx } from '@/lib/changelog';
 import { can } from '@/lib/rbac/can';
 import type { SessionUser } from '@/lib/auth/types';
+import { parseDateRangeParam } from '@/lib/metrics/date-range';
+import { simTodayFor } from '@/lib/metrics/clock';
 import { getGridMetrics } from '@/lib/metrics/grid-metrics';
 import { persistTargeting } from '@/lib/targeting';
 import { validate } from '@/lib/validation/engine';
@@ -969,9 +971,16 @@ export async function listLineItems(
         skip: (page - 1) * pageSize,
         take: pageSize,
         include: {
-          io: { select: { publicId: true, objective: true, kpi: true } },
+          io: {
+            select: {
+              publicId: true,
+              objective: true,
+              kpi: true,
+              segments: { select: { startDate: true, endDate: true } },
+            },
+          },
           campaign: { select: { publicId: true } },
-          advertiser: { select: { currencyCode: true } },
+          advertiser: { select: { currencyCode: true, timeZone: true } },
         },
       }),
     ]);
@@ -992,19 +1001,45 @@ export async function listLineItems(
             })
           )?.currencyCode
         : null);
-    return { total, rows, alerts, currency: currencyRow ?? 'INR' };
+    const zone =
+      rows[0]?.advertiser.timeZone ??
+      (scope.kind === 'advertiser'
+        ? (await tx.advertiser.findUnique({ where: { id: scope.id }, select: { timeZone: true } }))
+            ?.timeZone
+        : null);
+    const today = zone ? await simTodayFor(tx, user.sandboxId!, zone) : null;
+    return { total, rows, alerts, currency: currencyRow ?? 'INR', today };
   });
   if (!out) return null;
+  // `d` (routes.md 6.1) wins over the explicit range; an unknown token keeps the explicit range
+  let metricRange = range;
+  if (query.d && out.today) {
+    try {
+      metricRange = parseDateRangeParam(query.d, out.today);
+    } catch {
+      // keep the default range
+    }
+  }
   const metrics = await getGridMetrics({
     level: 'li',
     ids: out.rows.map((r) => r.id),
-    range,
+    range: metricRange,
     sandboxId: user.sandboxId!,
   });
   const alertCount = new Map(out.alerts.map((a) => [a.lineItemId, a._count._all]));
   const rows: LineItemRow[] = out.rows.map((r) => {
     const m = metrics[r.id];
     const youtube = r.type === 'YT_VIDEO' || r.type === 'YT_AUDIO' || r.type === 'YT_ON_CTV';
+    const iso = (d: Date | null | undefined) => (d ? d.toISOString().slice(0, 10) : null);
+    const segStarts = r.io.segments
+      .map((x) => iso(x.startDate) ?? '')
+      .filter(Boolean)
+      .sort();
+    const segEnds = r.io.segments
+      .map((x) => iso(x.endDate) ?? '')
+      .filter(Boolean)
+      .sort();
+    const custom = r.flightMode === 'CUSTOM';
     return {
       id: r.id,
       publicId: r.publicId.toString(),
@@ -1024,6 +1059,9 @@ export async function listLineItems(
       cpa: m && m.conversions > 0 ? m.cpa : null,
       customValueCost:
         m && m.customImpressionCost > 0 ? m.customImpressionValue / m.customImpressionCost : null,
+      pacingType: r.pacingType,
+      flightStart: custom ? iso(r.flightStart) : (segStarts[0] ?? null),
+      flightEnd: custom ? iso(r.flightEnd) : (segEnds[segEnds.length - 1] ?? null),
       ...(youtube ? { trueViewViews: m?.counters.videoViews ?? 0 } : {}),
     };
   });
@@ -1042,5 +1080,6 @@ export async function listLineItems(
     },
     currency: out.currency as LiListResult['currency'],
     asOf: new Date().toISOString(),
+    ...(out.today ? { simToday: out.today } : {}),
   };
 }
