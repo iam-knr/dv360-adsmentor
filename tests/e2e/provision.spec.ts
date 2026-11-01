@@ -96,7 +96,7 @@ async function studentWalksTheSandbox(
       },
     )
     .toBe(true);
-  await expect(page).toHaveTitle('Overview - DV360 Simulator by Adsmetor');
+  await expect(page).toHaveTitle('Display & Video 360');
 
   const sandbox = await sandboxOf(s.id);
   expect(sandbox).not.toBeNull();
@@ -258,6 +258,6 @@ test('E2E-ADM-03 the account page follows the build to READY without a reload, a
   const sp = await ctx.newPage();
   await signIn(sp, student.email, student.password);
   await expect(sp).toHaveURL(/\/p\/[^/]+\/home_v3$/);
-  await expect(sp).toHaveTitle('Overview - DV360 Simulator by Adsmetor');
+  await expect(sp).toHaveTitle('Display & Video 360');
   await ctx.close();
 });

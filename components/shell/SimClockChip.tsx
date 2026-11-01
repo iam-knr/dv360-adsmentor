@@ -21,13 +21,24 @@ export function formatSimTime(iso: string, timeZone: string): string {
   }).format(new Date(iso));
 }
 
+/** Date only ("Feb 20, 2027"): the chip shows no time of day, so it only changes when the sim day changes (CAM-073). */
+export function formatSimDate(iso: string, timeZone: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(iso));
+}
+
 export function SimClockChip() {
   const { clock } = useViewer().chrome;
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   if (!clock) return null;
   const paused = clock.state !== 'RUNNING';
   const when = formatSimTime(clock.simNow, clock.timeZone);
-  const label = `Sim ${when}${paused ? ' · Paused' : ` · ${clock.speedX}x`}`;
+  const day = formatSimDate(clock.simNow, clock.timeZone);
+  const label = `Sim ${day}${paused ? ' · Paused' : ` · ${clock.speedX}x`}`;
   return (
     <>
       <Chip

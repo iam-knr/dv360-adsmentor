@@ -178,12 +178,13 @@ export const theme = createTheme({
     h4: { fontFamily: fonts.display, fontSize: 20, lineHeight: '28px', fontWeight: 400 },
     h5: { fontFamily: fonts.display, fontSize: 18, lineHeight: '24px', fontWeight: 500 },
     h6: { fontFamily: fonts.display, fontSize: 20, lineHeight: '28px', fontWeight: 400 },
-    subtitle1: { fontSize: 14, lineHeight: '20px', fontWeight: 500 },
+    subtitle1: { fontFamily: fonts.display, fontSize: 14, lineHeight: '20px', fontWeight: 500 },
     subtitle2: { fontSize: 13, lineHeight: '20px', fontWeight: 500 },
     body1: { fontSize: 14, lineHeight: '20px', fontWeight: 400 },
     body2: { fontSize: 13, lineHeight: '20px', fontWeight: 400, color: text.secondary },
     caption: { fontSize: 12, lineHeight: '16px', fontWeight: 400, color: text.secondary },
     button: {
+      fontFamily: fonts.display,
       fontSize: 14,
       lineHeight: '20px',
       fontWeight: 500,
@@ -215,12 +216,13 @@ export const theme = createTheme({
       fontVariantNumeric: 'tabular-nums',
     },
     tableCell: {
-      fontSize: 13,
-      lineHeight: '20px',
+      fontSize: 12,
+      lineHeight: '16px',
       fontWeight: 400,
+      color: colors.tableText,
       fontVariantNumeric: 'tabular-nums',
     },
-    tableHeader: { fontSize: 12, lineHeight: '16px', fontWeight: 500, color: text.secondary },
+    tableHeader: { fontSize: 12, lineHeight: '16px', fontWeight: 500, color: colors.tableText },
     badge: {
       fontSize: 10,
       lineHeight: '14px',
@@ -254,11 +256,14 @@ export const theme = createTheme({
       defaultProps: { disableElevation: true },
       styleOverrides: {
         root: { height: sizes.buttonHeight, borderRadius: radii.button, padding: '0 16px' },
+        // Real DV360 primary button: Google Sans 14/500, 36 high, padding 9px 24px (CAM-031).
+        contained: { padding: '9px 24px', lineHeight: '18px' },
         sizeSmall: { height: sizes.buttonHeightSmall, padding: '0 12px' },
+        containedSizeSmall: { padding: '0 12px' },
         outlined: {
-          borderColor: line,
+          borderColor: colors.outlineStrong,
           color: primary.main,
-          '&:hover': { borderColor: line, backgroundColor: colors.outlinedHoverBg },
+          '&:hover': { borderColor: colors.outlineStrong, backgroundColor: colors.outlinedHoverBg },
         },
         text: { padding: '0 8px' },
         containedPrimary: {

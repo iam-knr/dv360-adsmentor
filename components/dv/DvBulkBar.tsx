@@ -9,12 +9,18 @@ import ListSubheader from '@mui/material/ListSubheader';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
-import { DvIcon } from '@/components/icons';
+import { DvIcon, type DvIconName } from '@/components/icons';
 import { DvTooltip } from './DvTooltip';
 
 export interface BulkMenuItem {
   id: string;
   label: string;
+  /** Leading icon (a DvIcon name), like the real DV360 status menu. */
+  icon?: string;
+  /** Icon colour as a theme palette path, for example `status.active`. */
+  iconColor?: string;
+  /** Bold label (the real DV360 "Activate" item). */
+  emphasis?: boolean;
   /** Shortcut hint such as "⌘+D". */
   shortcut?: string;
   disabled?: boolean;
@@ -71,7 +77,16 @@ export function DvBulkBar({ count, groups, onAction, onClear, segmentBy }: DvBul
         }}
         sx={{ justifyContent: 'space-between', gap: 6 }}
       >
-        <span>{item.label}</span>
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+          {item.icon ? (
+            <DvIcon
+              name={item.icon as DvIconName}
+              size={20}
+              color={item.disabled ? undefined : item.iconColor}
+            />
+          ) : null}
+          <span style={item.emphasis ? { fontWeight: 700 } : undefined}>{item.label}</span>
+        </Box>
         {item.shortcut ? (
           <Typography variant="caption" component="span">
             {item.shortcut}
@@ -151,7 +166,7 @@ export function DvBulkBar({ count, groups, onAction, onClear, segmentBy }: DvBul
           ...(i > 0 ? [<Divider component="li" key={`${g.label}-divider`} />] : []),
           <ListSubheader
             key={`${g.label}-header`}
-            sx={{ typography: 'panelOverline', lineHeight: '32px' }}
+            sx={{ typography: 'subtitle2', color: 'text.secondary', lineHeight: '32px' }}
           >
             {g.label}
           </ListSubheader>,

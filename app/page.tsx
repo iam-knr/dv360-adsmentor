@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -8,7 +7,6 @@ import { getSessionUser } from '@/lib/auth/session';
 import { homeFor } from '@/lib/scope/home';
 
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { icons: { icon: '/brand/adsmentor-icon.png' } };
 
 // "/" (routes.md 3.1): a signed in person goes to their home (student: sandbox Overview). Signed out, the page stays
 // public and offers the sign in.
