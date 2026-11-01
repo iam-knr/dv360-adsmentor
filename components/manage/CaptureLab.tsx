@@ -14,6 +14,7 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 import {
+  CaptureChordTracker,
   detectPrintEvent,
   detectScreenshotKey,
   screenshotMethodLabel,
@@ -53,6 +54,9 @@ export function CaptureLab() {
   const start = useRef<number | null>(null);
   const seq = useRef(0);
   const chord = useRef(new SnipChordTracker());
+  const capture = useRef(new CaptureChordTracker());
+  const lastFocus = useRef<boolean | null>(null);
+  const lastMouse = useRef(0);
 
   const push = useCallback((type: string, detail: string, verdict: ScreenshotMethod | null) => {
     const now = Date.now();
@@ -65,19 +69,44 @@ export function CaptureLab() {
     const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
     setPlatform(`${nav.userAgentData?.platform ?? navigator.platform} | ${navigator.userAgent}`);
     const onKey = (e: KeyboardEvent) => {
-      const verdict = detectScreenshotKey(e);
-      if (!verdict) chord.current.key(e, Date.now());
-      push(e.type, describeKey(e), verdict);
+      const direct = detectScreenshotKey(e);
+      if (!direct) chord.current.key(e, Date.now());
+      const verdict = direct ?? capture.current.event(e, Date.now());
+      push(e.type, `${describeKey(e)} hasFocus=${document.hasFocus()}`, verdict);
     };
-    const onBlur = () => push('blur', 'window lost focus', chord.current.blur(Date.now()));
+    // A mouse event with Ctrl and Shift reported as released while the page never saw the release.
+    const onMouse = (e: MouseEvent) => {
+      const verdict = capture.current.event(e, Date.now());
+      const now = Date.now();
+      if (verdict || now - lastMouse.current > 1000) {
+        lastMouse.current = now;
+        push(e.type, `ctrl=${e.ctrlKey} shift=${e.shiftKey} hasFocus=${document.hasFocus()}`, verdict);
+      }
+    };
+    const onBlur = () => {
+      capture.current.reset();
+      push('blur', `window lost focus hasFocus=${document.hasFocus()}`, chord.current.blur(Date.now()));
+    };
+    // Focus can leave the page without a blur event (the Edge capture bubble): poll document.hasFocus().
+    const timer = window.setInterval(() => {
+      const has = document.hasFocus();
+      const verdict = capture.current.poll(has, Date.now());
+      if (lastFocus.current !== null && lastFocus.current !== has) push('hasFocus', `document.hasFocus() is now ${has}`, verdict);
+      else if (verdict) push('hasFocus', `document.hasFocus() is ${has}`, verdict);
+      lastFocus.current = has;
+    }, 150);
     const simple = (type: string) => () => {
+      if (type === 'visibilitychange' || type === 'pagehide') capture.current.reset();
       const verdict = detectPrintEvent(type);
-      push(type, type === 'visibilitychange' ? `visibilityState=${document.visibilityState}` : '', verdict);
+      push(type, type === 'visibilitychange' ? `visibilityState=${document.visibilityState}` : type === 'resize' ? `${window.innerWidth}x${window.innerHeight}` : `hasFocus=${document.hasFocus()}`, verdict);
     };
     const handlers: Array<[string, EventListener]> = [
       ['keydown', onKey as EventListener],
       ['keyup', onKey as EventListener],
       ['blur', onBlur],
+      ['mousemove', onMouse as EventListener],
+      ['pointerdown', onMouse as EventListener],
+      ['resize', simple('resize')],
       ['focus', simple('focus')],
       ['visibilitychange', simple('visibilitychange')],
       ['pagehide', simple('pagehide')],
@@ -89,6 +118,7 @@ export function CaptureLab() {
       else window.addEventListener(type, fn, type === 'keydown' || type === 'keyup');
     }
     return () => {
+      window.clearInterval(timer);
       for (const [type, fn] of handlers) {
         if (type === 'visibilitychange') document.removeEventListener(type, fn);
         else window.removeEventListener(type, fn, type === 'keydown' || type === 'keyup');

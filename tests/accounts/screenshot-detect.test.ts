@@ -6,6 +6,7 @@ import {
   normaliseEventPath,
   SCREENSHOT_METHODS,
   SnipChordTracker,
+  CaptureChordTracker,
   screenshotMethodLabel,
   type KeyEventLike,
 } from '@/lib/security/screenshot-detect';
@@ -94,7 +95,7 @@ describe('detectScreenshotKey: recognised combinations', () => {
       'PRINT_EVENT',
     ])
       expect(isScreenshotMethod(m)).toBe(true);
-    expect(SCREENSHOT_METHODS).toHaveLength(7);
+    expect(SCREENSHOT_METHODS).toHaveLength(8);
     expect(isScreenshotMethod('KEYLOG')).toBe(false);
     expect(isScreenshotMethod(undefined)).toBe(false);
   });
@@ -157,15 +158,19 @@ describe('detectScreenshotKey: typing is never a match', () => {
     expect(detectScreenshotKey(ev({ key: 'p', code: 'KeyP', altKey: true }))).toBeNull();
   });
 
-  it('the chords are key down only (a key up of Ctrl+P or Cmd+Shift+3 does nothing)', () => {
+  it('Ctrl+P and Ctrl+Shift+S are key down only (their key up does nothing); the OS-handled Win/Cmd+Shift chords also count on key up', () => {
     expect(
       detectScreenshotKey(ev({ type: 'keyup', key: 'p', code: 'KeyP', ctrlKey: true })),
     ).toBeNull();
     expect(
+      detectScreenshotKey(ev({ type: 'keyup', key: 'S', code: 'KeyS', ctrlKey: true, shiftKey: true })),
+    ).toBeNull();
+    // Windows delivers only the key UP of Win+Shift+S (capture lab report, 1 Nov); macOS is assumed the same.
+    expect(
       detectScreenshotKey(
         ev({ type: 'keyup', key: '#', code: 'Digit3', metaKey: true, shiftKey: true }),
       ),
-    ).toBeNull();
+    ).toBe('MAC_SHORTCUT');
   });
 
   it('IME composition, other event types, modifiers alone and function keys', () => {
@@ -328,5 +333,97 @@ describe('SnipChordTracker (Win/Cmd+Shift then the window loses focus)', () => {
     const t = new SnipChordTracker();
     for (const key of ['Control', 'Alt', 'Shift', 's', 'S', '3']) t.key({ type: 'keydown', key, code: '' }, 1000);
     expect(t.blur(1100)).toBeNull();
+  });
+});
+
+describe('Win+Shift+S as the owner\'s Windows machine delivers it (capture lab report, 1 Nov)', () => {
+  it('recognises the key UP of S with Meta and Shift (the key down never reaches the page)', () => {
+    expect(
+      detectScreenshotKey(ev({ type: 'keyup', key: 'S', code: 'KeyS', metaKey: true, shiftKey: true })),
+    ).toBe('WIN_SHIFT_S');
+  });
+  it('does not match a key up of S with Shift only or Meta only', () => {
+    expect(detectScreenshotKey(ev({ type: 'keyup', key: 'S', code: 'KeyS', shiftKey: true }))).toBeNull();
+    expect(detectScreenshotKey(ev({ type: 'keyup', key: 's', code: 'KeyS', metaKey: true }))).toBeNull();
+  });
+});
+
+describe('CaptureChordTracker (Edge Web Capture: the page sees Ctrl+Shift go down and never come up)', () => {
+  const m = (type: string, key: string | undefined, over: Partial<{ ctrlKey: boolean; shiftKey: boolean; altKey: boolean; metaKey: boolean }> = {}) => ({
+    type,
+    ...(key ? { key } : {}),
+    ctrlKey: false,
+    shiftKey: false,
+    altKey: false,
+    metaKey: false,
+    ...over,
+  });
+
+  it('replays the owner\'s real Ctrl+Shift+S log: Control down, Shift down, then Esc key up with no modifiers', () => {
+    const t = new CaptureChordTracker();
+    expect(t.event(m('keydown', 'Control', { ctrlKey: true }), 8408)).toBeNull();
+    expect(t.event(m('keydown', 'Shift', { ctrlKey: true, shiftKey: true }), 8790)).toBeNull();
+    expect(t.event(m('keyup', 'Escape'), 11902)).toBe('CAPTURE_CHORD');
+  });
+
+  it('trips on a focus poll that says the page lost the keyboard focus, but not before 120 ms', () => {
+    const t = new CaptureChordTracker();
+    t.event(m('keydown', 'Control', { ctrlKey: true }), 1000);
+    t.event(m('keydown', 'Shift', { ctrlKey: true, shiftKey: true }), 1100);
+    expect(t.poll(false, 1150)).toBeNull();
+    expect(t.poll(true, 1500)).toBeNull();
+    expect(t.poll(false, 1500)).toBe('CAPTURE_CHORD');
+  });
+
+  it('trips on a mouse event that shows both keys released', () => {
+    const t = new CaptureChordTracker();
+    t.event(m('keydown', 'Control', { ctrlKey: true }), 1000);
+    t.event(m('keydown', 'Shift', { ctrlKey: true, shiftKey: true }), 1100);
+    expect(t.event(m('mousemove', undefined), 1500)).toBe('CAPTURE_CHORD');
+  });
+
+  it('does not trip when the release is seen (normal Ctrl+Shift, for example switching the input language)', () => {
+    const t = new CaptureChordTracker();
+    t.event(m('keydown', 'Control', { ctrlKey: true }), 1000);
+    t.event(m('keydown', 'Shift', { ctrlKey: true, shiftKey: true }), 1100);
+    t.event(m('keyup', 'Shift', { ctrlKey: true }), 1300);
+    t.event(m('keyup', 'Control'), 1350);
+    expect(t.event(m('keydown', 'a'), 2000)).toBeNull();
+    expect(t.poll(false, 2500)).toBeNull();
+  });
+
+  it('does not trip when a real key arrived (Ctrl+Shift+Z, Ctrl+Shift+Left): ordinary shortcuts the page saw', () => {
+    const t = new CaptureChordTracker();
+    t.event(m('keydown', 'Control', { ctrlKey: true }), 1000);
+    t.event(m('keydown', 'Shift', { ctrlKey: true, shiftKey: true }), 1100);
+    t.event(m('keydown', 'Z', { ctrlKey: true, shiftKey: true }), 1200);
+    expect(t.event(m('keyup', 'Escape'), 3000)).toBeNull();
+    expect(t.poll(false, 3500)).toBeNull();
+  });
+
+  it('does not trip while Ctrl and Shift are still reported down (mouse moves during Ctrl+Shift+click)', () => {
+    const t = new CaptureChordTracker();
+    t.event(m('keydown', 'Control', { ctrlKey: true }), 1000);
+    t.event(m('keydown', 'Shift', { ctrlKey: true, shiftKey: true }), 1100);
+    expect(t.event(m('mousemove', undefined, { ctrlKey: true, shiftKey: true }), 2000)).toBeNull();
+  });
+
+  it('ignores Alt+Tab (the lab control) and a reset by blur or hiding the tab', () => {
+    const a = new CaptureChordTracker();
+    a.event(m('keydown', 'Alt', { altKey: true }), 1000);
+    expect(a.poll(false, 2000)).toBeNull();
+    const b = new CaptureChordTracker();
+    b.event(m('keydown', 'Control', { ctrlKey: true }), 1000);
+    b.event(m('keydown', 'Shift', { ctrlKey: true, shiftKey: true }), 1100);
+    b.reset();
+    expect(b.poll(false, 2000)).toBeNull();
+  });
+
+  it('trips only once', () => {
+    const t = new CaptureChordTracker();
+    t.event(m('keydown', 'Control', { ctrlKey: true }), 1000);
+    t.event(m('keydown', 'Shift', { ctrlKey: true, shiftKey: true }), 1100);
+    expect(t.poll(false, 1500)).toBe('CAPTURE_CHORD');
+    expect(t.poll(false, 1700)).toBeNull();
   });
 });

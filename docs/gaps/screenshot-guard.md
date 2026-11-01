@@ -71,3 +71,18 @@ Owner test: Print Screen is caught; Win+Shift+S, Ctrl+Shift+S and the Mac shortc
 - **Known false positives:** Win+Shift+Tab and Cmd+Shift+Tab (the switcher also takes focus and the OS keeps the Tab). Accepted for now; the Super admin can Restore access.
 - **Still not detectable:** snipping tools started from the Start menu or a taskbar icon, browser or OS extensions, screen recorders, remote desktop, phone cameras. A visible watermark with the student's email is the stronger deterrent for those and is a possible follow-up.
 - **Not tested on real hardware:** the CI browser is Linux Chromium. The owner's Windows machine is the real test of `SNIP_CHORD` (does the snipping overlay blur the page in Edge/Chrome on Windows 10 and 11?). If it does not blur, the next step is a Super admin "capture lab" page that shows which events the browser delivers for each shortcut, so the rule can be tuned from real data.
+
+## Update 2, 1 Nov 2026: what the capture lab showed on the owner's Windows machine (Edge 156)
+
+The owner's real capture lab report (Windows 10/11, Edge):
+
+| Shortcut | What the page received | Result |
+| --- | --- | --- |
+| Win+Shift+S | keydown Meta, keydown Shift, **keyup S** (Shift+Meta), then `blur` | Caught by the SNIP_CHORD rule (Meta+Shift, no other key down, then blur); now also by the key up of S (`WIN_SHIFT_S`) |
+| Print Screen | **keyup only** (no keydown), then `blur` | Caught (`PRINT_SCREEN`) |
+| Ctrl+Shift+S (Edge Web Capture) | keydown Control, keydown Shift, **nothing else**: no S, no key up of Ctrl/Shift, no `blur`; the next event was the Esc key up with no modifiers | NOT caught by the direct match (Edge never delivers the S). Now caught by `CaptureChordTracker` (`CAPTURE_CHORD`) |
+| Alt+Tab (control) | keydown Alt, `blur`, `focus` | Not a match, as intended |
+
+`CAPTURE_CHORD`: Ctrl and Shift were pressed, no other key reached the page, the page did not blur or hide, and then either (a) `document.hasFocus()` becomes false (polled every 150 ms) or (b) the next key or mouse event reports Ctrl and Shift as already released although the page never saw the release. Ordinary shortcuts do not match: Ctrl+Shift+Z (a real key arrives), the input-language switch (the release is seen), a tab switch or new window (blur or hide resets the rule). It was written from the lab report and unit tested with that exact sequence; it is not testable on real Edge from CI, so the owner's machine is the real check. The lab (`/manage/security/lab`) now also logs `document.hasFocus()`, `resize` and mouse events so any browser that behaves differently shows up.
+
+The macOS key up of Cmd+Shift+3/4/5/6 is accepted by analogy with Windows; nothing was measured on a Mac.
