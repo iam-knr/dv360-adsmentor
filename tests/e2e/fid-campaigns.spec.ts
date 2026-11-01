@@ -127,7 +127,7 @@ test.describe('Campaigns list', () => {
     // remove the Status chip: both campaigns, then search by name and by ID
     await bar.getByRole('img', { name: 'Remove filter Status: Active' }).click();
     await expect(page.getByRole('link', { name: 'FID Beta Campaign' })).toBeVisible();
-    const input = bar.locator('input[aria-label="Search or filter"]');
+    const input = page.locator('input[aria-label="Search or filter"]');
     await input.fill('beta');
     await expect(page.getByRole('link', { name: 'FID Alpha Campaign' })).toHaveCount(0);
     await input.fill(campaign.publicId);

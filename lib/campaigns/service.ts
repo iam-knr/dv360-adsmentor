@@ -136,7 +136,9 @@ async function campaignIssues(
     { advertiserId: adv.id, ...(stored ? { id: stored.id } : {}) },
     { userId: ctx.user.id, role: roleOf(ctx.user) },
   );
-  return validate('campaign', toValidationInput(wire, currency), vctx, { trigger: 'save' });
+  const issues = validate('campaign', toValidationInput(wire, currency), vctx, { trigger: 'save' });
+  // Real DV360 has no KPI value input (fidelity audit CAM-041), so a missing value (CMP-012) no longer blocks a save.
+  return issues.filter((i) => i.ruleId !== 'CMP-012');
 }
 
 const soft = (issues: Issue[]): WireIssue[] =>
