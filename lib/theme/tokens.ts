@@ -5,8 +5,8 @@
 
 export const colors = {
   primary: { main: '#1a73e8', dark: '#1557b0', light: '#e8f0fe', contrastText: '#ffffff' },
-  link: '#1967d2',
-  nav: { activeBg: '#e8f0fe', activeText: '#0b57d0', hoverBg: '#f1f3f4', newDot: '#1a73e8' },
+  link: '#1a73e8',
+  nav: { activeBg: '#1a73e8', activeText: '#ffffff', hoverBg: '#f1f3f4', newDot: '#1a73e8' },
   status: {
     active: '#1e8e3e',
     warning: '#f29900',
@@ -42,6 +42,12 @@ export const colors = {
   toast: { bg: '#323232', action: '#8ab4f8' },
   tooltipBg: '#3c4043',
   hoverOverlay: 'rgba(60,64,67,.08)',
+  /** Body and header text in tables (real DV360 rgb(60,64,67)). */
+  tableText: '#3c4043',
+  /** Secondary button / date dropdown border (real DV360 rgb(128,134,139)). */
+  outlineStrong: '#80868b',
+  /** Grey ID text under names in lists (rgba(0,0,0,0.54)). */
+  idText: 'rgba(0,0,0,0.54)',
   outlinedHoverBg: '#f6fafe',
   progressTrack: '#d2e3fc',
   chart: ['#1a73e8', '#188038', '#f29900', '#d93025', '#9334e6', '#12b5cb', '#5f6368'],
@@ -58,7 +64,8 @@ export const colors = {
 } as const;
 
 export const fonts = {
-  display: '"Figtree Variable", "Figtree", "Roboto", "Helvetica Neue", Arial, sans-serif',
+  // The single place the display face is chosen (docs/gaps/fid-foundation.md). Swap here and in lib/theme/fonts.ts.
+  display: '"Google Sans", "Roboto", "Helvetica Neue", Arial, sans-serif',
   text: '"Roboto", "Helvetica Neue", Arial, sans-serif',
   mono: '"Roboto Mono", ui-monospace, Menlo, Consolas, monospace',
 } as const;

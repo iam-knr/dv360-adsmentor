@@ -29,8 +29,9 @@ describe('money', () => {
     expect(() => fromMinor(1.5, 'INR')).toThrow(/integer/);
   });
 
-  it('formats INR with Indian grouping', () => {
-    expect(format(123456.5, 'INR')).toBe('₹1,23,456.50');
+  it('formats INR with Western grouping like real DV360', () => {
+    expect(format(123456.5, 'INR')).toBe('₹123,456.50');
+    expect(format(12000, 'INR')).toBe('₹12,000.00');
   });
 
   it('formats SGD', () => {
@@ -44,8 +45,12 @@ import { money as expMoney } from '@/components/experiments/format';
 import { fmtMoney } from '@/lib/planning/table';
 
 describe('Q18 one formatter per currency', () => {
-  it('renders INR identically everywhere (rupee sign, Indian grouping)', () => {
-    const want = '₹11,02,900.00';
+  it('shows a dash for zero money in grid cells (CAM-014) but not in formatMoney', () => {
+    expect(formatCurrency(0, 'INR')).toBe('-');
+    expect(formatMoney(0, 'INR')).toBe('₹0.00');
+  });
+  it('renders INR identically everywhere (rupee sign, Western grouping)', () => {
+    const want = '₹1,102,900.00';
     expect(formatMoney(1102900, 'INR')).toBe(want);
     expect(formatMoney(1102900, '₹')).toBe(want);
     expect(formatCurrency(1102900, 'INR')).toBe(want);

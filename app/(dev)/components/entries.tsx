@@ -198,6 +198,7 @@ const NAV_ITEMS: NavItem[] = [
     id: 'resources',
     label: 'Resources',
     icon: 'navResources',
+    newDot: true,
     dividerAfter: true,
     children: [
       { id: 'brand', label: 'Brand controls' },
@@ -265,6 +266,12 @@ function ShellDemo() {
             { level: 'Campaign', name: 'Autumn launch' },
           ]}
         />
+      </Variant>
+      <Variant label="Buttons (fidelity probes: primary, secondary)">
+        <Stack direction="row" gap={3} data-testid="fidelity-buttons">
+          <Button variant="contained">New campaign</Button>
+          <Button variant="outlined">Last 30 days</Button>
+        </Stack>
       </Variant>
       <Stack direction="row" gap={6} alignItems="flex-start">
         <Variant label="Nav, expanded">

@@ -16,6 +16,7 @@ describe('middleware matcher', () => {
       '/_next/image',
       '/_next/webpack-hmr',
       '/favicon.ico',
+      '/icon.png',
       '/brand/adsmentor-logo-horizontal.png',
     ]) {
       expect(runs(p), p).toBe(false);
