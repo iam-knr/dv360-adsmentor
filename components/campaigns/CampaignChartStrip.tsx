@@ -17,7 +17,14 @@ import { useViewer } from '@/components/shell/ViewerProvider';
 const LOAD_MS = 600;
 
 function Spinner() {
-  return <CircularProgress size={24} aria-label="Loading" role="progressbar" sx={{ alignSelf: 'center' }} />;
+  return (
+    <CircularProgress
+      size={24}
+      aria-label="Loading"
+      role="progressbar"
+      sx={{ alignSelf: 'center' }}
+    />
+  );
 }
 
 export function CampaignChartStrip({
@@ -57,14 +64,14 @@ export function CampaignChartStrip({
             />
           ))}
           <Box sx={{ flex: 1 }} />
-          <Button
-            size="small"
-            onClick={custom.onTour}
-            startIcon={<DvIcon name="tour" size={18} />}
-          >
+          <Button size="small" onClick={custom.onTour} startIcon={<DvIcon name="tour" size={18} />}>
             Tour custom charts
           </Button>
-          <Button size="small" onClick={custom.onShare} startIcon={<DvIcon name="share" size={18} />}>
+          <Button
+            size="small"
+            onClick={custom.onShare}
+            startIcon={<DvIcon name="share" size={18} />}
+          >
             Share
           </Button>
         </Box>

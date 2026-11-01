@@ -58,14 +58,18 @@ export function useDateParam(): (d: string) => void {
 
 /**
  * Real DV360 shows the Intelligence panel (Advertiser health, Optimization suggestions) every time the Campaigns list
- * loads. RailHost opens a panel from `?sim_rail=`; this sets it without a navigation. It only runs on mount.
+ * loads. RailHost opens a panel from `?sim_rail=`; this sets it with a soft navigation. It only runs on mount.
  */
 export function OpenIntelligenceOnLoad() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const search = useSearchParams();
   useEffect(() => {
-    const url = new URL(window.location.href);
-    if (url.searchParams.get('sim_rail')) return;
-    url.searchParams.set('sim_rail', 'intelligence');
-    window.history.replaceState(window.history.state, '', url.toString());
+    if (search?.get('sim_rail')) return;
+    const qs = new URLSearchParams(search?.toString() ?? '');
+    qs.set('sim_rail', 'intelligence');
+    router.replace(`${pathname}?${qs.toString()}`, { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per load
   }, []);
   return null;
 }

@@ -64,7 +64,11 @@ const CREATIVE_TYPES = [
 function currencySymbol(code: string): string {
   try {
     return (
-      new Intl.NumberFormat('en-US', { style: 'currency', currency: code, currencyDisplay: 'narrowSymbol' })
+      new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: code,
+        currencyDisplay: 'narrowSymbol',
+      })
         .formatToParts(0)
         .find((p) => p.type === 'currency')?.value ?? code
     );

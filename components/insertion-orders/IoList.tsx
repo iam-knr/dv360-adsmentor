@@ -225,8 +225,7 @@ export function IoList({
       group: 'customBidding',
       align: 'right',
       width: 180,
-      cell: (r) =>
-        r.customImpressionValueCost === null ? '-' : num(r.customImpressionValueCost),
+      cell: (r) => (r.customImpressionValueCost === null ? '-' : num(r.customImpressionValueCost)),
     },
   ];
 

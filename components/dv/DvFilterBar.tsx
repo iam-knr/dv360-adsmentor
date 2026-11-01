@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useRef, useState } from 'react';
+import { useId, useRef, useState, type MouseEventHandler } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
@@ -55,6 +55,23 @@ export function filterChipText(field: FilterField | undefined, v: FilterValue): 
   const raw = v.values[0] ?? '';
   const option = field?.options?.find((o) => o.value === raw);
   return `${label}: ${option?.label ?? raw}`;
+}
+
+/** MUI injects `onClick` and `className` into the delete icon; `DvIcon` ignores both, so the click would open the chip. */
+function ChipDeleteIcon({
+  label,
+  onClick,
+  className,
+}: {
+  label: string;
+  onClick?: MouseEventHandler<HTMLSpanElement>;
+  className?: string;
+}) {
+  return (
+    <Box component="span" className={className} onClick={onClick} sx={{ display: 'inline-flex' }}>
+      <DvIcon name="close" size={16} label={label} />
+    </Box>
+  );
 }
 
 export function DvFilterBar({
@@ -186,7 +203,7 @@ export function DvFilterBar({
             disabled={disabled}
             onClick={(e) => openEditor(v.fieldId, e.currentTarget)}
             onDelete={() => setFilter(v.fieldId, [])}
-            deleteIcon={<DvIcon name="close" size={16} label={`Remove filter ${label}`} />}
+            deleteIcon={<ChipDeleteIcon label={`Remove filter ${label}`} />}
             sx={{ '&:hover': { bgcolor: 'surface.sunken' } }}
           />
         );

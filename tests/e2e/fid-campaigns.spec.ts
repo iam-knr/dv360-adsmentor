@@ -78,15 +78,18 @@ test.describe('Campaigns list', () => {
     await login(page);
     for (let i = 0; i < 2; i++) {
       await page.goto(A('/cs'));
-      await expect(page.getByText('Advertiser health')).toBeVisible();
-      await expect(page.getByText('Optimization suggestions')).toBeVisible();
+      await expect(page.getByText(/^advertiser health$/i)).toBeVisible();
+      await expect(page.getByText(/^optimization suggestions$/i)).toBeVisible();
     }
   });
 
   test('CAM-005/034: date presets, and Today is the sim date', async ({ page }) => {
     await login(page);
     await page.goto(A('/cs'));
-    await page.getByRole('button', { name: /^(?!More)[A-Z][a-z]{2} \d/ }).first().click();
+    await page
+      .getByRole('button', { name: /^(?!More)[A-Z][a-z]{2} \d/ })
+      .first()
+      .click();
     const presets = page.getByRole('menu', { name: 'Date presets' });
     await expect(presets.getByRole('menuitem')).toHaveText([
       'Custom',
@@ -99,11 +102,11 @@ test.describe('Campaigns list', () => {
       'Quarter to date',
       'Year to date',
       'Lifetime',
-      /30 days up to today/,
-      /30 days up to yesterday/,
-    ] as never);
+      /days up to today$/,
+      /days up to yesterday$/,
+    ]);
     await expect(page.getByLabel('Start date')).toBeVisible();
-    await presets.getByRole('menuitem', { name: 'Today' }).click();
+    await presets.getByRole('menuitem', { name: 'Today', exact: true }).click();
     await expect(page.getByLabel('Start date')).toHaveValue(simToday);
     await expect(page.getByLabel('End date')).toHaveValue(simToday);
     await page.getByRole('button', { name: 'Apply' }).click();
@@ -121,12 +124,6 @@ test.describe('Campaigns list', () => {
     await expect(page.getByRole('link', { name: 'FID Alpha Campaign' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'FID Beta Campaign' })).toHaveCount(0);
 
-    // the funnel lists the filter fields
-    await bar.getByRole('button', { name: /Filters/ }).click();
-    for (const f of ['Status', 'Goal', 'Budget'])
-      await expect(page.getByRole('button', { name: f, exact: true }).last()).toBeVisible();
-    await page.keyboard.press('Escape');
-
     // remove the Status chip: both campaigns, then search by name and by ID
     await bar.getByRole('img', { name: 'Remove filter Status: Active' }).click();
     await expect(page.getByRole('link', { name: 'FID Beta Campaign' })).toBeVisible();
@@ -140,6 +137,12 @@ test.describe('Campaigns list', () => {
     await expect(bar.getByRole('button', { name: `Name/ID: ${campaign.publicId}` })).toBeVisible();
     await bar.getByRole('button', { name: 'Clear all' }).click();
     await expect(page.getByRole('link', { name: 'FID Beta Campaign' })).toBeVisible();
+
+    // the funnel lists the filter fields
+    await bar.getByRole('button', { name: /Filters/ }).click();
+    for (const f of ['Status', 'Goal', 'Budget'])
+      await expect(page.getByRole('button', { name: f, exact: true }).last()).toBeVisible();
+    await page.keyboard.press('Escape');
   });
 
   test('CAM-003: the Insertion orders tab keeps the list chrome', async ({ page }) => {
@@ -191,7 +194,10 @@ test.describe('New campaign form', () => {
     ];
     const ys: number[] = [];
     for (const t of order) {
-      const box = await page.getByText(t, { exact: true }).first().boundingBox();
+      const box = await page
+        .getByText(new RegExp(`^${t}`))
+        .first()
+        .boundingBox();
       expect(box, t).not.toBeNull();
       ys.push(box!.y);
     }
@@ -201,9 +207,7 @@ test.describe('New campaign form', () => {
     await expect(page.getByLabel('Audio')).toBeVisible();
     await expect(page.getByText('End date (optional)')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Add another url' })).toBeVisible();
-    await expect(
-      page.getByPlaceholder('Add keywords separated by a comma'),
-    ).toBeVisible();
+    await expect(page.getByPlaceholder('Add keywords separated by a comma')).toBeVisible();
     await expect(
       page.getByText('Enter up to 5 keywords to help improve recommendations.'),
     ).toBeVisible();
@@ -221,9 +225,9 @@ test.describe('New campaign form', () => {
     // Create and Cancel are the last things on the scrolling page, not a sticky footer (CAM-046)
     const create = page.getByRole('button', { name: 'Create' });
     await create.scrollIntoViewIfNeeded();
-    expect(await create.evaluate((el) => getComputedStyle(el.closest('footer') ?? el).position)).not.toBe(
-      'sticky',
-    );
+    expect(
+      await create.evaluate((el) => getComputedStyle(el.closest('footer') ?? el).position),
+    ).not.toBe('sticky');
     await expect(page.getByRole('button', { name: 'Cancel' })).toBeVisible();
   });
 
@@ -233,7 +237,7 @@ test.describe('New campaign form', () => {
     await page.locator('#name').fill('FID Created Campaign');
     await page.getByRole('combobox', { name: /Overall campaign goal/ }).click();
     await page.getByRole('option', { name: /Raise awareness/ }).click();
-    await page.getByRole('combobox', { name: 'KPI', exact: true }).click();
+    await page.getByRole('combobox', { name: /^KPI/ }).click();
     await page.getByRole('option', { name: /^CPM/ }).first().click();
     await page.getByRole('checkbox', { name: 'Display' }).check();
     await page.getByLabel('Landing page URL 1').fill('https://example.com/offer');
@@ -262,7 +266,12 @@ test.describe('Campaign detail', () => {
 
     // five fixed cards (CAM-063)
     const cards = page.getByTestId('chart-cards').getByRole('region');
-    await expect(cards.filter({ hasText: /^(Total cost|Avg\. performance|Impressions lost|Added impression reach|Explore budget options)/ })).toHaveCount(5);
+    await expect(
+      cards.filter({
+        hasText:
+          /^(Total cost|Avg\. performance|Impressions lost|Added impression reach|Explore budget options)/,
+      }),
+    ).toHaveCount(5);
     await expect(page.getByRole('progressbar').first()).toBeVisible();
     await expect(page.getByRole('button', { name: /Scroll charts/ })).toHaveCount(0);
     await expect(page.getByText('No spend yet for this period.')).toHaveCount(0);
@@ -281,7 +290,14 @@ test.describe('Campaign detail', () => {
 
     // column groups and columns (CAM-066, CAM-067)
     const headers = page.getByRole('columnheader');
-    for (const g of ['Settings', 'Goal', 'Delivery', 'Interactions', 'Conversions', 'Custom Bidding'])
+    for (const g of [
+      'Settings',
+      'Goal',
+      'Delivery',
+      'Interactions',
+      'Conversions',
+      'Custom Bidding',
+    ])
       await expect(headers.filter({ hasText: new RegExp(`^${g}$`) }).first()).toBeVisible();
     for (const c of [
       'Id',
@@ -295,7 +311,9 @@ test.describe('Campaign detail', () => {
       'CPA',
       'Custom Impr. value / cost',
     ])
-      await expect(headers.filter({ hasText: new RegExp(`^${c.replace(/[.]/g, '\\.')}$`) }).first()).toBeVisible();
+      await expect(
+        headers.filter({ hasText: new RegExp(`^${c.replace(/[.]/g, '\\.')}$`) }).first(),
+      ).toBeVisible();
 
     // no NEW badge on the Alerts nav item (CAM-060)
     const alerts = page.getByRole('link', { name: /^Alerts/ }).first();

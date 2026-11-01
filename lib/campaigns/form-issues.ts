@@ -11,7 +11,8 @@ export function realFormIssues(issues: WireIssue[], value: CampaignWire): WireIs
       ? { ...i, message: REQUIRED_VALUE }
       : i,
   );
-  const needsKpi = !value.kpi.type && !out.some((i) => i.path === 'kpi.type' && i.severity === 'error');
+  const needsKpi =
+    !value.kpi.type && !out.some((i) => i.path === 'kpi.type' && i.severity === 'error');
   // Only when the form is being rejected anyway: the server stays the judge of what is saved.
   if (needsKpi && out.some((i) => i.severity === 'error')) {
     out.push({ path: 'kpi.type', severity: 'error', code: 'CMP-011', message: REQUIRED_VALUE });

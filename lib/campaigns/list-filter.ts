@@ -28,7 +28,8 @@ export function initialChips(initialStatus?: string | null): ChipValue[] {
   return [{ fieldId: 'status', values: [initialStatus ?? 'ACTIVE'] }];
 }
 
-const valuesOf = (chips: ChipValue[], id: string) => chips.find((c) => c.fieldId === id)?.values ?? [];
+const valuesOf = (chips: ChipValue[], id: string) =>
+  chips.find((c) => c.fieldId === id)?.values ?? [];
 
 /** Free text matches the name (contains, any case) or the ID (contains). Several terms are alternatives. */
 export function matchesNameId(row: { name: string; publicId: string }, terms: string[]): boolean {
@@ -59,8 +60,7 @@ export function filterCampaignRows(rows: CampaignRow[], chips: ChipValue[], text
     const budget = valuesOf(c, 'budget');
     return (
       (goal.length === 0 || (r.goal !== null && goal.includes(r.goal))) &&
-      (budget.length === 0 ||
-        budget.includes(r.budget === null ? 'UNKNOWN' : 'SET'))
+      (budget.length === 0 || budget.includes(r.budget === null ? 'UNKNOWN' : 'SET'))
     );
   });
 }

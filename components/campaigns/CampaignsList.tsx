@@ -48,7 +48,12 @@ const DOT: Record<EntityStatusKey, EntityStatus> = {
 
 const FIELDS: FilterField[] = [
   { id: 'status', label: 'Status', type: 'multi', options: STATUS_OPTIONS },
-  { id: 'goal', label: 'Goal', type: 'multi', options: CAMPAIGN_GOALS.map((g) => ({ value: g, label: CAMPAIGN_GOAL_LABEL[g] })) },
+  {
+    id: 'goal',
+    label: 'Goal',
+    type: 'multi',
+    options: CAMPAIGN_GOALS.map((g) => ({ value: g, label: CAMPAIGN_GOAL_LABEL[g] })),
+  },
   { id: 'budget', label: 'Budget', type: 'multi', options: BUDGET_OPTIONS },
 ];
 

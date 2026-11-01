@@ -105,8 +105,14 @@ describe('list filter chips', () => {
 
 describe('toCsv', () => {
   it('quotes commas, quotes and line breaks', () => {
-    expect(toCsv(['a', 'b'], [['x,y', 'say "hi"'], [1, null]])).toBe(
-      'a,b\r\n"x,y","say ""hi"""\r\n1,\r\n',
-    );
+    expect(
+      toCsv(
+        ['a', 'b'],
+        [
+          ['x,y', 'say "hi"'],
+          [1, null],
+        ],
+      ),
+    ).toBe('a,b\r\n"x,y","say ""hi"""\r\n1,\r\n');
   });
 });
