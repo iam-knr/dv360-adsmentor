@@ -87,10 +87,22 @@ export async function createHistoryJobOnce(
     where: { sandboxId, kind: 'FAST_FORWARD', status: { in: ['QUEUED', 'RUNNING', 'DONE'] } },
     orderBy: { createdAt: 'asc' },
   });
-  const existing = rows.find(
+  const history = rows.filter(
     (r) => (r.params as { history?: unknown } | null)?.history !== undefined,
   );
-  if (existing) return toView(existing);
+  // an open job is always the one to use; a DONE one only while the clock still shows its ticks applied (a rewound
+  // sandbox, tickIndex back below the job's length, is a new history)
+  const open = history.find((r) => r.status !== 'DONE');
+  if (open) return toView(open);
+  const done = history.find((r) => r.status === 'DONE');
+  if (done) {
+    const clock = await tx.simClock.findUnique({
+      where: { sandboxId },
+      select: { tickIndex: true },
+    });
+    const length = (done.params as { simHours?: number } | null)?.simHours ?? 0;
+    if (clock && Number(clock.tickIndex) >= length) return toView(done);
+  }
   return createJob(tx, sandboxId, 'FAST_FORWARD', params);
 }
 

@@ -252,6 +252,7 @@ async function resumeBackfill(db: Db, sb: Sandbox): Promise<void> {
   await fastForward(sb.id, remaining, {
     history: { hourlyDays: 14, sliceDays: 14, today: simToday() },
     deadline: Date.now() + STEP_BUDGET_MS,
+    once: true,
   });
 }
 

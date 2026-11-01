@@ -179,6 +179,7 @@ export async function provisionSandbox(db: Db, input: ProvisionInput): Promise<P
         today,
       },
       ...(input.deadlineMs !== undefined ? { deadline: input.deadlineMs } : {}),
+      once: true,
     });
     if (job.status === 'DONE') await finishBackfill(db, sandbox.id, today);
     return {

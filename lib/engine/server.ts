@@ -327,6 +327,8 @@ export async function fastForward(
     untilDate?: string;
     deadline?: number;
     history?: HistoryParams;
+    /** Provisioning: the build's history is ONE job; reuse the open or finished one instead of adding another. */
+    once?: boolean;
   } = {},
 ): Promise<JobView> {
   if (!Number.isInteger(simHours) || simHours < 1 || simHours > 24 * 120) {
@@ -340,7 +342,7 @@ export async function fastForward(
   };
   const job = await withBypass(
     (tx) =>
-      params.history
+      params.history && opts.once
         ? createHistoryJobOnce(tx, sandboxId, params)
         : createJob(tx, sandboxId, 'FAST_FORWARD', params),
     TX,
