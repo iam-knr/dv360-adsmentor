@@ -13,8 +13,8 @@ export const TEMPLATES: readonly TemplateDef[] = [
   {
     family: 'BASIC',
     key: 'advertiser-overview',
-    title: 'Advertiser overview',
-    description: 'Delivery, clicks, conversions and cost for each advertiser.',
+    title: 'Advertiser Overview',
+    description: 'Key performance metrics by advertiser',
     definition: {
       dimensions: ['advertiser'],
       metrics: [
@@ -31,8 +31,8 @@ export const TEMPLATES: readonly TemplateDef[] = [
   {
     family: 'BASIC',
     key: 'io-pacing',
-    title: 'Insertion order pacing',
-    description: 'Budget, spend and pacing of every budget segment.',
+    title: 'Insertion Order Pacing',
+    description: 'Budget pacing by insertion order',
     definition: {
       dimensions: [
         'insertion_order',
@@ -47,8 +47,8 @@ export const TEMPLATES: readonly TemplateDef[] = [
   {
     family: 'BASIC',
     key: 'app-url-viewability',
-    title: 'App/URL viewability',
-    description: 'Viewability of the apps and sites you bought.',
+    title: 'App/URL Viewability',
+    description: 'Active View viewability performance by App or URL',
     definition: {
       dimensions: ['app_url'],
       metrics: [
@@ -63,8 +63,8 @@ export const TEMPLATES: readonly TemplateDef[] = [
   {
     family: 'REACH',
     key: 'unique-reach',
-    title: 'Unique reach',
-    description: 'People reached and how often, by advertiser and line item.',
+    title: 'Unique Reach',
+    description: 'Unique Reach performance by advertiser and line item',
     definition: {
       dimensions: ['advertiser', 'line_item'],
       metrics: ['impression_reach', 'average_impression_frequency'],
@@ -74,8 +74,8 @@ export const TEMPLATES: readonly TemplateDef[] = [
   {
     family: 'REACH',
     key: 'unique-reach-cost',
-    title: 'Unique reach and cost',
-    description: 'Reach, frequency and the cost of each person reached, by insertion order.',
+    title: 'Unique Reach and Cost',
+    description: 'Unique Reach and cost performance by insertion order',
     definition: {
       dimensions: ['insertion_order'],
       metrics: [
@@ -89,8 +89,8 @@ export const TEMPLATES: readonly TemplateDef[] = [
   {
     family: 'REACH',
     key: 'unique-household-reach',
-    title: 'Unique household reach',
-    description: 'Households reached and household frequency.',
+    title: 'Unique Household Reach',
+    description: 'Unique Household Reach by advertiser and line item',
     definition: {
       dimensions: ['advertiser', 'line_item'],
       metrics: ['unique_household_reach_impression', 'average_household_frequency'],
@@ -100,8 +100,8 @@ export const TEMPLATES: readonly TemplateDef[] = [
   {
     family: 'VIDEO',
     key: 'video-performance',
-    title: 'Video performance',
-    description: 'Starts, completions, skips and cost for each video creative.',
+    title: 'Video Performance',
+    description: 'Key video metrics by creative',
     definition: {
       dimensions: ['creative'],
       metrics: [
@@ -157,7 +157,7 @@ export const OFFLINE_TEMPLATES: readonly OfflineTemplate[] = [
     type: 'FLOODLIGHT',
     title: 'Floodlight Impressions',
     dimensions: ['date', 'advertiser'],
-    metrics: ['impressions', 'clicks', 'floodlight_impressions'],
+    metrics: ['floodlight_impressions'],
     dateRange: 'LAST_7_DAYS',
   },
   {

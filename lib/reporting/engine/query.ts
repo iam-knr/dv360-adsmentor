@@ -82,9 +82,8 @@ export async function runQuery(
       ? loadReach(tx, sandboxId, lineItemIds, range.to)
       : Promise.resolve({ pools: new Map<string, number>(), lifetime: new Map<string, number>() }),
   ]);
-  return compute({
+  const input = {
     def,
-    plan,
     world,
     range,
     today,
@@ -93,7 +92,27 @@ export async function runQuery(
     reachPools: reach.pools,
     lifetimeImpressions: reach.lifetime,
     ...(opts.limit !== undefined ? { limit: opts.limit } : {}),
-  });
+  };
+  const result = compute({ ...input, plan });
+  // Grand total: the same metrics over the whole range with no dimension (ratios and reach recomputed, not summed).
+  if (def.dimensions.length > 0 && result.rows.length > 1 && !plan.hourly) {
+    try {
+      const flat = { ...def, dimensions: [] as string[] };
+      const tp = makePlan(flat, [...new Set(filterKinds)]);
+      const loaded = await loadDaily(tx, sandboxId, lineItemIds, tp, fetchFrom, fetchTo);
+      const t = compute({ ...input, def: flat, plan: tp, daily: loaded, limit: 1 });
+      const row = t.rows[0];
+      if (row) {
+        const byKey = new Map(t.columns.map((c, i) => [c.key, row[i] ?? null]));
+        result.totals = result.columns.map((c, i) =>
+          c.kind === 'DIMENSION' ? (i === 0 ? 'Total' : null) : (byKey.get(c.key) ?? null),
+        );
+      }
+    } catch {
+      /* no total row */
+    }
+  }
+  return result;
 }
 
 function shift(iso: string, days: number): string {

@@ -1,6 +1,6 @@
 import { ReportsHub } from '@/components/reporting/ReportsHub';
 import { requireView } from '@/lib/scope/guard';
-import { HUB_PAGE_SIZE, listReports, listTemplates, pageContext } from '@/lib/reporting/service';
+import { listReports, listTemplates, pageContext } from '@/lib/reporting/service';
 
 export const metadata = { title: 'Reports' };
 
@@ -21,9 +21,10 @@ export default async function Page({
   const createdBy = one(sp.createdBy) === 'any' ? 'any' : 'me';
   const q = one(sp.q) ?? '';
   const page = Math.max(1, Number(one(sp.page)) || 1);
+  const pageSize = Number(one(sp.rows)) || undefined;
   const [ctx, list] = await Promise.all([
     pageContext(user, partnerId),
-    listReports(user, partnerId, { kind: tab, createdBy, q, page }),
+    listReports(user, partnerId, { kind: tab, createdBy, q, page, ...(pageSize ? { pageSize } : {}) }),
   ]);
   return (
     <ReportsHub
@@ -32,7 +33,7 @@ export default async function Page({
       createdBy={createdBy}
       q={q}
       page={list.page}
-      pageSize={HUB_PAGE_SIZE}
+      pageSize={list.pageSize}
       total={list.total}
       rows={list.rows}
       templates={listTemplates()}

@@ -27,7 +27,7 @@ export const DEFAULT_DELIVERY = (name: string): ReportDelivery => ({
   shareWith: [],
 });
 
-const REPEATS = [
+export const REPEATS = [
   { value: 'DAILY', label: 'Daily' },
   { value: 'WEEKLY', label: 'Weekly' },
   { value: 'MONTHLY', label: 'Monthly' },
