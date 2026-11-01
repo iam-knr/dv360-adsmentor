@@ -118,5 +118,5 @@ export default function middleware(req: NextRequest, event: NextFetchEvent) {
 // Only Next.js internals and the public brand folder skip the middleware. A file extension is not a reason to skip
 // it: a DV360 route may end in ".js" or ".txt" (an id or a name), and it still needs a session.
 export const config = {
-  matcher: ['/((?!_next/|favicon\\.ico$|brand/).*)'],
+  matcher: ['/((?!_next/|favicon\\.ico$|icon\\.png$|brand/).*)'],
 };

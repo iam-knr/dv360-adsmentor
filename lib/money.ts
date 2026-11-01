@@ -14,7 +14,8 @@ const MINOR_DIGITS: Record<CurrencyCode, number> = {
 };
 
 const LOCALE: Record<CurrencyCode, string> = {
-  INR: 'en-IN',
+  // Real DV360 shows rupees with Western grouping ("₹12,000.00"), not lakh grouping (CAM-015).
+  INR: 'en-US',
   SGD: 'en-SG',
   USD: 'en-US',
   EUR: 'en-IE',
@@ -42,7 +43,7 @@ export function fromMinor(minor: number, currency: CurrencyCode): number {
   return minor / 10 ** digits(currency);
 }
 
-/** Display string such as "₹1,23,456.50" (INR) or "$1,234.50" (SGD). */
+/** Display string such as "₹123,456.50" (INR) or "$1,234.50" (SGD). */
 export function format(amount: number, currency: CurrencyCode): string {
   const d = digits(currency);
   return new Intl.NumberFormat(LOCALE[currency], {
@@ -63,7 +64,7 @@ export function isCurrencyCode(code: string | null | undefined): code is Currenc
 
 /**
  * The one display formatter for money amounts everywhere in the UI (Q18).
- * Accepts a currency code or the rupee sign; INR always renders as "₹1,23,456.50".
+ * Accepts a currency code or the rupee sign; INR always renders as "₹123,456.50".
  * Unknown codes fall back to "<CODE> 1,234.50".
  */
 export function formatMoney(amount: number | null | undefined, currency: string | null | undefined): string {

@@ -79,6 +79,8 @@ export const ICON_NAMES = [
   'last_page',
   'circle',
   'pause_circle',
+  'pause',
+  'play_arrow',
   'radio_button_unchecked',
   'show_chart',
   'calendar_today',

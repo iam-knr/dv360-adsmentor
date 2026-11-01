@@ -14,8 +14,8 @@ import { toViewerInfo } from '@/lib/scope/guard';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: { template: '%s - DV360 Simulator by Adsmetor', default: 'DV360 Simulator by Adsmetor' },
-  icons: { icon: '/brand/adsmentor-icon.png' },
+  // Real DV360 shows the same tab title on every page (CAM-021, 050, 071, REP-021); the template drops the page name.
+  title: { template: 'Display & Video 360', default: 'Display & Video 360' },
 };
 
 export default async function DvLayout({ children }: { children: ReactNode }) {

@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import Box from '@mui/material/Box';
+import type { Theme } from '@mui/material/styles';
 import ButtonBase from '@mui/material/ButtonBase';
 import Checkbox from '@mui/material/Checkbox';
 import IconButton from '@mui/material/IconButton';
@@ -189,7 +190,7 @@ export function DvNameCell({
           {name}
         </Link>
         {id ? (
-          <Typography variant="caption" component="div">
+          <Typography variant="caption" component="div" sx={{ color: colors.idText }}>
             {id}
           </Typography>
         ) : null}
@@ -223,9 +224,21 @@ export function rangeText(page: number, pageSize: number, total: number): string
   return `${start} - ${end} of ${total}`;
 }
 
+/**
+ * Header cells: transparent background like real DV360 (CAM-026). A white gradient image keeps the sticky
+ * header opaque while rows scroll underneath, without changing the computed background colour.
+ */
+const headerBg = {
+  backgroundColor: 'transparent',
+  backgroundImage: (t: Theme) =>
+    `linear-gradient(${t.palette.background.paper}, ${t.palette.background.paper})`,
+} as const;
+
 const cellSx = {
   px: 3,
-  py: 2,
+  // 3 px keeps a two line name cell (name + id) at the 40 px row height of real DV360 (CAM-028).
+  py: '3px',
+  height: sizes.rowHeight,
   borderBottom: '1px solid',
   borderColor: 'divider',
   typography: 'tableCell',
@@ -703,7 +716,7 @@ export function DvGrid<T>(props: DvGridProps<T>) {
                     top: 0,
                     zIndex: (t) => (s.sticky ? t.zIndex.gridCorner : t.zIndex.gridStickyHeader),
                     left: s.sticky ? s.left : undefined,
-                    bgcolor: 'surface.sunken',
+                    ...headerBg,
                     borderBottom: '1px solid',
                     borderBottomColor: colors.dividerStrong,
                     height: sizes.groupHeaderHeight,
@@ -758,7 +771,7 @@ export function DvGrid<T>(props: DvGridProps<T>) {
                       sx={(t) => ({
                         ...cellSx,
                         ...hsx(t),
-                        bgcolor: 'surface.sunken',
+                        ...headerBg,
                         p: 0,
                         textAlign: 'center',
                         typography: 'tableHeader',
@@ -785,7 +798,7 @@ export function DvGrid<T>(props: DvGridProps<T>) {
                       sx={(t) => ({
                         ...cellSx,
                         ...hsx(t),
-                        bgcolor: 'surface.sunken',
+                        ...headerBg,
                         p: 0,
                         textAlign: 'center',
                       })}
@@ -814,7 +827,7 @@ export function DvGrid<T>(props: DvGridProps<T>) {
                       sx={(t) => ({
                         ...cellSx,
                         ...hsx(t),
-                        bgcolor: 'surface.sunken',
+                        ...headerBg,
                         p: 0,
                         typography: 'tableHeader',
                       })}
@@ -833,7 +846,7 @@ export function DvGrid<T>(props: DvGridProps<T>) {
                       sx={(t) => ({
                         ...cellSx,
                         ...hsx(t),
-                        bgcolor: 'surface.sunken',
+                        ...headerBg,
                         p: 0,
                         typography: 'tableHeader',
                       })}
@@ -889,7 +902,7 @@ export function DvGrid<T>(props: DvGridProps<T>) {
                       ...hsx(t),
                       ...stickyStyle(c, t.zIndex.gridCorner, ''),
                       top: sizes.groupHeaderHeight,
-                      bgcolor: 'surface.sunken',
+                      ...headerBg,
                       typography: 'tableHeader',
                       textAlign: numeric ? 'right' : 'left',
                       whiteSpace: 'nowrap',
