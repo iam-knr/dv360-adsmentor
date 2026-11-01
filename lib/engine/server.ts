@@ -1,10 +1,11 @@
 // Engine runtime API (engine.md 1.6): lazy catch-up, the cron entry point, fast-forward, reset and the clock controls.
 // Everything here runs through withBypass (role app_engine). It is the only module that app/api/** imports from the
 // engine besides the types in lib/engine/index.ts.
-import { prisma, withBypass } from '@/lib/db';
+import { prisma, withBypass, type Tx } from '@/lib/db';
 import { finishBackfill } from '@/lib/seed/after-history';
 import { MAX_DUE_TICKS, SPEED_PRESETS, speedAllowed } from './clock/clock';
 import {
+  createHistoryJobOnce,
   createJob,
   getJob,
   openJobs,
@@ -17,6 +18,7 @@ import {
 import { countDueSandboxes, listDueSandboxes, logFailure } from './io/locks';
 import { BATCH_TICKS, runBatch, type BatchResult } from './io/runBatch';
 import { trimHourly } from './io/retention';
+import { isTransientError, withTransientRetry } from '@/lib/db/transient';
 import { nowMs } from './io/time';
 import { MS_HOUR } from './calendar';
 
@@ -121,7 +123,8 @@ export async function runDueTicks(
 ): Promise<RunDueResult> {
   const now = opts.now ?? nowMs();
   const ids = await withBypass(
-    (tx) => listDueSandboxes(tx, now, opts.maxSandboxes ?? MAX_SANDBOXES_PER_CALL, opts.activeWithinMs),
+    (tx) =>
+      listDueSandboxes(tx, now, opts.maxSandboxes ?? MAX_SANDBOXES_PER_CALL, opts.activeWithinMs),
     TX,
   );
   const result: RunDueResult = { processed: 0, ticks: 0, failed: 0, busy: 0, stillDue: 0, jobs: 0 };
@@ -175,6 +178,8 @@ async function runJob(job: JobView, deadline: number): Promise<JobView> {
   try {
     return await runJobChunks(job, deadline);
   } catch (err) {
+    // transient (see io/transient.ts): the job stays open, the next call continues it; the caller decides when to give up
+    if (isTransientError(err)) throw err;
     const message = (err instanceof Error ? err.message : String(err)).slice(0, 300);
     const params = job.params as FastForwardParams;
     await withBypass(async (tx) => {
@@ -189,6 +194,12 @@ async function runJob(job: JobView, deadline: number): Promise<JobView> {
   }
 }
 
+/** What one locked batch of a job did (see `runJobChunks`). */
+type JobStep =
+  | { kind: 'busy' } // another runner holds the job or the clock
+  | { kind: 'closed' } // the job is no longer open (DONE by someone else, FAILED, CANCELLED)
+  | { kind: 'ran'; progress: JobProgress; ticks: number; finished: boolean };
+
 async function runJobChunks(job: JobView, deadline: number): Promise<JobView> {
   const params = job.params as FastForwardParams;
   const startedAt = nowMs();
@@ -200,24 +211,43 @@ async function runJobChunks(job: JobView, deadline: number): Promise<JobView> {
   const runnable = sandbox?.status === 'ACTIVE' || (params.history && sandbox?.status === 'FROZEN');
   if (!sandbox || !runnable) {
     await withBypass((tx) =>
-      setJob(tx, job.id, { status: 'FAILED', error: 'Sandbox is not active' }, new Date(startedAt)),
+      tx.simJob.updateMany({
+        where: { id: job.id, status: { in: ['QUEUED', 'RUNNING'] } },
+        data: { status: 'FAILED', error: 'Sandbox is not active', finishedAt: new Date(startedAt) },
+      }),
     );
     return (await withBypass((tx) => getJob(tx, job.id), TX)) as JobView;
   }
-  let progress: JobProgress = job.progress ?? {
-    doneTicks: 0,
-    totalTicks: params.simHours,
-    simDate: '',
-  };
-  await withBypass((tx) => setJob(tx, job.id, { status: 'RUNNING' }, new Date(startedAt)));
-  let stoppedBy: string | undefined;
-  // History mode keeps hourly rows and slices for the last days before the end of the job only
-  const history = params.history ? await historyWindow(job.sandboxId, params, progress) : undefined;
-  while (progress.doneTicks < params.simHours && nowMs() < deadline && !stoppedBy) {
-    const count = Math.min(BATCH_TICKS, params.simHours - progress.doneTicks);
-    const r: BatchResult = await withBypass(
-      (tx) =>
-        runBatch(
+  let finished = false;
+  // Several callers may drive one job (the timer, the welcome page, the account page, a page load). Each batch is one
+  // transaction that first locks the JOB row, then reads the progress that is stored NOW (not the copy this caller was
+  // handed, which may be old) and writes the new progress in the same transaction. So two callers never run the same
+  // ticks twice, never run past `simHours` and never move a finished job back to RUNNING (docs/gaps/prov-race2.md).
+  for (;;) {
+    if (nowMs() >= deadline) break;
+    const step: JobStep = await withTransientRetry(() =>
+      withBypass(async (tx): Promise<JobStep> => {
+        const rows = await tx.$queryRaw<{ status: JobView['status']; progress: unknown }[]>`
+        SELECT "status", "progress" FROM "SimJob" WHERE "id" = ${job.id} FOR UPDATE SKIP LOCKED`;
+        const row = rows[0];
+        if (!row) return { kind: 'busy' };
+        if (row.status !== 'QUEUED' && row.status !== 'RUNNING') return { kind: 'closed' };
+        const progress: JobProgress = (row.progress as JobProgress | null) ?? {
+          doneTicks: 0,
+          totalTicks: params.simHours,
+          simDate: '',
+        };
+        if (row.status === 'QUEUED')
+          await setJob(tx, job.id, { status: 'RUNNING' }, new Date(nowMs()));
+        if (progress.doneTicks >= params.simHours) {
+          await setJob(tx, job.id, { status: 'DONE', progress }, new Date(nowMs()));
+          return { kind: 'ran', progress, ticks: 0, finished: true };
+        }
+        const count = Math.min(BATCH_TICKS, params.simHours - progress.doneTicks);
+        const history = params.history
+          ? await historyWindow(tx, job.sandboxId, params, progress)
+          : undefined;
+        const r: BatchResult = await runBatch(
           tx,
           job.sandboxId,
           { kind: 'fixed', count },
@@ -231,49 +261,50 @@ async function runJobChunks(job: JobView, deadline: number): Promise<JobView> {
               return undefined;
             },
           },
-        ),
-      TX,
+        );
+        if (!r.locked) return { kind: 'busy' };
+        const simDate = r.clock
+          ? new Date(r.clock.simStartMs + (r.tickIndex - 1) * MS_HOUR).toISOString().slice(0, 10)
+          : progress.simDate;
+        const next: JobProgress = {
+          ...progress,
+          doneTicks: progress.doneTicks + r.ticks,
+          simDate,
+          ...(r.stoppedBy ? { stoppedBy: r.stoppedBy } : {}),
+        };
+        const done = r.stoppedBy !== undefined || next.doneTicks >= params.simHours;
+        await setJob(
+          tx,
+          job.id,
+          done ? { status: 'DONE', progress: next } : { progress: next },
+          new Date(nowMs()),
+        );
+        return { kind: 'ran', progress: next, ticks: r.ticks, finished: done };
+      }, TX),
     );
-    if (!r.locked) {
-      // another run holds the sandbox: try again on the next call
-      return (await withBypass((tx) => getJob(tx, job.id), TX)) as JobView;
-    }
-    const simDate = r.clock
-      ? new Date(r.clock.simStartMs + (r.tickIndex - 1) * MS_HOUR).toISOString().slice(0, 10)
-      : progress.simDate;
-    progress = {
-      ...progress,
-      doneTicks: progress.doneTicks + r.ticks,
-      simDate,
-      ...(r.stoppedBy ? { stoppedBy: r.stoppedBy } : {}),
-    };
-    stoppedBy = r.stoppedBy;
-    await withBypass((tx) => setJob(tx, job.id, { progress }, new Date(nowMs())));
-    if (r.ticks === 0) break;
+    // another run holds the job: try again on the next call
+    if (step.kind === 'busy' || step.kind === 'closed') break;
+    finished = step.finished;
+    if (step.finished || step.ticks === 0) break;
   }
-  const done = stoppedBy !== undefined || progress.doneTicks >= params.simHours;
-  if (done) {
-    await withBypass((tx) => setJob(tx, job.id, { status: 'DONE', progress }, new Date(nowMs())));
-    // a sandbox waiting for its history is finished here when the job ran in several calls
+  if (finished) {
+    // a sandbox waiting for its history is finished here when the job ran in several calls (idempotent, locked)
     if (params.history?.today) await finishBackfill(prisma, job.sandboxId, params.history.today);
   }
   return (await withBypass((tx) => getJob(tx, job.id), TX)) as JobView;
 }
 
 async function historyWindow(
+  tx: Tx,
   sandboxId: string,
   params: FastForwardParams,
   progress: JobProgress,
 ): Promise<{ hourlyFromMs: number; sliceFromDay: string }> {
   const h = params.history as HistoryParams;
-  const clock = await withBypass(
-    (tx) =>
-      tx.simClock.findUniqueOrThrow({
-        where: { sandboxId },
-        select: { simStart: true, tickIndex: true },
-      }),
-    TX,
-  );
+  const clock = await tx.simClock.findUniqueOrThrow({
+    where: { sandboxId },
+    select: { simStart: true, tickIndex: true },
+  });
   const endMs =
     clock.simStart.getTime() +
     (Number(clock.tickIndex) + params.simHours - progress.doneTicks) * MS_HOUR;
@@ -296,6 +327,8 @@ export async function fastForward(
     untilDate?: string;
     deadline?: number;
     history?: HistoryParams;
+    /** Provisioning: the build's history is ONE job; reuse the open or finished one instead of adding another. */
+    once?: boolean;
   } = {},
 ): Promise<JobView> {
   if (!Number.isInteger(simHours) || simHours < 1 || simHours > 24 * 120) {
@@ -307,7 +340,13 @@ export async function fastForward(
     ...(opts.untilDate ? { untilDate: opts.untilDate } : {}),
     ...(opts.history ? { history: opts.history } : {}),
   };
-  const job = await withBypass((tx) => createJob(tx, sandboxId, 'FAST_FORWARD', params), TX);
+  const job = await withBypass(
+    (tx) =>
+      params.history && opts.once
+        ? createHistoryJobOnce(tx, sandboxId, params)
+        : createJob(tx, sandboxId, 'FAST_FORWARD', params),
+    TX,
+  );
   return runJob(job, opts.deadline ?? Number.MAX_SAFE_INTEGER);
 }
 
