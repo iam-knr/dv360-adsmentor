@@ -701,6 +701,7 @@ export function LiForm({
               value={value.targetingState}
               onChange={(targetingState) => set({ targetingState })}
               readOnly={ro}
+              embedded
             />
           </TargetingEditorContext.Provider>
         </DvSectionCard>

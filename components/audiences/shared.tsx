@@ -92,6 +92,7 @@ export function ChipInput({
   hint,
   id,
   disabled,
+  hideLabel,
 }: {
   label: string;
   values: string[];
@@ -103,6 +104,8 @@ export function ChipInput({
   hint?: string;
   id: string;
   disabled?: boolean;
+  /** The caller draws the label (with its help icon); the input keeps it as its accessible name. */
+  hideLabel?: boolean;
 }) {
   const [text, setText] = useState('');
   const [local, setLocal] = useState<string | null>(null);
@@ -124,7 +127,7 @@ export function ChipInput({
     }
   };
   return (
-    <DvFieldShell id={id} label={label} error={error ?? local ?? undefined} hint={hint}>
+    <DvFieldShell id={id} {...(hideLabel ? {} : { label })} error={error ?? local ?? undefined} hint={hint}>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: values.length ? 1 : 0 }}>
         {values.map((v) => (
           <Chip
