@@ -96,7 +96,7 @@ test.describe('PW-01-1 shell tour (STANDARD student)', () => {
       'Switch products',
       'Account: Sam Student',
     ]);
-    await expect(page).toHaveTitle('Overview - DV360 Simulator by Adsmetor');
+    await expect(page).toHaveTitle('Display & Video 360');
   });
 
   test('the hamburger toggles 256 px and 72 px and survives reload (AC-01-2)', async ({ page }) => {

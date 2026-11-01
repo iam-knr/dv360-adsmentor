@@ -26,7 +26,7 @@ describe('tokens and theme', () => {
     expect(theme.palette.status.active).toBe('#1e8e3e');
     expect(theme.palette.banner.warning.bg).toBe('#fef7e0');
     expect(theme.palette.chart).toHaveLength(7);
-    expect(theme.palette.link).toBe('#1967d2');
+    expect(theme.palette.link).toBe('#1a73e8');
   });
 
   it('defines the typography variants of design-system 1.2', () => {
@@ -38,7 +38,7 @@ describe('tokens and theme', () => {
       letterSpacing: '0.8px',
     });
     expect(theme.typography.button).toMatchObject({ textTransform: 'none' });
-    expect(String(theme.typography.pageTitle.fontFamily)).toContain('Figtree');
+    expect(String(theme.typography.pageTitle.fontFamily)).toContain('Google Sans');
     expect(String(theme.typography.fontFamily)).toContain('Roboto');
   });
 

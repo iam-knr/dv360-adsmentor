@@ -82,7 +82,7 @@ export function DvNav({
       }
       secondary={item.secondLine}
       slotProps={{
-        primary: { sx: { typography: 'subtitle1', fontWeight: item.id === activeId ? 500 : 400 } },
+        primary: { sx: { typography: 'subtitle1' } },
         secondary: { sx: { typography: 'caption' } },
       }}
     />
@@ -120,19 +120,25 @@ export function DvNav({
         }
         aria-label={rail ? item.label : undefined}
       >
-        {item.icon ? (
-          <ListItemIcon sx={rail ? { minWidth: 0, justifyContent: 'center' } : undefined}>
-            <DvIcon name={item.icon} size={20} color={tinted ? 'nav.activeText' : undefined} />
-          </ListItemIcon>
-        ) : null}
-        {rail ? null : label(item)}
         {group && !rail ? (
+          // Real DV360 puts the expand chevron to the LEFT of the icon (CAM-024).
           <DvIcon
             name="expand_more"
             size={20}
-            sx={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 250ms' }}
+            sx={{
+              mr: 1,
+              ml: -1,
+              transform: open ? 'none' : 'rotate(-90deg)',
+              transition: 'transform 250ms',
+            }}
           />
         ) : null}
+        {item.icon ? (
+          <ListItemIcon sx={rail ? { minWidth: 0, justifyContent: 'center' } : undefined}>
+            <DvIcon name={item.icon} size={20} color={tinted ? 'primary.main' : undefined} />
+          </ListItemIcon>
+        ) : null}
+        {rail ? null : label(item)}
       </ListItemButton>
     );
 

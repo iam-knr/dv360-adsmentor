@@ -1,9 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import '@fontsource-variable/figtree';
-import '@fontsource/roboto/400.css';
-import '@fontsource/roboto/500.css';
-import '@fontsource/roboto/700.css';
+import '@/lib/theme/fonts';
 import { ThemeRegistry } from '@/lib/theme/provider';
 
 export const metadata: Metadata = {

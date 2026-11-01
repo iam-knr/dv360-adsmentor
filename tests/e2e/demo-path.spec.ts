@@ -84,7 +84,7 @@ test('demo path: Super admin, student, campaign to metrics', async ({ page, brow
     await signIn(page, w.email, w.password);
     // A student lands on /sim/welcome, which opens the sandbox home as soon as the sandbox is ready (it is here).
     await expect(page).toHaveURL(/\/home_v3$/);
-    await expect(page).toHaveTitle('Overview - DV360 Simulator by Adsmetor');
+    await expect(page).toHaveTitle('Display & Video 360');
   });
 
   await test.step('3. opens the advertiser and creates a campaign', async () => {
