@@ -23,6 +23,8 @@ const TYPE_PATH: Record<string, string> = {
 
 export interface CatalogueItem {
   id: string;
+  /** Numeric id shown in the picker; `id` is the internal key the line item stores. */
+  displayId: string;
   name: string;
   path: string;
   meta: AudienceMeta;
@@ -40,6 +42,7 @@ export async function GET(req: Request) {
     const meta = audienceMeta(r, data!.nowMs);
     return {
       id: r.id,
+      displayId: r.publicId.toString(),
       name: r.name,
       path: `${TYPE_PATH[r.type] ?? r.type} » ${r.name}`,
       meta,
@@ -48,6 +51,7 @@ export async function GET(req: Request) {
   });
   const google: CatalogueItem[] = GOOGLE_AUDIENCES.map((g) => ({
     id: g.id,
+    displayId: g.id,
     name: g.name,
     path: g.path.join(' » '),
     subtype: g.kind,

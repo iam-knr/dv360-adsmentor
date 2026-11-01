@@ -276,35 +276,51 @@ test('PW-10-07: the audience picker offers Custom affinity and Custom intent and
   await page.getByRole('button', { name: 'Add targeting' }).click();
   await page.getByRole('menuitem', { name: /Audience lists/ }).click();
   const editor = page.getByRole('dialog').last();
-  // the Create menu of the Custom lists section links to the three Audiences forms
+  const tabsBefore = page.context().pages().length;
+  // the Create menu of the Custom lists section has two items and opens a stacked panel, not a browser tab
   await editor.getByRole('button', { name: 'Create', exact: true }).click();
-  await expect(page.getByRole('menuitem', { name: 'Custom affinity' })).toHaveAttribute(
-    'href',
-    /customaudience\/affinity\/new/,
-  );
-  await expect(page.getByRole('menuitem', { name: 'Custom intent (YouTube)' })).toHaveAttribute(
-    'href',
-    /surface=youtube/,
-  );
-  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menuitem')).toHaveText(['Custom affinity', 'Custom Intent']);
+  await page.getByRole('menuitem', { name: 'Custom affinity' }).click();
+  const panel = page.getByRole('dialog', { name: 'New Custom Affinity Audience' });
+  await expect(panel).toBeVisible();
+  expect(page.context().pages().length).toBe(tabsBefore);
+  await expect(panel.getByText('Impressions Estimator')).toHaveCount(0);
+  // validation: only "Enter a value" under Audience name
+  await panel.getByRole('button', { name: 'Save' }).click();
+  await expect(panel.getByText('Enter a value')).toHaveCount(1);
+  await expect(panel.getByText(/Add at least one/)).toHaveCount(0);
+  await panel.getByLabel('Audience name', { exact: true }).fill('PW Panel affinity: trail runners');
+  await panel.getByLabel('Interests', { exact: true }).fill('running');
+  await panel.getByLabel('Interests', { exact: true }).press('Enter');
+  await panel.getByRole('button', { name: 'Save' }).click();
+  // back on the Audience lists panel
+  await expect(panel).toHaveCount(0);
+  await expect(page.getByRole('dialog', { name: 'Audience lists' })).toBeVisible();
   await editor.getByRole('button', { name: 'Select Custom lists' }).click();
-  const picker = page.getByRole('dialog').last();
+  const picker = page.getByRole('dialog', { name: 'Select custom lists' });
+  await expect(picker.getByRole('combobox', { name: 'Audience type' })).toHaveText('Custom affinity');
   await picker.getByRole('combobox', { name: 'Audience type' }).click();
-  await expect(page.getByRole('option', { name: 'Custom affinity' })).toBeVisible();
-  await expect(
-    page.getByRole('option', { name: 'Custom intent (Display, Video)' }),
-  ).toBeVisible();
-  // the YouTube intent list is not offered to a Display line item
-  await expect(page.getByRole('option', { name: /Custom intent \(YouTube\)/ })).toHaveCount(0);
+  await expect(page.getByRole('option')).toHaveText(['Custom lists', 'Custom affinity', 'Custom intent']);
   await page.keyboard.press('Escape');
+  // numeric id in its own column, not the internal key
+  await expect(
+    picker.getByRole('row', { name: /PW Panel affinity: trail runners/ }),
+  ).toContainText(/\d{6,}/);
+  await picker.getByRole('checkbox', { name: 'PW Panel affinity: trail runners' }).check();
   await picker.getByRole('checkbox', { name: 'PW Custom affinity: gadget fans' }).check();
+  await picker.getByRole('combobox', { name: 'Audience type' }).click();
+  await page.getByRole('option', { name: 'Custom intent' }).click();
   await picker.getByRole('checkbox', { name: 'PW Custom intent: buying a phone' }).check();
+  // the YouTube intent list is not offered to a Display line item
   await expect(picker.getByRole('checkbox', { name: /YouTube: phone reviews/ })).toHaveCount(0);
   await picker.getByRole('button', { name: 'Apply' }).click();
   const included = editor.getByRole('list', { name: 'Included Custom lists' });
   await expect(included).toContainText('PW Custom affinity: gadget fans');
   await expect(included).toContainText('PW Custom intent: buying a phone');
+  await expect(included).toContainText('PW Panel affinity: trail runners');
   await editor.getByRole('button', { name: 'Apply' }).click();
+  // the form shows an "Audience lists" row inside the Targeting list, without its own bordered card
+  await expect(page.getByTestId('target-row-AUDIENCE_LISTS')).toContainText('Audience lists');
   await page.getByRole('button', { name: 'Create' }).click();
   await page.waitForURL(/\/li\/\d+\/details/);
 
@@ -314,7 +330,7 @@ test('PW-10-07: the audience picker offers Custom affinity and Custom intent and
   const rows = await db.targetingAssignment.findMany({
     where: { lineItemId: li.id, dimension: 'AUDIENCE_LIST' },
   });
-  expect(rows.map((r) => r.audienceSection)).toEqual(['CUSTOM_LIST', 'CUSTOM_LIST']);
+  expect(rows.map((r) => r.audienceSection)).toEqual(['CUSTOM_LIST', 'CUSTOM_LIST', 'CUSTOM_LIST']);
   const names = await db.audience.findMany({
     where: { id: { in: rows.map((r) => r.refId ?? '') } },
     select: { name: true },
@@ -322,5 +338,6 @@ test('PW-10-07: the audience picker offers Custom affinity and Custom intent and
   expect(names.map((n) => n.name).sort()).toEqual([
     'PW Custom affinity: gadget fans',
     'PW Custom intent: buying a phone',
+    'PW Panel affinity: trail runners',
   ]);
 });

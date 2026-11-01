@@ -130,11 +130,11 @@ test.describe('audience builder', () => {
       'Other targeting',
       '(Diagram not to scale)',
       'Gender',
-      'Data available for 95% of impressions',
+      'DATA AVAILABLE FOR 95% OF IMPRESSIONS',
       'Age',
       'Desktop vs. Mobile',
     ])
-      await expect(pane.getByText(label, { exact: true })).toBeVisible();
+      await expect(pane.getByText(label, { exact: true }).first()).toBeVisible();
     await d.getByRole('button', { name: 'Apply' }).click();
     await expect(page.getByTestId('target-row-AUDIENCE_LISTS')).toContainText('Include: 1 list');
   });

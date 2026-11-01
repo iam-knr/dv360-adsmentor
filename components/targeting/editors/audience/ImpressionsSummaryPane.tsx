@@ -5,7 +5,6 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import {
   AUDIENCE_MESSAGES,
-  formatImpressions,
   type AudienceLists,
   type ImpressionsSummary,
 } from '@/lib/targeting/audience';
@@ -83,8 +82,17 @@ export function ImpressionsSummaryPane({
         <Typography variant="subtitle1" component="h4">
           Impressions summary
         </Typography>
-        <Typography variant="caption">
-          Based only on flight dates and targeting (without expansion)
+        <Typography variant="caption" component="p" sx={{ m: 0, color: 'inherit' }}>
+          Based only on flight dates and targeting (without expansion).{' '}
+          <Box
+            component="a"
+            href="https://support.google.com/displayvideo/answer/6042304"
+            target="_blank"
+            rel="noreferrer"
+            sx={{ color: 'inherit', textDecoration: 'underline' }}
+          >
+            Learn more
+          </Box>
         </Typography>
       </Box>
       <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -111,10 +119,28 @@ function Stat({ label, value, id }: { label: string; value: number; id: string }
         {label}
       </Typography>
       <Typography variant="h4" component="p" data-testid={id} sx={{ m: 0 }}>
-        {formatImpressions(value)}
+        {compact(value)}
       </Typography>
     </Box>
   );
+}
+
+/** 478B, 3.41B, 42.5K: three significant digits (the units of formatImpressions, one digit fewer). */
+export function compact(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return '0';
+  const units: [number, string][] = [
+    [1e12, 'T'],
+    [1e9, 'B'],
+    [1e6, 'M'],
+    [1e3, 'K'],
+  ];
+  for (const [size, suffix] of units)
+    if (n >= size) {
+      const v = n / size;
+      const text = v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2);
+      return `${text.replace(/\.0+$|(\.\d*[1-9])0+$/, '$1')}${suffix}`;
+    }
+  return String(Math.round(n));
 }
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;
@@ -154,30 +180,42 @@ function Numbers({ s }: { s: ImpressionsSummary }) {
       <Box>
         <Typography variant="subtitle2">Gender</Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <svg viewBox="0 0 36 36" width={72} height={72} role="img" aria-label="Gender split">
-            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e8710a" strokeWidth="6" />
+          <svg viewBox="0 0 36 36" width={88} height={88} role="img" aria-label="Gender split">
+            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e8710a" strokeWidth="5" />
             <circle
               cx="18"
               cy="18"
               r="15.9"
               fill="none"
               stroke="#1a73e8"
-              strokeWidth="6"
-              strokeDasharray={`${s.gender.male * donut} ${donut}`}
+              strokeWidth="5"
+              strokeDasharray={`${s.gender.female * donut} ${donut}`}
               transform="rotate(-90 18 18)"
             />
           </svg>
           <Box>
-            <Typography variant="body2">Male {pct(s.gender.male)}</Typography>
-            <Typography variant="body2">Female {pct(s.gender.female)}</Typography>
+            <Typography variant="body2" aria-label={`Female ${pct(s.gender.female)}`}>
+              <Box component="span" sx={{ color: '#1a73e8' }}>
+                ●
+              </Box>{' '}
+              {pct(s.gender.female)}
+            </Typography>
+            <Typography variant="body2" aria-label={`Male ${pct(s.gender.male)}`}>
+              <Box component="span" sx={{ color: '#e8710a' }}>
+                ●
+              </Box>{' '}
+              {pct(s.gender.male)}
+            </Typography>
           </Box>
         </Box>
-        <Typography variant="caption" color="text.secondary">
-          Data available for {s.gender.coveragePct}% of impressions
-        </Typography>
+        <Coverage pct={s.gender.coveragePct} />
       </Box>
 
-      <Bars title="Age" rows={Object.entries(s.age).map(([k, v]) => [k, v])} />
+      <Bars
+        title="Age"
+        rows={Object.entries(s.age).map(([k, v]) => [k, v])}
+        coverage={s.gender.coveragePct}
+      />
       <Bars
         title="Desktop vs. Mobile"
         rows={[
@@ -186,12 +224,30 @@ function Numbers({ s }: { s: ImpressionsSummary }) {
           ['Tablet', s.device.tablet],
           ['CTV', s.device.ctv],
         ]}
+        coverage={s.gender.coveragePct}
       />
     </>
   );
 }
 
-function Bars({ title, rows }: { title: string; rows: [string, number][] }) {
+/** Upper-case caption under each chart (LIT-013). */
+function Coverage({ pct: p }: { pct: number }) {
+  return (
+    <Typography variant="caption" color="text.secondary" component="p" sx={{ m: 0, letterSpacing: 0.4 }}>
+      {`Data available for ${p}% of impressions`.toUpperCase()}
+    </Typography>
+  );
+}
+
+function Bars({
+  title,
+  rows,
+  coverage,
+}: {
+  title: string;
+  rows: [string, number][];
+  coverage: number;
+}) {
   return (
     <Box>
       <Typography variant="subtitle2">{title}</Typography>
@@ -215,6 +271,7 @@ function Bars({ title, rows }: { title: string; rows: [string, number][] }) {
           </Typography>
         </Box>
       ))}
+      <Coverage pct={coverage} />
     </Box>
   );
 }
