@@ -6,7 +6,7 @@
 // Knobs (env): STRESS_STUDENTS (default 12), STRESS_SEED (default random, printed), SANDBOX_ENGINE_DAYS (default 3).
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { prisma } from '@/lib/db';
-import { isTransientError } from '@/lib/db/transient';
+import { isTransientError, withTransientRetry } from '@/lib/db/transient';
 import { maybeAdvance } from '@/lib/sandbox/maybe-advance';
 import {
   advanceProvisioning,
@@ -67,11 +67,16 @@ async function newStudent(tag: string, cohortId: string): Promise<Student> {
   return { userId: user.id, sandboxId, cohortId };
 }
 
+// the test's own polling shares the pool of 9 with ~48 callers: a pool timeout here is retried, not a finding
 const stateRow = (sandboxId: string) =>
-  prisma.sandbox.findUniqueOrThrow({
-    where: { id: sandboxId },
-    select: { provisionState: true, provisionError: true },
-  });
+  withTransientRetry(
+    () =>
+      prisma.sandbox.findUniqueOrThrow({
+        where: { id: sandboxId },
+        select: { provisionState: true, provisionError: true },
+      }),
+    { attempts: 8 },
+  );
 
 /** Every table with a sandboxId column and its row count for one sandbox. */
 async function rowCounts(sandboxId: string): Promise<Record<string, number>> {
