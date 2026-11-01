@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import Box from '@mui/material/Box';
+import type { Theme } from '@mui/material/styles';
 import ButtonBase from '@mui/material/ButtonBase';
 import Checkbox from '@mui/material/Checkbox';
 import IconButton from '@mui/material/IconButton';
@@ -229,7 +230,8 @@ export function rangeText(page: number, pageSize: number, total: number): string
  */
 const headerBg = {
   backgroundColor: 'transparent',
-  backgroundImage: 'linear-gradient(#fff, #fff)',
+  backgroundImage: (t: Theme) =>
+    `linear-gradient(${t.palette.background.paper}, ${t.palette.background.paper})`,
 } as const;
 
 const cellSx = {

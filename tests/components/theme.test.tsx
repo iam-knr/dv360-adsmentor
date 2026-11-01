@@ -96,8 +96,9 @@ describe('no hard-coded colours', () => {
     },
   );
 
-  it('never references a Google asset, logo or font', () => {
-    const banned = /google sans|product sans|gstatic|googleusercontent|fonts\.googleapis/i;
+  // Google Sans is allowed since FID-FOUNDATION: it is open (SIL OFL 1.1) and loaded from @fontsource, see docs/gaps/fid-foundation.md.
+  it('never references a proprietary Google asset, logo or font', () => {
+    const banned = /product sans|gstatic|googleusercontent|fonts\.googleapis/i;
     for (const f of files) expect(readFileSync(f, 'utf8')).not.toMatch(banned);
   });
 });
