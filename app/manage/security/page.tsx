@@ -37,7 +37,11 @@ export default async function SecurityPage({
         and suspended at once; open the account to restore access or to allow screenshots. A browser
         cannot see a phone camera or a screen recorder, so this is a deterrent, not a guarantee.
         Only the recognised event is stored (method, page, time); nothing typed is recorded. There
-        is no email service yet: this page, the banner and the audit log are the notification.
+        is no email service yet: this page, the banner and the audit log are the notification.{' '}
+        <Link href="/manage/security/lab" underline="always">
+          Capture lab
+        </Link>{' '}
+        shows which events your browser delivers for each shortcut.
       </Typography>
       <Table size="small" aria-label="Security events">
         <TableHead>
