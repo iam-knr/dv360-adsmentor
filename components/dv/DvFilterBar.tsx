@@ -40,6 +40,8 @@ export interface DvFilterBarProps {
   disabled?: boolean;
   /** Landmark name. Default "Filters". */
   ariaLabel?: string;
+  /** Real DV360: the funnel opens a menu of the filter fields (click one to edit it) instead of the active-filter list. */
+  fieldMenu?: boolean;
 }
 
 export const FILTER_PLACEHOLDER = 'Enter a search term or select filters';
@@ -63,6 +65,7 @@ export function DvFilterBar({
   placeholder = FILTER_PLACEHOLDER,
   disabled,
   ariaLabel = 'Filters',
+  fieldMenu = false,
 }: DvFilterBarProps) {
   const popId = useId();
   const barRef = useRef<HTMLDivElement>(null);
@@ -141,8 +144,23 @@ export function DvFilterBar({
         anchorEl={funnelAnchor}
         onClose={() => setFunnelAnchor(null)}
       >
-        <Box sx={{ p: 3, minWidth: 240 }}>
-          {count === 0 ? (
+        <Box sx={{ p: fieldMenu ? 0 : 3, minWidth: 240 }}>
+          {fieldMenu ? (
+            <List dense aria-label="Filter fields">
+              {fields.map((f) => (
+                <ListItemButton
+                  key={f.id}
+                  onClick={() => {
+                    const anchor = funnelAnchor;
+                    setFunnelAnchor(null);
+                    if (anchor) openEditor(f.id, anchor);
+                  }}
+                >
+                  {f.label}
+                </ListItemButton>
+              ))}
+            </List>
+          ) : count === 0 ? (
             <Typography variant="body2">No filters applied</Typography>
           ) : (
             <List dense aria-label="Active filters">

@@ -28,6 +28,7 @@ export default async function Page({
         advertiserId={chain.advertiser.publicId}
         currency={chain.advertiser.currencyCode}
         initial={newCampaignValue(today)}
+        advertiserPaused={chain.advertiser.paused}
       />
     </FormFrame>
   );

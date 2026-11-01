@@ -86,7 +86,7 @@ test('PW-11-01 SDF download: untick Ads, the job lists with a Download link to a
 }) => {
   await signIn(page, w);
   await page.goto(A('/cs'));
-  await page.getByRole('button', { name: 'SDF' }).click();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('menuitem', { name: 'Download', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Download Structured Data Files' })).toBeVisible();
   await page.getByRole('checkbox', { name: 'Ads' }).uncheck();
@@ -126,7 +126,7 @@ test('PW-11-02 SDF upload: rename a campaign in the CSV and upload it', async ({
   );
   expect(csv).toContain('PW11 Renamed by SDF');
   await page.goto(A('/cs'));
-  await page.getByRole('button', { name: 'SDF' }).click();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('menuitem', { name: 'Upload' }).click();
   await expect(
     page.getByText('Line items without an answer for EU political ads will get "No"'),
@@ -157,7 +157,7 @@ test('PW-11-16 column view: create a custom view, pin it, reload and the columns
   page,
 }) => {
   await signIn(page, w);
-  await page.goto(A(`/c/${w.ids.cid}/explorerios`));
+  await page.goto(A(`/c/${w.ids.cid}/io/${w.ids.ioId}/explorerlis`));
   await page.getByRole('combobox', { name: 'Status filter' }).click();
   await page.getByRole('option', { name: 'Status: All' }).click();
   await expect(page.getByRole('columnheader', { name: /Impr\./ })).toBeVisible();
@@ -227,7 +227,7 @@ test('PW-11-15 a read-only person cannot edit in bulk but can still download SDF
   await expect(page.getByRole('menuitem', { name: /Duplicate/ })).toBeDisabled();
   await expect(page.getByRole('menuitem', { name: /^Download/ }).first()).toBeEnabled();
   await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'SDF' }).click();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await expect(page.getByRole('menuitem', { name: 'Upload' })).toBeDisabled();
   await expect(page.getByRole('menuitem', { name: 'Download', exact: true })).toBeEnabled();
 });
