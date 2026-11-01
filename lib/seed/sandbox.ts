@@ -2,7 +2,7 @@
 import type { Prisma, PrismaClient, SandboxKind } from '@prisma/client';
 import { seedAudiences } from '../audiences/seed';
 import { fastForward } from '../engine/server';
-import { isTransientError } from '../engine/io/transient';
+import { isTransientError } from '../db/transient';
 import { seedAppCatalog, seedResources } from '../resources/seed';
 import { seedYoutube, seedYoutubeVideos } from '../youtube/seed';
 import { finishBackfill, seedPostHistory } from './after-history';

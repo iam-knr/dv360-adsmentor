@@ -55,7 +55,7 @@ the note at the end for `provision.db.test.ts`).
 
 ## Changed
 
-- `lib/engine/io/transient.ts` (new): `isTransientError`, `withTransientRetry` (+ `tests/engine/transient.test.ts`).
+- `lib/db/transient.ts` (new): `isTransientError`, `withTransientRetry` (+ `tests/engine/transient.test.ts`).
 - `lib/engine/io/jobs.ts`: `createHistoryJobOnce`. `lib/engine/server.ts`: `fastForward` uses it for history jobs;
   `runJobChunks` locks the job row per batch and keeps progress and DONE in the batch transaction; batches retry
   transient errors; `runJob` leaves the job and sandbox alone on a transient error.

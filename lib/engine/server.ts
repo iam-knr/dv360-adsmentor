@@ -18,7 +18,7 @@ import {
 import { countDueSandboxes, listDueSandboxes, logFailure } from './io/locks';
 import { BATCH_TICKS, runBatch, type BatchResult } from './io/runBatch';
 import { trimHourly } from './io/retention';
-import { isTransientError, withTransientRetry } from './io/transient';
+import { isTransientError, withTransientRetry } from '@/lib/db/transient';
 import { nowMs } from './io/time';
 import { MS_HOUR } from './calendar';
 

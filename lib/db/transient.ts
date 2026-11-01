@@ -11,7 +11,7 @@ const CODES = new Set([
   'P1001',
   'P1002',
   'P1008',
-  'P1017', // server closed the connection
+  'P1017', // server (has )?closed the connection
   '23505', // unique_violation
   '40001', // serialization_failure
   '40P01', // deadlock_detected
@@ -21,7 +21,7 @@ const CODES = new Set([
 ]);
 
 const MESSAGE =
-  /unique constraint|deadlock detected|could not serialize|write conflict|connection (terminated|reset|closed|refused)|ECONNRESET|server closed the connection|can't reach database|timed out fetching a new connection|unable to start a transaction|transaction already closed|transaction not found/i;
+  /unique constraint|deadlock detected|could not serialize|write conflict|connection (terminated|reset|closed|refused)|ECONNRESET|server (has )?closed the connection|can't reach database|timed out fetching a new connection|unable to start a transaction|transaction already closed|transaction not found/i;
 
 /** True for an error that a retry of the same work is expected to get past. */
 export function isTransientError(err: unknown): boolean {

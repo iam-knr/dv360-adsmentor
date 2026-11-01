@@ -12,11 +12,13 @@ describe('ProvisionProgress', () => {
     const calls: unknown[] = [];
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (_url: string, init?: RequestInit) => {
-        calls.push(JSON.parse(String(init?.body ?? '{}')));
-        return new Response(
-          JSON.stringify({ state: 'BUILDING', percent: 40, message: 'Loading your history' }),
-          { status: 200, headers: { 'content-type': 'application/json' } },
+      vi.fn((_url: string, init?: RequestInit) => {
+        calls.push(JSON.parse(typeof init?.body === 'string' ? init.body : '{}'));
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ state: 'BUILDING', percent: 40, message: 'Loading your history' }),
+            { status: 200, headers: { 'content-type': 'application/json' } },
+          ),
         );
       }),
     );

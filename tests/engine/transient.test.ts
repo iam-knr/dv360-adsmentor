@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isTransientError, withTransientRetry } from '@/lib/engine/io/transient';
+import { isTransientError, withTransientRetry } from '@/lib/db/transient';
 
 describe('isTransientError', () => {
   it.each([
@@ -26,9 +26,9 @@ describe('withTransientRetry', () => {
     let n = 0;
     await expect(
       withTransientRetry(
-        async () => {
+        () => {
           n++;
-          throw new Error('deadlock detected');
+          return Promise.reject(new Error('deadlock detected'));
         },
         { attempts: 3, baseMs: 1 },
       ),
@@ -40,18 +40,18 @@ describe('withTransientRetry', () => {
     let n = 0;
     expect(
       await withTransientRetry(
-        async () => {
-          if (++n < 3) throw Object.assign(new Error('x'), { code: 'P2002' });
-          return 'ok';
+        () => {
+          if (++n < 3) return Promise.reject(Object.assign(new Error('x'), { code: 'P2002' }));
+          return Promise.resolve('ok');
         },
         { baseMs: 1 },
       ),
     ).toBe('ok');
     let m = 0;
     await expect(
-      withTransientRetry(async () => {
+      withTransientRetry(() => {
         m++;
-        throw new Error('seed exploded');
+        return Promise.reject(new Error('seed exploded'));
       }),
     ).rejects.toThrow('seed exploded');
     expect(m).toBe(1);

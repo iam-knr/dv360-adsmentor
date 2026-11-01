@@ -20,7 +20,7 @@ import { after } from 'next/server';
 import { findStudentsWithoutSandbox, getProvisionSource } from '@/lib/accounts/provisioning-source';
 import { prisma } from '@/lib/db';
 import { advanceSandboxJobs, fastForward } from '@/lib/engine/server';
-import { withTransientRetry } from '@/lib/engine/io/transient';
+import { withTransientRetry } from '@/lib/db/transient';
 import {
   isTemplateKey,
   partnerIdOf,

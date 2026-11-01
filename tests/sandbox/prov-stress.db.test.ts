@@ -6,7 +6,7 @@
 // Knobs (env): STRESS_STUDENTS (default 12), STRESS_SEED (default random, printed), SANDBOX_ENGINE_DAYS (default 3).
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { prisma } from '@/lib/db';
-import { isTransientError } from '@/lib/engine/io/transient';
+import { isTransientError } from '@/lib/db/transient';
 import { maybeAdvance } from '@/lib/sandbox/maybe-advance';
 import {
   advanceProvisioning,
