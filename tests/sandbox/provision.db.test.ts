@@ -268,7 +268,9 @@ describe('timer', () => {
     for (let i = 0; i < 5 && sb && (await getProvisionView(id)).state !== 'READY'; i++) {
       await advanceProvisioning(Date.now() + 120_000, { limit: 50, classroomId });
     }
-    expect((await getProvisionView(id)).state).toBe('READY');
+    const view = await getProvisionView(id);
+    // a FAILED build says why (provisionError), so a CI failure is diagnosable from its log
+    expect(view.state, `provisionError: ${JSON.stringify(view)}`).toBe('READY');
   }, 900_000);
 });
 
