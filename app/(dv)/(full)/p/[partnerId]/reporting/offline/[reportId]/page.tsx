@@ -30,6 +30,8 @@ export default async function Page({ params }: { params: Promise<{ partnerId: st
       version={view.version}
       readOnly={!view.canEdit}
       ctx={ctx}
+      publicId={view.publicId}
+      ownerEmail={user.email}
     />
   );
 }
