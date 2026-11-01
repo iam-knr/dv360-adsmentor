@@ -5,6 +5,7 @@ import {
   isScreenshotMethod,
   normaliseEventPath,
   SCREENSHOT_METHODS,
+  SnipChordTracker,
   screenshotMethodLabel,
   type KeyEventLike,
 } from '@/lib/security/screenshot-detect';
@@ -93,7 +94,7 @@ describe('detectScreenshotKey: recognised combinations', () => {
       'PRINT_EVENT',
     ])
       expect(isScreenshotMethod(m)).toBe(true);
-    expect(SCREENSHOT_METHODS).toHaveLength(5);
+    expect(SCREENSHOT_METHODS).toHaveLength(7);
     expect(isScreenshotMethod('KEYLOG')).toBe(false);
     expect(isScreenshotMethod(undefined)).toBe(false);
   });
@@ -248,5 +249,84 @@ describe('isSameOrigin', () => {
   it('falls back to Sec-Fetch-Site when there is no Origin', () => {
     expect(isSameOrigin(req({ 'sec-fetch-site': 'same-origin' }))).toBe(true);
     expect(isSameOrigin(req({ 'sec-fetch-site': 'cross-site' }))).toBe(false);
+  });
+});
+
+describe('Ctrl+Shift+S (Edge Web Capture, Firefox screenshots)', () => {
+  it('is recognised on key down', () => {
+    expect(detectScreenshotKey(ev({ key: 'S', code: 'KeyS', ctrlKey: true, shiftKey: true }))).toBe(
+      'BROWSER_CAPTURE',
+    );
+  });
+  it.each([
+    ['Ctrl+S (save)', { key: 's', code: 'KeyS', ctrlKey: true }],
+    ['Shift+S (typing a capital S)', { key: 'S', code: 'KeyS', shiftKey: true }],
+    ['Ctrl+Alt+Shift+S', { key: 'S', code: 'KeyS', ctrlKey: true, altKey: true, shiftKey: true }],
+  ])('does not match %s', (_n, init) => {
+    expect(detectScreenshotKey(ev(init))).toBeNull();
+  });
+});
+
+describe('SnipChordTracker (Win/Cmd+Shift then the window loses focus)', () => {
+  const k = (type: string, key: string) => ({ type, key, code: key === 'Meta' ? 'MetaLeft' : 'ShiftLeft' });
+
+  it('flags Win+Shift held with no other key, then blur within 2 s', () => {
+    const t = new SnipChordTracker();
+    t.key(k('keydown', 'Meta'), 1000);
+    t.key(k('keydown', 'Shift'), 1100);
+    expect(t.blur(1600)).toBe('SNIP_CHORD');
+  });
+
+  it('works in either press order', () => {
+    const t = new SnipChordTracker();
+    t.key(k('keydown', 'Shift'), 1000);
+    t.key(k('keydown', 'Meta'), 1100);
+    expect(t.blur(1200)).toBe('SNIP_CHORD');
+  });
+
+  it('ignores a blur that comes too late', () => {
+    const t = new SnipChordTracker();
+    t.key(k('keydown', 'Meta'), 1000);
+    t.key(k('keydown', 'Shift'), 1100);
+    expect(t.blur(1100 + 2001)).toBeNull();
+  });
+
+  it('ignores the Windows key alone (Start menu) and Shift alone', () => {
+    const a = new SnipChordTracker();
+    a.key(k('keydown', 'Meta'), 1000);
+    expect(a.blur(1100)).toBeNull();
+    const b = new SnipChordTracker();
+    b.key(k('keydown', 'Shift'), 1000);
+    expect(b.blur(1100)).toBeNull();
+  });
+
+  it('ignores the chord when a real key was delivered after it (the swallowed-key case is the only match)', () => {
+    const t = new SnipChordTracker();
+    t.key(k('keydown', 'Meta'), 1000);
+    t.key(k('keydown', 'Shift'), 1100);
+    t.key({ type: 'keydown', key: 'Tab', code: 'Tab' }, 1200);
+    expect(t.blur(1300)).toBeNull();
+  });
+
+  it('forgets the chord once a modifier is released', () => {
+    const t = new SnipChordTracker();
+    t.key(k('keydown', 'Meta'), 1000);
+    t.key(k('keydown', 'Shift'), 1100);
+    t.key(k('keyup', 'Shift'), 1200);
+    expect(t.blur(1300)).toBeNull();
+  });
+
+  it('is single use: a second blur does not fire again', () => {
+    const t = new SnipChordTracker();
+    t.key(k('keydown', 'Meta'), 1000);
+    t.key(k('keydown', 'Shift'), 1100);
+    expect(t.blur(1200)).toBe('SNIP_CHORD');
+    expect(t.blur(1300)).toBeNull();
+  });
+
+  it('never fires from typing: letters, Ctrl, Alt', () => {
+    const t = new SnipChordTracker();
+    for (const key of ['Control', 'Alt', 'Shift', 's', 'S', '3']) t.key({ type: 'keydown', key, code: '' }, 1000);
+    expect(t.blur(1100)).toBeNull();
   });
 });
