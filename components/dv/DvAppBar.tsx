@@ -5,10 +5,8 @@ import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
-import Dialog from '@mui/material/Dialog';
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
-import InputBase from '@mui/material/InputBase';
 import Link from '@mui/material/Link';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
@@ -17,6 +15,7 @@ import Typography from '@mui/material/Typography';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import type { DvIconName } from '@/components/icons';
 import { DvIcon } from '@/components/icons';
+import { SearchOverlay } from '@/components/shell/SearchOverlay';
 import { sizes } from '@/lib/theme/tokens';
 import { DvBreadcrumbs, type DvCrumb } from './DvBreadcrumbs';
 import { DvTooltip } from './DvTooltip';
@@ -74,65 +73,6 @@ const ICONS: { id: AppBarActionId; icon: DvIconName; tooltip: string }[] = [
   { id: 'shortcuts', icon: 'keyboard', tooltip: 'Keyboard shortcuts' },
   { id: 'products', icon: 'apps', tooltip: 'Switch products' },
 ];
-
-function SearchOverlay({
-  open,
-  onClose,
-  suggestions,
-  onSearch,
-}: {
-  open: boolean;
-  onClose: () => void;
-  suggestions: string[];
-  onSearch?: (q: string) => void;
-}) {
-  const [q, setQ] = useState('');
-  const submit = (text: string) => {
-    onSearch?.(text);
-    onClose();
-  };
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      aria-label="Search"
-      sx={{
-        zIndex: (t) => t.zIndex.searchOverlay,
-        '& .MuiDialog-container': { alignItems: 'flex-start' },
-      }}
-      slotProps={{ paper: { sx: { width: 640, maxWidth: '95vw', mt: 16, p: 4 } } }}
-    >
-      <InputBase
-        autoFocus
-        fullWidth
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && q.trim()) submit(q.trim());
-        }}
-        placeholder="Search the advertiser with phrases like 'paused line items'"
-        inputProps={{ 'aria-label': 'Search' }}
-        startAdornment={<DvIcon name="search" size={24} sx={{ mr: 3 }} />}
-        sx={{ typography: 'body1', mb: 4 }}
-      />
-      {suggestions.length ? (
-        <>
-          <Typography variant="caption" sx={{ display: 'block', mb: 2 }}>
-            Try searching this advertiser for:
-          </Typography>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-            {suggestions.map((s) => (
-              <Chip key={s} variant="outlined" label={s} onClick={() => submit(s)} />
-            ))}
-          </Box>
-        </>
-      ) : null}
-      <Typography variant="caption" sx={{ display: 'block', mt: 4 }}>
-        Results come from the simulator&apos;s saved filters
-      </Typography>
-    </Dialog>
-  );
-}
 
 /** 56 px app bar: hamburger, logo, home, two-line crumbs and the right icon group (design-system 2.1). */
 export function DvAppBar({
@@ -360,7 +300,7 @@ export function DvAppBar({
         open={searchOpen}
         onClose={() => setSearchOpen(false)}
         suggestions={searchSuggestions}
-        onSearch={onSearch}
+        onSearch={onSearch ?? (() => undefined)}
       />
     </Box>
   );

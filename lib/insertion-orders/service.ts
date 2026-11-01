@@ -329,6 +329,7 @@ export async function listInsertionOrders(
       cpa: m && m.conversions > 0 ? m.cpa : null,
       customImpressionValueCost: custom,
       parentPaused: io.campaign.status === 'PAUSED' || io.campaign.status === 'ARCHIVED',
+      pacingType: io.pacingType,
     };
   });
   const sort = query.sort;
