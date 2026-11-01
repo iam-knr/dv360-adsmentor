@@ -1,11 +1,11 @@
-import { fireEvent, render } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ScreenshotGuard, reportScreenshot } from '@/components/security/ScreenshotGuard';
 
-function setup() {
+function setup(hasFocus: () => boolean = () => true) {
   const report = vi.fn();
   const navigate = vi.fn();
-  const view = render(<ScreenshotGuard report={report} navigate={navigate} />);
+  const view = render(<ScreenshotGuard report={report} navigate={navigate} hasFocus={hasFocus} />);
   return { report, navigate, ...view };
 }
 
@@ -57,6 +57,53 @@ describe('ScreenshotGuard', () => {
     window.dispatchEvent(new Event('blur'));
     expect(report).not.toHaveBeenCalled();
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('reports Win+Shift+S as the owner\'s Windows machine delivers it: the key UP of S', () => {
+    const { report } = setup();
+    fireEvent.keyDown(window, { key: 'Meta', code: 'MetaLeft', metaKey: true });
+    fireEvent.keyDown(window, { key: 'Shift', code: 'ShiftLeft', metaKey: true, shiftKey: true });
+    fireEvent.keyUp(window, { key: 'S', code: 'KeyS', metaKey: true, shiftKey: true });
+    expect(report).toHaveBeenCalledWith('WIN_SHIFT_S', expect.any(String));
+  });
+
+  describe('Edge Web Capture (Ctrl+Shift+S: the page never sees the S or the release)', () => {
+    afterEach(() => vi.useRealTimers());
+
+    it('reports when the page loses the keyboard focus while Ctrl+Shift are down', () => {
+      vi.useFakeTimers();
+      let focused = true;
+      const { report, navigate } = setup(() => focused);
+      fireEvent.keyDown(window, { key: 'Control', code: 'ControlLeft', ctrlKey: true });
+      fireEvent.keyDown(window, { key: 'Shift', code: 'ShiftLeft', ctrlKey: true, shiftKey: true });
+      act(() => void vi.advanceTimersByTime(400));
+      expect(report).not.toHaveBeenCalled();
+      focused = false;
+      act(() => void vi.advanceTimersByTime(400));
+      expect(report).toHaveBeenCalledWith('CAPTURE_CHORD', expect.any(String));
+      expect(navigate).toHaveBeenCalledWith('/sim/suspended');
+    });
+
+    it('reports when the next event shows the keys released although the page never saw it', () => {
+      vi.useFakeTimers();
+      const { report } = setup();
+      fireEvent.keyDown(window, { key: 'Control', code: 'ControlLeft', ctrlKey: true });
+      fireEvent.keyDown(window, { key: 'Shift', code: 'ShiftLeft', ctrlKey: true, shiftKey: true });
+      act(() => void vi.advanceTimersByTime(300));
+      fireEvent.keyUp(window, { key: 'Escape', code: 'Escape' });
+      expect(report).toHaveBeenCalledWith('CAPTURE_CHORD', expect.any(String));
+    });
+
+    it('does not report a normal Ctrl+Shift press and release', () => {
+      vi.useFakeTimers();
+      const { report } = setup();
+      fireEvent.keyDown(window, { key: 'Control', code: 'ControlLeft', ctrlKey: true });
+      fireEvent.keyDown(window, { key: 'Shift', code: 'ShiftLeft', ctrlKey: true, shiftKey: true });
+      fireEvent.keyUp(window, { key: 'Shift', code: 'ShiftLeft', ctrlKey: true });
+      fireEvent.keyUp(window, { key: 'Control', code: 'ControlLeft' });
+      act(() => void vi.advanceTimersByTime(1000));
+      expect(report).not.toHaveBeenCalled();
+    });
   });
 
   it('reports the print event', () => {

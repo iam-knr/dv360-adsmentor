@@ -16,6 +16,7 @@ export const SCREENSHOT_METHODS = [
   'PRINT_EVENT',
   'BROWSER_CAPTURE',
   'SNIP_CHORD',
+  'CAPTURE_CHORD',
 ] as const;
 
 export type ScreenshotMethod = (typeof SCREENSHOT_METHODS)[number];
@@ -29,6 +30,7 @@ export const SCREENSHOT_METHOD_LABELS: Record<ScreenshotMethod, string> = {
   PRINT_EVENT: 'Print dialog opened',
   BROWSER_CAPTURE: 'Browser capture shortcut (Ctrl+Shift+S)',
   SNIP_CHORD: 'Snipping or screenshot shortcut (Win/Cmd+Shift, then the window lost focus)',
+  CAPTURE_CHORD: 'Browser capture shortcut (Ctrl+Shift, the page never saw the keys released)',
 };
 
 export function isScreenshotMethod(value: unknown): value is ScreenshotMethod {
@@ -66,11 +68,15 @@ export function detectScreenshotKey(e: KeyEventLike): ScreenshotMethod | null {
   // PrintScreen, with or without Alt/Ctrl/Shift. Windows often delivers only the key up, so both are accepted.
   if (e.code === 'PrintScreen' || e.key === 'PrintScreen') return 'PRINT_SCREEN';
 
-  // The rest are chords: recognised on key down only, so one press is one event.
-  if (!isDown) return null;
+  // Win+Shift+S and Cmd+Shift+3..6: the operating system keeps the key DOWN but Windows still delivers the key UP
+  // (owner's capture lab report, 1 Nov: keydown Meta, keydown Shift, keyup S), so both are accepted here.
   if (e.metaKey && e.shiftKey && !e.altKey && e.code === 'KeyS') return 'WIN_SHIFT_S';
   if (e.metaKey && e.shiftKey && MAC_DIGITS.has(e.code)) return 'MAC_SHORTCUT';
-  // Edge Web Capture and the Firefox screenshot tool: the browser lets the page see this one.
+
+  // The rest are chords: recognised on key down only, so one press is one event.
+  if (!isDown) return null;
+  // Edge Web Capture and the Firefox screenshot tool. Edge does NOT deliver the S to the page (capture lab report,
+  // 1 Nov): that case is CaptureChordTracker below; this direct match covers browsers that do deliver it.
   if (e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey && (e.code === 'KeyS' || e.key.toLowerCase() === 's'))
     return 'BROWSER_CAPTURE';
   if (
@@ -150,5 +156,77 @@ export class SnipChordTracker {
     this.shift = false;
     this.armedAt = null;
     this.other = false;
+  }
+}
+
+/**
+ * Browser capture shortcuts such as Edge Web Capture (Ctrl+Shift+S) are handled by the browser itself: the page sees
+ * Ctrl and Shift go down, never sees the S, and never sees the two keys released because the capture UI has the focus,
+ * yet the window does not fire `blur` (owner's capture lab report, 1 Nov 2026). The signature is therefore: Ctrl and
+ * Shift down, no other key delivered, no blur or hide, and a later event (a key, the mouse, or a focus poll) that
+ * shows the page has lost the keyboard focus, or that reports both keys already released although the page never
+ * saw the release. Pure: no DOM; the guard feeds it events and a `document.hasFocus()` poll.
+ */
+export const CAPTURE_CHORD_MIN_MS = 120;
+
+export interface ModifierEventLike {
+  type: string;
+  key?: string;
+  ctrlKey: boolean;
+  shiftKey: boolean;
+  altKey: boolean;
+  metaKey: boolean;
+}
+
+export class CaptureChordTracker {
+  private ctrl = false;
+  private shift = false;
+  private armedAt: number | null = null;
+  private other = false;
+
+  /** Feed key, pointer and mouse events. Returns the method when the page missed the release of Ctrl and Shift. */
+  event(e: ModifierEventLike, now: number): ScreenshotMethod | null {
+    const isKey = e.type === 'keydown' || e.type === 'keyup';
+    const name = isKey ? e.key : undefined;
+    // A release the page missed: we believe Ctrl and Shift are down, an event that is not their own release says neither is.
+    if (this.armed(now) && !this.other && !e.ctrlKey && !e.shiftKey && name !== 'Control' && name !== 'Shift') {
+      this.reset();
+      return 'CAPTURE_CHORD';
+    }
+    if (isKey) {
+      const down = e.type === 'keydown';
+      if (name === 'Control') this.ctrl = down;
+      else if (name === 'Shift') this.shift = down;
+      else if (name === 'Alt' || name === 'AltGraph' || name === 'Meta' || name === 'OS') {
+        this.reset(); // Alt+Tab, Win+Shift: other rules
+        return null;
+      } else if (down) this.other = true; // a real key arrived: ordinary typing or a shortcut the page saw
+      if (e.altKey || e.metaKey) this.reset();
+    }
+    if (this.ctrl && this.shift && this.armedAt === null && !this.other) this.armedAt = now;
+    if (!(this.ctrl && this.shift)) {
+      this.armedAt = null;
+      this.other = false;
+    }
+    return null;
+  }
+
+  /** Called on a timer with `document.hasFocus()`: the page lost the keyboard focus with Ctrl+Shift down. */
+  poll(hasFocus: boolean, now: number): ScreenshotMethod | null {
+    if (hasFocus || !this.armed(now) || this.other) return null;
+    this.reset();
+    return 'CAPTURE_CHORD';
+  }
+
+  /** The page was blurred, hidden or left: other rules own those cases. */
+  reset(): void {
+    this.ctrl = false;
+    this.shift = false;
+    this.armedAt = null;
+    this.other = false;
+  }
+
+  private armed(now: number): boolean {
+    return this.ctrl && this.shift && this.armedAt !== null && now - this.armedAt >= CAPTURE_CHORD_MIN_MS;
   }
 }
