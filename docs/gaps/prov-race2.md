@@ -50,8 +50,8 @@ it; H1 to H3 need two callers. What its history shows is a FAILED build with no 
 cause I could produce that does not need a second caller is H5 (a transient database error: connection pool timeout,
 transaction start timeout under a loaded machine, in a run of 4 full db runs one after the other). That is a hypothesis
 from measurement, not proof for that one event. What is guaranteed now: a transient error no longer fails the build,
-and any other FAILED names its cause in the assertion (`provisionError` of every sandbox is in the stress message; see
-the note at the end for `provision.db.test.ts`).
+and any other FAILED names its cause in the stress assertion (every `provisionError` and the seed are in the message).
+`provision.db.test.ts` is not touched here (FLAKE-DB, PR 63, owns its diagnostic edit).
 
 ## Changed
 
@@ -74,3 +74,13 @@ the note at the end for `provision.db.test.ts`).
 
 A stale step from an old build can still mark a rebuilt sandbox SEEDING FAILED if its own (real) error arrives after the
 rebuild started; needs a rebuild during a running step plus a real error. Not changed.
+
+## Gate results (measured)
+
+- Stress test on the fixed code: 21 of 21 passes on the final test code (16 loop runs with seeds 1007 to 1022, the last
+  ten with `CI=1 TZ=UTC`, plus 5 extra with `CI=1 TZ=UTC`), `SANDBOX_ENGINE_DAYS=3`. One earlier run failed because a
+  caller of the test itself got a pool timeout (9 connections, ~48 callers); the test now tolerates a transient error
+  of a caller and retries its own polling. On main the same test failed in every sandbox (see above).
+- `npm run check` green; `npm run test:db` green twice in a row (75 files, 837 tests); a first full run failed once
+  in `history-mode.db.test.ts` (my first dedupe reused a finished history job; it is now opt-in for provisioning) and
+  once in the stress test's own polling (pool timeout, fixed). Playwright chromium 239 passed; prod-like crawler 3 passed.
