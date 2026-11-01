@@ -220,6 +220,9 @@ export function CampaignForm({
     </Typography>
   );
 
+  const SHOWN = /^(name|status|goal|kpi\.type|kpi\.value|creativeTypes|plannedSpend|startDate|endDate|budgets\.\d+\.|frequencyCap\.maxImpressions|landingPageUrls\[|keywords)/;
+  const stray = issues.filter((i) => i.severity === 'error' && !SHOWN.test(i.path));
+
   const urls = value.landingPageUrls.length ? value.landingPageUrls : [''];
 
   return (
@@ -450,7 +453,7 @@ export function CampaignForm({
                         placeholder="https://"
                         value={u}
                         readOnly={readOnly}
-                        error={err(`landingPageUrls.${i}`)}
+                        error={err(`landingPageUrls[${i}]`)}
                         onChange={(next) =>
                           set({ landingPageUrls: urls.map((x, j) => (j === i ? next : x)) })
                         }
@@ -483,6 +486,12 @@ export function CampaignForm({
             </Box>
           </Box>
         </DvSectionCard>
+
+        {stray.map((i) => (
+          <Typography key={`${i.path}:${i.code}`} role="alert" color="error">
+            {i.message}
+          </Typography>
+        ))}
 
         {mode === 'create' && !readOnly ? (
           <Box sx={{ display: 'flex', gap: 2, pb: 4 }}>

@@ -48,7 +48,7 @@ test('PW-06-01 and PW-07-01 create a campaign, then an insertion order in it', a
   await page.locator('#name').fill('PW Autumn Launch');
   await page.getByRole('combobox', { name: /Overall campaign goal/ }).click();
   await page.getByRole('option', { name: /Raise awareness/ }).click();
-  await page.getByRole('combobox', { name: 'KPI', exact: true }).click();
+  await page.getByRole('combobox', { name: /^KPI/ }).click();
   await page.getByRole('option', { name: /^CPM/ }).first().click();
   await page.getByRole('checkbox', { name: 'Display' }).check();
   await page.getByRole('button', { name: 'Create' }).click();
@@ -78,7 +78,7 @@ async function fillValidCampaign(page: Page, name: string, kpiOption: RegExp) {
   await page.locator('#name').fill(name);
   await page.getByRole('combobox', { name: /Overall campaign goal/ }).click();
   await page.getByRole('option', { name: /Raise awareness/ }).click();
-  await page.getByRole('combobox', { name: 'KPI', exact: true }).click();
+  await page.getByRole('combobox', { name: /^KPI/ }).click();
   await page.getByRole('option', { name: kpiOption }).first().click();
   await page.getByRole('checkbox', { name: 'Display' }).check();
 }

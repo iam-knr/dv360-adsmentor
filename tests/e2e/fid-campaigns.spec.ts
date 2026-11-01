@@ -111,7 +111,7 @@ test.describe('Campaigns list', () => {
     await expect(page.getByLabel('End date')).toHaveValue(simToday);
     await page.getByRole('button', { name: 'Apply' }).click();
     await expect(page).toHaveURL(/[?&]d=TODAY/);
-    await expect(page.getByRole('button', { name: label(simToday) })).toBeVisible();
+    await expect(page.getByRole('button', { name: label(simToday), exact: true })).toBeVisible();
   });
 
   test('CAM-006/065: filter chips, search text and clear all', async ({ page }) => {
@@ -127,7 +127,7 @@ test.describe('Campaigns list', () => {
     // remove the Status chip: both campaigns, then search by name and by ID
     await bar.getByRole('img', { name: 'Remove filter Status: Active' }).click();
     await expect(page.getByRole('link', { name: 'FID Beta Campaign' })).toBeVisible();
-    const input = bar.getByRole('textbox', { name: 'Search or filter' });
+    const input = bar.locator('input[aria-label="Search or filter"]');
     await input.fill('beta');
     await expect(page.getByRole('link', { name: 'FID Alpha Campaign' })).toHaveCount(0);
     await input.fill(campaign.publicId);
