@@ -1,5 +1,6 @@
 // P4-07, module 16 6.2: E2E-RPT-01 hub and template run, 02 build/save/save as, 03 visualisations, 04 offline Floodlight,
 // 05 schedule, 06 share, 07 role matrix, 08 generate report. Synthetic data only.
+import { readFileSync } from 'node:fs';
 import { PrismaClient } from '@prisma/client';
 import { expect, test, type Page } from '@playwright/test';
 import { addDaysIso, simDateIn } from '@/lib/metrics/date-range';
@@ -112,24 +113,23 @@ test('E2E-RPT-01: hub lists the seven templates; a template runs, the file match
   await page.goto(hub());
   await expect(page.getByText('Suggested templates')).toBeVisible();
   for (const t of [
-    'Advertiser overview',
-    'Insertion order pacing',
-    'App/URL viewability',
-    'Unique reach',
-    'Unique reach and cost',
-    'Unique household reach',
-    'Video performance',
+    'Advertiser Overview',
+    'Insertion Order Pacing',
+    'App/URL Viewability',
+    'Unique Reach',
+    'Unique Reach and Cost',
+    'Unique Household Reach',
+    'Video Performance',
   ])
     await expect(page.getByRole('list', { name: 'Suggested templates' }).getByText(t, { exact: true })).toBeVisible();
   await expect(page.getByTestId('created-by-chip')).toBeVisible();
   await page.getByTestId('created-by-chip').locator('.MuiChip-deleteIcon').click();
-  await expect(page.getByText('Created by: Anyone with access')).toBeVisible();
+  await expect(page.getByTestId('created-by-chip')).toHaveCount(0);
 
   await page
     .getByRole('listitem')
-    .filter({ hasText: 'Advertiser overview' })
-    .getByRole('button')
-    .first()
+    .filter({ hasText: 'Advertiser Overview' })
+    .getByRole('button', { name: /Open template/ })
     .click();
   await page.waitForURL(/instant\/new\?template=advertiser-overview/);
   await page.getByRole('button', { name: 'Run report' }).click();
@@ -141,7 +141,7 @@ test('E2E-RPT-01: hub lists the seven templates; a template runs, the file match
   // saved by the run: files page lists it and the CSV equals the preview
   await expect(page.getByText('Report ready')).toBeVisible();
   const saved = await db.report.findFirstOrThrow({
-    where: { sandboxId: w.sandboxId, name: 'Advertiser overview' },
+    where: { sandboxId: w.sandboxId, name: 'Advertiser Overview' },
     orderBy: { createdAt: 'desc' },
   });
   await page.goto(`${hub()}/instant/${saved.id}/runs`);
@@ -214,18 +214,18 @@ test('E2E-RPT-03: chart types and their constraints', async ({ page }) => {
   await page.goto(`${hub()}/instant/new`);
   await addField(page, 'Date');
   await addField(page, 'Impressions');
-  await page.getByRole('combobox', { name: /Visualisation/ }).click();
+  await page.getByRole('combobox', { name: /Visualization/ }).click();
   await page.getByRole('option', { name: 'Time series chart' }).click();
   await page.getByRole('button', { name: 'Run report' }).click();
   await expect(page.getByTestId('report-canvas')).toBeVisible();
   await expect(page.getByText('Report ready')).toBeVisible();
   // Pie needs exactly one dimension and one metric: Date + Impressions is fine
-  await page.getByRole('combobox', { name: /Visualisation/ }).click();
+  await page.getByRole('combobox', { name: /Visualization/ }).click();
   await page.getByRole('option', { name: 'Pie chart' }).click();
   await page.getByRole('button', { name: 'Run report' }).click();
   await expect(page.getByTestId('report-canvas')).toBeVisible();
   // Scatter needs two metrics: only one is selected
-  await page.getByRole('combobox', { name: /Visualisation/ }).click();
+  await page.getByRole('combobox', { name: /Visualization/ }).click();
   await page.getByRole('option', { name: 'Scatter chart' }).click();
   await expect(page.getByText(/This chart needs/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Run report' })).toBeDisabled();
@@ -233,7 +233,7 @@ test('E2E-RPT-03: chart types and their constraints', async ({ page }) => {
   await page.getByRole('button', { name: 'Reset' }).click();
   await addField(page, 'Advertiser');
   await addField(page, 'Impressions');
-  await page.getByRole('combobox', { name: /Visualisation/ }).click();
+  await page.getByRole('combobox', { name: /Visualization/ }).click();
   await page.getByRole('option', { name: 'Time series chart' }).click();
   await expect(page.getByText(/This chart needs/)).toBeVisible();
 });
@@ -241,22 +241,23 @@ test('E2E-RPT-03: chart types and their constraints', async ({ page }) => {
 test('E2E-RPT-04: offline Floodlight report: validation, SAVE AND RUN, schedule summary', async ({ page }) => {
   await signIn(page);
   await page.goto(`${hub()}/offline/new?type=floodlight`);
-  await page.getByLabel('Report template').click();
-  await page.getByRole('option', { name: 'Floodlight Impressions' }).click();
-  await expect(page.getByTestId('offline-metrics')).toContainText('Impressions');
+  // the template is prefilled
+  await expect(page.getByTestId('offline-metrics')).toContainText('Floodlight Impressions');
+  await expect(page.getByLabel('Report template')).toContainText('Floodlight Impressions');
+  await page.getByLabel('Active').check();
   await page.getByLabel('Report name').fill('PW floodlight');
   // RPT-004 empty file name, RPT-003 expires before starts
   await page.getByLabel('File name').fill('');
   await page.getByRole('button', { name: 'SAVE AND RUN' }).click();
   await expect(page.getByText('Enter a value').first()).toBeVisible();
   await page.getByLabel('File name').fill('pw_floodlight');
-  await page.getByLabel('Starts').fill('2026-10-10');
-  await page.getByLabel('Expires').fill('2026-10-01');
+  await page.getByLabel('Starts').fill('10/10/2026');
+  await page.getByLabel('Expires').fill('10/01/2026');
   await page.getByRole('button', { name: 'SAVE AND RUN' }).click();
   await expect(page.getByText('End date must be on or after the start date.').first()).toBeVisible();
-  await page.getByLabel('Expires').fill('2026-12-31');
+  await page.getByLabel('Expires').fill('12/31/2026');
   await expect(page.getByTestId('schedule-summary')).toHaveText(
-    'Runs every day at 12 am in UTC until 2026-12-31',
+    'Runs every day at 12 am in Pacific Time (GMT-08:00) until 12/31/2026',
   );
   await page.getByRole('button', { name: 'SAVE AND RUN' }).click();
   await page.waitForURL(/offline\/[a-z0-9]+\/runs$/);
@@ -277,7 +278,7 @@ test('E2E-RPT-05: scheduling an instant report stores the next run on the sim cl
   await dialog.getByRole('button', { name: 'Save schedule' }).click();
   await expect(page.getByText('Schedule saved')).toBeVisible();
   const row = await db.report.findFirstOrThrow({
-    where: { sandboxId: w.sandboxId, name: 'Advertiser overview' },
+    where: { sandboxId: w.sandboxId, name: 'Advertiser Overview' },
     orderBy: { updatedAt: 'desc' },
   });
   expect((row.schedule as { active: boolean }).active).toBe(true);
@@ -302,8 +303,7 @@ test('E2E-RPT-06: share a report with a person who has access to this partner', 
   expect(shares.map((x) => x.userId)).toEqual([other.id]);
   expect(shares[0]?.canEdit).toBe(false);
   // the hub marks it shared
-  await page.goto(hub());
-  await page.getByTestId('created-by-chip').locator('.MuiChip-deleteIcon').click();
+  await page.goto(`${hub()}?createdBy=any`);
   await expect(page.getByRole('row', { name: /PW shared report/ })).toContainText('Shared');
 });
 
@@ -349,6 +349,206 @@ test('E2E-RPT-08: Generate report maps a sentence to a definition and runs it', 
   await expect(page.getByTestId('zone-chip-clicks')).toBeVisible();
   await page.getByRole('button', { name: 'Run report' }).click();
   await expect(page.getByTestId('report-canvas')).toBeVisible();
+});
+
+test('FID-REP-01: instant list matches DV360 and rows can be duplicated and deleted after confirmation', async ({ page }) => {
+  await signIn(page);
+  // a saved report to list
+  await page.goto(`${hub()}/instant/new?template=io-pacing`);
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.waitForURL(/instant\/[a-z0-9]+$/);
+  await settle(page);
+  await page.goto(hub());
+  // page furniture: no cross-media link, no Tutor chip, Generate report bar with BETA
+  await expect(page.getByTestId('cross-media-link')).toHaveCount(0);
+  await expect(page.getByText('Tutor', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Generate report' })).toBeVisible();
+  await expect(page.getByText('BETA')).toBeVisible();
+  // seven cards with the tag above the title and a single Open template action, View All, no scroll arrows
+  await expect(page.getByTestId('template-card')).toHaveCount(7);
+  await expect(page.getByRole('button', { name: /Open template/ })).toHaveCount(7);
+  await expect(page.getByRole('button', { name: 'View All' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Next cards' })).toHaveCount(0);
+  await expect(page.getByText('Key performance metrics by advertiser')).toBeVisible();
+  // filter row
+  await expect(page.getByPlaceholder('Enter a search term or select filters')).toBeVisible();
+  await expect(page.getByTestId('created-by-chip')).toHaveText('Created by: Me');
+  // table columns and cells
+  const headers = page.getByRole('table', { name: 'Reports' }).getByRole('columnheader');
+  await expect(headers.filter({ hasText: /^Report name$/ })).toHaveCount(1);
+  for (const h of ['Created by', 'Last modified', 'Report ID', 'Files'])
+    await expect(headers.filter({ hasText: h })).toHaveCount(1);
+  const row = page.getByTestId('report-row').filter({ hasText: 'Insertion Order Pacing' }).first();
+  await expect(row).toContainText(w.email);
+  await expect(row.getByRole('button', { name: 'View', exact: true })).toBeVisible();
+  await expect(row.getByRole('cell').nth(4)).toHaveText(/^[A-Z][a-z]{2} \d{1,2}, \d{4} \d{2}:\d{2}$/);
+  await expect(page.getByRole('button', { name: /^Actions for/ })).toHaveCount(0);
+
+  // duplicate through the selection bar
+  await row.getByRole('checkbox').check();
+  await page.getByRole('button', { name: 'Duplicate' }).click();
+  const dlg = page.getByRole('dialog');
+  await dlg.getByLabel('New report name').fill('PW list copy');
+  await dlg.getByRole('button', { name: 'Duplicate' }).click();
+  const copy = page.getByTestId('report-row').filter({ hasText: 'PW list copy' });
+  await expect(copy).toHaveCount(1);
+  // delete asks first; Cancel keeps it, Delete removes it
+  await copy.getByRole('checkbox').check();
+  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+  await expect(page.getByRole('dialog')).toContainText('PW list copy and its files will be removed.');
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(copy).toHaveCount(1);
+  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
+  await expect(copy).toHaveCount(0);
+});
+
+test('FID-REP-02: instant builder layout, inline rename, field groups, unsaved-changes dialog', async ({ page }) => {
+  await signIn(page);
+  await page.goto(`${hub()}/instant/new`);
+  await expect(page.getByTestId('builder-header')).toContainText('Return to Instant Report List');
+  await expect(page.getByRole('button', { name: 'Guided tour' })).toBeVisible();
+  await expect(page.getByTestId('report-title')).toHaveText('Untitled Report');
+  for (const n of ['Schedule', 'Bulk edit', 'Reset', 'Save', 'Save as', 'Run report', 'Download', 'Undo', 'Redo'])
+    await expect(page.getByRole('button', { name: n, exact: true })).toBeVisible();
+  await expect(page.getByLabel('Auto-run')).toBeVisible();
+  await expect(page.getByText('Time zone: Advertiser')).toBeVisible();
+  await expect(page.getByTestId('range-text')).toHaveText(/^Date range: [A-Z][a-z]{2} \d{1,2}(, \d{4})?( – (?:[A-Z][a-z]{2} )?\d{1,2}, \d{4})?$/);
+  await expect(page.getByTestId('filter-bar')).toContainText(/Partner includes .+ \(\d+\)/);
+  await expect(page.getByRole('button', { name: 'Add', exact: true })).toBeVisible();
+  // empty state
+  const empty = page.getByTestId('canvas-empty');
+  await expect(empty).toContainText('Build an instant report');
+  await expect(empty).toContainText('To build a report, select filters, metrics, dimensions, and a date range.');
+  for (const b of ['Run report:', 'Auto-run:', 'Direct download:']) await expect(empty).toContainText(b);
+  await expect(page.getByTestId('empty-illustration')).toBeVisible();
+  // panel: Flat table picker, search, Custom data, no British spelling
+  await expect(page.getByRole('combobox', { name: /Visualization/ })).toContainText('Flat table');
+  await expect(page.getByText('Visualisation')).toHaveCount(0);
+  await expect(page.getByPlaceholder('Search metrics and dimensions')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Custom data/ })).toBeVisible();
+  // field groups: Frequently used in the DV360 order, All data, no counts, Title Case
+  const picker = page.getByTestId('field-picker');
+  await expect(picker).toContainText('All data');
+  await expect(picker.getByRole('button', { name: /Frequently used/ })).toHaveText(/Frequently used$/);
+  await expect(picker.getByTestId('picker-field')).toHaveText([
+    /^abcAdvertiseradd$/,
+    /^abcAdvertiser Currencyadd$/,
+    /^123Clicksadd$/,
+    /^123Impressionsadd$/,
+    /^abcInsertion Orderadd$/,
+    /^123Revenue \(Advertiser Currency\)add$/,
+  ]);
+  await expect(picker.getByRole('button', { name: /^Active View$/ })).toBeVisible();
+  await expect(picker.getByText(/\(\d+\)/)).toHaveCount(0);
+  // collapse the panel
+  await page.getByRole('button', { name: 'Collapse panel' }).click();
+  await expect(page.getByTestId('builder-panel')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Expand panel' }).click();
+
+  // inline rename: Enter commits
+  await page.getByRole('button', { name: 'Rename report' }).click();
+  await page.getByLabel('Report name').fill('PW inline name');
+  await page.getByLabel('Report name').press('Enter');
+  await expect(page.getByTestId('report-title')).toHaveText('PW inline name');
+
+  // leaving with changes asks first; Continue editing stays, Discard changes leaves
+  await addField(page, 'Impressions');
+  await page.getByRole('button', { name: /Return to Instant Report List/ }).click();
+  const dlg = page.getByRole('dialog');
+  await expect(dlg).toContainText('Unsaved Changes');
+  await dlg.getByRole('button', { name: 'Continue editing' }).click();
+  await expect(page.getByTestId('zone-chip-impressions')).toBeVisible();
+  await page.getByRole('button', { name: /Return to Instant Report List/ }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Discard changes' }).click();
+  await page.waitForURL((u) => u.pathname === hub() || u.pathname === `${hub()}/`);
+});
+
+test('FID-REP-03: results show a totals row, Western grouping, and the download carries the report footer', async ({ page }) => {
+  await signIn(page);
+  await page.goto(`${hub()}/instant/new`);
+  await addField(page, 'Date');
+  await addField(page, 'Impressions');
+  await addField(page, 'Click Rate (CTR)');
+  await page.getByRole('button', { name: 'Run report' }).click();
+  const table = page.getByTestId('report-table');
+  await expect(table).toBeVisible();
+  const totalRow = page.getByTestId('report-totals');
+  await expect(totalRow).toBeVisible();
+  await expect(totalRow.getByRole('cell').first()).toHaveText('Total');
+  await expect(totalRow).toContainText(totals.impressions.toLocaleString('en-US'));
+  await expect(totalRow.getByRole('cell').nth(2)).toHaveText(/^\d+\.\d{2}%$/);
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    (async () => {
+      await page.getByRole('button', { name: 'Download' }).click();
+      await page.getByRole('menuitem', { name: 'CSV' }).click();
+    })(),
+  ]);
+  const path = await download.path();
+  const csv = readFileSync(path, 'utf8');
+  const lines = csv.split('\n');
+  expect(lines[0]).toBe('Date,Impressions,Click Rate (CTR)');
+  expect(lines[1]).toMatch(/^\d{4}\/\d{2}\/\d{2},/);
+  expect(csv).toContain('Report Time:,');
+  expect(csv).toContain('Group By:,Date');
+  expect(csv).not.toContain('Total,');
+});
+
+test('FID-OFF-01: offline list, then the classic builder layout with schedule and delivery', async ({ page }) => {
+  await signIn(page);
+  await page.goto(`${hub()}?tab=offline`);
+  await expect(page.getByRole('button', { name: 'Generate report' })).toHaveCount(0);
+  await expect(page.getByText('Tutor', { exact: true })).toHaveCount(0);
+  await expect(page.getByTestId('cross-media-link')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'New Offline Report' })).toBeVisible();
+  await page.getByRole('button', { name: 'New Offline Report' }).click();
+  await expect(page.getByRole('menuitem', { name: 'Floodlight' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Inventory Availability' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByText('Show rows:')).toBeVisible();
+  await expect(page.getByTestId('pager-range')).toHaveText(/^\d+ - \d+$/);
+  await expect(page.getByText('Scheduled', { exact: true })).toHaveCount(0);
+
+  await page.goto(`${hub()}/offline/new?type=floodlight`);
+  await expect(page.getByTestId('offline-ids')).toContainText('Report type: Floodlight');
+  await expect(page.getByTestId('offline-ids')).toContainText('ID:');
+  await expect(page.getByRole('combobox', { name: 'Date range' })).toContainText(/^Last 7 days : [A-Z][a-z]{2} \d{1,2}, \d{4} - [A-Z][a-z]{2} \d{1,2}, \d{4}$/);
+  await expect(page.getByRole('combobox', { name: 'Language formatting' })).toContainText('English (raw)');
+  await expect(page.getByText('Numbers are displayed without commas or currency symbols.')).toBeVisible();
+  const filters = page.getByTestId('offline-filters');
+  await expect(filters).toContainText('Partner:');
+  await expect(filters).toContainText('Advertiser');
+  await expect(filters.getByRole('button', { name: '+ add filter' })).toBeVisible();
+  await expect(page.getByTestId('offline-metrics')).toContainText('Floodlight Impressions');
+  // schedule is greyed until Active; the time zone is Pacific; dates are MM/DD/YYYY
+  await expect(page.getByLabel('Starts')).toBeDisabled();
+  await expect(page.getByLabel('Time zone')).toContainText('Pacific Time (GMT-08:00)');
+  await page.getByLabel('Active').check();
+  await expect(page.getByLabel('Starts')).toBeEnabled();
+  await expect(page.getByLabel('Starts')).toHaveValue(/^\d{2}\/\d{2}\/\d{4}$/);
+  await expect(page.getByLabel('Expires')).toHaveValue(/^\d{2}\/\d{2}\/\d{4}$/);
+  // delivery
+  await expect(page.getByLabel('Format')).toContainText('CSV');
+  await expect(page.getByLabel(new RegExp(`Email owner \\(${w.email.replace('.', '\\.')}\\)`))).toBeVisible();
+  await expect(page.getByText('Share with:')).toBeVisible();
+  await expect(page.getByRole('button', { name: '+ add people' })).toBeDisabled();
+  await expect(page.getByText('You can also access this report as an Instant Report.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'OPEN IN INSTANT REPORTING' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'SAVE AND RUN' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Cancel' })).toBeVisible();
+  // unsaved-changes dialog on Cancel after an edit
+  await page.getByLabel('Report name').fill('PW offline edit');
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.getByRole('dialog')).toContainText('Unsaved Changes');
+  await page.getByRole('dialog').getByRole('button', { name: 'Continue editing' }).click();
+  // Save, then Share with is enabled
+  await page.getByLabel('File name').fill('pw_offline_edit');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByText('Report saved')).toBeVisible();
+  await expect(page.getByRole('button', { name: '+ add people' })).toBeEnabled();
 });
 
 test('a report route under an advertiser is the 404 page', async ({ page }) => {

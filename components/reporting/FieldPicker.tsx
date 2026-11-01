@@ -3,6 +3,7 @@
 // Field picker (module 16 S2): search, frequently used, categories with counts, incompatible fields greyed.
 import { useMemo, useState } from 'react';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
 import IconButton from '@mui/material/IconButton';
 import Menu from '@mui/material/Menu';
@@ -23,6 +24,7 @@ export function FieldPicker({
   showDownloadOnly,
   onToggleDownloadOnly,
   onAdd,
+  onCustomData,
 }: {
   fields: FieldView[];
   selected: string[];
@@ -31,6 +33,7 @@ export function FieldPicker({
   showDownloadOnly: boolean;
   onToggleDownloadOnly: () => void;
   onAdd: (key: string) => void;
+  onCustomData?: () => void;
 }) {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState<Set<string>>(new Set(['Frequently used']));
@@ -42,12 +45,14 @@ export function FieldPicker({
   const needle = q.trim().toLowerCase();
   const matches = (f: FieldView) => !needle || f.label.toLowerCase().includes(needle);
   const groups = useMemo(() => {
-    const out: { name: string; items: FieldView[]; count: number }[] = [];
-    const freq = visible.filter((f) => f.frequentlyUsed);
+    const byLabel = (a: FieldView, b: FieldView) => a.label.localeCompare(b.label, 'en');
+    const out: { name: string; items: FieldView[]; count: number; all?: boolean }[] = [];
+    const freq = visible.filter((f) => f.frequentlyUsed).sort(byLabel);
     out.push({ name: 'Frequently used', items: freq.filter(matches), count: freq.length });
-    for (const cat of CATEGORIES) {
-      const all = visible.filter((f) => f.category === cat);
-      if (all.length) out.push({ name: cat, items: all.filter(matches), count: all.length });
+    const cats = [...CATEGORIES].sort((a, b) => a.localeCompare(b, 'en'));
+    for (const cat of cats) {
+      const all = visible.filter((f) => f.category === cat).sort(byLabel);
+      if (all.length) out.push({ name: cat, items: all.filter(matches), count: all.length, all: true });
     }
     return out.filter((g) => !needle || g.items.length > 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -103,16 +108,26 @@ export function FieldPicker({
           </MenuItem>
         </Menu>
       </Box>
+      <Box>
+        <Button size="small" startIcon={<DvIcon name="add" size={16} />} onClick={onCustomData}>
+          Custom data
+        </Button>
+      </Box>
       <Box sx={{ maxHeight: 420, overflowY: 'auto' }}>
-        {groups.map((g) => (
+        {groups.map((g, gi) => (
           <Box key={g.name}>
+            {g.all && !groups[gi - 1]?.all ? (
+              <Typography variant="body2" sx={{ fontWeight: 500, mt: 2, mb: 0.5 }}>
+                All data
+              </Typography>
+            ) : null}
             <ButtonBase
               onClick={() => toggle(g.name)}
               aria-expanded={isOpen(g.name)}
-              sx={{ width: '100%', justifyContent: 'flex-start', gap: 1, py: 1, typography: 'panelOverline' }}
+              sx={{ width: '100%', justifyContent: 'flex-start', gap: 1, py: 1, typography: 'body2', textTransform: 'none' }}
             >
               <DvIcon name={isOpen(g.name) ? 'expand_less' : 'expand_more'} size={16} />
-              {g.name} ({g.count})
+              {g.name}
             </ButtonBase>
             {isOpen(g.name)
               ? g.items.map((f) => {

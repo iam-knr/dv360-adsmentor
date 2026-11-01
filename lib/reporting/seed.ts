@@ -95,7 +95,7 @@ interface SeedReport {
 
 const INSTANT: SeedReport[] = [
   {
-    name: 'Advertiser overview',
+    name: 'Advertiser Overview',
     template: 'advertiser-overview',
     dimensions: [],
     metrics: [],
@@ -103,7 +103,7 @@ const INSTANT: SeedReport[] = [
     runs: 2,
   },
   {
-    name: 'IO pacing',
+    name: 'Insertion Order Pacing',
     template: 'io-pacing',
     dimensions: [],
     metrics: [],
@@ -242,6 +242,10 @@ export async function seedReports(tx: Db, input: SeedReportsInput): Promise<numb
             ? 'INSTANT'
             : (OFFLINE[def.offlineType ?? 'FLOODLIGHT'] ?? 'OFFLINE_FLOODLIGHT'),
         name: def.name,
+        // Sim time, staggered over the last days, so the list sorts and prints like a used account.
+        updatedAt: new Date(
+          `${addDays(input.today, -(1 + ((made * 3) % 9)))}T${String(8 + ((made * 5) % 11)).padStart(2, '0')}:${String((made * 17) % 60).padStart(2, '0')}:00Z`,
+        ),
         definition: def as unknown as Prisma.InputJsonValue,
         timeZone: def.timeZone,
         dateRange: def.dateRange,
@@ -268,7 +272,7 @@ export async function seedReports(tx: Db, input: SeedReportsInput): Promise<numb
           dateRangeEnd: new Date(`${end}T00:00:00Z`),
           createdById: input.ownerUserId as string,
           status: 'DONE',
-          completedAt: new Date(),
+          completedAt: new Date(`${end}T12:00:00Z`),
           completedAtSim: new Date(`${end}T12:00:00Z`),
           format: 'CSV',
           fileName: `${def.name.replace(/\s+/g, '_')}_${end.replace(/-/g, '')}_1200.csv`,
