@@ -2,6 +2,7 @@
 import type { Prisma, PrismaClient, SandboxKind } from '@prisma/client';
 import { seedAudiences } from '../audiences/seed';
 import { fastForward } from '../engine/server';
+import { isTransientError } from '../engine/io/transient';
 import { seedAppCatalog, seedResources } from '../resources/seed';
 import { seedYoutube, seedYoutubeVideos } from '../youtube/seed';
 import { finishBackfill, seedPostHistory } from './after-history';
@@ -188,6 +189,10 @@ export async function provisionSandbox(db: Db, input: ProvisionInput): Promise<P
       backfill: job.status === 'DONE' ? 'DONE' : 'PENDING',
     };
   } catch (err) {
+    // A transient error (unique violation raced by another step, deadlock, dropped connection, pool timeout) is not a
+    // failed build: the state stays as it is, so nobody sees FAILED while the caller (runProvisionStep) repeats the
+    // work; the caller ends the build FAILED itself when its bounded retries are spent (docs/gaps/prov-race2.md).
+    if (isTransientError(err)) throw err;
     await db.sandbox.update({
       where: { id: sandbox.id },
       data: {

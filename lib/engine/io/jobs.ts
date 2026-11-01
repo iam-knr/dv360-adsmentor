@@ -70,6 +70,30 @@ export async function createJob(
   return toView(row);
 }
 
+/**
+ * The history job of a sandbox, created at most once. A build's history is ONE job (a second one would run the ticks
+ * again, past "today"), but several steps can reach "start the history" at the same moment (the claimant of the build and
+ * a step that found a BACKFILLING sandbox without a job). A transaction-scoped advisory lock per sandbox serialises
+ * them: the second one finds the first one's job (open or already DONE) and uses it. A FAILED or CANCELLED job does not
+ * count, so a retry starts a new one. `clearSandboxData` deletes the jobs of a rebuilt sandbox.
+ */
+export async function createHistoryJobOnce(
+  tx: Tx,
+  sandboxId: string,
+  params: FastForwardParams,
+): Promise<JobView> {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`ff-history:${sandboxId}`}))`;
+  const rows = await tx.simJob.findMany({
+    where: { sandboxId, kind: 'FAST_FORWARD', status: { in: ['QUEUED', 'RUNNING', 'DONE'] } },
+    orderBy: { createdAt: 'asc' },
+  });
+  const existing = rows.find(
+    (r) => (r.params as { history?: unknown } | null)?.history !== undefined,
+  );
+  if (existing) return toView(existing);
+  return createJob(tx, sandboxId, 'FAST_FORWARD', params);
+}
+
 export async function getJob(tx: Tx, id: string): Promise<JobView | null> {
   const row = await tx.simJob.findUnique({ where: { id } });
   return row ? toView(row) : null;

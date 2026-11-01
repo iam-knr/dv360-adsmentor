@@ -20,6 +20,7 @@ import { after } from 'next/server';
 import { findStudentsWithoutSandbox, getProvisionSource } from '@/lib/accounts/provisioning-source';
 import { prisma } from '@/lib/db';
 import { advanceSandboxJobs, fastForward } from '@/lib/engine/server';
+import { withTransientRetry } from '@/lib/engine/io/transient';
 import {
   isTemplateKey,
   partnerIdOf,
@@ -287,27 +288,34 @@ export async function runProvisionStep(
       data: { provisionState: 'SEEDING', provisionError: null },
     });
     if (claimed.count === 1) {
+      const row = sb;
       const stopBeat = startHeartbeat(db, sandboxId);
       try {
-        await provisionSandbox(db, {
-          classroomId: sb.classroomId,
-          ownerUserId: sb.ownerUserId,
-          name: sb.name,
-          template: isTemplateKey(sb.seedTemplateKey) ? sb.seedTemplateKey : FALLBACK_TEMPLATE,
-          kind: sb.kind,
-          seedValue: sb.seedValue,
-          partnerName: sb.name,
-          knobs: { engineDays: engineDays(), sliceDays: STUDENT_SLICE_DAYS },
-          deadlineMs: deadline,
-          force: true,
-        });
-        await ensureStudentGrant(db, sandboxId, sb.ownerUserId);
+        // a transient error (a unique violation raced by another step, a deadlock, a dropped connection) repeats the seed:
+        // provisionSandbox clears the sandbox's rows first, so a repeat is a clean rebuild, and it ends FAILED itself
+        // only when the error is not transient or the bounded retries are spent
+        await withTransientRetry(() =>
+          provisionSandbox(db, {
+            classroomId: row.classroomId,
+            ownerUserId: row.ownerUserId,
+            name: row.name,
+            template: isTemplateKey(row.seedTemplateKey) ? row.seedTemplateKey : FALLBACK_TEMPLATE,
+            kind: row.kind,
+            seedValue: row.seedValue,
+            partnerName: row.name,
+            knobs: { engineDays: engineDays(), sliceDays: STUDENT_SLICE_DAYS },
+            deadlineMs: deadline,
+            force: true,
+          }),
+        );
+        await withTransientRetry(() => ensureStudentGrant(db, sandboxId, row.ownerUserId));
         // engineDays 0 reaches READY inside provisionSandbox; with a history job finishBackfill starts the clock
         const done = await db.sandbox.findUnique({
           where: { id: sandboxId },
           select: { provisionState: true },
         });
-        if (done?.provisionState === 'READY') await startSandboxClock(db, sandboxId).catch(() => undefined);
+        if (done?.provisionState === 'READY')
+          await startSandboxClock(db, sandboxId).catch(() => undefined);
       } catch (err) {
         // provisionSandbox sets FAILED itself when its own work fails; this covers an error before it got that far
         await db.sandbox.updateMany({
@@ -323,11 +331,15 @@ export async function runProvisionStep(
   }
 
   if (sb.provisionState === 'BACKFILLING' && Date.now() < deadline) {
+    const row = sb;
     const stopBeat = startHeartbeat(db, sandboxId);
     try {
-      await ensureStudentGrant(db, sandboxId, sb.ownerUserId);
-      const jobs = await advanceSandboxJobs(sandboxId, deadline);
-      if (jobs.length === 0) await resumeBackfill(db, sb);
+      // transient errors (see lib/engine/io/transient.ts) are retried a few times; the engine retries its own batches
+      await withTransientRetry(async () => {
+        await ensureStudentGrant(db, sandboxId, row.ownerUserId);
+        const jobs = await advanceSandboxJobs(sandboxId, deadline);
+        if (jobs.length === 0) await resumeBackfill(db, row);
+      });
     } catch (err) {
       await db.sandbox.updateMany({
         where: { id: sandboxId, provisionState: { in: ['BACKFILLING', 'SEEDING'] } },

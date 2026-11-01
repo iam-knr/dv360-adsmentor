@@ -9,6 +9,7 @@ import { seedExperiments } from '../experiments/seed';
 import { seedCrossMediaReports, seedPlans } from '../planning/seed';
 import { seedReports } from '../reporting/seed';
 import type { TemplateKey } from './knobs';
+import { stableId } from './prng';
 
 export interface PostHistoryInput {
   sandboxId: string;
@@ -48,18 +49,23 @@ export async function seedPostHistory(
 }
 
 /**
- * Finishes a sandbox whose history job is done: post-history seeds, then READY. Idempotent: only a sandbox that is
- * BACKFILLING is touched.
+ * Finishes a sandbox whose history job is done: post-history seeds, then READY. Idempotent and safe to call from several
+ * places at once (the job runner that ends the job, a provisioning step that finds the job DONE, the timer): the whole
+ * finish is ONE transaction that first locks the Sandbox row and checks it is still BACKFILLING, so the second caller
+ * waits, sees READY and does nothing. Before this the post-history seeds ran once per caller and the sandbox ended with
+ * two or three copies of every report, plan and experiment (docs/gaps/prov-race2.md).
  */
 export async function finishBackfill(
   db: PrismaClient,
   sandboxId: string,
   today: string,
 ): Promise<boolean> {
-  const sandbox = await db.sandbox.findUnique({ where: { id: sandboxId } });
-  if (!sandbox || sandbox.provisionState !== 'BACKFILLING') return false;
-  await db.$transaction(
+  const finished = await db.$transaction(
     async (tx) => {
+      const rows = await tx.$queryRaw<{ provisionState: string }[]>`
+        SELECT "provisionState"::text AS "provisionState" FROM "Sandbox" WHERE "id" = ${sandboxId} FOR NO KEY UPDATE`;
+      if (rows[0]?.provisionState !== 'BACKFILLING') return false;
+      const sandbox = await tx.sandbox.findUniqueOrThrow({ where: { id: sandboxId } });
       await seedPostHistory(tx, {
         sandboxId,
         template: sandbox.seedTemplateKey as TemplateKey,
@@ -67,13 +73,24 @@ export async function finishBackfill(
         ownerUserId: sandbox.ownerUserId,
         today,
       });
+      // the student's access goes in with READY, never after it (a student sent to the home page by READY needs it)
+      if (sandbox.ownerUserId) {
+        const partnerId = stableId(sandboxId, 'partner');
+        if (await tx.partner.findUnique({ where: { id: partnerId }, select: { id: true } }))
+          await tx.userAccessGrant.createMany({
+            data: [{ userId: sandbox.ownerUserId, sandboxId, partnerId, role: 'STANDARD' }],
+            skipDuplicates: true,
+          });
+      }
+      await tx.sandbox.update({
+        where: { id: sandboxId },
+        data: { provisionState: 'READY', provisionError: null },
+      });
+      return true;
     },
     { timeout: 120_000, maxWait: 30_000 },
   );
-  await db.sandbox.update({
-    where: { id: sandboxId },
-    data: { provisionState: 'READY', provisionError: null },
-  });
+  if (!finished) return false;
   // The history is built; from here the sandbox runs (docs/gaps/sim-clock-runs.md). Accounting point = now: no debt.
   await startSandboxClock(db, sandboxId).catch(() => undefined);
   return true;

@@ -14,7 +14,7 @@ import { useProvisionDriver, type ProvisionViewJson } from './useProvisionDriver
  * the tab is hidden); it stops when the sandbox is READY and offers the way in.
  */
 export function ProvisionProgress({ initial }: { initial: ProvisionViewJson }) {
-  const { view, step } = useProvisionDriver('/api/sim/provision', initial);
+  const { view, step, busy } = useProvisionDriver('/api/sim/provision', initial);
   const call = (retry = false) => step({ retry });
 
   useEffect(() => {
@@ -38,10 +38,11 @@ export function ProvisionProgress({ initial }: { initial: ProvisionViewJson }) {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
         <DvBanner kind="error">
-          We could not prepare your practice account.{view.error ? ` ${view.error}` : ''}
+          We could not prepare your practice account.{view.error ? ` ${view.error}` : ''} Your build
+          is saved: Retry starts it again.
         </DvBanner>
-        <Button variant="contained" onClick={() => void call(true)}>
-          Try again
+        <Button variant="contained" disabled={busy} onClick={() => void call(true)}>
+          {busy ? 'Retrying…' : 'Retry'}
         </Button>
       </Box>
     );
