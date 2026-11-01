@@ -6,12 +6,13 @@ import { useState } from 'react';
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
 import Typography from '@mui/material/Typography';
+import { colors } from '@/lib/theme/tokens';
 import type { TemplateDef } from '@/lib/reporting/templates';
 
 const BORDER: Record<TemplateDef['family'], string> = {
-  BASIC: '#1a73e8',
-  REACH: '#d93025',
-  VIDEO: '#e8710a',
+  BASIC: colors.primary.main,
+  REACH: colors.status.error,
+  VIDEO: colors.status.atRisk,
 };
 
 export function TemplateCards({

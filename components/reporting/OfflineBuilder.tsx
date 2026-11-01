@@ -12,6 +12,7 @@ import MenuItem from '@mui/material/MenuItem';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Link from '@mui/material/Link';
 import Typography from '@mui/material/Typography';
+import { colors } from '@/lib/theme/tokens';
 import { DvIcon } from '@/components/icons';
 import {
   DvBanner,
@@ -254,8 +255,8 @@ export function OfflineBuilder(props: OfflineBuilderProps) {
       label={text}
       sx={{
         borderRadius: '14px',
-        color: '#fff',
-        bgcolor: kind === 'green' ? '#188038' : '#1a73e8',
+        color: colors.text.inverse,
+        bgcolor: kind === 'green' ? colors.statusText.active : colors.primary.main,
         '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.8)' },
       }}
       {...(extra?.onDelete ? { onDelete: extra.onDelete } : {})}
@@ -272,7 +273,7 @@ export function OfflineBuilder(props: OfflineBuilderProps) {
 
   return (
     <Box
-      sx={{ bgcolor: '#f1f3f4', mx: -4, mt: -4, mb: -4, px: 4, py: 3, minHeight: '100%', display: 'flex', flexDirection: 'column', gap: 2 }}
+      sx={{ bgcolor: colors.surface.sunken, mx: -4, mt: -4, mb: -4, px: 4, py: 3, minHeight: '100%', display: 'flex', flexDirection: 'column', gap: 2 }}
       data-testid="offline-page"
     >
       <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 3 }}>
@@ -305,7 +306,7 @@ export function OfflineBuilder(props: OfflineBuilderProps) {
         </DvBanner>
       ) : null}
 
-      <Box sx={{ bgcolor: '#fff', border: '1px solid', borderColor: 'divider', px: 3, py: 1 }}>
+      <Box sx={{ bgcolor: colors.text.inverse, border: '1px solid', borderColor: 'divider', px: 3, py: 1 }}>
         {section(
           'Date range',
           <Box sx={{ maxWidth: 420 }}>
@@ -335,7 +336,7 @@ export function OfflineBuilder(props: OfflineBuilderProps) {
         )}
       </Box>
 
-      <Box sx={{ bgcolor: '#fff', border: '1px solid', borderColor: 'divider', px: 3, py: 1 }}>
+      <Box sx={{ bgcolor: colors.text.inverse, border: '1px solid', borderColor: 'divider', px: 3, py: 1 }}>
         {section(
           'Report template',
           <Box sx={{ maxWidth: 420 }}>
@@ -399,7 +400,7 @@ export function OfflineBuilder(props: OfflineBuilderProps) {
         )}
       </Box>
 
-      <Box sx={{ bgcolor: '#fff', border: '1px solid', borderColor: 'divider', px: 3, py: 1 }}>
+      <Box sx={{ bgcolor: colors.text.inverse, border: '1px solid', borderColor: 'divider', px: 3, py: 1 }}>
         {section(
           'Schedule',
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 420 }}>

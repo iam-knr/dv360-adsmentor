@@ -16,6 +16,7 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
+import { colors } from '@/lib/theme/tokens';
 import { DvIcon } from '@/components/icons';
 import {
   DvBanner,
@@ -475,7 +476,7 @@ export function ReportBuilder(props: ReportBuilderProps) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
       <Box
-        sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap', bgcolor: '#f1f3f4', px: 3, py: 1, mx: -4, mt: -4 }}
+        sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap', bgcolor: colors.surface.sunken, px: 3, py: 1, mx: -4, mt: -4 }}
         data-testid="builder-header"
       >
         <Link component="button" underline="hover" onClick={leave} sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>

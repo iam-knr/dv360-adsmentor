@@ -397,6 +397,7 @@ test('FID-REP-01: instant list matches DV360 and rows can be duplicated and dele
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
   await expect(page.getByRole('dialog')).toContainText('PW list copy and its files will be removed.');
   await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(copy).toHaveCount(1);
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
@@ -432,12 +433,12 @@ test('FID-REP-02: instant builder layout, inline rename, field groups, unsaved-c
   await expect(picker).toContainText('All data');
   await expect(picker.getByRole('button', { name: /Frequently used/ })).toHaveText(/Frequently used$/);
   await expect(picker.getByTestId('picker-field')).toHaveText([
-    /Advertiser$/,
-    /Advertiser Currency$/,
-    /Clicks$/,
-    /Impressions$/,
-    /Insertion Order$/,
-    /Revenue \(Advertiser Currency\)$/,
+    /^abcAdvertiseradd$/,
+    /^abcAdvertiser Currencyadd$/,
+    /^123Clicksadd$/,
+    /^123Impressionsadd$/,
+    /^abcInsertion Orderadd$/,
+    /^123Revenue \(Advertiser Currency\)add$/,
   ]);
   await expect(picker.getByRole('button', { name: /^Active View$/ })).toBeVisible();
   await expect(picker.getByText(/\(\d+\)/)).toHaveCount(0);
