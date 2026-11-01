@@ -236,7 +236,8 @@ const headerBg = {
 
 const cellSx = {
   px: 3,
-  py: 2,
+  // 3 px keeps a two line name cell (name + id) at the 40 px row height of real DV360 (CAM-028).
+  py: '3px',
   height: sizes.rowHeight,
   borderBottom: '1px solid',
   borderColor: 'divider',

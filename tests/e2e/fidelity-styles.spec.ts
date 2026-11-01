@@ -23,7 +23,7 @@ test.describe('fidelity: computed styles of shared components', () => {
 
   test('table header and body cells (CAM-026..030, 054)', async ({ page }) => {
     const grid = page.locator('#grid');
-    const header = grid.getByRole('columnheader', { name: /^Budget/ }).first();
+    const header = grid.locator('th').filter({ hasText: 'Budget' }).first();
     const h = await styles(header, [
       'font-size',
       'font-weight',
@@ -37,8 +37,8 @@ test.describe('fidelity: computed styles of shared components', () => {
     expect(h['background-color']).toBe(TRANSPARENT);
     expect(h['font-family']).toMatch(/^Roboto/);
 
-    const row = grid.getByRole('row', { name: /Winter clearance/ });
-    const cell = row.getByRole('gridcell').filter({ hasText: '40,000' }).first();
+    const row = grid.getByRole('row', { name: /Back to school/ });
+    const cell = row.getByRole('gridcell').filter({ hasText: '80,000' }).first();
     const c = await styles(cell, [
       'font-size',
       'font-weight',
@@ -56,12 +56,12 @@ test.describe('fidelity: computed styles of shared components', () => {
     expect(box?.height).toBeGreaterThanOrEqual(39);
     expect(box?.height).toBeLessThanOrEqual(41);
 
-    const link = grid.getByRole('link', { name: 'Winter clearance' });
+    const link = grid.getByRole('link', { name: 'Back to school' });
     const l = await styles(link, ['font-size', 'color']);
     expect(l['font-size']).toBe('12px');
     expect(l['color']).toBe('rgb(26, 115, 232)');
 
-    const id = row.getByText('C-1004');
+    const id = row.getByText('C-1002');
     const i = await styles(id, ['font-size', 'color']);
     expect(i['font-size']).toBe('12px');
     expect(i['color']).toBe('rgba(0, 0, 0, 0.54)');
@@ -112,27 +112,27 @@ test.describe('fidelity: computed styles of shared components', () => {
   }) => {
     const nav = page.getByRole('navigation', { name: 'Main', exact: true });
     const selected = nav.locator('[aria-current="page"]').first();
-    const sel = await styles(selected, [
-      'background-color',
-      'color',
+    const sel = await styles(selected, ['background-color', 'color']);
+    const selLabel = await styles(selected.locator('.MuiListItemText-primary'), [
       'font-family',
       'font-size',
       'font-weight',
     ]);
     expect(sel['background-color']).toBe('rgb(26, 115, 232)');
     expect(sel['color']).toBe('rgb(255, 255, 255)');
-    expect(sel['font-family']).toMatch(GOOGLE_SANS);
-    expect(sel['font-size']).toBe('14px');
-    expect(sel['font-weight']).toBe('500');
+    expect(selLabel['font-family']).toMatch(GOOGLE_SANS);
+    expect(selLabel['font-size']).toBe('14px');
+    expect(selLabel['font-weight']).toBe('500');
 
     const normal = nav.getByRole('button', { name: /^Audiences/ });
-    const n = await styles(normal, [
-      'color',
-      'font-family',
-      'font-size',
-      'font-weight',
-      'background-color',
-    ]);
+    const n = {
+      ...(await styles(normal, ['color', 'background-color'])),
+      ...(await styles(normal.locator('.MuiListItemText-primary'), [
+        'font-family',
+        'font-size',
+        'font-weight',
+      ])),
+    };
     expect(n['color']).toBe('rgb(32, 33, 36)');
     expect(n['font-family']).toMatch(GOOGLE_SANS);
     expect(n['font-size']).toBe('14px');
