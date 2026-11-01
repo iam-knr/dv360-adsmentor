@@ -6,6 +6,7 @@
 // Knobs (env): STRESS_STUDENTS (default 12), STRESS_SEED (default random, printed), SANDBOX_ENGINE_DAYS (default 3).
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { prisma } from '@/lib/db';
+import { isTransientError } from '@/lib/engine/io/transient';
 import { maybeAdvance } from '@/lib/sandbox/maybe-advance';
 import {
   advanceProvisioning,
@@ -183,6 +184,12 @@ describe('stress: many sandboxes, overlapping callers', () => {
             note(s, 'retryProvisionSandbox', v.state, v.error);
           }
         } catch (err) {
+          // a call that cannot get a connection (~48 callers share a pool of 9 here) is a 500 that the page driver retries;
+          // the build itself must still end READY, which is asserted below
+          if (isTransientError(err)) {
+            await sleep(100);
+            continue;
+          }
           failures.push(
             `${s.sandboxId} caller ${id} threw: ${err instanceof Error ? err.message : String(err)}`,
           );
