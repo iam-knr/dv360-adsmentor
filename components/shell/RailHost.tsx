@@ -55,7 +55,8 @@ export function RailHost() {
     const defaultPage = onCampaigns || level === 'campaign' || level === 'io' || level === 'li';
     if (!defaultPage) return;
     const memory = readMemory();
-    if (memory.intelligenceSeen) return;
+    // Real DV360 shows Intelligence every time the Campaigns list loads (fidelity audit CAM-008); other pages only once.
+    if (memory.intelligenceSeen && !onCampaigns) return;
     writeStorage(RAIL_KEY, JSON.stringify({ ...memory, intelligenceSeen: true }));
     setOpen('intelligence');
   }, [pathname, level, ids.partnerId, ids.advertiserId]);

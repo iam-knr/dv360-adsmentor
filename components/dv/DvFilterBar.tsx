@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useRef, useState } from 'react';
+import { useId, useRef, useState, type MouseEventHandler } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
@@ -40,6 +40,8 @@ export interface DvFilterBarProps {
   disabled?: boolean;
   /** Landmark name. Default "Filters". */
   ariaLabel?: string;
+  /** Real DV360: the funnel opens a menu of the filter fields (click one to edit it) instead of the active-filter list. */
+  fieldMenu?: boolean;
 }
 
 export const FILTER_PLACEHOLDER = 'Enter a search term or select filters';
@@ -55,6 +57,23 @@ export function filterChipText(field: FilterField | undefined, v: FilterValue): 
   return `${label}: ${option?.label ?? raw}`;
 }
 
+/** MUI injects `onClick` and `className` into the delete icon; `DvIcon` ignores both, so the click would open the chip. */
+function ChipDeleteIcon({
+  label,
+  onClick,
+  className,
+}: {
+  label: string;
+  onClick?: MouseEventHandler<HTMLSpanElement>;
+  className?: string;
+}) {
+  return (
+    <Box component="span" className={className} onClick={onClick} sx={{ display: 'inline-flex' }}>
+      <DvIcon name="close" size={16} label={label} />
+    </Box>
+  );
+}
+
 export function DvFilterBar({
   fields,
   value,
@@ -63,6 +82,7 @@ export function DvFilterBar({
   placeholder = FILTER_PLACEHOLDER,
   disabled,
   ariaLabel = 'Filters',
+  fieldMenu = false,
 }: DvFilterBarProps) {
   const popId = useId();
   const barRef = useRef<HTMLDivElement>(null);
@@ -141,8 +161,23 @@ export function DvFilterBar({
         anchorEl={funnelAnchor}
         onClose={() => setFunnelAnchor(null)}
       >
-        <Box sx={{ p: 3, minWidth: 240 }}>
-          {count === 0 ? (
+        <Box sx={{ p: fieldMenu ? 0 : 3, minWidth: 240 }}>
+          {fieldMenu ? (
+            <List dense aria-label="Filter fields">
+              {fields.map((f) => (
+                <ListItemButton
+                  key={f.id}
+                  onClick={() => {
+                    const anchor = funnelAnchor;
+                    setFunnelAnchor(null);
+                    if (anchor) openEditor(f.id, anchor);
+                  }}
+                >
+                  {f.label}
+                </ListItemButton>
+              ))}
+            </List>
+          ) : count === 0 ? (
             <Typography variant="body2">No filters applied</Typography>
           ) : (
             <List dense aria-label="Active filters">
@@ -168,7 +203,7 @@ export function DvFilterBar({
             disabled={disabled}
             onClick={(e) => openEditor(v.fieldId, e.currentTarget)}
             onDelete={() => setFilter(v.fieldId, [])}
-            deleteIcon={<DvIcon name="close" size={16} label={`Remove filter ${label}`} />}
+            deleteIcon={<ChipDeleteIcon label={`Remove filter ${label}`} />}
             sx={{ '&:hover': { bgcolor: 'surface.sunken' } }}
           />
         );

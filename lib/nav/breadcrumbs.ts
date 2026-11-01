@@ -25,7 +25,7 @@ export function topCrumbs(s: CrumbScope): TopCrumb[] {
   if (!s.campaign) return out;
   out.push({
     level: 'Campaign',
-    name: `Campaign ${s.campaign.name}`,
+    name: s.campaign.name,
     href: campaignPath(pid, aid, s.campaign.publicId),
   });
   return out;

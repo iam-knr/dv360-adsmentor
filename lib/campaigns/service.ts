@@ -136,7 +136,9 @@ async function campaignIssues(
     { advertiserId: adv.id, ...(stored ? { id: stored.id } : {}) },
     { userId: ctx.user.id, role: roleOf(ctx.user) },
   );
-  return validate('campaign', toValidationInput(wire, currency), vctx, { trigger: 'save' });
+  const issues = validate('campaign', toValidationInput(wire, currency), vctx, { trigger: 'save' });
+  // Real DV360 has no KPI value input (fidelity audit CAM-041), so a missing value (CMP-012) no longer blocks a save.
+  return issues.filter((i) => i.ruleId !== 'CMP-012');
 }
 
 const soft = (issues: Issue[]): WireIssue[] =>
@@ -161,6 +163,12 @@ function detailOf(ctx: ServiceCtx, c: CampaignFull, adv: Advertiser): CampaignDe
 // ---------------------------------------------------------------------------------------------
 // Reads
 // ---------------------------------------------------------------------------------------------
+
+/** The sim date (YYYY-MM-DD) in the advertiser time zone: "Today" of the list date picker. */
+export async function getSimToday(user: SessionUser, timeZone: string): Promise<string> {
+  const ctx = await serviceCtx(user);
+  return todayIn(ctx.simNow, timeZone);
+}
 
 /** A1: campaigns of one advertiser. Numbers come from getGridMetrics only (build-plan 4.11 item 6). */
 export async function listCampaigns(
@@ -238,6 +246,7 @@ export async function listCampaigns(
           : null,
       budget: budgetBy.get(c.id) ?? null,
       spent: km.revenue,
+      goal: c.goal,
       kpiGoal: kpiGoalText(c.kpi, decimalToNumber(c.kpiValue), currency),
       kpiActual: kpiActualText(c.kpi, km, currency),
       kpiActualTrueView: kpiActualTrueViewText(c.kpi, km, currency),
