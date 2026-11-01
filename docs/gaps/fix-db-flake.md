@@ -53,3 +53,16 @@ the same latent tie risk, fixed below).
 8 consecutive runs of `sandbox.db.test.ts` pass after the fix (1 of 3 failed before). Other tests that compare sandboxes
 (`plan.test.ts`, `history.test.ts`) compare in-memory plans built by pure functions, not database order; the other
 `orderBy: { name }` uses in tests (`dg`, `seed-advertisers`, `resources/seed`) read one name-unique set each.
+
+## Gate results
+
+- `npm run check` passes. Full db project (`CI=1 TZ=UTC`, clean DB each): run 1 pass, run 2 **one failure** (below), runs 3 and 4 pass (73 files, 832 tests each, ~16 min).
+- `tests/seed/sandbox.db.test.ts`: 8 passes in a row after the fix (TZ=UTC), then 2 under UTC and 2 under Asia/Kolkata, all 18/18.
+
+## Open: a second, unrelated, rare flake (not fixed here)
+
+In one full run `tests/sandbox/provision.db.test.ts` > "timer > starts students who have an account but no sandbox and
+builds queued ones" ended with the sandbox `FAILED` instead of `READY`. It did not reproduce in 4 isolated runs of the
+file or in the next two full runs, and the log did not keep the stored `provisionError`, so **the cause is unknown**. It
+is not claimed as fixed. That test now prints the view (including the error) when the state is not READY, so the next
+occurrence names its cause. Suspect family: overlapping build steps, as in docs/gaps/fix-prov-flake.md.
