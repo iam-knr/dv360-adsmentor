@@ -74,6 +74,7 @@ export const PARTNER_TREE: NavNode[] = [
     key: 'resources',
     label: 'Resources',
     icon: 'navResources',
+    newDot: true,
     children: [
       {
         key: 'resources.brand',
@@ -247,6 +248,7 @@ export const ADVERTISER_TREE: NavNode[] = [
     key: 'resources',
     label: 'Resources',
     icon: 'navResources',
+    newDot: true,
     children: [
       {
         key: 'resources.brand',

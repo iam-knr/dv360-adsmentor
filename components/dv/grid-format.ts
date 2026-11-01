@@ -17,9 +17,9 @@ export function formatNumber(n: number | null | undefined): string {
   return missing(n) ? EMPTY_CELL : int.format(n);
 }
 
-/** "₹12,000.00". */
+/** "₹12,000.00". Zero money shows "-" in list cells, like real DV360 (CAM-014). */
 export function formatCurrency(n: number | null | undefined, symbol = '₹'): string {
-  if (missing(n)) return EMPTY_CELL;
+  if (missing(n) || n === 0) return EMPTY_CELL;
   return formatMoney(n, symbol);
 }
 

@@ -106,7 +106,15 @@ export function BulkActionBar({
     const g: BulkMenuGroup[] = [
       {
         label: 'Status',
-        items: [item('ACTIVATE', 'Activate', caps), item('PAUSE', 'Pause', caps)],
+        items: [
+          {
+            ...item('ACTIVATE', 'Activate', caps),
+            icon: 'play_arrow',
+            iconColor: 'status.active',
+            emphasis: true,
+          },
+          { ...item('PAUSE', 'Pause', caps), icon: 'pause' },
+        ],
       },
     ];
     if (entity !== 'campaign')
@@ -147,20 +155,19 @@ export function BulkActionBar({
         ],
       });
     }
-    // Real DV360 shows no Unarchive item and no shortcut hints on the campaign and IO lists (fidelity audit CAM-036).
-    const real = entity !== 'lineItem';
     g.push({
       label: 'Bulk action',
       items: [
         item('ARCHIVE', 'Archive', caps),
-        ...(real ? [] : [item('UNARCHIVE', 'Unarchive', caps)]),
-        item('DUPLICATE', 'Duplicate', caps, 'DUPLICATE', real ? undefined : '⌘+D'),
+        // A disabled "Unarchive" is noise: real DV360 only offers it when it applies.
+        ...(caps.UNARCHIVE?.enabled ? [item('UNARCHIVE', 'Unarchive', caps)] : []),
+        item('DUPLICATE', 'Duplicate', caps),
       ],
     });
     g.push({
       label: 'SDF',
       items: [
-        { id: 'SDF_DOWNLOAD', label: 'Download', ...(real ? {} : { shortcut: '⌘+Shift+K' }) },
+        { id: 'SDF_DOWNLOAD', label: 'Download' },
         { id: 'SDF_QA', label: 'Download QA' },
       ],
     });
