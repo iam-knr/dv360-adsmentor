@@ -1,6 +1,6 @@
 # Build plan (P2-07)
 
-Executable plan for Phase 3 (foundation build), with an outline for Phases 4 and 5. Written 2026-10-28 by session P2-07. Inputs: `PROJECT.md`, `docs/PROJECT-LOG.md`, `docs/decisions.md`, `docs/specs/*.md`, `docs/specs/modules/*.md`, `docs/specs/conflicts.md`.
+Executable plan for Phase 3 (foundation build), with an outline for Phases 4 and 5. Written 2026-10-28 by session P2-07. Inputs: `docs/PROJECT-LOG.md` (Part B), `docs/PROJECT-LOG.md`, `docs/decisions.md`, `docs/specs/*.md`, `docs/specs/modules/*.md`, `docs/specs/conflicts.md`.
 
 Contents
 1. Owner prerequisites checklist
@@ -28,13 +28,13 @@ Where this file and a spec disagree, the order is: `conflicts.md` rows, then thi
 
 ## 1. Owner prerequisites checklist
 
-Owner decisions of 2026-10-28 are recorded below (ADR-039 to ADR-046): P-01, P-05, P-10 and P-13 are done, P-09 is partly done. The rest is still open. Tick each box in a PR to this file or tell the Cowork session; the Cowork session then updates PROJECT.md. Items marked **BLOCKS** stop a Phase 3 session from starting. Items marked **DEFAULT** have a default, so work starts without an answer.
+Owner decisions of 2026-10-28 are recorded below (ADR-039 to ADR-046): P-01, P-05, P-10 and P-13 are done, P-09 is partly done. The rest is still open. Tick each box in a PR to this file or tell the Cowork session; the Cowork session then updates docs/PROJECT-LOG.md (Part B). Items marked **BLOCKS** stop a Phase 3 session from starting. Items marked **DEFAULT** have a default, so work starts without an answer.
 
 ### 1.1 Checklist
 
 | # | Done | Item | Due | Effect if late |
 |---|---|---|---|---|
-| P-01 | [x] | Approve PROJECT.md and the stack (P0-02, RC-060). **Done 2026-10-28, Kailas:** stack as in PROJECT.md section 7.1 and ADR-006 to ADR-010 approved; plan approved as the project plan and action plan (Phases 0 to 2 done). ADR-039 | Sat 31 Oct | was **BLOCKS** P3-01; no longer blocks |
+| P-01 | [x] | Approve docs/PROJECT-LOG.md (Part B) and the stack (P0-02, RC-060). **Done 2026-10-28, Kailas:** stack as in docs/PROJECT-LOG.md (Part B) section 7.1 and ADR-006 to ADR-010 approved; plan approved as the project plan and action plan (Phases 0 to 2 done). ADR-039 | Sat 31 Oct | was **BLOCKS** P3-01; no longer blocks |
 | P-02 | [ ] | Prepare the Claude Code cloud environment `dv360-build` (steps in 1.2). **Open** | Sat 31 Oct | **BLOCKS** P3-01 |
 | P-03 | [ ] | Import the repo into Vercel Hobby (team "BIGSEO's projects"); no upgrade needed now (steps in 1.3, ADR-048). **Open** | Sun 1 Nov, 10:00 IST | Preview deploys and the "preview green" part of the definition of done wait. Sessions still run. Revisit Pro before a large public free cohort or if Vercel asks for an upgrade |
 | P-04 | [ ] | Copy the two Supabase connection strings into Vercel Environment Variables (steps in 1.4). The Supabase project already exists (ref `bwqzdhyatvhpssxtwjza`, eu-west-1). **Open** | Sun 1 Nov, 10:00 IST | Same as P-03. Sessions use a local Postgres, so they do not wait |
@@ -165,7 +165,7 @@ Vercel project, Storage, Create, Blob. Connect it to the project. Vercel adds `B
 | RC-063 | Student accounts: answered by the owner on 2026-10-28 (module 19, ADR-047): created by Super admin or Admin with email login and a shared password, no email provider. Open details are in module 19 section 8 | As stated in module 19 (forced change on, one session per User, cohort 25) | before P3-02b |
 | RC-064 | Allow students to upload their own files | Allowed with size caps, no scanning | before Phase 4 |
 | RC-065 | Student data retention after a course | Archive after 90 days, delete on request | before the pilot |
-| PROJECT.md 11 | Exercises you already teach (students per class is decided: up to 25, RC-057) | the 10 starters in module 18 | before Phase 5 |
+| docs/PROJECT-LOG.md (Part B) 11 | Exercises you already teach (students per class is decided: up to 25, RC-057) | the 10 starters in module 18 | before Phase 5 |
 
 ### 1.10 Environment variables, complete list
 
@@ -198,11 +198,11 @@ Everything in this section is the spec for P3-01. Later sessions follow it.
 
 ### 2.1 Folder tree
 
-Based on PROJECT.md section 3, routes.md 5.1, validation.md 6.2 and engine.md 1.5. Each folder that has an owner (section 3.2) gets a `README.md` of three lines naming the owner session and the spec.
+Based on docs/PROJECT-LOG.md (Part B) section 3, routes.md 5.1, validation.md 6.2 and engine.md 1.5. Each folder that has an owner (section 3.2) gets a `README.md` of three lines naming the owner session and the spec.
 
 ```
 dv360-adsmentor/
-├─ PROJECT.md  README.md  .env.example  .gitignore  .nvmrc (22)
+├─ docs/PROJECT-LOG.md (Part B)  README.md  .env.example  .gitignore  .nvmrc (22)
 ├─ package.json  package-lock.json  tsconfig.json  next.config.ts  vercel.json
 ├─ eslint.config.mjs  .prettierrc  .dependency-cruiser.cjs
 ├─ vitest.config.ts  vitest.setup.ts  playwright.config.ts
@@ -243,7 +243,7 @@ dv360-adsmentor/
 └─ tests/{unit,components,db,validation,engine,engine-io,auth,shell,seed,metrics,targeting,changelog,e2e}/
 ```
 
-Decision (ADR-022): `components/<module>` holds UI and `lib/<module>` holds server services, matching PROJECT.md section 3. There is no `features/` folder.
+Decision (ADR-022): `components/<module>` holds UI and `lib/<module>` holds server services, matching docs/PROJECT-LOG.md (Part B) section 3. There is no `features/` folder.
 
 ### 2.2 Package versions
 
@@ -450,7 +450,7 @@ Commits and PRs
 - Commit messages: `<type>(<session>): <subject>` with type `feat`, `fix`, `test`, `refactor`, `chore`, `docs`; for example `feat(p3-06b): campaign create form`. Subject in the imperative, under 72 characters. The attribution trailer is added by the harness.
 - Push at checkpoints, not after every commit: first push within 30 minutes of starting (so work survives a reclaimed container), then at most every 20 minutes. Each push may trigger a Vercel preview, and the free plan limits deployments per day.
 - Final steps: `git fetch origin main && git rebase origin/main` (or merge main if the rebase is messy), re-run `npm run check` and the tests you own, push, open or update the PR.
-- The last commit on the branch is `docs: status <session>`. It changes PROJECT.md only: tick or mark your line in section 6 (use 🟨 for a split task until the integration session completes it) and append one row at the end of the section 10 table (`| date | <session> | result | next |`). If this conflicts on rebase, keep both rows.
+- The last commit on the branch is `docs: status <session>`. It changes docs/PROJECT-LOG.md (Part B) only: tick or mark your line in section 6 (use 🟨 for a split task until the integration session completes it) and append one row at the end of the section 10 table (`| date | <session> | result | next |`). If this conflicts on rebase, keep both rows.
 - PR title: `<SESSION>: <short name>`. PR body uses `.github/pull_request_template.md`: Summary; Specs read; Acceptance criteria table (id, status Done/Partly/Not done, evidence test name); Tests added; Files outside my ownership list touched (should be none); Deviations from specs; Not done; Migration or env var notes; Preview URL; Suggested merge order note.
 - PR size: aim under 2,500 changed lines excluding lockfile, migrations, generated files and fixtures. If the session will exceed it, stop at a clean boundary and put the rest under "Not done".
 
@@ -460,8 +460,8 @@ Code
 - Every write goes through `withChangeLog` (module 05 4.1). Every service function checks `can()` and validates with `lib/validation` before writing.
 - Time: store UTC; sim time is a separate value; use `date-fns` with the advertiser time zone. Never call `new Date()` without an argument inside `lib/engine`.
 - Money: `Decimal` in the database, major units on the wire, minor units into validation rules (`lib/money.ts`, RC-019).
-- Copy: UI strings follow `validation.md` 1.2 and the module specs verbatim. No Google logos, names or assets (PROJECT.md R1, R2).
-- Synthetic data only (PROJECT.md R5).
+- Copy: UI strings follow `validation.md` 1.2 and the module specs verbatim. No Google logos, names or assets (docs/PROJECT-LOG.md (Part B) R1, R2).
+- Synthetic data only (docs/PROJECT-LOG.md (Part B) R5).
 - Tests are deterministic: seed any randomness, fake the clock, no network.
 - Deviations from a spec go in the PR body. Do not edit `docs/specs/**` or `docs/explore/**`.
 
@@ -488,7 +488,7 @@ Sizes use the module specs' scale: S under half a day, M about a day, L two days
 
 "Prerequisites" are merged PRs by merge number (column "Merge"), plus owner items from section 1. A session starts only when its prerequisites are merged and `main` CI is green.
 
-| Wave | Session | Tasks (PROJECT.md section 6 mapped to specs) | Owns (details in 3.2) | Prerequisites | Merge | Size, share | Definition of done (all also need: `npm run check`, CI green, PR template filled, last commit `docs: status <id>`) |
+| Wave | Session | Tasks (docs/PROJECT-LOG.md (Part B) section 6 mapped to specs) | Owns (details in 3.2) | Prerequisites | Merge | Size, share | Definition of done (all also need: `npm run check`, CI green, PR template filled, last commit `docs: status <id>`) |
 |---|---|---|---|---|---|---|---|
 | 1 | **P3-01** | P3-01 scaffold, Vercel deploy. build-plan 2; routes.md 5.1, 9; validation.md 6.2; engine.md 1.5 | root configs, `package*.json`, `.github/**`, `scripts/**`, stubs (2.7), `app/api/health`, root layout | P-01, P-02. P-03 and P-04 for the deploy check | 1 | M, 3 | Fresh clone: `npm ci`, `npm run check`, `npm run db:local`, `npm run build` pass. `/api/health` returns 200 on the preview (or "not done: needs P-03/P-04"). Tick P3-01 |
 | 2 | **P3-04** | P3-04 shared components. design-system.md 1 to 5 | `lib/theme`, `components/dv`, `components/icons`, `app/(dev)/components`, `tests/components` | 1 | 3 | L, 9 | Every Tier A component has variants in the gallery, RTL tests and no serious axe violations. Gallery preview loads. Tick P3-04 |
@@ -505,8 +505,8 @@ Sizes use the module specs' scale: S under half a day, M about a day, L two days
 | 4 | **P3-08b** | P3-08 engine runtime. engine.md 1.2 to 1.4, 1.7, 3.5, 3.7, 10.2, 10.3 | `lib/engine/io/**`, `lib/engine/server.ts`, `app/api/sim/engine`, `.github/workflows/engine-tick.yml`, `tests/engine-io` | 2, 5, 6, 7 | 13 | M, 5 | A tick writes funnel, hourly and daily rows for seeded LIs. Idempotent and lock-safe in DB tests. Fast-forward 7 days finishes. Tick endpoint rejects a wrong secret. Tick P3-08 |
 | 4 | **P3-09** | P3-09 performance columns. engine.md 9.2 to 9.4; modules 06, 07, 08 section 2.1 | `lib/metrics/**`, `app/api/dv/metrics`, `tests/metrics`, `tests/e2e/performance-columns.spec.ts` | 2, 7 to start; 11 and 12 merged before its e2e spec runs | 14 | S, 3 | Campaign, IO and LI lists show real numbers and totals on seeded data; totals reconcile with raw rows in tests. Tick P3-09 |
 | 5 | **P3-07b** | P3-07 targeting, part b: geography with map, apps and URLs, brand suitability, audience builder. module 10 T07, T08 (apps), T09, T10 | `components/targeting/editors/{geography,apps-urls,brand,audience}/**`, `lib/targeting/{geo,audience}.ts` | 10 | 15 | M, 5 | Acceptance criteria listed in the prompt pass. Tick P3-07 |
-| 5 | **P3-02b** | Account management dashboard (new, module 19). module 19 M19-05 to M19-16; routes.md 7.5, 8.21; validation.md 2.26 | `lib/accounts/**`, `lib/actions/accounts.ts`, `lib/validation/rules/acc.ts`, `lib/sandbox/provision.ts`, `app/manage/**`, `app/api/manage/**`, `components/manage/**`, `tests/accounts/**`, `tests/e2e/accounts.spec.ts` | 2, 3, 4, 6 (P3-02 foundation M19-01 to 04 and 14). M18-05 optional (stub) | 15b | L, 6 | Super admin, Admin and User flows of module 19 section 6 pass in unit, db and e2e tests; no plaintext password in storage or logs; CSV import with exact messages. Tick P3-02b (PROJECT.md 6 and 5.13 row) |
-| 5 | **P3-INT** | Integration and hardening. Not a PROJECT.md task | any file, small fixes only, one commit per fix with the owning session id | all merged | 16 | M, 4 | Full CI green on `main`, demo script passes on the production preview, gaps listed in `docs/gaps/p3.md`. Tick remaining P3 lines |
+| 5 | **P3-02b** | Account management dashboard (new, module 19). module 19 M19-05 to M19-16; routes.md 7.5, 8.21; validation.md 2.26 | `lib/accounts/**`, `lib/actions/accounts.ts`, `lib/validation/rules/acc.ts`, `lib/sandbox/provision.ts`, `app/manage/**`, `app/api/manage/**`, `components/manage/**`, `tests/accounts/**`, `tests/e2e/accounts.spec.ts` | 2, 3, 4, 6 (P3-02 foundation M19-01 to 04 and 14). M18-05 optional (stub) | 15b | L, 6 | Super admin, Admin and User flows of module 19 section 6 pass in unit, db and e2e tests; no plaintext password in storage or logs; CSV import with exact messages. Tick P3-02b (docs/PROJECT-LOG.md (Part B) 6 and 5.13 row) |
+| 5 | **P3-INT** | Integration and hardening. Not a docs/PROJECT-LOG.md (Part B) task | any file, small fixes only, one commit per fix with the owning session id | all merged | 16 | M, 4 | Full CI green on `main`, demo script passes on the production preview, gaps listed in `docs/gaps/p3.md`. Tick remaining P3 lines |
 
 Merge numbers are the order in 3.5. P3-02b is merge 15b (inserted by module 19, so no later number moves); it runs in wave 5 beside P3-07b and P3-INT and must merge before P3-INT. Wave 4 sessions can run in parallel because their file sets do not overlap. P3-06c and P3-07a talk to each other only through the stub in 2.7. P3-09 and P3-06b/c talk through `getGridMetrics`.
 
@@ -540,12 +540,12 @@ No two sessions that run at the same time own the same path. "Owner" is the only
 | `lib/targeting/**` except `geo.ts`, `audience.ts`; `components/targeting/**` except `editors/{geography,apps-urls,brand,audience}/`; `app/api/dv/targeting/**`; `tests/targeting/**`; `tests/e2e/targeting.spec.ts` | P3-07a | |
 | `lib/targeting/{geo,audience}.ts`, `components/targeting/editors/{geography,apps-urls,brand,audience}/**`, `app/api/dv/audiences/estimate/**` | P3-07b | |
 | `lib/metrics/**`, `app/api/dv/metrics/**`, `tests/metrics/**`, `tests/e2e/performance-columns.spec.ts` | P3-09 | |
-| `PROJECT.md` | nobody, except the last commit of each PR (2.9) | |
+| `docs/PROJECT-LOG.md` (Part B) | nobody, except the last commit of each PR (2.9) | |
 | `docs/specs/**`, `docs/explore/**`, `docs/decisions.md` | the Cowork planning sessions | Sessions report deviations in the PR body |
 
 ### 3.3 Why this split is safe
 
-- The only file every session touches is `PROJECT.md` (two lines each), and `package-lock.json`. Both have a stated conflict rule (2.2, 2.9).
+- The only file every session touches is `docs/PROJECT-LOG.md` (Part B) (two lines each), and `package-lock.json`. Both have a stated conflict rule (2.2, 2.9).
 - Sessions that need the database schema wait for P3-05a (merge 2). Sessions that are pure TypeScript (P3-04, P3-06a, P3-08a) run in wave 2 beside it.
 - Cross-session calls go through the stubs of 2.7, which exist from merge 1.
 
@@ -600,14 +600,14 @@ For each PR in order:
 2. Read "Files outside my ownership list touched". It should say none. If it lists files, check 3.2.
 3. Read "Not done". If a "must" item from the prompt is missing, ask the session to finish it before merging.
 4. Squash merge. Delete the PR's own head branch only (the "Automatically delete head branches" setting does this); never delete other branches.
-5. In the next waiting PR, if there is a conflict only in `PROJECT.md` or `package-lock.json`, apply the rules in 2.2 and 2.9 (a session can do it: comment "rebase on main and resolve per build-plan 2.2 and 2.9").
+5. In the next waiting PR, if there is a conflict only in `docs/PROJECT-LOG.md` (Part B) or `package-lock.json`, apply the rules in 2.2 and 2.9 (a session can do it: comment "rebase on main and resolve per build-plan 2.2 and 2.9").
 6. Start the next session whose prerequisites are now merged.
 
 ### 3.7 Phase 4 outline (after the credit window, normal plan limits)
 
 Run 2 to 3 sessions in parallel per wave. Prompts for these are written by a planning session once Phase 3 is merged, using the same template as section 4. Each module's build tasks come from section 7 of its module file. Every session gets a branch `p4-xx-name`, an ownership list, acceptance criteria copied from its module and the same definition of done.
 
-| Wave | Sessions (PROJECT.md task: module tasks) | Parallel because | Prerequisites |
+| Wave | Sessions (docs/PROJECT-LOG.md (Part B) task: module tasks) | Parallel because | Prerequisites |
 |---|---|---|---|
 | 6 | P4-01 creatives: module 12 M12-01 to M12-14. P4-04 resources: module 15 M15-01 to M15-07, M15-09. P4-09 settings and users: module 02 T3 to T13, module 03 T1 to T10 | disjoint folders (`lib/creatives`, `lib/resources`, `lib/settings`) | Phase 3 merged; Blob store (P-08) |
 | 7 | P4-03 audiences: module 14 M14-01 to M14-11. P4-02 inventory: module 13 M13-01 to M13-13. P4-06 YouTube: module 09 T09-01 to T09-12. P4-05 custom bidding: module 15 M15-08 | audiences need Floodlight (P4-04); YouTube needs targeting and creatives | wave 6 merged |
@@ -622,7 +622,7 @@ Added by P3-INT (`docs/gaps/p3.md` A3): before wave 10 add one engine session fo
 |---|---|---|
 | 10 | P5-01 instructor console: module 18 M18-07, M18-08, M18-09, M18-16, M18-17 (stretch), module 03 T09 console part. P5-03 time controls: M18-10 | `app/sim/instructor/**`, disjoint |
 | 11 | P5-02 scenario engine and 10 starter exercises: M18-11 to M18-14 (needs modules 12 to 17 landed). P5-04 progress dashboard: M18-15 | needs P5-01 and Phase 4 |
-| 12 | Phase 6 per PROJECT.md: SOP-3 fidelity per module, Playwright core flows, load test (25 students, 60 as stretch), pilot class | planning sessions |
+| 12 | Phase 6 per docs/PROJECT-LOG.md (Part B): SOP-3 fidelity per module, Playwright core flows, load test (25 students, 60 as stretch), pilot class | planning sessions |
 
 ---
 
@@ -636,14 +636,14 @@ The prompts quote acceptance criteria verbatim from the module files, so a chang
 ### 4.1 P3-01 (Scaffold)
 
 ```text
-Read PROJECT.md, docs/specs/build-plan.md and the listed specs. Implement the repository skeleton of build-plan section 2: Next.js, TypeScript, MUI, Prisma, Vitest, Playwright, CI, scripts, stubs and a health check. Write tests. Open a PR to `main` from branch `p3-01-scaffold`; do not push to main. Update nothing in PROJECT.md except via the PR's last commit `docs: status P3-01`.
+Read docs/PROJECT-LOG.md (Part B), docs/specs/build-plan.md and the listed specs. Implement the repository skeleton of build-plan section 2: Next.js, TypeScript, MUI, Prisma, Vitest, Playwright, CI, scripts, stubs and a health check. Write tests. Open a PR to `main` from branch `p3-01-scaffold`; do not push to main. Update nothing in docs/PROJECT-LOG.md (Part B) except via the PR's last commit `docs: status P3-01`.
 
 SESSION: P3-01 (scaffold and deploy). Wave 1. Merged before you start: nothing (owner items P-01 and P-02 done).
 
 READ FIRST, in this order
 - docs/specs/conflicts.md (rows RC-nnn override every spec; read section 1.1)
 - docs/specs/build-plan.md sections 2 (conventions, stubs, global stop conditions in 2.10) and 3.2 (file ownership)
-- PROJECT.md sections 2 (rules R1 to R8), 3, 7.1
+- docs/PROJECT-LOG.md (Part B) sections 2 (rules R1 to R8), 3, 7.1
 - docs/specs/build-plan.md section 2 in full (this is the spec for this session) and section 1.10 (environment variables)
 - docs/specs/routes.md sections 1 (decisions R1 to R10) and 5.1 (folder tree) and 9 (build notes)
 - docs/specs/validation.md section 6.2 (folder structure and the purity lint rule)
@@ -673,7 +673,7 @@ OUT OF SCOPE (do not build, even if easy)
 FILES YOU OWN (create or edit)
 - everything in build-plan 3.2 row "Root configs", plus `.github/**`, `scripts/**`, `prisma/schema/00-base.prisma`, `prisma/migrations/0000_base`, the stub files of 2.7, `app/layout.tsx`, `app/page.tsx`, `app/api/health/**`, `tests/unit/sanity.test.ts`, `tests/db/health.db.test.ts`, `tests/e2e/smoke.spec.ts`, folder README files
 EXCEPTIONS (you may also touch)
-- `PROJECT.md` (last commit only)
+- `docs/PROJECT-LOG.md` (Part B) (last commit only)
 Everything else belongs to another session. Do not edit it. If you must, follow stop condition 1 of build-plan 2.10.
 
 ACCEPTANCE CRITERIA (copied from the specs; list each one in the PR as Done, Partly or Not done with the test that proves it)
@@ -712,7 +712,7 @@ STOP CONDITIONS (in addition to build-plan 2.10)
 ### 4.2 P3-04 (Design system components)
 
 ```text
-Read PROJECT.md, docs/specs/build-plan.md and the listed specs. Implement the design tokens, MUI theme, icon set and shared component kit of design-system.md (PROJECT.md P3-04). Write tests. Open a PR to `main` from branch `p3-04-components`; do not push to main. Update nothing in PROJECT.md except via the PR's last commit `docs: status P3-04`.
+Read docs/PROJECT-LOG.md (Part B), docs/specs/build-plan.md and the listed specs. Implement the design tokens, MUI theme, icon set and shared component kit of design-system.md (docs/PROJECT-LOG.md (Part B) P3-04). Write tests. Open a PR to `main` from branch `p3-04-components`; do not push to main. Update nothing in docs/PROJECT-LOG.md (Part B) except via the PR's last commit `docs: status P3-04`.
 
 SESSION: P3-04 (shared components and theme). Wave 2. Merged before you start: P3-01.
 
@@ -750,7 +750,7 @@ FILES YOU OWN (create or edit)
 - `public/brand/**` (copy `docs/brand/adsmentor-logo-horizontal.png` to `public/brand/` as the logo source; no other brand assets)
 EXCEPTIONS (you may also touch)
 - `package.json` and lockfile only to add a missing dependency (rebase rule in build-plan 2.2)
-- `PROJECT.md` (last commit only)
+- `docs/PROJECT-LOG.md` (Part B) (last commit only)
 Everything else belongs to another session. Do not edit it. If you must, follow stop condition 1 of build-plan 2.10.
 
 ACCEPTANCE CRITERIA (copied from the specs; list each one in the PR as Done, Partly or Not done with the test that proves it)
@@ -823,7 +823,7 @@ STOP CONDITIONS (in addition to build-plan 2.10)
 ### 4.3 P3-05a (Schema core and data layer)
 
 ```text
-Read PROJECT.md, docs/specs/build-plan.md and the listed specs. Implement the core Prisma schema (data-model Appendix A with the resolved conflicts), the multi-tenant data layer with row level security, and the `withChangeLog` write pipeline. Write tests. Open a PR to `main` from branch `p3-05a-schema-core`; do not push to main. Update nothing in PROJECT.md except via the PR's last commit `docs: status P3-05a`.
+Read docs/PROJECT-LOG.md (Part B), docs/specs/build-plan.md and the listed specs. Implement the core Prisma schema (data-model Appendix A with the resolved conflicts), the multi-tenant data layer with row level security, and the `withChangeLog` write pipeline. Write tests. Open a PR to `main` from branch `p3-05a-schema-core`; do not push to main. Update nothing in docs/PROJECT-LOG.md (Part B) except via the PR's last commit `docs: status P3-05a`.
 
 SESSION: P3-05a (schema core, tenancy and change log). Wave 2. Merged before you start: P3-01.
 
@@ -859,7 +859,7 @@ FILES YOU OWN (create or edit)
 - `tests/changelog/**`
 EXCEPTIONS (you may also touch)
 - `lib/db/index.ts` (extend exports)
-- `PROJECT.md` (last commit only)
+- `docs/PROJECT-LOG.md` (Part B) (last commit only)
 Everything else belongs to another session. Do not edit it. If you must, follow stop condition 1 of build-plan 2.10.
 
 ACCEPTANCE CRITERIA (copied from the specs; list each one in the PR as Done, Partly or Not done with the test that proves it)
@@ -897,7 +897,7 @@ STOP CONDITIONS (in addition to build-plan 2.10)
 ### 4.4 P3-06a (Validation core)
 
 ```text
-Read PROJECT.md, docs/specs/build-plan.md and the listed specs. Implement the `lib/validation` library for the Campaign, Insertion order and Line item domains (PROJECT.md P3-06, first part). Write tests. Open a PR to `main` from branch `p3-06a-validation`; do not push to main. Update nothing in PROJECT.md except via the PR's last commit `docs: status P3-06a`.
+Read docs/PROJECT-LOG.md (Part B), docs/specs/build-plan.md and the listed specs. Implement the `lib/validation` library for the Campaign, Insertion order and Line item domains (docs/PROJECT-LOG.md (Part B) P3-06, first part). Write tests. Open a PR to `main` from branch `p3-06a-validation`; do not push to main. Update nothing in docs/PROJECT-LOG.md (Part B) except via the PR's last commit `docs: status P3-06a`.
 
 SESSION: P3-06a (validation library). Wave 2. Merged before you start: P3-01.
 
@@ -927,7 +927,7 @@ FILES YOU OWN (create or edit)
 - `lib/validation/**` except `rules/targeting.ts` and `rules/template.ts`
 - `tests/validation/**` except `cases.targeting.ts`
 EXCEPTIONS (you may also touch)
-- `PROJECT.md` (last commit only)
+- `docs/PROJECT-LOG.md` (Part B) (last commit only)
 Everything else belongs to another session. Do not edit it. If you must, follow stop condition 1 of build-plan 2.10.
 
 ACCEPTANCE CRITERIA (copied from the specs; list each one in the PR as Done, Partly or Not done with the test that proves it)
@@ -1021,7 +1021,7 @@ STOP CONDITIONS (in addition to build-plan 2.10)
 ### 4.5 P3-08a (Engine core)
 
 ```text
-Read PROJECT.md, docs/specs/build-plan.md and the listed specs. Implement the pure TypeScript simulation engine: parameters, deterministic randomness, supply, eligibility funnel, bidding, auction, outcomes, pacing, costs, diagnostics and aggregation (PROJECT.md P3-08, first part). Write tests. Open a PR to `main` from branch `p3-08a-engine-core`; do not push to main. Update nothing in PROJECT.md except via the PR's last commit `docs: status P3-08a`.
+Read docs/PROJECT-LOG.md (Part B), docs/specs/build-plan.md and the listed specs. Implement the pure TypeScript simulation engine: parameters, deterministic randomness, supply, eligibility funnel, bidding, auction, outcomes, pacing, costs, diagnostics and aggregation (docs/PROJECT-LOG.md (Part B) P3-08, first part). Write tests. Open a PR to `main` from branch `p3-08a-engine-core`; do not push to main. Update nothing in docs/PROJECT-LOG.md (Part B) except via the PR's last commit `docs: status P3-08a`.
 
 SESSION: P3-08a (simulation engine, pure core). Wave 2. Merged before you start: P3-01.
 
@@ -1055,7 +1055,7 @@ FILES YOU OWN (create or edit)
 - `tests/engine/**`
 - `package.json` scripts: add `engine:golden` only
 EXCEPTIONS (you may also touch)
-- `PROJECT.md` (last commit only)
+- `docs/PROJECT-LOG.md` (Part B) (last commit only)
 Everything else belongs to another session. Do not edit it. If you must, follow stop condition 1 of build-plan 2.10.
 
 ACCEPTANCE CRITERIA (copied from the specs; list each one in the PR as Done, Partly or Not done with the test that proves it)
@@ -1095,7 +1095,7 @@ STOP CONDITIONS (in addition to build-plan 2.10)
 ### 4.6 P3-02 (Auth, roles, access windows)
 
 ```text
-Read PROJECT.md, docs/specs/build-plan.md and the listed specs. Implement Adsmetor authentication, roles (`USER`, `ADMIN`, `SUPER_ADMIN`, RC-068), DV360 access levels and classroom access windows (PROJECT.md P3-02), plus the account security foundation of module 19 (tasks M19-01 to M19-04 and M19-14). Write tests. Open a PR to `main` from branch `p3-02-auth`; do not push to main. Update nothing in PROJECT.md except via the PR's last commit `docs: status P3-02`.
+Read docs/PROJECT-LOG.md (Part B), docs/specs/build-plan.md and the listed specs. Implement Adsmetor authentication, roles (`USER`, `ADMIN`, `SUPER_ADMIN`, RC-068), DV360 access levels and classroom access windows (docs/PROJECT-LOG.md (Part B) P3-02), plus the account security foundation of module 19 (tasks M19-01 to M19-04 and M19-14). Write tests. Open a PR to `main` from branch `p3-02-auth`; do not push to main. Update nothing in docs/PROJECT-LOG.md (Part B) except via the PR's last commit `docs: status P3-02`.
 
 SESSION: P3-02 (authentication, roles and classroom access windows). Wave 3. Merged before you start: P3-01, P3-05a.
 
@@ -1142,7 +1142,7 @@ FILES YOU OWN (create or edit)
 EXCEPTIONS (you may also touch)
 - `prisma/schema/95-p3-02-extra.prisma` plus its migration, only if a column you need is missing from P3-05a (say so in the PR)
 - `package.json` for missing auth dependencies
-- `PROJECT.md` (last commit only)
+- `docs/PROJECT-LOG.md` (Part B) (last commit only)
 Everything else belongs to another session. Do not edit it. If you must, follow stop condition 1 of build-plan 2.10.
 
 ACCEPTANCE CRITERIA (copied from the specs; list each one in the PR as Done, Partly or Not done with the test that proves it)
@@ -1179,7 +1179,7 @@ STOP CONDITIONS (in addition to build-plan 2.10)
 ### 4.7 P3-05b (Seed generator)
 
 ```text
-Read PROJECT.md, docs/specs/build-plan.md and the listed specs. Implement the deterministic seed generator, reference data and demo class bootstrap (PROJECT.md P3-05, second part). Write tests. Open a PR to `main` from branch `p3-05b-seed`; do not push to main. Update nothing in PROJECT.md except via the PR's last commit `docs: status P3-05b`.
+Read docs/PROJECT-LOG.md (Part B), docs/specs/build-plan.md and the listed specs. Implement the deterministic seed generator, reference data and demo class bootstrap (docs/PROJECT-LOG.md (Part B) P3-05, second part). Write tests. Open a PR to `main` from branch `p3-05b-seed`; do not push to main. Update nothing in docs/PROJECT-LOG.md (Part B) except via the PR's last commit `docs: status P3-05b`.
 
 SESSION: P3-05b (seed generator and reference data). Wave 3. Merged before you start: P3-01, P3-05a.
 
@@ -1199,7 +1199,7 @@ BUILD EXACTLY THIS
 4. `npm run db:seed` runs global seeds then a demo sandbox; `prisma/seed/index.ts` globs `prisma/seed/**/*.seed.ts` in name order (it must tolerate the absence of `auth.seed.ts`).
 5. `prisma/bootstrap/20-demo-class.bootstrap.ts`: creates classroom "Demo class", one `ADMIN` account (instructor level, `instructor@example.test`), three `USER` accounts (`student1@example.test` to `student3@example.test`) with passwords from `SEED_STUDENT_PASSWORD` or a random value printed once to the terminal of a non-production run (never to production logs, module 19 4.4), sandboxes from `starter-agency`, and an always-open window for 30 days. Idempotent. Skipped when `NODE_ENV=production` unless `SEED_DEMO=1`.
 6. Size knobs `advertisers`, `campaignsPerAdvertiser`, `iosPerCampaign`, `lineItemsPerIo`, `creativesPerAdvertiser`, `historyDays`, `plantedProblems[]` (data-model 3.4). One sandbox builds in under 60 seconds locally, ten in under 3 minutes.
-7. All names synthetic (PROJECT.md R5). Real exchange and verifier names are allowed only from the allow-list in `data/reference/vendors.json` (RC-055).
+7. All names synthetic (docs/PROJECT-LOG.md (Part B) R5). Real exchange and verifier names are allowed only from the allow-list in `data/reference/vendors.json` (RC-055).
 
 OUT OF SCOPE (do not build, even if easy)
 - full creative library variety, audiences, deals, Floodlight, reports, plans, experiments (Phase 4 sessions add `*.seed.ts` files)
@@ -1213,7 +1213,7 @@ FILES YOU OWN (create or edit)
 - `data/reference/**`
 - `tests/seed/**`
 EXCEPTIONS (you may also touch)
-- `PROJECT.md` (last commit only)
+- `docs/PROJECT-LOG.md` (Part B) (last commit only)
 Everything else belongs to another session. Do not edit it. If you must, follow stop condition 1 of build-plan 2.10.
 
 ACCEPTANCE CRITERIA (copied from the specs; list each one in the PR as Done, Partly or Not done with the test that proves it)
@@ -1242,7 +1242,7 @@ STOP CONDITIONS (in addition to build-plan 2.10)
 ### 4.8 P3-05c (Schema extended)
 
 ```text
-Read PROJECT.md, docs/specs/build-plan.md and the listed specs. Implement the Prisma models for every table that has no model yet (PROJECT.md P3-05, third part). Write tests. Open a PR to `main` from branch `p3-05c-schema-extended`; do not push to main. Update nothing in PROJECT.md except via the PR's last commit `docs: status P3-05c`.
+Read docs/PROJECT-LOG.md (Part B), docs/specs/build-plan.md and the listed specs. Implement the Prisma models for every table that has no model yet (docs/PROJECT-LOG.md (Part B) P3-05, third part). Write tests. Open a PR to `main` from branch `p3-05c-schema-extended`; do not push to main. Update nothing in docs/PROJECT-LOG.md (Part B) except via the PR's last commit `docs: status P3-05c`.
 
 SESSION: P3-05c (remaining tables of the data model). Wave 3. Merged before you start: P3-01, P3-05a.
 
@@ -1267,7 +1267,7 @@ FILES YOU OWN (create or edit)
 - `prisma/sql/` files you add (new filenames only)
 - `tests/db/extended*.db.test.ts`
 EXCEPTIONS (you may also touch)
-- `PROJECT.md` (last commit only)
+- `docs/PROJECT-LOG.md` (Part B) (last commit only)
 Everything else belongs to another session. Do not edit it. If you must, follow stop condition 1 of build-plan 2.10.
 
 ACCEPTANCE CRITERIA (copied from the specs; list each one in the PR as Done, Partly or Not done with the test that proves it)
@@ -1294,7 +1294,7 @@ STOP CONDITIONS (in addition to build-plan 2.10)
 ### 4.9 P3-03 (App shell)
 
 ```text
-Read PROJECT.md, docs/specs/build-plan.md and the listed specs. Implement the DV360-style application shell: top bar, left navigation, breadcrumbs, banners, right-rail frame, layouts for every frame, scope loaders, 404 and stub pages for every route (PROJECT.md P3-03). Write tests. Open a PR to `main` from branch `p3-03-shell`; do not push to main. Update nothing in PROJECT.md except via the PR's last commit `docs: status P3-03`.
+Read docs/PROJECT-LOG.md (Part B), docs/specs/build-plan.md and the listed specs. Implement the DV360-style application shell: top bar, left navigation, breadcrumbs, banners, right-rail frame, layouts for every frame, scope loaders, 404 and stub pages for every route (docs/PROJECT-LOG.md (Part B) P3-03). Write tests. Open a PR to `main` from branch `p3-03-shell`; do not push to main. Update nothing in docs/PROJECT-LOG.md (Part B) except via the PR's last commit `docs: status P3-03`.
 
 SESSION: P3-03 (application shell, navigation and route frames). Wave 3. Merged before you start: P3-01, P3-05a, P3-04 (and P3-02 recommended).
 
@@ -1341,7 +1341,7 @@ FILES YOU OWN (create or edit)
 - `tests/e2e/shell.spec.ts`
 EXCEPTIONS (you may also touch)
 - `components/dv` (bug fixes of one line only, listed in the PR)
-- `PROJECT.md` (last commit only)
+- `docs/PROJECT-LOG.md` (Part B) (last commit only)
 Everything else belongs to another session. Do not edit it. If you must, follow stop condition 1 of build-plan 2.10.
 
 ACCEPTANCE CRITERIA (copied from the specs; list each one in the PR as Done, Partly or Not done with the test that proves it)
@@ -1378,7 +1378,7 @@ STOP CONDITIONS (in addition to build-plan 2.10)
 ### 4.10 P3-07a (Targeting core)
 
 ```text
-Read PROJECT.md, docs/specs/build-plan.md and the listed specs. Implement the shared targeting card, state converters, targeting validation and the simple editors (PROJECT.md P3-07, first part). Write tests. Open a PR to `main` from branch `p3-07a-targeting-core`; do not push to main. Update nothing in PROJECT.md except via the PR's last commit `docs: status P3-07a`.
+Read docs/PROJECT-LOG.md (Part B), docs/specs/build-plan.md and the listed specs. Implement the shared targeting card, state converters, targeting validation and the simple editors (docs/PROJECT-LOG.md (Part B) P3-07, first part). Write tests. Open a PR to `main` from branch `p3-07a-targeting-core`; do not push to main. Update nothing in docs/PROJECT-LOG.md (Part B) except via the PR's last commit `docs: status P3-07a`.
 
 SESSION: P3-07a (targeting card, state and basic editors). Wave 4. Merged before you start: P3-01, P3-05a, P3-04, P3-02, P3-03, P3-06a.
 
@@ -1415,7 +1415,7 @@ FILES YOU OWN (create or edit)
 - `tests/e2e/targeting.spec.ts`
 EXCEPTIONS (you may also touch)
 - `lib/validation/constants/targeting-availability.ts` (extend the mapping only)
-- `PROJECT.md` (last commit only)
+- `docs/PROJECT-LOG.md` (Part B) (last commit only)
 Everything else belongs to another session. Do not edit it. If you must, follow stop condition 1 of build-plan 2.10.
 
 ACCEPTANCE CRITERIA (copied from the specs; list each one in the PR as Done, Partly or Not done with the test that proves it)
@@ -1477,7 +1477,7 @@ STOP CONDITIONS (in addition to build-plan 2.10)
 ### 4.11 P3-06b (Campaigns and insertion orders)
 
 ```text
-Read PROJECT.md, docs/specs/build-plan.md and the listed specs. Implement Campaigns and Insertion orders: services, forms, grids and page shells with full validation and change log (PROJECT.md P3-06, second part). Write tests. Open a PR to `main` from branch `p3-06b-campaigns-io`; do not push to main. Update nothing in PROJECT.md except via the PR's last commit `docs: status P3-06b`.
+Read docs/PROJECT-LOG.md (Part B), docs/specs/build-plan.md and the listed specs. Implement Campaigns and Insertion orders: services, forms, grids and page shells with full validation and change log (docs/PROJECT-LOG.md (Part B) P3-06, second part). Write tests. Open a PR to `main` from branch `p3-06b-campaigns-io`; do not push to main. Update nothing in docs/PROJECT-LOG.md (Part B) except via the PR's last commit `docs: status P3-06b`.
 
 SESSION: P3-06b (campaign and insertion order create, edit, list and pages). Wave 4. Merged before you start: P3-01, P3-05a, P3-04, P3-06a, P3-02, P3-05b, P3-03.
 
@@ -1519,7 +1519,7 @@ FILES YOU OWN (create or edit)
 - `tests/e2e/campaigns.spec.ts`
 - `tests/e2e/insertion-orders.spec.ts`
 EXCEPTIONS (you may also touch)
-- `PROJECT.md` (last commit only)
+- `docs/PROJECT-LOG.md` (Part B) (last commit only)
 Everything else belongs to another session. Do not edit it. If you must, follow stop condition 1 of build-plan 2.10.
 
 ACCEPTANCE CRITERIA (copied from the specs; list each one in the PR as Done, Partly or Not done with the test that proves it)
@@ -1577,7 +1577,7 @@ STOP CONDITIONS (in addition to build-plan 2.10)
 ### 4.12 P3-06c (Line items)
 
 ```text
-Read PROJECT.md, docs/specs/build-plan.md and the listed specs. Implement Line items of types Display, Video, Connected TV, Audio, Mobile app install, Ads in mobile apps, DOOH and the Demand Gen shell: service, type picker, form, grid and page (PROJECT.md P3-06, third part). Write tests. Open a PR to `main` from branch `p3-06c-line-items`; do not push to main. Update nothing in PROJECT.md except via the PR's last commit `docs: status P3-06c`.
+Read docs/PROJECT-LOG.md (Part B), docs/specs/build-plan.md and the listed specs. Implement Line items of types Display, Video, Connected TV, Audio, Mobile app install, Ads in mobile apps, DOOH and the Demand Gen shell: service, type picker, form, grid and page (docs/PROJECT-LOG.md (Part B) P3-06, third part). Write tests. Open a PR to `main` from branch `p3-06c-line-items`; do not push to main. Update nothing in docs/PROJECT-LOG.md (Part B) except via the PR's last commit `docs: status P3-06c`.
 
 SESSION: P3-06c (line item create, edit, list and page). Wave 4. Merged before you start: P3-01, P3-05a, P3-04, P3-06a, P3-02, P3-05b, P3-03.
 
@@ -1613,7 +1613,7 @@ FILES YOU OWN (create or edit)
 - `tests/services/line-items/**`
 - `tests/e2e/line-items.spec.ts`
 EXCEPTIONS (you may also touch)
-- `PROJECT.md` (last commit only)
+- `docs/PROJECT-LOG.md` (Part B) (last commit only)
 Everything else belongs to another session. Do not edit it. If you must, follow stop condition 1 of build-plan 2.10.
 
 ACCEPTANCE CRITERIA (copied from the specs; list each one in the PR as Done, Partly or Not done with the test that proves it)
@@ -1654,7 +1654,7 @@ STOP CONDITIONS (in addition to build-plan 2.10)
 ### 4.13 P3-08b (Engine runtime)
 
 ```text
-Read PROJECT.md, docs/specs/build-plan.md and the listed specs. Implement the database layer of the engine: loading the world, persisting ticks, locks, the tick endpoint, catch-up, fast-forward and alert persistence (PROJECT.md P3-08, second part). Write tests. Open a PR to `main` from branch `p3-08b-engine-runtime`; do not push to main. Update nothing in PROJECT.md except via the PR's last commit `docs: status P3-08b`.
+Read docs/PROJECT-LOG.md (Part B), docs/specs/build-plan.md and the listed specs. Implement the database layer of the engine: loading the world, persisting ticks, locks, the tick endpoint, catch-up, fast-forward and alert persistence (docs/PROJECT-LOG.md (Part B) P3-08, second part). Write tests. Open a PR to `main` from branch `p3-08b-engine-runtime`; do not push to main. Update nothing in docs/PROJECT-LOG.md (Part B) except via the PR's last commit `docs: status P3-08b`.
 
 SESSION: P3-08b (engine runtime, tick endpoint and fast-forward). Wave 4. Merged before you start: P3-01, P3-05a, P3-08a, P3-02, P3-05b.
 
@@ -1689,7 +1689,7 @@ FILES YOU OWN (create or edit)
 EXCEPTIONS (you may also touch)
 - `vercel.json` only for a once-daily backup cron entry (build-plan 1.5); never a sub-daily entry
 - `lib/engine/index.ts` to export runtime types only
-- `PROJECT.md` (last commit only)
+- `docs/PROJECT-LOG.md` (Part B) (last commit only)
 Everything else belongs to another session. Do not edit it. If you must, follow stop condition 1 of build-plan 2.10.
 
 ACCEPTANCE CRITERIA (copied from the specs; list each one in the PR as Done, Partly or Not done with the test that proves it)
@@ -1725,7 +1725,7 @@ STOP CONDITIONS (in addition to build-plan 2.10)
 ### 4.14 P3-09 (Performance columns)
 
 ```text
-Read PROJECT.md, docs/specs/build-plan.md and the listed specs. Implement the metric aggregation layer behind the Performance columns, totals row and chart feeds of the list pages (PROJECT.md P3-09). Write tests. Open a PR to `main` from branch `p3-09-metrics`; do not push to main. Update nothing in PROJECT.md except via the PR's last commit `docs: status P3-09`.
+Read docs/PROJECT-LOG.md (Part B), docs/specs/build-plan.md and the listed specs. Implement the metric aggregation layer behind the Performance columns, totals row and chart feeds of the list pages (docs/PROJECT-LOG.md (Part B) P3-09). Write tests. Open a PR to `main` from branch `p3-09-metrics`; do not push to main. Update nothing in docs/PROJECT-LOG.md (Part B) except via the PR's last commit `docs: status P3-09`.
 
 SESSION: P3-09 (performance metrics for list pages). Wave 4. Merged before you start: P3-01, P3-05a, P3-05b (start); P3-06b and P3-06c merged before the e2e spec runs.
 
@@ -1755,7 +1755,7 @@ FILES YOU OWN (create or edit)
 - `tests/metrics/**`
 - `tests/e2e/performance-columns.spec.ts`
 EXCEPTIONS (you may also touch)
-- `PROJECT.md` (last commit only)
+- `docs/PROJECT-LOG.md` (Part B) (last commit only)
 Everything else belongs to another session. Do not edit it. If you must, follow stop condition 1 of build-plan 2.10.
 
 ACCEPTANCE CRITERIA (copied from the specs; list each one in the PR as Done, Partly or Not done with the test that proves it)
@@ -1784,7 +1784,7 @@ STOP CONDITIONS (in addition to build-plan 2.10)
 ### 4.15 P3-07b (Targeting advanced editors)
 
 ```text
-Read PROJECT.md, docs/specs/build-plan.md and the listed specs. Implement the advanced targeting editors (PROJECT.md P3-07, second part). Write tests. Open a PR to `main` from branch `p3-07b-targeting-advanced`; do not push to main. Update nothing in PROJECT.md except via the PR's last commit `docs: status P3-07b`.
+Read docs/PROJECT-LOG.md (Part B), docs/specs/build-plan.md and the listed specs. Implement the advanced targeting editors (docs/PROJECT-LOG.md (Part B) P3-07, second part). Write tests. Open a PR to `main` from branch `p3-07b-targeting-advanced`; do not push to main. Update nothing in docs/PROJECT-LOG.md (Part B) except via the PR's last commit `docs: status P3-07b`.
 
 SESSION: P3-07b (geography, apps and URLs, brand suitability and audience builder editors). Wave 5. Merged before you start: P3-07a merged (and P3-08a for the audience size estimate).
 
@@ -1819,7 +1819,7 @@ EXCEPTIONS (you may also touch)
 - `components/targeting/editors/registry.ts` (add four entries)
 - `tests/targeting/advanced/**`
 - `tests/e2e/targeting-advanced.spec.ts`
-- `PROJECT.md` (last commit only)
+- `docs/PROJECT-LOG.md` (Part B) (last commit only)
 Everything else belongs to another session. Do not edit it. If you must, follow stop condition 1 of build-plan 2.10.
 
 ACCEPTANCE CRITERIA (copied from the specs; list each one in the PR as Done, Partly or Not done with the test that proves it)
@@ -1847,7 +1847,7 @@ STOP CONDITIONS (in addition to build-plan 2.10)
 ### 4.16 P3-INT (Integration and hardening)
 
 ```text
-Read PROJECT.md, docs/specs/build-plan.md and the listed specs. Implement the integration pass: make the minimum viable classroom demo work end to end on `main`, fix cross-session breakage, and list what is left. Write tests. Open a PR to `main` from branch `p3-int-hardening`; do not push to main. Update nothing in PROJECT.md except via the PR's last commit `docs: status P3-INT`.
+Read docs/PROJECT-LOG.md (Part B), docs/specs/build-plan.md and the listed specs. Implement the integration pass: make the minimum viable classroom demo work end to end on `main`, fix cross-session breakage, and list what is left. Write tests. Open a PR to `main` from branch `p3-int-hardening`; do not push to main. Update nothing in docs/PROJECT-LOG.md (Part B) except via the PR's last commit `docs: status P3-INT`.
 
 SESSION: P3-INT (integration, demo path and gap list). Wave 5. Merged before you start: all other Phase 3 PRs.
 
@@ -1855,7 +1855,7 @@ READ FIRST, in this order
 - docs/specs/conflicts.md (rows RC-nnn override every spec; read section 1.1)
 - docs/specs/build-plan.md sections 2 (conventions, stubs, global stop conditions in 2.10) and 3.2 (file ownership)
 - docs/specs/build-plan.md sections 3 and 5.2 (minimum viable demo and cut order)
-- PROJECT.md section 6 and 10 (what each session reported), every merged PR description (Not done and Deviations lists)
+- docs/PROJECT-LOG.md (Part B) section 6 and 10 (what each session reported), every merged PR description (Not done and Deviations lists)
 - docs/specs/design-system.md section 6 (fidelity checklist: Global, Data grid, Forms)
 - docs/specs/conflicts.md (check that nothing built contradicts an RC row)
 
@@ -1865,7 +1865,7 @@ BUILD EXACTLY THIS
 3. Add `/sim/admin/seed` (admin only) that creates the demo class and sandboxes by calling the bootstrap functions, so the owner can reseed the production database without shell access.
 4. Write `docs/gaps/p3.md`: a table of every "Not done" and "Deviation" from the Phase 3 PRs, each with the module task id, size and suggested phase. Update the Phase 4 outline in `docs/specs/build-plan.md` section 3.7 if the gaps change it (this is the only edit to build-plan.md you may make).
 5. Quick fidelity pass with the Global items of design-system section 6 on the preview; log misses in `docs/gaps/p3.md`.
-6. Final status commit ticks every remaining P3 line in PROJECT.md section 6 that is truly done and appends one summary row to section 10.
+6. Final status commit ticks every remaining P3 line in docs/PROJECT-LOG.md (Part B) section 6 that is truly done and appends one summary row to section 10.
 
 OUT OF SCOPE (do not build, even if easy)
 - new features, new modules, refactors without a failing test or a demo break
@@ -1875,7 +1875,7 @@ FILES YOU OWN (create or edit)
 - `docs/demo-script.md`, `docs/gaps/p3.md`
 - `app/sim/admin/seed/**`
 EXCEPTIONS (you may also touch)
-- `PROJECT.md` (last commit only)
+- `docs/PROJECT-LOG.md` (Part B) (last commit only)
 Everything else belongs to another session. Do not edit it. If you must, follow stop condition 1 of build-plan 2.10.
 
 ACCEPTANCE CRITERIA (copied from the specs; list each one in the PR as Done, Partly or Not done with the test that proves it)
@@ -1902,7 +1902,7 @@ STOP CONDITIONS (in addition to build-plan 2.10)
 ### 4.17 P3-02b (Account management dashboard)
 
 ```text
-Read PROJECT.md, docs/specs/build-plan.md and the listed specs. Implement the account management dashboard under `/manage` (module 19): accounts list, add account with generated or typed password, CSV import, cohorts, access periods, audit log, policy settings, and the sandbox link. Write tests. Open a PR to `main` from branch `p3-02b-accounts`; do not push to main. Update nothing in PROJECT.md except via the PR's last commit `docs: status P3-02b`.
+Read docs/PROJECT-LOG.md (Part B), docs/specs/build-plan.md and the listed specs. Implement the account management dashboard under `/manage` (module 19): accounts list, add account with generated or typed password, CSV import, cohorts, access periods, audit log, policy settings, and the sandbox link. Write tests. Open a PR to `main` from branch `p3-02b-accounts`; do not push to main. Update nothing in docs/PROJECT-LOG.md (Part B) except via the PR's last commit `docs: status P3-02b`.
 
 SESSION: P3-02b (account management: Super admin, Admin, User). Wave 5. Merged before you start: P3-01, P3-05a, P3-04, P3-06a, P3-02. M18-05 (sandbox provisioning job) is not required: use the stub described below.
 
@@ -1948,7 +1948,7 @@ EXCEPTIONS (you may also touch)
 - `.eslintrc*` or `eslint.config.*`: only to add the ban rule of step 7
 - `lib/validation/catalogue index`: only to register the `ACC` domain
 - `package.json` for missing dependencies
-- `PROJECT.md` (last commit only)
+- `docs/PROJECT-LOG.md` (Part B) (last commit only)
 Everything else belongs to another session. Do not edit it. If you must, follow stop condition 1 of build-plan 2.10.
 
 ACCEPTANCE CRITERIA (module 19 section 6.1; list each as Done, Partly or Not done with the test that proves it)
@@ -1988,7 +1988,7 @@ The $100 credit expires on 5 Nov 2026 at 1:29 PM IST. The plan spends about 90 o
 3. Re-check after every wave. Nothing is started if the remaining credit is below the planned share of that session.
 4. A session that is cut short still pushes its branch (stop condition 3 in build-plan 2.10). Drafts are kept; nothing is thrown away.
 5. Work in progress at 1:29 PM IST on 5 Nov may stop. Merge freeze is 9:00 AM IST for that reason.
-6. After the credit expires, work continues on the normal plan limits (PROJECT.md R7). The Phase 4 outline in 3.7 is written for that.
+6. After the credit expires, work continues on the normal plan limits (docs/PROJECT-LOG.md (Part B) R7). The Phase 4 outline in 3.7 is written for that.
 
 ### 5.2 Minimum viable classroom demo and cut order
 
@@ -2029,7 +2029,7 @@ Not cuttable: P3-01, P3-05a, P3-06a, P3-05b, P3-03, P3-06b, P3-06c, a minimal P3
 | R-06 | Supabase free-tier limits (Nano): 500 MB storage, project paused after 7 days of inactivity, about 60 pooled connections, cold starts | Medium, medium | Slow first request; storage near the limit; compute hours used up early in the month | Lower sim speed and hourly retention (RC-057, ADR-045); open the app before each class so a paused project is restored. The tick workflow runs only inside class hours (edit the cron expression of `engine-tick.yml` to class hours). Move to Supabase Pro if a class exceeds 25 students |
 | R-07 | Prisma with a transaction pooler: prepared statements, `SET LOCAL` and interactive transactions | Medium, high | Errors like "prepared statement already exists" or lost `app.sandbox_id` | Use `pgbouncer=true` on `DATABASE_URL`, `DIRECT_URL` for migrations, and run every request inside `withSandbox` (one interactive transaction). Fallback F-4 |
 | R-08 | RLS and composite foreign keys slow the schema work or break Prisma features | Medium, medium | P3-05a tests need long fixes | `RLS_ENABLED=false` switch keeps the service-layer sandbox filter (every query already carries `sandboxId`). Record the gap and move on |
-| R-09 | Merge conflicts between parallel sessions | Medium, low | PRs show conflicts | Ownership map 3.2, merge order 3.5, conflict rules for `package-lock.json`, `PROJECT.md`, `prisma/migrations` (2.2, 2.9, 2.5) |
+| R-09 | Merge conflicts between parallel sessions | Medium, low | PRs show conflicts | Ownership map 3.2, merge order 3.5, conflict rules for `package-lock.json`, `docs/PROJECT-LOG.md` (Part B), `prisma/migrations` (2.2, 2.9, 2.5) |
 | R-10 | A session ignores `conflicts.md` and builds a superseded name | Medium, medium | Old enum spelling in a PR | PR template item "Specs read and RC rows applied". Merger greps for the retired names listed in conflicts.md section 5 |
 | R-11 | Spec errors found during the build (the specs were written without running code) | High, medium | Sessions list Deviations | Deviations go to P3-INT's `docs/gaps/p3.md`. The planning sessions update the specs and `conflicts.md` after Phase 3 |
 | R-12 | Container reclaimed after inactivity, losing local work | Low, medium | Session ends without a push | Push within 30 minutes of starting and at checkpoints |

@@ -1,6 +1,6 @@
 # Module 03: Advertiser settings
 
-Task P2-06a. Source: PROJECT.md 5.11, `docs/explore/14-advertiser-settings.md`. Related explore: 01 (paused banner), 05 (Demand Gen gate, EU political ads), 07 (locked targeting, verification), 11 (Google tag, Floodlight), 15 (alerts).
+Task P2-06a. Source: docs/PROJECT-LOG.md (Part B) 5.11, `docs/explore/14-advertiser-settings.md`. Related explore: 01 (paused banner), 05 (Demand Gen gate, EU political ads), 07 (locked targeting, verification), 11 (Google tag, Floodlight), 15 (alerts).
 Specs used: `data-model.md` (DM), `routes.md` (RT), `design-system.md` (DS), `validation.md` (VAL), `engine.md` (ENG). Cited as `DM 5.3`, `RT 3.11`, and so on.
 Build phase: P4-09 (with module 02). Alert preferences also feed P4-11.
 
@@ -18,7 +18,7 @@ Build phase: P4-09 (with module 02). Alert preferences also feed P4-11.
 | Alert preferences | 10 alert toggles with two thresholds | `[A]/alert-config` |
 | Policy center | One card per certificate type, request flow | `[A]/policy-center` |
 
-PROJECT.md 5.11 also lists "Billing", "Creative settings (OBA icon, Dynamic creatives)", "Brand safety defaults", "Data access / Integrations" and "Industry". The demo showed none of the first four as separate pages: see 1.3 and conflict C-03-1.
+docs/PROJECT-LOG.md (Part B) 5.11 also lists "Billing", "Creative settings (OBA icon, Dynamic creatives)", "Brand safety defaults", "Data access / Integrations" and "Industry". The demo showed none of the first four as separate pages: see 1.3 and conflict C-03-1.
 
 ### 1.2 Out of scope (owned elsewhere)
 
@@ -381,7 +381,7 @@ Rules: `ADV-027` (proposed) country required for political, gambling and electio
 
 | # | Conflict | Where | Proposed resolution |
 |---|---|---|---|
-| C-03-1 | PROJECT.md 5.11 lists Ad serving (CM360 link), Creative settings (OBA icon, Dynamic creatives), Floodlight config, Linked accounts, Billing, Targeting defaults, Brand safety defaults, Data access / Integrations, and "industry". Explore 14 and RT 3.11 have five pages with a different content split (Targeting rules replaces "Targeting defaults" and "Brand safety defaults"; no OBA icon, Dynamic creatives or Billing) | `PROJECT.md` 5.11 vs `docs/explore/14` and `routes.md` 3.11 | Follow explore 14. Update PROJECT.md 5.11 |
+| C-03-1 | docs/PROJECT-LOG.md (Part B) 5.11 lists Ad serving (CM360 link), Creative settings (OBA icon, Dynamic creatives), Floodlight config, Linked accounts, Billing, Targeting defaults, Brand safety defaults, Data access / Integrations, and "industry". Explore 14 and RT 3.11 have five pages with a different content split (Targeting rules replaces "Targeting defaults" and "Brand safety defaults"; no OBA icon, Dynamic creatives or Billing) | `docs/PROJECT-LOG.md` (Part B) 5.11 vs `docs/explore/14` and `routes.md` 3.11 | Follow explore 14. Update docs/PROJECT-LOG.md (Part B) 5.11 |
 | C-03-2 | Write rights: RT 3.11 `[A]/details` write `ADM`; VAL 4.1 lets `STANDARD` pause an advertiser; students are `STANDARD` (RT Q10); DM 5.1 `partner.settings.write` is ADMIN only. Alert preferences and Policy center are `STD` in RT 3.11 | `routes.md` 3.11, Q10; `validation.md` 4.1; `data-model.md` 5.1 | See C-02-2. Needs a decision before P4-09 |
 | C-03-3 | Engine text does not say that advertiser-level locked targeting rules are merged into LI targeting before the funnel. DM 5.3 and explore 14 require it | `engine.md` 3.1, 3.3 vs `data-model.md` 5.3 | Add one sentence to ENG 3.1 and a test in ENG 11 |
 | C-03-4 | DM 5.3 says the engine blocks LIs in restricted categories without an approved certificate. ENG 3.2 has no reason code for it and no field marks a LI or advertiser as "restricted category" | `data-model.md` 5.3 vs `engine.md` 3.2 | Add a `restrictedCategory` attribute (on Advertiser or LI) and reason code `T.POLICY`, or drop the rule in v1 and keep certificates informational |

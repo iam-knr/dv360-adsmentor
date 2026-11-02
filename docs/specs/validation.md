@@ -1875,5 +1875,5 @@ Priority tags: **H** blocks a P3 task, **M** fix before fidelity review, **L** l
 | Q24 | M | Does saving with warnings ever show a confirm dialog (for example LI budget above IO budget)? | Current: never |
 | Q25 | M | Optimized targeting compatibility with fixed bid and with Audio / CTV / YouTube | MX-10 `OPTIMIZED_TARGETING` |
 | Q26 | L | Campaign keywords above 5: warning or error | CMP-061 current: warning |
-| Q27 | L | PROJECT.md §5.3 mentions YouTube "Video reach / action / view" variants; 06 shows Reach, Target frequency, TrueView views, Ad sequence. Is "Video action" still a subtype? | MX-07 lists only what was seen |
+| Q27 | L | docs/PROJECT-LOG.md (Part B) §5.3 mentions YouTube "Video reach / action / view" variants; 06 shows Reach, Target frequency, TrueView views, Ad sequence. Is "Video action" still a subtype? | MX-07 lists only what was seen |
 | Q28 | L | Limited Access as a scenario flag: should students ever get it, and should role `PARTNER_CLIENT` be simulated? | 4.0 roles |

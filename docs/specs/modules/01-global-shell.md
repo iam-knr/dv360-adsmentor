@@ -1,6 +1,6 @@
 # Module 01: Global shell
 
-Task P2-06a. Source: PROJECT.md 5.1, `docs/explore/01-global-shell.md`, `docs/explore/16-history-notifications.md` (notes panel, notifications, right rail).
+Task P2-06a. Source: docs/PROJECT-LOG.md (Part B) 5.1, `docs/explore/01-global-shell.md`, `docs/explore/16-history-notifications.md` (notes panel, notifications, right rail).
 Specs used: `data-model.md` (DM), `routes.md` (RT), `design-system.md` (DS), `validation.md` (VAL), `engine.md` (ENG). Sections are cited as `DM 5.1`, `RT 4.6`, and so on. Explore files are cited by number (`01`, `16`).
 Nothing from those specs is repeated here beyond what a builder needs on one screen. Follow the citations for the full text.
 
@@ -433,7 +433,7 @@ Numbered `AC-01-n`. Each is testable by Vitest (V), Playwright (E) or both.
 
 ## 7. Build tasks
 
-Sizes: S under half a day, M about a day, L two days or more. "P3-xx" are foundation tasks (PROJECT.md 6). Tasks with "(P3-03)" belong to that foundation task; the rest are P4 work.
+Sizes: S under half a day, M about a day, L two days or more. "P3-xx" are foundation tasks (docs/PROJECT-LOG.md (Part B) 6). Tasks with "(P3-03)" belong to that foundation task; the rest are P4 work.
 
 | # | Task | Size | Depends on |
 |---|---|---|---|

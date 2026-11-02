@@ -21,7 +21,7 @@ Not in scope: custom bidding list/wizard/test run (M15-08, session P4-05), Playw
 - The page files under `app/(dv)/**` of the routes listed in module 15 section 1 (they are `StubPage` stubs today),
   except `custom-bidding` (P4-05)
 - One additive line pair in `lib/seed/sandbox.ts` (call the resource seed inside the provisioning transaction)
-- `PROJECT.md` (last commit only)
+- `docs/PROJECT-LOG.md` (Part B) (last commit only)
 
 ## Acceptance list
 

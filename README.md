@@ -1,6 +1,6 @@
 # DV360 Simulator by Adsmetor
 
-A classroom simulator of a Display & Video 360 style buying tool for free students. Master plan: [PROJECT.md](PROJECT.md). Build plan and conventions: [docs/specs/build-plan.md](docs/specs/build-plan.md).
+A classroom simulator of a Display & Video 360 style buying tool for free students. Project log and master plan: [docs/PROJECT-LOG.md](docs/PROJECT-LOG.md). Build plan and conventions: [docs/specs/build-plan.md](docs/specs/build-plan.md).
 
 ## Quickstart
 

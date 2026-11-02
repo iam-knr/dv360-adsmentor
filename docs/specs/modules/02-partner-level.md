@@ -1,6 +1,6 @@
 # Module 02: Partner level
 
-Task P2-06a. Source: PROJECT.md 5.2, `docs/explore/02-partner-level.md`. Related explore: 01 (nav, Overview), 11 (brand controls at advertiser level), 14 (advertiser fields used by Create advertiser), 17 (404).
+Task P2-06a. Source: docs/PROJECT-LOG.md (Part B) 5.2, `docs/explore/02-partner-level.md`. Related explore: 01 (nav, Overview), 11 (brand controls at advertiser level), 14 (advertiser fields used by Create advertiser), 17 (404).
 Specs used: `data-model.md` (DM), `routes.md` (RT), `design-system.md` (DS), `validation.md` (VAL), `engine.md` (ENG). Cited as `DM 5.2`, `RT 3.2` and so on.
 Build phases: P3-02 (roles), P3-05 (seed), P4-09 (this module), with the Advertisers list also needed by P3-03 for advertiser switching.
 
@@ -40,7 +40,7 @@ Build phases: P3-02 (roles), P3-05 (seed), P4-09 (this module), with the Adverti
 |---|---|---|
 | Create advertiser | Button disabled (Limited Access) | Form in 2.2. Fields from DM 5.3 (name, website, currency, time zone, ad server, Floodlight, billing profile) plus `industry` (Q2) |
 | Billing profiles, invoices, partner costs and revenue models | Not in the demo partner nav | **Deferred.** Data tables exist in DM 5.2 (`BillingProfile`, `Invoice`). No route in RT (RT 3.2 last row, RT Q21). Decision in Q1; stub task 02-T14 behind a flag |
-| Partner-level audiences, combined audiences, custom lists, location lists, negative keyword lists, inventory lists (listed in PROJECT.md 5.2) | Not in the demo partner nav; RT has no routes | **Not built in v1.** Conflict C-02-1 |
+| Partner-level audiences, combined audiences, custom lists, location lists, negative keyword lists, inventory lists (listed in docs/PROJECT-LOG.md (Part B) 5.2) | Not in the demo partner nav; RT has no routes | **Not built in v1.** Conflict C-02-1 |
 | Role picker | Not reachable | Roles from DM 5.1 with the permission matrix (6 roles) |
 | Role dropdown on New user | Not reachable | Dropdown with the 6 role labels (Q4) |
 | Email preference pages | Menu seen, pages not opened | Two toggles (4.9) |
@@ -467,7 +467,7 @@ Freshness: list and summary call `engine.ensureCaughtUp(sandboxId)` before readi
 
 | # | Question | Default used here |
 |---|---|---|
-| Q1 | Is Billing (profiles, invoices, partner costs and revenue models, listed in PROJECT.md 5.2) in v1? RT 3.2 says no route | Deferred (02-T14), data tables stay in the schema |
+| Q1 | Is Billing (profiles, invoices, partner costs and revenue models, listed in docs/PROJECT-LOG.md (Part B) 5.2) in v1? RT 3.2 says no route | Deferred (02-T14), data tables stay in the schema |
 | Q2 | `industry` list and whether Create advertiser asks for it. Public docs vary; ENG 2.7 uses `verticalMultiplier` | Optional dropdown with 8 values: e-commerce, lead gen, travel, finance, auto, CPG, media, other |
 | Q3 | Are emails (alerts, news) simulated anywhere? | No. Toggles stored only; Reports "email owner" lands in an in-app inbox (DM 5.14) |
 | Q4 | Role dropdown order and labels | Admin, Standard, Read only, Reporting only, Partner client, Creative |
@@ -483,7 +483,7 @@ Freshness: list and summary call `engine.ensureCaughtUp(sandboxId)` before readi
 
 | # | Conflict | Where | Proposed resolution |
 |---|---|---|---|
-| C-02-1 | PROJECT.md 5.2 lists partner-level audiences, combined audiences, custom lists, location lists, negative keyword lists, inventory lists, billing, partner costs and revenue models, and partner reporting; RT 3.2 and the demo partner nav have none of them (RT Q21 only covers billing) | `PROJECT.md` 5.2 vs `routes.md` 3.2, 4.2 | Treat 5.2 as aspirational. Update PROJECT.md 5.2 or add routes in a later phase |
+| C-02-1 | docs/PROJECT-LOG.md (Part B) 5.2 lists partner-level audiences, combined audiences, custom lists, location lists, negative keyword lists, inventory lists, billing, partner costs and revenue models, and partner reporting; RT 3.2 and the demo partner nav have none of them (RT Q21 only covers billing) | `docs/PROJECT-LOG.md` (Part B) 5.2 vs `routes.md` 3.2, 4.2 | Treat 5.2 as aspirational. Update docs/PROJECT-LOG.md (Part B) 5.2 or add routes in a later phase |
 | C-02-2 | Who may pause an advertiser: RT 3.11 gives `[A]/details` write `ADM`, VAL 4.1 allows `ADMIN, STANDARD`, RT 8.2 `setAdvertiserStatus` is `STD`, DM 5.1 permission `partner.settings.write` is ADMIN only. Students are `STANDARD` (RT Q10) | `routes.md` 3.11, 8.2; `validation.md` 4.1; `data-model.md` 5.1 | Make `entity.write` on Advertiser details `STD` for status, name, website, SDF, authorizations, EU ads and Demand Gen switch (module 03 edits), keep Schedule for deletion and partner settings `ADM`. Change RT 3.11 to `RO / STD` |
 | C-02-3 | `User.email` is unique across the platform (DM 5.1) but `/users/new` needs sandbox-local fake colleagues; USR-004 says unique "user with this email already exists" | `data-model.md` 5.1 vs `validation.md` USR-004 | DELTA-02-2 |
 | C-02-4 | SDF version defaults: partner `V11`, advertiser `V9`, VAL 4.1 says new advertiser copies defaults from the partner | `data-model.md` 5.2, 5.3 vs `validation.md` 4.1, ADV-006 | Resolved RC-045: a new advertiser copies the partner `sdfVersion` (V11); `V9` only on the seeded demo advertisers; "Copy settings from" can override |

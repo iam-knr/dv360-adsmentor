@@ -543,7 +543,7 @@ Troubleshooter / service:
 | C-08-13 | TargetingTemplate columns for inventory quality and optimized targeting are described as `config` json "assumption" but not in Prisma | DM 5.8 | Δ-08-16 |
 | C-08-14 | VAL MX-10 labels `INVENTORY_SOURCES`, `APPS_URLS`, `AUDIENCE_LISTS`, `KEYWORD_EXCLUSIONS`, `LIVESTREAM`, `DOOH_VENUE_SCREEN` vs DM `TargetingDimension` `INVENTORY_SOURCE`, `APPS_AND_URLS`, `AUDIENCE_LIST`, `KEYWORD` (mode EXCLUDE), `CONTENT_STREAM_TYPE`, `DOOH_VENUE` | VAL 3 vs DM 4.6 | map table in `lib/validation/constants/targeting-availability.ts`; see 10 |
 | C-08-15 | LI `pacing` options: explore 05 says "(only ASAP when IO automates bid & budget; existing LI showed Even)"; MX-05 permits LI `FLIGHT x AHEAD` `(from public docs)` | explore 05 vs VAL MX-05 | follow MX-05 |
-| C-08-16 | PROJECT.md 5.3 lists "Over-the-top" as an LI type and "Video reach / action / view / Demand Gen variants" for YouTube; DM treats OTT as CTV and VAL Q27 flags Video action | PROJECT.md 5.3 | no OTT type; see 09 |
+| C-08-16 | docs/PROJECT-LOG.md (Part B) 5.3 lists "Over-the-top" as an LI type and "Video reach / action / view / Demand Gen variants" for YouTube; DM treats OTT as CTV and VAL Q27 flags Video action | docs/PROJECT-LOG.md (Part B) 5.3 | no OTT type; see 09 |
 
 ---
 **Observed in DV360 (2026-10-29):** read `docs/explore/19-gap-finish.md` sections 2.3, 2.4 before building this module. Where it differs from this spec, the explore file wins (observed behaviour); section 5 there lists the flows this module must implement.

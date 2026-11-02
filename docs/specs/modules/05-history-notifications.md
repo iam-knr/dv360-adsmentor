@@ -1,6 +1,6 @@
 # Module 05: Change history, notes and notifications
 
-Task P2-06a. Source: PROJECT.md 5.12, `docs/explore/16-history-notifications.md`, creative History in `docs/explore/17-gap-sweep.md` (section "Creative History tab"). Related explore: 01 (bell, right rail), 08 (creative page), 11 (Floodlight History tab), 09 (deal History tab), 15 (Intelligence).
+Task P2-06a. Source: docs/PROJECT-LOG.md (Part B) 5.12, `docs/explore/16-history-notifications.md`, creative History in `docs/explore/17-gap-sweep.md` (section "Creative History tab"). Related explore: 01 (bell, right rail), 08 (creative page), 11 (Floodlight History tab), 09 (deal History tab), 15 (Intelligence).
 Specs used: `data-model.md` (DM), `routes.md` (RT), `design-system.md` (DS), `validation.md` (VAL), `engine.md` (ENG). Cited as `DM 6.3`, `RT 3.13`, and so on.
 Build phases: the write pipeline (5.1) is needed in P3-06 (first CRUD). The pages are P4-12.
 
@@ -24,8 +24,8 @@ This module owns three things:
 | Creative History | Table with date range chip and filters, expandable rows, 25 per page | 17, RT 3.7 |
 | History consumers | Deal History tab, Floodlight group History tab: they call the same service, with their own thin renderers | 09, 11 |
 | Notification service | Announcements, dismissals, expiry, targeting classroom or platform; list and dismiss API; create and delete actions used by the instructor console | 16, DM 5.1 |
-| Alerts centre (reading side) | The data contract for the campaign Alerts page and Intelligence rows is shared with module 01 and P4-11; this module only guarantees the alert state changes are logged | PROJECT.md 5.12 |
-| Help panel text | Adsmetor-written learning tips: hosted by module 01 Quick help. No work here | PROJECT.md 5.12 |
+| Alerts centre (reading side) | The data contract for the campaign Alerts page and Intelligence rows is shared with module 01 and P4-11; this module only guarantees the alert state changes are logged | docs/PROJECT-LOG.md (Part B) 5.12 |
+| Help panel text | Adsmetor-written learning tips: hosted by module 01 Quick help. No work here | docs/PROJECT-LOG.md (Part B) 5.12 |
 
 ### 1.2 Out of scope (owned elsewhere)
 

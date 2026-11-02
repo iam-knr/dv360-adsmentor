@@ -4,7 +4,7 @@ Owner session: P3-05b.
 Spec: data-model.md 3.1, modules 02 and 10 (section 3.4). Do not edit from another session (build-plan 3.2).
 
 Global reference data for the seed. Every file is plain JSON, read by `lib/seed/reference.ts`.
-All data is synthetic (PROJECT.md R5). Real exchange, verifier and vendor names are reference data with
+All data is synthetic (docs/PROJECT-LOG.md (Part B) R5). Real exchange, verifier and vendor names are reference data with
 invented prices (ADR-042, RC-055) and must be listed in `vendors.json`; a unit test fails otherwise.
 
 | File                    | Content                                                                                                                                                                        |
