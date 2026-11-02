@@ -40,6 +40,9 @@ export function formatCell(v: Cell | undefined, type: string): string {
 }
 
 const SERIES = colors.chart;
+/** Axis ticks: Western grouping, no decimals for large values. */
+const axisFmt = (v: number) =>
+  Math.abs(v) >= 100 ? Math.round(v).toLocaleString('en-US') : v.toLocaleString('en-US', { maximumFractionDigits: 2 });
 const isNum = (c: QueryColumn) => c.kind === 'METRIC';
 
 function FlatTable({ result }: { result: QueryResult }) {
@@ -59,12 +62,21 @@ function FlatTable({ result }: { result: QueryResult }) {
           {result.rows.map((row, i) => (
             <TableRow key={i} hover>
               {result.columns.map((c, j) => (
-                <TableCell key={c.key} align={isNum(c) ? 'right' : 'left'}>
+                <TableCell key={c.key} align={isNum(c) ? 'right' : 'left'} sx={isNum(c) ? { fontVariantNumeric: 'tabular-nums' } : undefined}>
                   {formatCell(row[j], c.dataType)}
                 </TableCell>
               ))}
             </TableRow>
           ))}
+          {result.totals ? (
+            <TableRow data-testid="report-totals" sx={{ '& td': { fontWeight: 500, borderTop: '2px solid', borderColor: 'divider' } }}>
+              {result.columns.map((c, j) => (
+                <TableCell key={c.key} align={isNum(c) ? 'right' : 'left'}>
+                  {formatCell(result.totals?.[j], c.dataType)}
+                </TableCell>
+              ))}
+            </TableRow>
+          ) : null}
         </TableBody>
       </Table>
     </TableContainer>
@@ -159,7 +171,7 @@ function Chart({ result, viz }: { result: QueryResult; viz: VizType }) {
               <PieCell key={i} fill={SERIES[i % SERIES.length] as string} />
             ))}
           </Pie>
-          <Tooltip />
+          <Tooltip formatter={(v) => (typeof v === 'number' ? v.toLocaleString('en-US', { maximumFractionDigits: 2 }) : String(v))} />
           <Legend />
         </PieChart>
       </ResponsiveContainer>
@@ -173,8 +185,8 @@ function Chart({ result, viz }: { result: QueryResult; viz: VizType }) {
       <ResponsiveContainer width="100%" height={h}>
         <ScatterChart>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis type="number" dataKey="x" name={a.c.label} />
-          <YAxis type="number" dataKey="y" name={b.c.label} />
+          <XAxis type="number" dataKey="x" name={a.c.label} tickFormatter={axisFmt} />
+          <YAxis type="number" dataKey="y" name={b.c.label} tickFormatter={axisFmt} />
           <Tooltip cursor={{ strokeDasharray: '3 3' }} />
           <Scatter data={pts} fill={SERIES[0]} />
         </ScatterChart>
@@ -188,8 +200,8 @@ function Chart({ result, viz }: { result: QueryResult; viz: VizType }) {
       <Cmp data={data}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="name" />
-        <YAxis />
-        <Tooltip />
+        <YAxis tickFormatter={axisFmt} />
+        <Tooltip formatter={(v) => (typeof v === 'number' ? v.toLocaleString('en-US', { maximumFractionDigits: 2 }) : String(v))} />
         <Legend />
         {mets.map((m, i) =>
           viz === 'TIME_SERIES' ? (

@@ -16,6 +16,7 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
+import { colors } from '@/lib/theme/tokens';
 import { DvIcon } from '@/components/icons';
 import {
   DvBanner,
@@ -46,10 +47,11 @@ import type {
   RuleIssue,
   VizType,
 } from '@/lib/reporting/types';
-import { parseDateRangeParam } from '@/lib/metrics/date-range';
 import { partnerPath } from '@/lib/routes/paths';
 import { DRAG_TYPE, FieldPicker } from './FieldPicker';
 import { ReportCanvas } from './ReportCanvas';
+import { ReportDateRange } from './ReportDateRange';
+import { EmptyIllustration } from './EmptyIllustration';
 import { ShareDialog } from './ShareDialog';
 
 type Model = Pick<
@@ -70,21 +72,9 @@ export interface ReportBuilderProps {
   skipped?: number;
 }
 
-const PRESETS = [
-  ['YESTERDAY', 'Yesterday'],
-  ['LAST_7_DAYS', 'Last 7 days'],
-  ['LAST_14_DAYS', 'Last 14 days'],
-  ['LAST_30_DAYS', 'Last 30 days'],
-  ['MONTH_TO_DATE', 'Month to date'],
-  ['LAST_MONTH', 'Last month'],
-  ['QUARTER_TO_DATE', 'Quarter to date'],
-  ['YEAR_TO_DATE', 'Year to date'],
-  ['LAST_2_YEARS', 'Last 2 years'],
-] as const;
-
 const VIZ: { value: VizType; label: string }[] = [
-  { value: 'TABLE', label: 'Table: flat table' },
-  { value: 'PIVOT_TABLE', label: 'Table: pivot table' },
+  { value: 'TABLE', label: 'Flat table' },
+  { value: 'PIVOT_TABLE', label: 'Pivot table' },
   { value: 'COLUMN', label: 'Column chart' },
   { value: 'TIME_SERIES', label: 'Time series chart' },
   { value: 'PIE', label: 'Pie chart' },
@@ -108,19 +98,6 @@ const toModel = (d: ReportDefinition): Model => ({
   viz: d.viz,
 });
 
-const CUSTOM = /^(\d{4})(\d{2})(\d{2}):(\d{4})(\d{2})(\d{2})$/;
-const toIso = (s: string) => `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
-const compact = (iso: string) => iso.replace(/-/g, '');
-
-function rangeText(range: string, today: string): string {
-  try {
-    const r = parseDateRangeParam(range, today);
-    return `${r.from} - ${r.to}`;
-  } catch {
-    return '';
-  }
-}
-
 export function ReportBuilder(props: ReportBuilderProps) {
   const { partnerId, partnerName, fields, ctx } = props;
   const router = useRouter();
@@ -142,9 +119,9 @@ export function ReportBuilder(props: ReportBuilderProps) {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | undefined>();
   const [issues, setIssues] = useState<RuleIssue[]>([]);
-  const [filterBar, setFilterBar] = useState(model.filters.length > 1);
+  const [filterBar, setFilterBar] = useState(true);
   const [showDownloadOnly, setShowDownloadOnly] = useState(false);
-  const [dialog, setDialog] = useState<null | 'schedule' | 'share' | 'bulk' | 'saveAs' | 'tour' | 'leave' | 'addFilter'>(null);
+  const [dialog, setDialog] = useState<null | 'schedule' | 'share' | 'bulk' | 'saveAs' | 'tour' | 'leave' | 'addFilter' | 'custom'>(null);
   const [download, setDownload] = useState<HTMLElement | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [genText, setGenText] = useState('');
@@ -437,13 +414,6 @@ export function ReportBuilder(props: ReportBuilderProps) {
     return `${label} ${f.op === 'NOT_IN' ? 'excludes' : 'includes'} ${names.join(', ')}`;
   };
 
-  // ---- date range -----------------------------------------------------------------------------------------------
-  const custom = CUSTOM.exec(model.dateRange);
-  const rangeValue = custom ? 'CUSTOM' : model.dateRange;
-  const [cFrom, cTo] = custom
-    ? [toIso(`${custom[1]}${custom[2]}${custom[3]}`), toIso(`${custom[4]}${custom[5]}${custom[6]}`)]
-    : ['', ''];
-
   const dimOptions = model.dimensions.map((k) => ({ value: k, label: byKey.get(k)?.label ?? k }));
   const pivotKey = model.viz.options?.columns ?? '';
 
@@ -501,21 +471,35 @@ export function ReportBuilder(props: ReportBuilderProps) {
     else router.push(base);
   };
 
+  const [panelOpen, setPanelOpen] = useState(true);
+
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      <Box
+        sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap', bgcolor: colors.surface.sunken, px: 3, py: 1, mx: -4, mt: -4 }}
+        data-testid="builder-header"
+      >
         <Link component="button" underline="hover" onClick={leave} sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
           <DvIcon name="arrow_back" size={16} /> Return to Instant Report List
         </Link>
         <Box sx={{ flex: 1 }} />
-        <Button variant="text" onClick={() => setDialog('tour')}>
+        <Button variant="text" size="small" onClick={() => setDialog('tour')}>
           Guided tour
         </Button>
       </Box>
 
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Box
+        sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', py: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}
+        role="toolbar"
+        aria-label="Report actions"
+      >
         {editingName && !readOnly ? (
-          <Box sx={{ width: 360 }}>
+          <Box
+            sx={{ width: 320 }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') (e.target as HTMLElement).blur();
+            }}
+          >
             <DvTextField
               ariaLabel="Report name"
               value={model.name}
@@ -529,38 +513,37 @@ export function ReportBuilder(props: ReportBuilderProps) {
           </Box>
         ) : (
           <>
-            <Typography variant="pageTitle" component="h1" data-testid="report-title">
+            <Typography variant="cardTitle" component="h1" data-testid="report-title">
               {model.name || 'Untitled Report'}
             </Typography>
             {!readOnly ? (
-              <IconButton aria-label="Rename report" onClick={() => setEditingName(true)}>
-                <DvIcon name="edit" />
+              <IconButton aria-label="Rename report" size="small" onClick={() => setEditingName(true)}>
+                <DvIcon name="edit" size={18} />
               </IconButton>
             ) : null}
           </>
         )}
         {readOnly ? <Chip size="small" label="Read only" /> : null}
-      </Box>
-      {nameError && !editingName && issues.length ? (
-        <Typography variant="caption" color="error">
-          {nameError}
-        </Typography>
-      ) : null}
-
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }} role="toolbar" aria-label="Report actions">
-        <Button disabled={readOnly || !id} onClick={() => setDialog('schedule')} title={id ? undefined : 'Save the report first'}>
-          Schedule
-        </Button>
-        <Button disabled={readOnly} onClick={openBulk}>
-          Bulk edit
-        </Button>
-        <Button disabled={readOnly} onClick={reset}>
+        <Box sx={{ flex: 1 }} />
+        <IconButton
+          aria-label="Schedule"
+          disabled={readOnly || !id}
+          onClick={() => setDialog('schedule')}
+          title={id ? 'Schedule' : 'Save the report first'}
+        >
+          <DvIcon name="schedule" />
+        </IconButton>
+        <IconButton aria-label="Bulk edit" title="Bulk edit" disabled={readOnly} onClick={openBulk}>
+          <DvIcon name="checklist" />
+        </IconButton>
+        <Button size="small" disabled={readOnly} onClick={reset}>
           Reset
         </Button>
-        <Button disabled={readOnly || busy} variant="outlined" onClick={() => void save()}>
+        <Button size="small" disabled={readOnly || busy} variant="outlined" onClick={() => void save()}>
           Save
         </Button>
         <Button
+          size="small"
           disabled={readOnly}
           onClick={() => {
             setCopyName(`${model.name} (copy)`);
@@ -570,21 +553,24 @@ export function ReportBuilder(props: ReportBuilderProps) {
           Save as
         </Button>
         {id && !readOnly ? (
-          <Button onClick={() => setDialog('share')}>Share</Button>
+          <Button size="small" onClick={() => setDialog('share')}>
+            Share
+          </Button>
         ) : null}
         <FormControlLabel
-          control={<Switch checked={autoRun} disabled={readOnly} onChange={(e) => setAutoRun(e.target.checked)} />}
+          control={<Switch size="small" checked={autoRun} disabled={readOnly} onChange={(e) => setAutoRun(e.target.checked)} />}
           label="Auto-run"
         />
         <Button
           variant="contained"
+          size="small"
           disabled={readOnly || !canRun || running}
           onClick={() => void runReport()}
           startIcon={<DvIcon name="refresh" />}
         >
           Run report
         </Button>
-        <Button onClick={(e) => setDownload(e.currentTarget)} startIcon={<DvIcon name="download" />} disabled={!canRun}>
+        <Button size="small" onClick={(e) => setDownload(e.currentTarget)} startIcon={<DvIcon name="download" />} disabled={!canRun}>
           Download
         </Button>
         <Menu anchorEl={download} open={!!download} onClose={() => setDownload(null)}>
@@ -592,77 +578,51 @@ export function ReportBuilder(props: ReportBuilderProps) {
           <MenuItem onClick={() => void downloadFile('XLSX')}>Excel</MenuItem>
         </Menu>
       </Box>
+      {nameError && !editingName && issues.length ? (
+        <Typography variant="caption" color="error">
+          {nameError}
+        </Typography>
+      ) : null}
       {running ? <LinearProgress aria-label="Running" /> : null}
 
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', py: 1 }}>
         <IconButton aria-label="Undo" disabled={readOnly || past.current.length === 0} onClick={undo}>
           <DvIcon name="undo" />
         </IconButton>
         <IconButton aria-label="Redo" disabled={readOnly || future.current.length === 0} onClick={redo}>
           <DvIcon name="redo" />
         </IconButton>
-        <Box sx={{ width: 180 }}>
+        <Box sx={{ width: 210 }}>
           <DvSelect
             ariaLabel="Time zone"
             value={model.timeZone}
             disabled={readOnly}
             onChange={(v) => patch({ timeZone: v as Model['timeZone'] })}
             options={[
-              { value: 'ADVERTISER', label: 'Advertiser time zone' },
-              { value: 'UTC', label: 'UTC' },
+              { value: 'ADVERTISER', label: 'Time zone: Advertiser' },
+              { value: 'UTC', label: 'Time zone: UTC' },
             ]}
           />
         </Box>
-        <Box sx={{ width: 200 }}>
-          <DvSelect
-            ariaLabel="Date range"
-            value={rangeValue}
-            disabled={readOnly}
-            onChange={(v) =>
-              patch({
-                dateRange:
-                  v === 'CUSTOM'
-                    ? `${compact(ctx.today.slice(0, 8))}01:${compact(ctx.today)}`
-                    : v,
-              })
-            }
-            options={[...PRESETS.map(([value, label]) => ({ value, label })), { value: 'CUSTOM', label: 'Custom' }]}
-          />
-        </Box>
-        {custom ? (
-          <>
-            <input
-              aria-label="From date"
-              type="date"
-              value={cFrom}
-              disabled={readOnly}
-              max={cTo || ctx.today}
-              onChange={(e) => e.target.value && patch({ dateRange: `${compact(e.target.value)}:${compact(cTo)}` })}
-            />
-            <input
-              aria-label="To date"
-              type="date"
-              value={cTo}
-              disabled={readOnly}
-              min={cFrom}
-              max={ctx.today}
-              onChange={(e) => e.target.value && patch({ dateRange: `${compact(cFrom)}:${compact(e.target.value)}` })}
-            />
-          </>
-        ) : null}
-        <Typography variant="caption" color="text.secondary" data-testid="range-text">
-          {rangeText(model.dateRange, ctx.today)}
-        </Typography>
-        <Button disabled={readOnly} onClick={() => setFilterBar((o) => !o)} aria-pressed={filterBar}>
-          Filter
-        </Button>
+        <ReportDateRange value={model.dateRange} today={ctx.today} disabled={readOnly} onChange={(v) => patch({ dateRange: v })} />
+        <IconButton aria-label="Filter" aria-pressed={filterBar} disabled={readOnly} onClick={() => setFilterBar((o) => !o)}>
+          <DvIcon name="filter_alt" />
+        </IconButton>
+        <Box sx={{ flex: 1 }} />
+        <IconButton
+          aria-label={panelOpen ? 'Collapse panel' : 'Expand panel'}
+          onClick={() => setPanelOpen((o) => !o)}
+        >
+          <DvIcon name={panelOpen ? 'keyboard_double_arrow_right' : 'keyboard_double_arrow_left'} />
+        </IconButton>
       </Box>
 
       {filterBar ? (
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }} data-testid="filter-bar">
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center', pb: 1 }} data-testid="filter-bar">
           {model.filters.map((f, i) => (
             <Chip
               key={i}
+              size="small"
               label={filterChip(f)}
               {...(f.field === 'partner' || readOnly
                 ? {}
@@ -702,86 +662,113 @@ export function ReportBuilder(props: ReportBuilderProps) {
           </DvBanner>
         ))}
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 380px' }, gap: 4 }}>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', lg: panelOpen ? 'minmax(0, 1fr) 340px' : 'minmax(0, 1fr)' },
+          gap: 4,
+          mt: 2,
+        }}
+      >
         <Box sx={{ minHeight: 320, border: '1px solid', borderColor: 'divider', borderRadius: '8px', p: 4 }}>
           {result ? (
             <ReportCanvas result={result} viz={model.viz.type} pivotKey={pivotKey} />
           ) : (
-            <Box data-testid="canvas-empty">
-              <Typography variant="cardTitle" component="h2">
-                Build an instant report
-              </Typography>
-              <Box component="ul" sx={{ mt: 2, pl: 5, color: 'text.secondary' }}>
-                <li>Select the filters, metrics, dimensions and date range.</li>
-                <li>Press Run report to see a preview.</li>
-                <li>Switch on Auto-run to refresh the preview after every change.</li>
-                <li>Use Download to get the full file directly.</li>
+            <Box data-testid="canvas-empty" sx={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <Box sx={{ flex: 1, minWidth: 260 }}>
+                <Typography variant="cardTitle" component="h2">
+                  Build an instant report
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 1 }}>
+                  To build a report, select filters, metrics, dimensions, and a date range.
+                </Typography>
+                <Box component="ul" sx={{ mt: 2, pl: 5, color: 'text.secondary' }}>
+                  <li>
+                    <b>Run report:</b> Press Run report to see a preview.
+                  </li>
+                  <li>
+                    <b>Auto-run:</b> Switch on Auto-run to refresh the preview after every change.
+                  </li>
+                  <li>
+                    <b>Direct download:</b> Use Download to get the full file directly.
+                  </li>
+                </Box>
               </Box>
+              <EmptyIllustration />
             </Box>
           )}
         </Box>
 
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '8px', p: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Button variant="text" aria-expanded={genOpen} onClick={() => setGenOpen((o) => !o)}>
-                Generate report
-              </Button>
-              <Chip size="small" label="BETA" />
-            </Box>
-            {genOpen ? (
-              <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <DvTextField
-                  ariaLabel="Describe the report you want"
-                  placeholder="Describe the report you want"
-                  value={genText}
-                  onChange={setGenText}
-                />
-                <Box>
-                  <Button
-                    variant="outlined"
-                    disabled={readOnly || !genText.trim()}
-                    onClick={() =>
-                      void generateReportAction(partnerId, genText).then((g) => {
-                        if (g) apply({ ...toModel(g.definition), name: model.name });
-                      })
-                    }
-                  >
-                    Generate
-                  </Button>
-                </Box>
+        {panelOpen ? (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }} data-testid="builder-panel">
+            <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '8px', px: 2, py: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Button
+                  variant="text"
+                  size="small"
+                  aria-expanded={genOpen}
+                  onClick={() => setGenOpen((o) => !o)}
+                  endIcon={<DvIcon name={genOpen ? 'expand_less' : 'expand_more'} size={18} />}
+                >
+                  Generate report
+                </Button>
+                <Chip size="small" label="BETA" />
               </Box>
-            ) : null}
-          </Box>
-          <DvSelect
-            label="Visualisation"
-            value={model.viz.type}
-            disabled={readOnly}
-            onChange={(v) => patch({ viz: { type: v as VizType, ...(v === 'PIVOT_TABLE' && model.viz.options ? { options: model.viz.options } : {}) } })}
-            options={VIZ}
-          />
-          {zone('dimensions')}
-          {model.viz.type === 'PIVOT_TABLE' ? (
+              {genOpen ? (
+                <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <DvTextField
+                    ariaLabel="Describe the report you want"
+                    placeholder="Describe the report you want"
+                    value={genText}
+                    onChange={setGenText}
+                  />
+                  <Box>
+                    <Button
+                      variant="outlined"
+                      disabled={readOnly || !genText.trim()}
+                      onClick={() =>
+                        void generateReportAction(partnerId, genText).then((g) => {
+                          if (g) apply({ ...toModel(g.definition), name: model.name });
+                        })
+                      }
+                    >
+                      Generate
+                    </Button>
+                  </Box>
+                </Box>
+              ) : null}
+            </Box>
             <DvSelect
-              label="Columns"
-              value={pivotKey}
+              ariaLabel="Visualization"
+              value={model.viz.type}
               disabled={readOnly}
-              placeholder="Choose a dimension"
-              onChange={(v) => patch({ viz: { type: 'PIVOT_TABLE', options: { columns: v } } })}
-              options={dimOptions}
+              onChange={(v) => patch({ viz: { type: v as VizType, ...(v === 'PIVOT_TABLE' && model.viz.options ? { options: model.viz.options } : {}) } })}
+              options={VIZ}
             />
-          ) : null}
-          {zone('metrics')}
-          <FieldPicker
-            fields={fields}
-            selected={selected}
-            incompatible={incompatible}
-            disabled={readOnly}
-            showDownloadOnly={showDownloadOnly}
-            onToggleDownloadOnly={() => setShowDownloadOnly((o) => !o)}
-            onAdd={addField}
-          />
-        </Box>
+            {zone('dimensions')}
+            {model.viz.type === 'PIVOT_TABLE' ? (
+              <DvSelect
+                label="Columns"
+                value={pivotKey}
+                disabled={readOnly}
+                placeholder="Choose a dimension"
+                onChange={(v) => patch({ viz: { type: 'PIVOT_TABLE', options: { columns: v } } })}
+                options={dimOptions}
+              />
+            ) : null}
+            {zone('metrics')}
+            <FieldPicker
+              fields={fields}
+              selected={selected}
+              incompatible={incompatible}
+              disabled={readOnly}
+              showDownloadOnly={showDownloadOnly}
+              onToggleDownloadOnly={() => setShowDownloadOnly((o) => !o)}
+              onAdd={addField}
+              onCustomData={() => setDialog('custom')}
+            />
+          </Box>
+        ) : null}
       </Box>
 
       <DvModal
@@ -865,6 +852,17 @@ export function ReportBuilder(props: ReportBuilderProps) {
             <DvTextField label="Values (comma separated)" value={fText} onChange={setFText} />
           )}
         </Box>
+      </DvModal>
+
+      <DvModal
+        open={dialog === 'custom'}
+        title="Custom data"
+        onClose={() => setDialog(null)}
+        primary={{ label: 'Close', onClick: () => setDialog(null) }}
+      >
+        <Typography variant="body2">
+          Custom metrics and dimensions are not available in the simulator. Pick fields from the lists on the right.
+        </Typography>
       </DvModal>
 
       <DvModal

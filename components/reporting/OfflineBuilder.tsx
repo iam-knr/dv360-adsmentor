@@ -1,26 +1,27 @@
 'use client';
 
 // Offline report builder, the classic form (module 16 S4): properties, setup, schedule, delivery, footer buttons.
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
 import Chip from '@mui/material/Chip';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Link from '@mui/material/Link';
 import Typography from '@mui/material/Typography';
+import { colors } from '@/lib/theme/tokens';
 import { DvIcon } from '@/components/icons';
 import {
   DvBanner,
   DvModal,
-  DvSectionCard,
   DvSelect,
   DvTextField,
   DvUnsavedChangesModal,
   useToast,
 } from '@/components/dv';
-import { parseDateRangeParam } from '@/lib/metrics/date-range';
 import { FIELD_BY_KEY } from '@/lib/reporting/catalogue';
 import { runReportAction, saveReportAction } from '@/lib/reporting/actions';
 import { ruleCompatibility } from '@/lib/reporting/engine/rules';
@@ -28,7 +29,11 @@ import type { FieldView, PageContext } from '@/lib/reporting/service';
 import { OFFLINE_TEMPLATES } from '@/lib/reporting/templates';
 import type { OfflineTypeWire, ReportDefinition, ReportDelivery, ReportSchedule } from '@/lib/reporting/types';
 import { partnerPath } from '@/lib/routes/paths';
-import { DEFAULT_DELIVERY, DEFAULT_SCHEDULE, ScheduleFields } from './ScheduleDialog';
+import { scheduleSummary } from '@/lib/reporting/schedule';
+import { OFFLINE_ZONES, formatOfflineRange, fromUs, toUs, zoneLabel } from '@/lib/reporting/format';
+import { DEFAULT_DELIVERY, REPEATS } from './ScheduleDialog';
+import { resolveRange } from './ReportDateRange';
+import { addDaysIso } from '@/lib/metrics/date-range';
 import { ShareDialog } from './ShareDialog';
 
 const RANGES = [
@@ -100,10 +105,12 @@ export interface OfflineBuilderProps {
   version?: number;
   readOnly: boolean;
   ctx: Pick<PageContext, 'today' | 'entityOptions'>;
+  publicId?: string;
+  ownerEmail: string;
 }
 
 export function OfflineBuilder(props: OfflineBuilderProps) {
-  const { partnerId, partnerName, offlineType, fields, ctx } = props;
+  const { partnerId, partnerName, offlineType, fields, ctx, publicId, ownerEmail } = props;
   const router = useRouter();
   const toast = useToast();
   const readOnly = props.readOnly;
@@ -119,8 +126,17 @@ export function OfflineBuilder(props: OfflineBuilderProps) {
   const [dimensions, setDimensions] = useState(props.initial.dimensions);
   const [metrics, setMetrics] = useState(props.initial.metrics);
   const [schedule, setSchedule] = useState<ReportSchedule>(
-    props.initial.schedule ?? DEFAULT_SCHEDULE(ctx.today),
+    props.initial.schedule ?? {
+      active: false,
+      timeZone: 'America/Los_Angeles',
+      repeats: 'DAILY',
+      every: 1,
+      starts: ctx.today,
+      expires: addDaysIso(ctx.today, 90),
+    },
   );
+  const [startsText, setStartsText] = useState(toUs(schedule.starts));
+  const [expiresText, setExpiresText] = useState(schedule.expires ? toUs(schedule.expires) : '');
   const [delivery, setDelivery] = useState<ReportDelivery>(
     props.initial.delivery ?? DEFAULT_DELIVERY(props.initial.name),
   );
@@ -140,15 +156,6 @@ export function OfflineBuilder(props: OfflineBuilderProps) {
   const dims = fields.filter((f) => f.kind === 'DIMENSION' && f.key !== 'partner');
   const mets = fields.filter((f) => f.kind === 'METRIC');
   const label = (k: string) => fields.find((f) => f.key === k)?.label ?? k;
-  const summary = useMemo(() => {
-    try {
-      const r = parseDateRangeParam(dateRange, ctx.today);
-      return `${r.from} - ${r.to}`;
-    } catch {
-      return '';
-    }
-  }, [dateRange, ctx.today]);
-
   const loadTemplate = (key: string) => {
     setTemplate(key);
     const t = OFFLINE_TEMPLATES.find((x) => x.key === key);
@@ -236,10 +243,40 @@ export function OfflineBuilder(props: OfflineBuilderProps) {
   };
 
   const advOptions = ctx.entityOptions.advertiser ?? [];
+  const [advMenu, setAdvMenu] = useState<HTMLElement | null>(null);
+  const rangeOptions = RANGES.map(([value, l]) => {
+    const r = resolveRange(value, ctx.today);
+    return { value, label: r ? formatOfflineRange(l, r.from, r.to) : l };
+  });
+  const pill = (text: string, kind: 'green' | 'blue', extra?: { onDelete?: () => void }) => (
+    <Chip
+      key={text}
+      size="small"
+      label={text}
+      sx={{
+        borderRadius: '14px',
+        color: colors.text.inverse,
+        bgcolor: kind === 'green' ? colors.statusText.active : colors.primary.main,
+        '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.8)' },
+      }}
+      {...(extra?.onDelete ? { onDelete: extra.onDelete } : {})}
+    />
+  );
+  const section = (title: string, children: React.ReactNode) => (
+    <Box sx={{ display: 'flex', gap: 4, py: 2, flexWrap: 'wrap' }}>
+      <Typography variant="body2" sx={{ width: 150, fontWeight: 500, color: 'text.secondary' }}>
+        {title}
+      </Typography>
+      <Box sx={{ flex: 1, minWidth: 280 }}>{children}</Box>
+    </Box>
+  );
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, maxWidth: 960 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+    <Box
+      sx={{ bgcolor: colors.surface.sunken, mx: -4, mt: -4, mb: -4, px: 4, py: 3, minHeight: '100%', display: 'flex', flexDirection: 'column', gap: 2 }}
+      data-testid="offline-page"
+    >
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 3 }}>
         <Link
           component="button"
           underline="hover"
@@ -249,9 +286,10 @@ export function OfflineBuilder(props: OfflineBuilderProps) {
           <DvIcon name="arrow_back" size={16} /> Return to Offline Report List
         </Link>
         <Box sx={{ flex: 1 }} />
-        <Typography variant="body2" color="text.secondary">
-          {TYPE_LABEL[offlineType]} report{id ? '' : ''}
-        </Typography>
+        <Box sx={{ textAlign: 'right' }} data-testid="offline-ids">
+          <Typography variant="body2">ID: {publicId ?? '-'}</Typography>
+          <Typography variant="body2">Report type: {TYPE_LABEL[offlineType]}</Typography>
+        </Box>
       </Box>
       <Box sx={{ maxWidth: 480 }}>
         <DvTextField
@@ -268,23 +306,40 @@ export function OfflineBuilder(props: OfflineBuilderProps) {
         </DvBanner>
       ) : null}
 
-      <DvSectionCard title="Report properties">
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, maxWidth: 480 }}>
-          <DvSelect
-            label="Date range"
-            value={RANGES.some(([v]) => v === dateRange) ? dateRange : 'LAST_7_DAYS'}
-            disabled={readOnly}
-            onChange={touch(setDateRange)}
-            options={RANGES.map(([value, l]) => ({ value, label: l }))}
-            hint={summary}
-          />
-          <Typography variant="body2">Language formatting: English (raw). Numbers have no thousand separators or currency symbols.</Typography>
-        </Box>
-      </DvSectionCard>
+      <Box sx={{ bgcolor: colors.text.inverse, border: '1px solid', borderColor: 'divider', px: 3, py: 1 }}>
+        {section(
+          'Date range',
+          <Box sx={{ maxWidth: 420 }}>
+            <DvSelect
+              ariaLabel="Date range"
+              value={RANGES.some(([v]) => v === dateRange) ? dateRange : 'LAST_7_DAYS'}
+              disabled={readOnly}
+              onChange={touch(setDateRange)}
+              options={rangeOptions}
+            />
+          </Box>,
+        )}
+        {section(
+          'Language formatting',
+          <Box sx={{ maxWidth: 420 }}>
+            <DvSelect
+              ariaLabel="Language formatting"
+              value="en-raw"
+              disabled={readOnly}
+              onChange={() => undefined}
+              options={[{ value: 'en-raw', label: 'English (raw)' }]}
+            />
+            <Typography variant="caption" color="text.secondary">
+              Numbers are displayed without commas or currency symbols.
+            </Typography>
+          </Box>,
+        )}
+      </Box>
 
-      <DvSectionCard title="Report setup">
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <Box sx={{ maxWidth: 480 }}>
+      <Box sx={{ bgcolor: colors.text.inverse, border: '1px solid', borderColor: 'divider', px: 3, py: 1 }}>
+        {section(
+          'Report template',
+          <Box sx={{ maxWidth: 420 }}>
             <DvSelect
               label="Report template"
               value={template}
@@ -294,81 +349,192 @@ export function OfflineBuilder(props: OfflineBuilderProps) {
               options={templates.map((t) => ({ value: t.key, label: t.title }))}
               hint="Choose a template to load reports with commonly prefilled settings"
             />
-          </Box>
-          <Box>
-            <Typography variant="panelOverline">Filters</Typography>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 1 }}>
-              <Chip color="success" variant="outlined" label={`Partner = ${partnerName} (${partnerId})`} />
-              {advertisers.map((a) => (
-                <Chip
-                  key={a}
-                  color="success"
-                  variant="outlined"
-                  label={`Advertiser = ${advOptions.find((o) => o.value === a)?.label ?? a}`}
-                  {...(readOnly ? {} : { onDelete: () => touch(setAdvertisers)(advertisers.filter((x) => x !== a)) })}
-                />
+          </Box>,
+        )}
+        {section(
+          'Filters',
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }} data-testid="offline-filters">
+            {pill(`Partner: ${partnerName} (${partnerId})`, 'green')}
+            {advertisers.length === 0 ? pill('Advertiser', 'green') : null}
+            {advertisers.map((a) =>
+              pill(`Advertiser: ${advOptions.find((o) => o.value === a)?.label ?? a}`, 'green', {
+                ...(readOnly ? {} : { onDelete: () => touch(setAdvertisers)(advertisers.filter((x) => x !== a)) }),
+              }),
+            )}
+            <Button size="small" disabled={readOnly} onClick={(e) => setAdvMenu(e.currentTarget)}>
+              + add filter
+            </Button>
+            <Menu anchorEl={advMenu} open={!!advMenu} onClose={() => setAdvMenu(null)}>
+              {advOptions.map((o) => (
+                <MenuItem
+                  key={o.value}
+                  disabled={advertisers.includes(o.value)}
+                  onClick={() => {
+                    setAdvMenu(null);
+                    touch(setAdvertisers)([...advertisers, o.value]);
+                  }}
+                >
+                  Advertiser: {o.label}
+                </MenuItem>
               ))}
-            </Box>
-            <Box sx={{ maxWidth: 360, mt: 2 }}>
+            </Menu>
+          </Box>,
+        )}
+        {section(
+          'Dimensions',
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }} data-testid="offline-dimensions">
+            {dimensions.map((k) => pill(label(k), 'green'))}
+            <Button size="small" disabled={readOnly} onClick={() => setChooser('dimensions')}>
+              + add / remove
+            </Button>
+          </Box>,
+        )}
+        {section(
+          'Metrics',
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }} data-testid="offline-metrics">
+            {metrics.map((k) => pill(label(k), 'blue'))}
+            <Button size="small" disabled={readOnly} onClick={() => setChooser('metrics')}>
+              + add / remove
+            </Button>
+          </Box>,
+        )}
+      </Box>
+
+      <Box sx={{ bgcolor: colors.text.inverse, border: '1px solid', borderColor: 'divider', px: 3, py: 1 }}>
+        {section(
+          'Schedule',
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 420 }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={schedule.active}
+                  disabled={readOnly}
+                  onChange={(e) => touch(setSchedule)({ ...schedule, active: e.target.checked })}
+                />
+              }
+              label="Active"
+            />
+            <DvSelect
+              label="Time zone"
+              value={schedule.timeZone}
+              disabled={readOnly || !schedule.active}
+              onChange={(v) => touch(setSchedule)({ ...schedule, timeZone: v })}
+              options={
+                OFFLINE_ZONES.some((z) => z.value === schedule.timeZone)
+                  ? OFFLINE_ZONES
+                  : [...OFFLINE_ZONES, { value: schedule.timeZone, label: schedule.timeZone }]
+              }
+            />
+            <Box sx={{ display: 'flex', gap: 2 }}>
               <DvSelect
-                ariaLabel="Add advertiser filter"
-                value=""
-                disabled={readOnly}
-                placeholder="+ add filter: advertiser"
-                onChange={(v) => v && !advertisers.includes(v) && touch(setAdvertisers)([...advertisers, v])}
-                options={advOptions.map((o) => ({ value: o.value, label: o.label }))}
+                label="Repeats"
+                value={schedule.repeats}
+                disabled={readOnly || !schedule.active}
+                onChange={(v) => touch(setSchedule)({ ...schedule, repeats: v as ReportSchedule['repeats'] })}
+                options={REPEATS}
+              />
+              <DvTextField
+                label="Every"
+                type="number"
+                value={String(schedule.every)}
+                disabled={readOnly || !schedule.active}
+                onChange={(v) => touch(setSchedule)({ ...schedule, every: Math.max(0, Number(v) || 0) })}
+                {...(errors['schedule.every'] ? { error: errors['schedule.every'] } : {})}
               />
             </Box>
-          </Box>
-          <Box>
-            <Typography variant="panelOverline">Dimensions</Typography>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 1 }} data-testid="offline-dimensions">
-              {dimensions.map((k) => (
-                <Chip key={k} label={label(k)} />
-              ))}
-              <Button size="small" disabled={readOnly} onClick={() => setChooser('dimensions')}>
-                + add / remove
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <DvTextField
+                label="Starts"
+                placeholder="MM/DD/YYYY"
+                value={startsText}
+                disabled={readOnly || !schedule.active}
+                onChange={(v) => {
+                  setStartsText(v);
+                  touch(setSchedule)({ ...schedule, starts: fromUs(v) });
+                }}
+              />
+              <DvTextField
+                label="Expires"
+                placeholder="MM/DD/YYYY"
+                value={expiresText}
+                disabled={readOnly || !schedule.active}
+                onChange={(v) => {
+                  setExpiresText(v);
+                  const { expires: _drop, ...rest } = schedule;
+                  void _drop;
+                  touch(setSchedule)(v ? { ...rest, expires: fromUs(v) } : rest);
+                }}
+                {...(errors['schedule.expires'] ? { error: errors['schedule.expires'] } : {})}
+              />
+            </Box>
+            <Typography variant="body2" data-testid="schedule-summary">
+              {scheduleSummary(schedule, { tzLabel: zoneLabel(schedule.timeZone), date: toUs })}
+            </Typography>
+          </Box>,
+        )}
+        {section(
+          'Delivery',
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 420 }}>
+            <DvSelect
+              label="Format"
+              value={delivery.format}
+              disabled={readOnly}
+              onChange={(v) => touch(setDelivery)({ ...delivery, format: v as ReportDelivery['format'] })}
+              options={[
+                { value: 'CSV', label: 'CSV' },
+                { value: 'XLSX', label: 'Excel' },
+              ]}
+            />
+            <DvTextField
+              label="File name"
+              value={delivery.fileName}
+              readOnly={readOnly}
+              onChange={(v) => touch(setDelivery)({ ...delivery, fileName: v })}
+              hint="The date and time are added to the name."
+              {...(errors['delivery.fileName'] ? { error: errors['delivery.fileName'] } : {})}
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={delivery.emailOwner}
+                  disabled={readOnly}
+                  onChange={(e) => touch(setDelivery)({ ...delivery, emailOwner: e.target.checked })}
+                />
+              }
+              label={`Email owner (${ownerEmail})`}
+            />
+            {delivery.emailOwner ? (
+              <DvSelect
+                label="Attachment"
+                value={delivery.attachment === false ? 'link' : 'file'}
+                disabled={readOnly}
+                onChange={(v) => touch(setDelivery)({ ...delivery, attachment: v === 'file' })}
+                options={[
+                  { value: 'file', label: 'Attach file' },
+                  { value: 'link', label: 'Link only' },
+                ]}
+              />
+            ) : null}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Typography variant="body2">Share with:</Typography>
+              <Button
+                size="small"
+                disabled={readOnly || !id}
+                title={id ? undefined : 'Save the report first'}
+                onClick={() => setShare(true)}
+              >
+                + add people
               </Button>
             </Box>
-          </Box>
-          <Box>
-            <Typography variant="panelOverline">Metrics</Typography>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 1 }} data-testid="offline-metrics">
-              {metrics.map((k) => (
-                <Chip key={k} color="primary" variant="outlined" label={label(k)} />
-              ))}
-              <Button size="small" disabled={readOnly} onClick={() => setChooser('metrics')}>
-                + add / remove
-              </Button>
-            </Box>
-          </Box>
-        </Box>
-      </DvSectionCard>
+          </Box>,
+        )}
+      </Box>
 
-      <DvSectionCard title="Schedule and delivery">
-        <ScheduleFields
-          schedule={schedule}
-          delivery={delivery}
-          onSchedule={touch(setSchedule)}
-          onDelivery={touch(setDelivery)}
-          errors={errors}
-        />
-        {id && !readOnly ? (
-          <Box sx={{ mt: 3 }}>
-            <Button onClick={() => setShare(true)}>Share with +</Button>
-          </Box>
-        ) : null}
-      </DvSectionCard>
-
-      <DvBanner
-        kind="info"
-        {...(offlineType === 'FLOODLIGHT' ? {} : {})}
-        action={{ label: 'OPEN IN INSTANT REPORTING', onClick: openInInstant }}
-      >
-        You can also access this report as an Instant Report
+      <DvBanner kind="info" action={{ label: 'OPEN IN INSTANT REPORTING', onClick: openInInstant }}>
+        You can also access this report as an Instant Report.
       </DvBanner>
 
-      <Box sx={{ display: 'flex', gap: 3 }}>
+      <Box sx={{ display: 'flex', gap: 3, pb: 2 }}>
         <Button variant="contained" disabled={readOnly || busy} onClick={() => void save(true)}>
           SAVE AND RUN
         </Button>

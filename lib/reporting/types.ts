@@ -63,6 +63,8 @@ export type Cell = string | number | null;
 export interface QueryResult {
   columns: QueryColumn[];
   rows: Cell[][];
+  /** Grand total over the range, aligned with `columns` (preview only, files have none). */
+  totals?: Cell[];
   truncated: boolean;
   totalRows: number;
   warnings: Warning[];

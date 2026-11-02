@@ -84,11 +84,14 @@ const UNIT: Record<ReportSchedule['repeats'], [string, string]> = {
 };
 
 /** "Runs every day at 12 am in {tz} until {date}" (S4 card 3). */
-export function scheduleSummary(s: ReportSchedule): string {
+export function scheduleSummary(
+  s: ReportSchedule,
+  fmt: { tzLabel?: string; date?: (iso: string) => string } = {},
+): string {
   const [one, many] = UNIT[s.repeats];
   const every = s.every === 1 ? `${one}` : `${s.every} ${many}`;
-  const tail = s.expires ? ` until ${s.expires}` : '';
-  return `Runs every ${every} at 12 am in ${s.timeZone}${tail}`;
+  const tail = s.expires ? ` until ${fmt.date ? fmt.date(s.expires) : s.expires}` : '';
+  return `Runs every ${every} at 12 am in ${fmt.tzLabel ?? s.timeZone}${tail}`;
 }
 
 /** The sim date a run of occurrence `at` counts as "today" for its relative date range (R9). */

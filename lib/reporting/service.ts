@@ -99,6 +99,10 @@ async function namesOf(ids: string[]): Promise<Map<string, string>> {
   const rows = await peopleByIds(ids);
   return new Map(rows.map((r) => [r.id, r.name]));
 }
+async function emailsOf(ids: string[]): Promise<Map<string, string>> {
+  const rows = await peopleByIds(ids);
+  return new Map(rows.map((r) => [r.id, r.email]));
+}
 
 type ReportRec = Prisma.ReportGetPayload<{ include: { shares: true } }>;
 
@@ -134,8 +138,10 @@ export interface HubQuery {
   createdBy?: 'me' | 'any';
   q?: string;
   page?: number;
+  pageSize?: number;
 }
 export const HUB_PAGE_SIZE = 20;
+export const HUB_PAGE_SIZES = [10, 20, 50] as const;
 
 export async function listReports(
   user: SessionUser,
@@ -157,17 +163,18 @@ export async function listReports(
       ],
     };
     const page = Math.max(1, q.page ?? 1);
+    const size = HUB_PAGE_SIZES.find((n) => n === q.pageSize) ?? HUB_PAGE_SIZE;
     const [total, recs] = await Promise.all([
       tx.report.count({ where }),
       tx.report.findMany({
         where,
         orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
-        skip: (page - 1) * HUB_PAGE_SIZE,
-        take: HUB_PAGE_SIZE,
+        skip: (page - 1) * size,
+        take: size,
         include: { shares: true, _count: { select: { runs: { where: { status: 'DONE' } } } } },
       }),
     ]);
-    const names = await namesOf([...new Set(recs.map((r) => r.ownerUserId))]);
+    const names = await emailsOf([...new Set(recs.map((r) => r.ownerUserId))]);
     const rows: ReportRow[] = recs.map((r) => ({
       id: r.id,
       publicId: r.publicId.toString(),
@@ -180,7 +187,7 @@ export async function listReports(
       shared: r.shares.length > 0,
       scheduled: !!(r.schedule as { active?: boolean } | null)?.active,
     }));
-    return { rows, total, page, pageSize: HUB_PAGE_SIZE };
+    return { rows, total, page, pageSize: size };
   });
 }
 
