@@ -66,7 +66,10 @@ test.describe('Campaigns list', () => {
     await expect(page.getByRole('columnheader', { name: /^ID$/ })).toHaveCount(0);
     await expect(page.getByRole('row').filter({ hasText: /^Total/ })).toHaveCount(0);
     // the ID sits in grey beside the name, 12 px (CAM-011, CAM-030)
-    const id = page.getByTestId('campaign-id').first();
+    const id = page
+      .getByRole('row')
+      .filter({ hasText: 'FID Alpha Campaign' })
+      .getByTestId('campaign-id');
     await expect(id).toHaveText(campaign.publicId);
     expect(await id.evaluate((el) => getComputedStyle(el).fontSize)).toBe('12px');
     // KPI columns are right-aligned (CAM-054)
