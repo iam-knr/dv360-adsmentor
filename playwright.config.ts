@@ -28,7 +28,7 @@ export default defineConfig({
     : {
         command: `npm run build && npm run start -- -p ${port}`,
         url: `http://127.0.0.1:${port}/api/health`,
-        timeout: 240_000,
+        timeout: 600_000, // the build runs inside this window; 240 s timed out on slow runners as the app grew
         reuseExistingServer: !process.env.CI,
         env: {
           DATABASE_URL: prodLike
