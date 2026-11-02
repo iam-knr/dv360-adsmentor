@@ -150,8 +150,8 @@ describe('targeting catalogue (module 10 3.4, reduced)', () => {
 });
 
 describe('other catalogues', () => {
-  it('has 60 Google audiences including the basketball example', () => {
-    expect(GOOGLE_AUDIENCES).toHaveLength(60);
+  it('has 130 Google audiences (64 affinity, 51 in-market) including the basketball example', () => {
+    expect(GOOGLE_AUDIENCES).toHaveLength(130);
     expect(
       GOOGLE_AUDIENCES.some(
         (a) =>
@@ -159,7 +159,7 @@ describe('other catalogues', () => {
           'Display & Video 360 Audiences » Affinity Categories » Sports & Fitness » Sports Fans » Basketball Fans',
       ),
     ).toBe(true);
-    expect(new Set(GOOGLE_AUDIENCES.map((a) => a.id)).size).toBe(60);
+    expect(new Set(GOOGLE_AUDIENCES.map((a) => a.id)).size).toBe(130);
   });
 
   it('has synthetic apps on example domains and invented FX rates', () => {

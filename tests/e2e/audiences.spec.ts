@@ -248,8 +248,8 @@ test('custom affinity: the estimator says forecasting is unavailable until an en
   await page.locator('#audience-name').fill('PW fans');
   await page.getByRole('button', { name: 'Create' }).click();
   await expect(page.getByText('Add at least one interest, URL or app.')).toBeVisible();
-  await page.getByLabel('Interests').fill('gadgets');
-  await page.getByLabel('Interests').press('Enter');
+  await page.getByLabel('Interests', { exact: true }).fill('gadgets');
+  await page.getByLabel('Interests', { exact: true }).press('Enter');
   await expect(estimator.getByTestId('size-cell').first()).toBeVisible();
   await page.getByRole('button', { name: 'Create' }).click();
   await expect(page).toHaveURL(/custom-lists/);
