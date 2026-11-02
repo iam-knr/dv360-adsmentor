@@ -320,7 +320,7 @@ Engine deltas requested: Δ13-14 `inventory/negotiations.ts` pure module: `advan
 | C4 | Engine has no negotiation or RFP module; data-model models the tables only | engine.md; data-model.md 5.11 | Δ13-14: add `advanceNegotiations` to the engine |
 | C5 | Data-model package has no `dealType`/floor; engine and Discover need them | data-model.md 5.11; engine.md 5.5 | Δ13-2 |
 | C6 | Data-model `DealAccess`: "All advertisers permissioned = a single row with both null (assumption)". With `NULLS NOT DISTINCT` this breaks uniqueness reasoning | data-model.md 5.11, Q22 | Use an explicit `allAdvertisers bool` on `InventorySourceDeal` (Δ13-16) instead of the null row |
-| C7 | Campaign-level inventory pages are unrecorded (routes Q2) but the nav says Campaign → Inventory ▸ My inventory/Marketplace/Negotiations | routes.md Q2, 3.4; PROJECT.md 5.3 | S11: same components with `campaignId` filter |
+| C7 | Campaign-level inventory pages are unrecorded (routes Q2) but the nav says Campaign → Inventory ▸ My inventory/Marketplace/Negotiations | routes.md Q2, 3.4; docs/PROJECT-LOG.md (Part B) 5.3 | S11: same components with `campaignId` filter |
 | C8 | Routes list `bulk-assign` as `POST /marketplace/bulk-assign`, validation INV-017 speaks of "package.bulkAssign"; Featured "Bulk assign" assigns to line items vs advertisers is ambiguous | routes.md 8.10; validation.md INV-017 | Assign to line items (format check needs an LI); advertiser access is a separate Access setting |
 | C9 | Permission model has no inventory permission | data-model.md 5.1 | Δ13-9 |
 

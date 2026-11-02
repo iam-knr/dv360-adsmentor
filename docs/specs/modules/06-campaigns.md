@@ -328,7 +328,7 @@ Engine freshness: every list GET calls `ensureCaughtUp` with the sandbox deadlin
 
 ## 7. Build tasks (ordered)
 
-Size: S = under half a day, M = about a day, L = 2 to 3 days of a cloud session. Dependencies name P3 tasks from PROJECT.md section 6.
+Size: S = under half a day, M = about a day, L = 2 to 3 days of a cloud session. Dependencies name P3 tasks from docs/PROJECT-LOG.md (Part B) section 6.
 
 | # | Task | Size | Depends on |
 |---|---|---|---|
@@ -345,7 +345,7 @@ Size: S = under half a day, M = about a day, L = 2 to 3 days of a cloud session.
 | T06-11 | Seed generator for campaigns (3.4) | S | P3-05 |
 | T06-12 | Playwright specs PW-06-01..12 | M | all above |
 
-Parallelisation note: T06-02 and T06-03 can run beside module 07 T07-02. P3-06 (CRUD with validation) in PROJECT.md corresponds to T06-02..T06-04 plus T07-02..T07-04 plus T08-02..T08-05.
+Parallelisation note: T06-02 and T06-03 can run beside module 07 T07-02. P3-06 (CRUD with validation) in docs/PROJECT-LOG.md (Part B) corresponds to T06-02..T06-04 plus T07-02..T07-04 plus T08-02..T08-05.
 
 ---
 

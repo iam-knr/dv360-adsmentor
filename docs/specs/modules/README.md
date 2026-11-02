@@ -4,9 +4,9 @@ One file per module area, each derived from `docs/explore/*` and cross-reference
 
 Index completed by session P2-07 (2026-10-28); module 19 added by P2-08 (2026-10-28). Conflicts between these files and the core specs are resolved in `../conflicts.md`; read it before using a module file. The build order and cloud-session prompts are in `../build-plan.md`.
 
-Columns: **PROJECT.md section** is the scope heading in PROJECT.md section 5. **Phase** names the PROJECT.md section 6 tasks the module's build tasks belong to. **Depends on** lists modules whose code or data this module calls (from the "Depends on" column of its section 7). **Build tasks** is the row count of its section 7 (231 tasks for modules 01 to 18, 248 with module 19).
+Columns: **docs/PROJECT-LOG.md (Part B) section** is the scope heading in docs/PROJECT-LOG.md (Part B) section 5. **Phase** names the docs/PROJECT-LOG.md (Part B) section 6 tasks the module's build tasks belong to. **Depends on** lists modules whose code or data this module calls (from the "Depends on" column of its section 7). **Build tasks** is the row count of its section 7 (231 tasks for modules 01 to 18, 248 with module 19).
 
-| # | File | Scope (PROJECT.md section) | PROJECT.md section | Phase | Depends on modules | Build tasks | Owner session |
+| # | File | Scope (docs/PROJECT-LOG.md (Part B) section) | docs/PROJECT-LOG.md (Part B) section | Phase | Depends on modules | Build tasks | Owner session |
 |---|---|---|---|---|---|---|---|
 | 01 | `01-global-shell.md` | Top bar, nav, breadcrumbs, banners, right rail (Ask Advisor, Quick help, Intelligence), search, shortcuts, Partner Overview, Bulk status page (5.1) | 5.1 | P3-03 (T1 to T6), P4 rest | 02, 05, 06, 07, 08, 11, 18 | 17 | P2-06a |
 | 02 | `02-partner-level.md` | Advertisers list and create, partner settings, exchanges, targeting defaults, advertiser configurations, users and roles, brand controls, email preferences (5.2) | 5.2 | P3-02/P3-05 (T1, T2), P4-09; billing deferred | 01, 03, 10, 15 | 14 | P2-06a |

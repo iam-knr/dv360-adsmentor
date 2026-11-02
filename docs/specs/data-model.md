@@ -1,7 +1,7 @@
 # Data model (P2-01)
 
 Spec for the full data model of **DV360 Simulator by Adsmetor**. Status: draft v1, written 2026-10-28.
-Inputs: `PROJECT.md` (§7.1 stack, §7.2 entity outline, §7.3 engine), `docs/PROJECT-LOG.md`, `docs/explore/01..18`.
+Inputs: `docs/PROJECT-LOG.md` (Part B) (§7.1 stack, §7.2 entity outline, §7.3 engine), `docs/PROJECT-LOG.md`, `docs/explore/01..18`.
 Stack: PostgreSQL + Prisma. Every table below maps to a Prisma model (core ones are in the appendix, the rest are field tables only).
 
 Conventions used in this file:
@@ -667,7 +667,7 @@ Reference list of exchanges (about 70 rows; names in `02`). Unique `code`.
 Which exchanges a partner enabled ("54 Exchanges enabled"). Unique `(partnerId, exchangeId)`. Fields: `enabled` bool N true, `seatId` Y, `networkId` Y, `agencyId` Y.
 
 #### BillingProfile , Invoice , ThirdPartyRateCard `(from public docs)`
-Billing is hidden by Limited Access in the demo, so these are the minimum needed for the Billing items listed in PROJECT.md §5.2.
+Billing is hidden by Limited Access in the demo, so these are the minimum needed for the Billing items listed in docs/PROJECT-LOG.md (Part B) §5.2.
 
 | Table | Fields |
 |---|---|
@@ -1455,8 +1455,8 @@ Each item states the assumption used in this spec so work can start.
 
 | # | Question | Assumption in this spec |
 |---|---|---|
-| 1 | One sandbox per student, or shared partners for pair work? (PROJECT.md open question 4) | One sandbox per student. A shared sandbox is possible: `Sandbox.ownerUserId` is nullable and `UserAccessGrant` can give several students a role in one sandbox. |
-| 2 | Students per class (PROJECT.md open question 3)? | 60 concurrent sandboxes for sizing (partitions and tick cost). |
+| 1 | One sandbox per student, or shared partners for pair work? (docs/PROJECT-LOG.md (Part B) open question 4) | One sandbox per student. A shared sandbox is possible: `Sandbox.ownerUserId` is nullable and `UserAccessGrant` can give several students a role in one sandbox. |
+| 2 | Students per class (docs/PROJECT-LOG.md (Part B) open question 3)? | 60 concurrent sandboxes for sizing (partitions and tick cost). |
 | 3 | Does the IO History tab include line item changes? Demo log did not show it. | Resolved RC-032: both show all descendants through the chain ids (6.4). |
 | 4 | Exact permission matrix for `PARTNER_CLIENT`, `CREATIVE`, `REPORTING_ONLY`. Role picker was unreachable in the demo. | Matrix in 5.1 from public docs knowledge; to be corrected with a full-access login. |
 | 5 | Sim clock per sandbox (assumed) or one classroom clock so everyone sees the same "today"? | Per sandbox, because pausing and resetting must not affect others; the classroom default speed copies into each sandbox. Instructor "sync all" action aligns `simNow`. |

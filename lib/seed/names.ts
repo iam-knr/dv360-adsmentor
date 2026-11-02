@@ -1,4 +1,4 @@
-// Synthetic names (data-model 3.3, PROJECT.md R5). Brands are built from fictional parts; a blocklist rejects real brands.
+// Synthetic names (data-model 3.3, docs/PROJECT-LOG.md (Part B) R5). Brands are built from fictional parts; a blocklist rejects real brands.
 import brands from '../../data/reference/brands.json';
 import type { Rng } from './prng';
 

@@ -6,7 +6,7 @@ Status values
 - **Accepted**: decided by the owner (Kailas) or fixed by an accepted spec. Binding.
 - **Proposed-awaiting-owner**: chosen as a default so work can start. The owner can change it; the consequence column says what that costs.
 
-Sources: `PROJECT.md` section 9, `docs/PROJECT-LOG.md` section 2, `docs/specs/routes.md` section 1, `docs/specs/conflicts.md`, `docs/specs/build-plan.md`. Index at the end.
+Sources: `docs/PROJECT-LOG.md` (Part B) section 9, `docs/PROJECT-LOG.md` section 2, `docs/specs/routes.md` section 1, `docs/specs/conflicts.md`, `docs/specs/build-plan.md`. Index at the end.
 
 ---
 
@@ -140,7 +140,7 @@ Sources: `PROJECT.md` section 9, `docs/PROJECT-LOG.md` section 2, `docs/specs/ro
 
 ### ADR-022 Folder convention: components and lib per module
 - Status: Accepted (build-plan 2.1). Date: 2026-10-28.
-- Decision: UI for a module is in `components/<module>`, server services in `lib/<module>`; route files in `app/**` are thin. There is no `features/` folder. This matches PROJECT.md section 3.
+- Decision: UI for a module is in `components/<module>`, server services in `lib/<module>`; route files in `app/**` are thin. There is no `features/` folder. This matches docs/PROJECT-LOG.md (Part B) section 3.
 
 ### ADR-023 Multi-file Prisma schema owned by session
 - Status: Accepted (build-plan 2.5). Date: 2026-10-28.
@@ -154,7 +154,7 @@ Sources: `PROJECT.md` section 9, `docs/PROJECT-LOG.md` section 2, `docs/specs/ro
 
 ### ADR-025 Pull request per session, disjoint ownership, ordered merges
 - Status: Accepted (build-plan 3). Date: 2026-10-28.
-- Decision: Each cloud session works on its own branch `p3-<id>-<name>` and opens one PR. No session pushes to `main`. A path is owned by one session while it is open. PRs merge in the fixed order of build-plan 3.5. The last commit of each PR is `docs: status <id>` and edits only PROJECT.md. `main` is protected after P3-01 (checks `check`, `db-tests`, `e2e`).
+- Decision: Each cloud session works on its own branch `p3-<id>-<name>` and opens one PR. No session pushes to `main`. A path is owned by one session while it is open. PRs merge in the fixed order of build-plan 3.5. The last commit of each PR is `docs: status <id>` and edits only docs/PROJECT-LOG.md (Part B). `main` is protected after P3-01 (checks `check`, `db-tests`, `e2e`).
 - Consequences: Planning sessions still commit documents directly to `main` until protection is enabled.
 
 ### ADR-026 Engine v1 scope and history stub for Phase 3
@@ -205,7 +205,7 @@ Answered by Kailas in chat on 2026-10-28 and recorded here. They close owner ite
 
 ### ADR-039 Stack and plan approved
 - Status: Accepted. Date: 2026-10-28. By: Kailas. Closes: P-01, P0-02, RC-060. Supersedes the "Proposed" status of ADR-006 to ADR-010.
-- Decision: The stack in PROJECT.md section 7.1 is approved as proposed: Next.js App Router with TypeScript, MUI, Prisma with PostgreSQL, Auth.js, Vercel, Recharts, Vitest and Playwright. PROJECT.md is approved as the project plan and the action plan (Phases 0 to 2 are done).
+- Decision: The stack in docs/PROJECT-LOG.md (Part B) section 7.1 is approved as proposed: Next.js App Router with TypeScript, MUI, Prisma with PostgreSQL, Auth.js, Vercel, Recharts, Vitest and Playwright. docs/PROJECT-LOG.md (Part B) is approved as the project plan and the action plan (Phases 0 to 2 are done).
 - Consequences: P3-01 is no longer blocked by approval. Still open before P3-01: P-02 (cloud environment `dv360-build`), P-03, P-04, P-06, P-07, P-12.
 
 ### ADR-040 Database is Supabase

@@ -1,6 +1,6 @@
 # Spec P2-05: Simulation engine (`lib/engine/`)
 
-Status: draft v1 (2026-10-28) · Owner: P2-05 · Reads: PROJECT.md §7.3, docs/PROJECT-LOG.md, docs/explore/01..18 · Sibling specs (written in parallel, reconcile names at merge): `data-model.md` (P2-01), `routes.md`, `validation.md` (P2-04).
+Status: draft v1 (2026-10-28) · Owner: P2-05 · Reads: docs/PROJECT-LOG.md (Part B) §7.3, docs/PROJECT-LOG.md, docs/explore/01..18 · Sibling specs (written in parallel, reconcile names at merge): `data-model.md` (P2-01), `routes.md`, `validation.md` (P2-04).
 
 All numbers in this file are **fictional training values**. They are tuned to look like believable programmatic benchmarks for India, not to reproduce any real exchange, advertiser or Google data (rule R5).
 
@@ -1402,7 +1402,7 @@ Fixture "benchmark advertiser": 1 IO, 1 LI per format (display, native, video, C
 | Pacing | Flight Even reaches 97% to 103% of budget in a 30-day segment with ample supply; Ahead reaches 100% by day 27 +/- 1 |
 | Other markets | US display CPM = India x 8.5 within +/- 10%; CTR index applied within +/- 10% |
 
-Calibration failures fail CI with a diff of observed vs band; the calibration bands are in `params.json.calibration` so the instructor review of realism (PROJECT.md §8, "Engine realism") is a one-file change.
+Calibration failures fail CI with a diff of observed vs band; the calibration bands are in `params.json.calibration` so the instructor review of realism (docs/PROJECT-LOG.md (Part B) §8, "Engine realism") is a one-file change.
 
 ### 11.4 Other tests
 
@@ -1609,7 +1609,7 @@ export function dueTicks(c: SimClock, realNow: Date): { due: number; remainderMs
 5. **Attribution depth.** Multi-touch is a two-touch approximation (6.5). Is full path modelling needed for any exercise (e.g. "assist" reports)?
 6. **Cell granularity vs fidelity.** Regions are 9 for India; city/DMA/zip are allocations. Is "single pincode" the finest exercise needed, or do students expect real zip-level supply differences?
 7. **Reach realism.** Pool model with shared overlap factor 1.15; do classes need accurate cross-IO deduplication (Cross-media reach, Unique Reach overlap reports)? If yes, move to a per-user cohort bitmap (cost: ~10x memory).
-8. **Retention and DB tier.** Row estimates assume Neon/Supabase paid tier. On free tier (0.5 GB) reduce slices and retention (1.4) or lower sim speed. Confirm the DB plan (PROJECT.md open question 2/3: class size).
+8. **Retention and DB tier.** Row estimates assume Neon/Supabase paid tier. On free tier (0.5 GB) reduce slices and retention (1.4) or lower sim speed. Confirm the DB plan (docs/PROJECT-LOG.md (Part B) open question 2/3: class size).
 9. **Time zones.** Half-hour offsets (IST) vs UTC reports are approximated at day boundaries (9.1). Acceptable, or force UTC reports to use whole hours?
 10. **YouTube modelling depth.** YouTube is one pseudo-exchange with format-specific rates. Do exercises need ad-group-level auction differences (audience, topics) beyond the shares in 2.3?
 11. **DOOH, Demand Gen, mobile app install step 2** were blocked in exploration (05); this spec treats them as variants of display/video cells with the following assumptions: DOOH = fixed bid, venue-based supply (no cookies), Demand Gen = YouTube-like with Floodlight optimisation. Revisit when explored.

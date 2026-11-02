@@ -1,4 +1,4 @@
-// Format gallery catalogue (module 12 S6). Code, not database. Descriptions are Adsmetor paraphrases (PROJECT.md R2, R5).
+// Format gallery catalogue (module 12 S6). Code, not database. Descriptions are Adsmetor paraphrases (docs/PROJECT-LOG.md (Part B) R2, R5).
 import type { LiType } from '@/lib/validation/constants/li-compat';
 import { creativeFormatAllowed, type CreativeFormat } from '@/lib/validation/constants/creatives';
 import { LI_TYPES } from '@/lib/validation/constants/li-compat';

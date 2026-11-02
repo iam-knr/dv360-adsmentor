@@ -1,6 +1,6 @@
 # Module 04: Planning (Plans, forecast, Cross-media reach)
 
-Task P2-06a. Source: PROJECT.md 5.10, `docs/explore/13-planning.md`. Related explore: 09 (Plans sit under Inventory), 12 (Cross-media reach under Reports), 02 (partner Cross-media reach page), 07 and 10 (targeting and audiences used in plan rows).
+Task P2-06a. Source: docs/PROJECT-LOG.md (Part B) 5.10, `docs/explore/13-planning.md`. Related explore: 09 (Plans sit under Inventory), 12 (Cross-media reach under Reports), 02 (partner Cross-media reach page), 07 and 10 (targeting and audiences used in plan rows).
 Specs used: `data-model.md` (DM), `routes.md` (RT), `design-system.md` (DS), `validation.md` (VAL), `engine.md` (ENG). Cited as `DM 5.15`, `RT 3.9`, and so on.
 Build phase: P4-08 (needs P3-05, P3-07, P3-08).
 
@@ -29,7 +29,7 @@ Build phase: P4-08 (needs P3-05, P3-07, P3-08).
 | Reports app, instant and offline reports | P4-07 |
 | Campaign, IO, LI creation forms | P3-06. The convert action calls their services |
 | Negotiations, Marketplace (siblings of Plans in the nav) | P4-02 |
-| A separate "Reach planner" product | There is none. PROJECT.md 5.10 lists "Planner / Plans" and "Reach planner" as two items; explore 13 shows that a plan page is the reach planner (C-04-1) |
+| A separate "Reach planner" product | There is none. docs/PROJECT-LOG.md (Part B) 5.10 lists "Planner / Plans" and "Reach planner" as two items; explore 13 shows that a plan page is the reach planner (C-04-1) |
 
 ### 1.3 Blocked in the demo, filled from public docs or by us
 
@@ -499,7 +499,7 @@ Determinism: the plan forecast uses a seeded noise term `hash(sandboxSeed, plan.
 
 | # | Conflict | Where | Proposed resolution |
 |---|---|---|---|
-| C-04-1 | PROJECT.md 5.10 lists "Planner / Plans" and "Reach planner" as separate items; explore 13 shows the plan page is the reach planner | `PROJECT.md` 5.10 vs `docs/explore/13` | One module, one page |
+| C-04-1 | docs/PROJECT-LOG.md (Part B) 5.10 lists "Planner / Plans" and "Reach planner" as separate items; explore 13 shows the plan page is the reach planner | `docs/PROJECT-LOG.md` (Part B) 5.10 vs `docs/explore/13` | One module, one page |
 | C-04-2 | RT has no route for a cross-media report detail page (only list and `new`), yet RT 8.10 has `GET /api/dv/cross-media-reports/:id` | `routes.md` 3.9, 3.2, 8.10 | Add `[A]/cross-media-reach/{reportId}` and `[P]/cross-media-reach/{reportId}` (†) |
 | C-04-3 | ENG exposes `engine.forecast(world, liDraft, window)` for line items only. There is no plan forecast, no TV supply and no cross-media function; ENG 9.5 mentions Cross-media reach only as constants. DM 5.15 expects `PlanForecast` to be "recomputed only when the plan changes" with per-row and curve outputs | `engine.md` 1.6, 9.5 vs `data-model.md` 5.15 | Add `forecastPlan` and `crossMediaReach` to ENG 1.6 and a `plan` block to params (DELTA-04-9) |
 | C-04-4 | Country sets disagree: Cross-media list has 13 countries (DM 4.9 `CrossMediaCountry`); ENG 2.6 has 9 markets (IN, ID, AE, SG, AU, UK, DE, US, BR). Only AU, UK, DE, US, BR overlap. The demo plan used a SGD currency (Singapore), which is in ENG but not in the Cross-media list | `data-model.md` 4.9 vs `engine.md` 2.6 | `PlanCountry` seed covers the union; markets missing from ENG use `priceIdx` interpolated by region and are flagged in the seed |

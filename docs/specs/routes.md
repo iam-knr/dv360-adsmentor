@@ -1,6 +1,6 @@
 # P2-02 - Route map, navigation, layouts and API map
 Spec for: Next.js App Router app that mirrors DV360 navigation.
-Status: draft 1 (2026-10-28). Inputs: `PROJECT.md`, `docs/PROJECT-LOG.md`, `docs/explore/01..18`.
+Status: draft 1 (2026-10-28). Inputs: `docs/PROJECT-LOG.md` (Part B), `docs/PROJECT-LOG.md`, `docs/explore/01..18`.
 Sibling specs written at the same time (not read, names only): `data-model.md` (P2-01), `design-system.md` (P2-03), `validation.md` (P2-04), `engine.md` (P2-05). DTO names in section 8 are wire types; reconcile with `data-model.md` when both land (Open question Q22).
 
 How to read this file
@@ -25,14 +25,14 @@ Path aliases used in tables
 | # | Decision | Why |
 |---|---|---|
 | R1 | Drop the `/ng_nav` prefix. `/ng_nav/**` is accepted and 308-redirected to `/**`. | Teachers can paste a real DV360 URL and land on the same screen. Real DV360 is a SPA under `/ng_nav/`; we do not need the prefix. |
-| R2 | Keep DV360 spelling for every segment, even odd ones (`home_v3`, `explorerios`, `explorerlis`, `fl/events`, `tid`, `location-extension`, `brand-lift-measurements`, `featured-v3`). | Fidelity rule (R2 in PROJECT.md). Students may compare URLs with the real product. |
+| R2 | Keep DV360 spelling for every segment, even odd ones (`home_v3`, `explorerios`, `explorerlis`, `fl/events`, `tid`, `location-extension`, `brand-lift-measurements`, `featured-v3`). | Fidelity rule (R2 in docs/PROJECT-LOG.md (Part B)). Students may compare URLs with the real product. |
 | R3 | Tabs are **path segments** (`/explorerios`, `/details`, `/history`, `/troubleshooter`, `/adgroups`). The only exception is the deal page, which uses `?activeTab=` because DV360 does. | Matches DV360 and gives each tab its own `page.tsx` and its own loading state. |
 | R4 | Everything simulator-only lives under `/sim/**` (pages) and `/api/sim/**` (API). Simulator-only query params start with `sim_`. DV360 paths never start with `sim`. Module 19 adds the reserved prefixes `/manage/**` (account management pages) and `/api/manage/**`; no DV360 path starts with `manage` either (RC-068). | No collision with any current or future DV360 path. |
 | R5 | Two physical route trees under one route group: `(app)` has the top bar, left nav, right rail. `(full)` has no top bar and no nav (full-screen forms, plan page, reports app). Both trees use the same URL prefix `p/[partnerId]/...`. | A parent layout cannot remove its own chrome, so full-screen pages must sit in a sibling tree. Cost: thin duplicate context layouts, solved with shared loaders. |
 | R6 | Right-rail panels and dialogs are client state. Draft-bound slide-overs are client state inside the form draft. Entity slide-overs use `?sim_panel=`. The two A/B test panels use a parallel + intercepting route because DV360 gives them real URLs. See section 5.4. | Each surface gets the mechanism that matches its lifetime. |
 | R7 | Reads for tables go through `GET /api/dv/**` route handlers. Form writes go through server actions that call the same service function. File up/download and polling use route handlers. | Tables need cacheable, refetchable URLs. Forms benefit from typed actions. One service layer keeps validation in one place. |
 | R8 | Every page is dynamic (`export const dynamic = 'force-dynamic'`). No static caching of tenant data. `params` and `searchParams` are Promises (Next 15+), always `await` them. | Data is per student sandbox and changes with the simulated clock. |
-| R9 | "Today" and "Yesterday" mean the **simulated** date of the user's class clock, in the advertiser time zone. Never the real date. | Engine spec (PROJECT.md 7.3): students must see sim spend for "yesterday". |
+| R9 | "Today" and "Yesterday" mean the **simulated** date of the user's class clock, in the advertiser time zone. Never the real date. | Engine spec (docs/PROJECT-LOG.md (Part B) 7.3): students must see sim spend for "yesterday". |
 | R10 | Entity chain is always verified: `/p/1/a/2/c/3` is valid only if campaign 3 is in advertiser 2 which is in partner 1 and the user can see partner 1. Otherwise render the 404 page. | Stops ID guessing across sandboxes. |
 
 ---

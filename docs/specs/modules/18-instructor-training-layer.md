@@ -2,7 +2,7 @@
 
 Status: draft v1, 2026-10-28. Owner session: P2-06c. Build phases: P3-02 (auth, roles, access windows: foundation part, section 7 tasks M18-01..06) and P5-01 to P5-04 (instructor console, scenarios, time controls, progress).
 Audience: the students here are FREE students; paying Ads Mentor students use the real DV360 (ADR-048). The default cohort is 25 and free cohorts may be larger (RC-057 open owner question).
-Inputs: `PROJECT.md` 5.13 and Phase 5, `docs/PROJECT-LOG.md` (D3, R3), `data-model.md` (1.1, 1.5, 2, 3, 5.1, 6), `routes.md` (2, 5.4, 7, 8.19, 8.20), `validation.md` (USR, state machines, DLG), `engine.md` (1.2 clock, 1.4, 10 hooks, 11), `design-system.md` (2.3 right rail, 7 branding).
+Inputs: `docs/PROJECT-LOG.md` (Part B) 5.13 and Phase 5, `docs/PROJECT-LOG.md` (D3, R3), `data-model.md` (1.1, 1.5, 2, 3, 5.1, 6), `routes.md` (2, 5.4, 7, 8.19, 8.20), `validation.md` (USR, state machines, DLG), `engine.md` (1.2 clock, 1.4, 10 hooks, 11), `design-system.md` (2.3 right rail, 7 branding).
 > Delta: module 19 (account management, 2026-10-28). Terminology and role names changed: the app roles are now `USER` (was student), `ADMIN` (was instructor) and `SUPER_ADMIN` (was admin), RC-068. Accounts are created with the person's email and a password the creator sets or generates and shares by hand, no temporary-password-by-default and no email (RC-063, RC-070). Creation, reset, disable, delete and the account audit log are implemented once in module 19 and called from the roster here (RC-073). Where this file says student, instructor or admin in the role sense, read `USER`, `ADMIN`, `SUPER_ADMIN`. Text below is otherwise unchanged.
 
 Tags: nothing tagged = decided from the sources above. `[SIM]` = invented here. `Δ` = spec delta, repeated in section 8. There was no DV360 reference for this layer (R1: own Adsmetor login), so everything here is a design.
@@ -33,7 +33,7 @@ Tags: nothing tagged = decided from the sources above. `[SIM]` = invented here. 
 - Proctoring, plagiarism detection and screen recording.
 
 ### Open decisions inherited
-PROJECT.md open questions: students per class (sizing 60), one sandbox per student (assumed), existing exercises (none yet: the 10 starters here), stack approval.
+docs/PROJECT-LOG.md (Part B) open questions: students per class (sizing 60), one sandbox per student (assumed), existing exercises (none yet: the 10 starters here), stack approval.
 
 ---
 

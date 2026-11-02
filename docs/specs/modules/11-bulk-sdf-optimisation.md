@@ -26,7 +26,7 @@ This file answers DM open question 17 ("SDF column layout per version 9 to 11 ne
 | Bulk status **page** UI (`/bulk-status`) | Shell (P3-03, explore 01); this module defines the rows it lists |
 | Templates CRUD, targeting editors | 10 |
 | Entity CRUD forms | 06, 07, 08, 09 |
-| **A/B tests and lift studies** (explore 15 + 18) | Not assigned to P2-06b. They sit in PROJECT.md 5.3 "Experiments" and P4-10; a separate module spec is needed (Q-11-02) |
+| **A/B tests and lift studies** (explore 15 + 18) | Not assigned to P2-06b. They sit in docs/PROJECT-LOG.md (Part B) 5.3 "Experiments" and P4-10; a separate module spec is needed (Q-11-02) |
 | Rules or automation page | Does not exist in DV360 (explore 15 access notes); automation is IO "Automate bid & budget", custom bidding and alerts |
 | Reporting exports, CSV of view for reports | Reporting (P4-07); this module only mounts the grid CSV (⌘+Shift+L) that RT 8.15 defines |
 | Engine rules that raise alerts | `engine.md` 3.7, 3.8 (this module lists how they are displayed) |
@@ -623,7 +623,7 @@ Dismiss hides a suggestion for 7 sim days. Generation runs in the engine at tick
 
 ## 7. Build tasks
 
-P4-10 in PROJECT.md (bulk edit, SDF, rules, experiments) = T11-01 to T11-13 here (experiments excluded). P4-11 (optimisation) = T11-14 to T11-16.
+P4-10 in docs/PROJECT-LOG.md (Part B) (bulk edit, SDF, rules, experiments) = T11-01 to T11-13 here (experiments excluded). P4-11 (optimisation) = T11-14 to T11-16.
 
 | # | Task | Size | Depends on |
 |---|---|---|---|
@@ -684,7 +684,7 @@ P4-10 in PROJECT.md (bulk edit, SDF, rules, experiments) = T11-01 to T11-13 here
 | C-11-12 | VAL 4.10 says SDF Upload is on "IO and LI ⋮" and the campaigns list; explore 04/05 list shows IO ⋮: Download, Upload, Download QA but LI ⋮ per explore 05 only mentions Download and Download QA in the bulk bar | VAL 4.10 vs explore 05 | LI ⋮ has Upload too (same dialog) |
 | C-11-13 | Archive cascade (VAL Q19) vs DM 7.3 "Archived = delete" | VAL 4.2/4.3 vs DM 7.3 | cascade flag in 4.3 |
 | C-11-14 | ENG 1.3 says edits take effect at `appliedAtTick`, and a large bulk job processed across several worker calls might straddle ticks; no spec says whether a job is atomic with respect to ticks | ENG 1.3 vs RT 8.15 | jobs stamp every item with the tick current at the job start (`payload.appliedAtTick`), not at item time |
-| C-11-15 | PROJECT.md 5.3 "Bulk tools ... rules/automation" vs explore 15: no Rules page exists | PROJECT.md 5.3 | no Rules page; see 1 out-of-scope |
+| C-11-15 | docs/PROJECT-LOG.md (Part B) 5.3 "Bulk tools ... rules/automation" vs explore 15: no Rules page exists | docs/PROJECT-LOG.md (Part B) 5.3 | no Rules page; see 1 out-of-scope |
 | C-11-16 | VAL 4.10 says "Download metadata" is on the campaigns list ⋮ only; RT 8.15 `SdfDownloadRequest.kind` has METADATA for any scope | VAL 4.10 vs RT 8.15 | allow all scopes server side, UI only on campaigns list |
 | C-11-17 | Ownership overlap with module 01: 01 owns the Intelligence panel, `getIntelligence`, health rows, `f.alert` filter keys and the `BulkJob` service and Bulk status page; the P2-06b task also lists "Intelligence panel suggestions" and bulk menus | module 01 sections 2.2, 2.8, 4.8, 4.9 vs this file | Split as in 1: 01 = panel, health, job service and page; 11 = suggestions, drawer, worker, bulk operations |
 | C-11-18 | Module 05 requires every write inside `withChangeLog` (lint rule and scan test); SDF row savepoints and bulk workers must call it per entity with `bulkJobId`, `source` and an `idempotencyKey` | module 05 4.1 vs this file 4.7, 4.8 | adopted in 3.2 and 4.7 |

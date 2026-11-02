@@ -1,7 +1,7 @@
 # Design system: DV360 Simulator by Adsmetor
 
 Task P2-03. Status: draft 1 (2026-10-28). Owner: Kailas Nath R (Adsmetor).
-Inputs: `PROJECT.md` (R1, R2, §7.1), `docs/PROJECT-LOG.md`, `docs/explore/01` to `18`.
+Inputs: `docs/PROJECT-LOG.md` (Part B) (R1, R2, §7.1), `docs/PROJECT-LOG.md`, `docs/explore/01` to `18`.
 Used by: P3-03 (app shell), P3-04 (shared components), every module spec in P2-06, SOP-3 fidelity reviews.
 
 ## 0. How to read this file
