@@ -152,6 +152,7 @@ export function summarizeTargeting(dim: MatrixDimension, c: TargetingCriteria): 
         a.include.combined.length +
         a.include.custom.length;
       const exc = a.exclude.firstParty.length + a.exclude.google.length;
+      if (inc + exc === 0) return null;
       return `Include: ${plural(inc, 'list')}; Exclude: ${plural(exc, 'list')}`;
     }
     case 'GEOGRAPHY': {

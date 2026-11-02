@@ -36,6 +36,8 @@ export interface TargetingCardProps {
   locked?: string[];
   inherited?: string[];
   readOnly?: boolean;
+  /** Inside a section card of a form that already shows the "Targeting" heading: no border, no second heading (LIT-015). */
+  embedded?: boolean;
 }
 
 const EDITABLE: MatrixDimension[] = [
@@ -66,6 +68,7 @@ export function TargetingCard({
   locked = [],
   inherited = [],
   readOnly,
+  embedded,
 }: TargetingCardProps) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [open, setOpen] = useState<MatrixDimension | null>(null);
@@ -109,13 +112,20 @@ export function TargetingCard({
   };
 
   return (
-    <Box data-testid="targeting-card" sx={{ border: 1, borderColor: 'divider', borderRadius: 1 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', p: 2, gap: 1 }}>
-        <Typography variant="h3" component="h3" sx={{ flex: 1 }}>
-          Targeting
-        </Typography>
+    <Box
+      data-testid="targeting-card"
+      sx={embedded ? {} : { border: 1, borderColor: 'divider', borderRadius: 1 }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', p: embedded ? 0 : 2, pb: embedded ? 1 : 2, gap: 1 }}>
+        {embedded ? (
+          <Box sx={{ flex: 1 }} />
+        ) : (
+          <Typography variant="h3" component="h3" sx={{ flex: 1 }}>
+            Targeting
+          </Typography>
+        )}
         <Button
-          variant="outlined"
+          variant={embedded ? 'text' : 'outlined'}
           disabled={readOnly}
           onClick={(e) => setAnchor(e.currentTarget)}
           aria-haspopup="menu"
@@ -166,7 +176,7 @@ export function TargetingCard({
               sx={{
                 display: 'flex',
                 alignItems: 'center',
-                px: 2,
+                px: embedded ? 0 : 2,
                 py: 1,
                 borderTop: 1,
                 borderColor: 'divider',

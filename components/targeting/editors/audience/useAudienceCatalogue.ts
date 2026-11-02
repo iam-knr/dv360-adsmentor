@@ -5,6 +5,8 @@ import { GOOGLE_AUDIENCES, type AudienceMeta } from '@/lib/targeting/audience';
 
 export interface CatalogueItem {
   id: string;
+  /** Numeric id shown in the picker; falls back to `id`. */
+  displayId?: string;
   name: string;
   path: string;
   meta: AudienceMeta;
@@ -20,6 +22,7 @@ export interface AudienceCatalogue {
 
 const GOOGLE: CatalogueItem[] = GOOGLE_AUDIENCES.map((g) => ({
   id: g.id,
+  displayId: g.id,
   name: g.name,
   path: g.path.join(' » '),
   subtype: g.kind,
@@ -29,10 +32,10 @@ const GOOGLE: CatalogueItem[] = GOOGLE_AUDIENCES.map((g) => ({
 const EMPTY: AudienceCatalogue = { firstParty: [], combined: [], custom: [], google: GOOGLE };
 
 /** Lists the picker offers. The Google catalogue is bundled, so it is there before the advertiser lists load. */
-export function useAudienceCatalogue(advertiserId?: string): AudienceCatalogue {
+export function useAudienceCatalogue(advertiserId?: string): AudienceCatalogue & { reload: () => void } {
   const [data, setData] = useState<AudienceCatalogue>(EMPTY);
   const [focusTick, setFocusTick] = useState(0);
-  // A custom list created in another tab shows up when the student comes back to this one.
+  // A list created elsewhere shows up when the student comes back to this tab; the stacked create panel calls reload().
   useEffect(() => {
     const onFocus = () => setFocusTick((n) => n + 1);
     window.addEventListener('focus', onFocus);
@@ -49,7 +52,7 @@ export function useAudienceCatalogue(advertiserId?: string): AudienceCatalogue {
       .catch(() => undefined);
     return () => ctl.abort();
   }, [advertiserId, focusTick]);
-  return data;
+  return { ...data, reload: () => setFocusTick((n) => n + 1) };
 }
 
 export function allItems(c: AudienceCatalogue): CatalogueItem[] {
