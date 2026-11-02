@@ -172,7 +172,7 @@ test.describe('PW-01-1 shell tour (STANDARD student)', () => {
     // campaign level: crumbs stop at the campaign, IO and LI frames have no left nav
     await page.goto(C(w));
     await expect(page).toHaveURL(C(w, '/explorerios'));
-    await expect(topCrumbs(page)).toContainText(`Campaign ${w.names.campaign}`);
+    await expect(topCrumbs(page)).toContainText(w.names.campaign);
     await expect(
       mainNav(page).getByRole('link', { name: 'Campaign', exact: true }),
     ).toHaveAttribute('aria-current', 'page');

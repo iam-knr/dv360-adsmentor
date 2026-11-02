@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
+import { DvBanner } from '@/components/dv/DvBanner';
 import { DvCheckboxGroup, DvRadioGroup } from '@/components/dv/DvChoice';
 import { DvFormFooter, focusFirstInvalid } from '@/components/dv/DvFormPage';
 import { DvSectionCard } from '@/components/dv/DvSectionCard';
@@ -20,11 +21,12 @@ import {
   updateCampaignAction,
   validateCampaignAction,
 } from '@/lib/campaigns/actions';
+import { realFormIssues } from '@/lib/campaigns/form-issues';
 import { KPI_LABEL } from '@/lib/campaigns/kpi';
 import {
   addBudgetRows,
   applyCopySource,
-  isMoneyKpi,
+  parseKeywords,
   type CampaignWire,
   type WireIssue,
 } from '@/lib/campaigns/wire';
@@ -48,6 +50,8 @@ export interface CampaignFormProps {
   version?: number;
   startLocked?: boolean;
   readOnly?: boolean;
+  /** New campaign: show the paused-advertiser banner. */
+  advertiserPaused?: boolean;
 }
 
 const CREATIVE_TYPES = [
@@ -55,6 +59,23 @@ const CREATIVE_TYPES = [
   { value: 'VIDEO', label: 'Video' },
   { value: 'AUDIO', label: 'Audio' },
 ];
+
+/** "₹" for INR: the narrow symbol of the currency code. */
+function currencySymbol(code: string): string {
+  try {
+    return (
+      new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: code,
+        currencyDisplay: 'narrowSymbol',
+      })
+        .formatToParts(0)
+        .find((p) => p.type === 'currency')?.value ?? code
+    );
+  } catch {
+    return code;
+  }
+}
 
 const issuesAt = (issues: WireIssue[], path: string, severity?: WireIssue['severity']) =>
   issues.find((i) => i.path === path && (!severity || i.severity === severity));
@@ -69,6 +90,7 @@ export function CampaignForm({
   version,
   startLocked,
   readOnly,
+  advertiserPaused,
 }: CampaignFormProps) {
   const router = useRouter();
   const [value, setValue] = useState<CampaignWire>(initial);
@@ -93,13 +115,12 @@ export function CampaignForm({
     );
   };
 
-  const kpiOptions = value.goal
-    ? CAMPAIGN_KPI_UNIVERSE.map((k) => ({
-        value: k,
-        label: `${KPI_LABEL[k]}${RECOMMENDED_KPIS[value.goal!].includes(k) ? '' : ' (not recommended)'}`,
-      }))
-    : [];
-  const kpiSuffix = value.kpi.type && !isMoneyKpi(value.kpi.type) ? '%' : undefined;
+  const kpiOptions = CAMPAIGN_KPI_UNIVERSE.map((k) => ({
+    value: k,
+    label: `${KPI_LABEL[k]}${value.goal && !RECOMMENDED_KPIS[value.goal].includes(k) ? ' (not recommended)' : ''}`,
+  }));
+  const symbol = currencySymbol(currency);
+  const [keywordsText, setKeywordsText] = useState(initial.keywords.join(', '));
 
   const submit = (overwrite = false) => {
     if (readOnly) return;
@@ -116,7 +137,7 @@ export function CampaignForm({
           setStale(true);
           return;
         }
-        setIssues(res.issues);
+        setIssues(mode === 'create' ? realFormIssues(res.issues, value) : res.issues);
         setTimeout(() => focusFirstInvalid(), 0);
         return;
       }
@@ -130,232 +151,364 @@ export function CampaignForm({
     });
   };
 
-  const errorCount = issues.filter((i) => i.severity === 'error').length;
+  const budgetRows = (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+      {value.budgets.map((b, i) => (
+        <Box key={i} sx={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 1 }}>
+          <DvTextField
+            ariaLabel={`Budget ${i + 1} name`}
+            placeholder="Name"
+            value={b.name ?? ''}
+            readOnly={readOnly}
+            error={err(`budgets.${i}.name`)}
+            onChange={(name) =>
+              set({ budgets: value.budgets.map((x, j) => (j === i ? { ...x, name } : x)) })
+            }
+          />
+          <DvTextField
+            ariaLabel={`Budget ${i + 1} amount`}
+            placeholder="Amount"
+            numeric
+            value={String(b.amount ?? '')}
+            readOnly={readOnly}
+            error={err(`budgets.${i}.amount`)}
+            onChange={(amount) =>
+              set({ budgets: value.budgets.map((x, j) => (j === i ? { ...x, amount } : x)) })
+            }
+          />
+          <DvTextField
+            ariaLabel={`Budget ${i + 1} start`}
+            placeholder="Start"
+            value={b.startDate ?? ''}
+            readOnly={readOnly}
+            error={err(`budgets.${i}.startDate`)}
+            onChange={(startDate) =>
+              set({ budgets: value.budgets.map((x, j) => (j === i ? { ...x, startDate } : x)) })
+            }
+          />
+          <DvTextField
+            ariaLabel={`Budget ${i + 1} end`}
+            placeholder="End"
+            value={b.endDate ?? ''}
+            readOnly={readOnly}
+            error={err(`budgets.${i}.endDate`)}
+            onChange={(endDate) =>
+              set({ budgets: value.budgets.map((x, j) => (j === i ? { ...x, endDate } : x)) })
+            }
+          />
+        </Box>
+      ))}
+      {!readOnly ? (
+        <Button
+          sx={{ alignSelf: 'flex-start' }}
+          onClick={() => set({ budgets: addBudgetRows(value.budgets) })}
+        >
+          Add Budgets
+        </Button>
+      ) : null}
+    </Box>
+  );
+
+  const heading = (text: string, optional = false) => (
+    <Typography variant="subtitle1" component="h3" sx={{ mb: 1 }}>
+      {text}
+      {optional ? (
+        <Typography variant="caption" component="span" sx={{ ml: 1 }}>
+          (Optional)
+        </Typography>
+      ) : null}
+    </Typography>
+  );
+
+  const SHOWN =
+    /^(name|status|goal|kpi\.type|kpi\.value|creativeTypes|plannedSpend|startDate|endDate|budgets\.\d+\.|frequencyCap\.maxImpressions|landingPageUrls\[|keywords)/;
+  const stray = issues.filter((i) => i.severity === 'error' && !SHOWN.test(i.path));
+
+  const urls = value.landingPageUrls.length ? value.landingPageUrls : [''];
 
   return (
     <Box component="form" noValidate onSubmit={(e) => e.preventDefault()}>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {errorCount > 0 ? (
-          <Typography role="alert" color="error">
-            {errorCount} {errorCount === 1 ? 'error' : 'errors'}. Fix them to continue.
-          </Typography>
+        {mode === 'create' && advertiserPaused ? (
+          <DvBanner kind="warning" level="inline">
+            This advertiser is paused. Campaigns you create here will not serve until the advertiser
+            is active again.
+          </DvBanner>
+        ) : null}
+        {mode === 'create' ? (
+          <DvBanner kind="info" level="inline">
+            Inventory source and Targeting settings are now managed at the line item level. Use
+            targeting templates for easy reuse.
+          </DvBanner>
         ) : null}
 
-        <DvSectionCard title="Campaign name" layout="settings">
-          <DvTextField
-            label="Campaign name"
-            required
-            value={value.name}
-            readOnly={readOnly}
-            error={err('name')}
-            onChange={(name) => set({ name })}
-            id="name"
-          />
+        <DvSectionCard layout="stacked">
+          <Box sx={{ display: 'flex', gap: 3, alignItems: 'flex-start' }}>
+            <Box sx={{ flex: 1, maxWidth: 480 }}>
+              <DvTextField
+                label="Campaign name"
+                placeholder="Enter name"
+                value={value.name}
+                readOnly={readOnly}
+                error={err('name')}
+                onChange={(name) => set({ name })}
+                id="name"
+              />
+            </Box>
+            {mode === 'create' ? (
+              <Box sx={{ width: 160 }}>
+                <DvSelect
+                  label="Status"
+                  ariaLabel="Status"
+                  value={value.status ?? 'ACTIVE'}
+                  disabled={readOnly}
+                  options={[
+                    { value: 'ACTIVE', label: 'Active' },
+                    { value: 'PAUSED', label: 'Paused' },
+                  ]}
+                  error={err('status')}
+                  onChange={(status) => set({ status: status as CampaignWire['status'] })}
+                  id="status"
+                />
+              </Box>
+            ) : null}
+          </Box>
           {mode === 'create' && !readOnly ? (
-            <Button sx={{ alignSelf: 'flex-start' }} onClick={() => setCopyOpen(true)}>
+            <Button sx={{ alignSelf: 'flex-start', mt: 1 }} onClick={() => setCopyOpen(true)}>
               Copy settings from an existing campaign
             </Button>
           ) : null}
         </DvSectionCard>
 
-        <DvSectionCard title="Campaign goal" layout="settings">
-          <DvSelect
-            label="Campaign goal"
-            placeholder="Choose goal"
-            value={value.goal ?? ''}
-            disabled={readOnly}
-            error={err('goal')}
-            options={CAMPAIGN_GOALS.map((g) => ({ value: g, label: CAMPAIGN_GOAL_LABEL[g] }))}
-            onChange={(goal) => {
-              const next = {
-                ...value,
-                goal: goal as CampaignWire['goal'],
-                kpi: { type: null, value: '' as const },
-              };
-              setValue(next);
-              refreshWarnings(next);
-            }}
-            id="goal"
-          />
-          <DvSelect
-            label="Goal KPI"
-            placeholder="Choose KPI"
-            value={value.kpi.type ?? ''}
-            disabled={readOnly || !value.goal}
-            error={err('kpi.type')}
-            warning={warn('kpi.type')}
-            options={kpiOptions}
-            onChange={(type) => {
-              const next = {
-                ...value,
-                kpi: { ...value.kpi, type: type as CampaignWire['kpi']['type'] },
-              };
-              setValue(next);
-              refreshWarnings(next);
-            }}
-            id="kpi-type"
-          />
-          <DvTextField
-            label="KPI value"
-            type="text"
-            numeric
-            prefix={kpiSuffix ? undefined : currency}
-            suffix={kpiSuffix}
-            value={String(value.kpi.value ?? '')}
-            readOnly={readOnly}
-            error={err('kpi.value')}
-            onChange={(v) => set({ kpi: { ...value.kpi, value: v } })}
-            id="kpi-value"
-          />
-        </DvSectionCard>
+        <DvSectionCard layout="stacked" gearNote="These settings don't impact serving.">
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <Box sx={{ maxWidth: 480 }}>
+              <DvSelect
+                label="Overall campaign goal"
+                help="The main objective of this campaign. It guides the KPI and the optimization suggestions."
+                placeholder="Select an option"
+                value={value.goal ?? ''}
+                disabled={readOnly}
+                error={err('goal')}
+                options={CAMPAIGN_GOALS.map((g) => ({ value: g, label: CAMPAIGN_GOAL_LABEL[g] }))}
+                onChange={(goal) => {
+                  const next = {
+                    ...value,
+                    goal: goal as CampaignWire['goal'],
+                    kpi: { type: null, value: '' as const },
+                  };
+                  setValue(next);
+                  refreshWarnings(next);
+                }}
+                id="goal"
+              />
+            </Box>
+            <Box sx={{ maxWidth: 480 }}>
+              <DvSelect
+                label="KPI"
+                help="The measure you use to judge whether the campaign reaches its goal."
+                placeholder="Select an option"
+                value={value.kpi.type ?? ''}
+                disabled={readOnly}
+                error={err('kpi.type')}
+                warning={warn('kpi.type')}
+                options={kpiOptions}
+                onChange={(type) => {
+                  const next = {
+                    ...value,
+                    kpi: { ...value.kpi, type: type as CampaignWire['kpi']['type'] },
+                  };
+                  setValue(next);
+                  refreshWarnings(next);
+                }}
+                id="kpi-type"
+              />
+            </Box>
 
-        <DvSectionCard title="Creative types" layout="settings">
-          <DvCheckboxGroup
-            label="Creative types"
-            values={value.creativeTypes}
-            readOnly={readOnly}
-            error={err('creativeTypes')}
-            options={CREATIVE_TYPES}
-            onChange={(v) => set({ creativeTypes: v as CampaignWire['creativeTypes'] })}
-          />
-        </DvSectionCard>
+            <Box>
+              <DvCheckboxGroup
+                label="Creative type you expect to use"
+                values={value.creativeTypes}
+                readOnly={readOnly}
+                error={err('creativeTypes')}
+                options={CREATIVE_TYPES}
+                onChange={(v) => set({ creativeTypes: v as CampaignWire['creativeTypes'] })}
+              />
+            </Box>
 
-        <DvSectionCard title="Flight dates" layout="settings">
-          <DvTextField
-            label="Start date"
-            placeholder="YYYY-MM-DD"
-            value={value.startDate ?? ''}
-            locked={startLocked}
-            readOnly={readOnly}
-            error={err('startDate')}
-            onChange={(startDate) => set({ startDate })}
-            id="startDate"
-          />
-          <DvTextField
-            label="End date (optional)"
-            placeholder="YYYY-MM-DD"
-            value={value.endDate ?? ''}
-            readOnly={readOnly}
-            error={err('endDate')}
-            onChange={(endDate) => set({ endDate })}
-            id="endDate"
-          />
-          <DvTextField
-            label="Planned spend (optional)"
-            numeric
-            prefix={currency}
-            value={String(value.plannedSpend ?? '')}
-            readOnly={readOnly}
-            error={err('plannedSpend')}
-            onChange={(plannedSpend) => set({ plannedSpend })}
-            id="plannedSpend"
-          />
-        </DvSectionCard>
+            <Box sx={{ maxWidth: 480 }}>
+              <DvTextField
+                label="Planned spend"
+                hint="Optional"
+                numeric
+                prefix={symbol}
+                suffix={currency}
+                value={String(value.plannedSpend ?? '')}
+                readOnly={readOnly}
+                error={err('plannedSpend')}
+                onChange={(plannedSpend) => set({ plannedSpend })}
+                id="plannedSpend"
+              />
+            </Box>
 
-        <DvSectionCard title="Frequency cap" layout="settings">
-          <DvRadioGroup
-            value={value.frequencyCap.mode === 'LIMITED' ? 'LIMITED' : 'UNLIMITED'}
-            readOnly={readOnly}
-            onChange={(m) =>
-              set({ frequencyCap: { ...value.frequencyCap, mode: m as 'UNLIMITED' | 'LIMITED' } })
-            }
-            options={[
-              { value: 'UNLIMITED', label: 'Unlimited' },
-              {
-                value: 'LIMITED',
-                label: 'Limit frequency to',
-                inline: (selected) => (
-                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                    <DvTextField
-                      ariaLabel="Exposures"
-                      numeric
-                      disabled={!selected}
-                      value={String(value.frequencyCap.maxImpressions ?? '')}
-                      error={err('frequencyCap.maxImpressions')}
-                      onChange={(v) =>
-                        set({ frequencyCap: { ...value.frequencyCap, maxImpressions: v } })
-                      }
-                    />
-                    <span>exposures per</span>
-                    <DvSelect
-                      value={value.frequencyCap.period ?? 'MONTH'}
-                      disabled={!selected}
-                      options={FREQ_PERIODS.map((p) => ({ value: p, label: p.toLowerCase() }))}
-                      onChange={(p) =>
-                        set({ frequencyCap: { ...value.frequencyCap, period: p as 'MONTH' } })
-                      }
-                    />
-                  </Box>
-                ),
-              },
-            ]}
-          />
-        </DvSectionCard>
-
-        <DvSectionCard title="Additional budget details" layout="stacked">
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            {value.budgets.map((b, i) => (
-              <Box key={i} sx={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 1 }}>
+            <Box>
+              {heading('Planned dates')}
+              <Box sx={{ display: 'flex', gap: 3, maxWidth: 480 }}>
                 <DvTextField
-                  ariaLabel={`Budget ${i + 1} name`}
-                  placeholder="Name"
-                  value={b.name ?? ''}
+                  label="Start date"
+                  placeholder="YYYY-MM-DD"
+                  value={value.startDate ?? ''}
+                  locked={startLocked}
                   readOnly={readOnly}
-                  error={err(`budgets.${i}.name`)}
-                  onChange={(name) =>
-                    set({ budgets: value.budgets.map((x, j) => (j === i ? { ...x, name } : x)) })
-                  }
+                  error={err('startDate')}
+                  onChange={(startDate) => set({ startDate })}
+                  id="startDate"
                 />
                 <DvTextField
-                  ariaLabel={`Budget ${i + 1} amount`}
-                  placeholder="Amount"
-                  numeric
-                  value={String(b.amount ?? '')}
+                  label="End date (optional)"
+                  placeholder="YYYY-MM-DD"
+                  value={value.endDate ?? ''}
                   readOnly={readOnly}
-                  error={err(`budgets.${i}.amount`)}
-                  onChange={(amount) =>
-                    set({ budgets: value.budgets.map((x, j) => (j === i ? { ...x, amount } : x)) })
-                  }
-                />
-                <DvTextField
-                  ariaLabel={`Budget ${i + 1} start`}
-                  placeholder="Start"
-                  value={b.startDate ?? ''}
-                  readOnly={readOnly}
-                  error={err(`budgets.${i}.startDate`)}
-                  onChange={(startDate) =>
-                    set({
-                      budgets: value.budgets.map((x, j) => (j === i ? { ...x, startDate } : x)),
-                    })
-                  }
-                />
-                <DvTextField
-                  ariaLabel={`Budget ${i + 1} end`}
-                  placeholder="End"
-                  value={b.endDate ?? ''}
-                  readOnly={readOnly}
-                  error={err(`budgets.${i}.endDate`)}
-                  onChange={(endDate) =>
-                    set({ budgets: value.budgets.map((x, j) => (j === i ? { ...x, endDate } : x)) })
-                  }
+                  error={err('endDate')}
+                  onChange={(endDate) => set({ endDate })}
+                  id="endDate"
                 />
               </Box>
-            ))}
-            {!readOnly ? (
-              <Button
-                sx={{ alignSelf: 'flex-start' }}
-                onClick={() => set({ budgets: addBudgetRows(value.budgets) })}
-              >
-                Add Budgets
-              </Button>
-            ) : null}
+            </Box>
+
+            <Box>
+              {heading('Additional budget details')}
+              {budgetRows}
+            </Box>
+
+            <Box>
+              {heading('Frequency cap')}
+              <DvRadioGroup
+                value={value.frequencyCap.mode === 'LIMITED' ? 'LIMITED' : 'UNLIMITED'}
+                readOnly={readOnly}
+                onChange={(m) =>
+                  set({
+                    frequencyCap: { ...value.frequencyCap, mode: m as 'UNLIMITED' | 'LIMITED' },
+                  })
+                }
+                options={[
+                  { value: 'UNLIMITED', label: 'No limit' },
+                  {
+                    value: 'LIMITED',
+                    label: 'Limit frequency to',
+                    inline: (selected) => (
+                      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                        <DvTextField
+                          ariaLabel="Exposures"
+                          numeric
+                          disabled={!selected}
+                          value={String(value.frequencyCap.maxImpressions ?? '')}
+                          error={err('frequencyCap.maxImpressions')}
+                          onChange={(v) =>
+                            set({ frequencyCap: { ...value.frequencyCap, maxImpressions: v } })
+                          }
+                        />
+                        <span>exposures per</span>
+                        <DvSelect
+                          ariaLabel="Period"
+                          value={value.frequencyCap.period ?? 'MONTH'}
+                          disabled={!selected}
+                          options={FREQ_PERIODS.map((p) => ({
+                            value: p,
+                            label: p.charAt(0) + p.slice(1).toLowerCase(),
+                          }))}
+                          onChange={(p) =>
+                            set({
+                              frequencyCap: {
+                                ...value.frequencyCap,
+                                period: p as NonNullable<CampaignWire['frequencyCap']['period']>,
+                              },
+                            })
+                          }
+                        />
+                      </Box>
+                    ),
+                  },
+                ]}
+              />
+              <Typography variant="caption" component="p" sx={{ mt: 1 }}>
+                You can also set specific frequency caps on each insertion order and line item in
+                this campaign.
+              </Typography>
+            </Box>
+
+            <Box>
+              {heading('Additional details')}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, maxWidth: 480 }}>
+                <Box>
+                  <Typography variant="body2" component="p" sx={{ fontWeight: 500, mb: 1 }}>
+                    Landing page URLs{' '}
+                    <Typography variant="caption" component="span">
+                      (Optional)
+                    </Typography>
+                  </Typography>
+                  {urls.map((u, i) => (
+                    <Box key={i} sx={{ mb: 1 }}>
+                      <DvTextField
+                        ariaLabel={`Landing page URL ${i + 1}`}
+                        placeholder="https://"
+                        value={u}
+                        readOnly={readOnly}
+                        error={err(`landingPageUrls[${i}]`)}
+                        onChange={(next) =>
+                          set({ landingPageUrls: urls.map((x, j) => (j === i ? next : x)) })
+                        }
+                      />
+                    </Box>
+                  ))}
+                  {!readOnly ? (
+                    <Button
+                      sx={{ alignSelf: 'flex-start' }}
+                      onClick={() => set({ landingPageUrls: [...urls, ''] })}
+                    >
+                      Add another url
+                    </Button>
+                  ) : null}
+                </Box>
+                <DvTextField
+                  label="Keywords"
+                  placeholder="Add keywords separated by a comma"
+                  hint="Enter up to 5 keywords to help improve recommendations."
+                  value={keywordsText}
+                  readOnly={readOnly}
+                  error={err('keywords')}
+                  onChange={(text) => {
+                    setKeywordsText(text);
+                    set({ keywords: parseKeywords(text) });
+                  }}
+                  id="keywords"
+                />
+              </Box>
+            </Box>
           </Box>
         </DvSectionCard>
+
+        {stray.map((i) => (
+          <Typography key={`${i.path}:${i.code}`} role="alert" color="error">
+            {i.message}
+          </Typography>
+        ))}
+
+        {mode === 'create' && !readOnly ? (
+          <Box sx={{ display: 'flex', gap: 2, pb: 4 }}>
+            <Button variant="contained" disabled={busy} onClick={() => submit()}>
+              {busy ? 'Saving…' : 'Create'}
+            </Button>
+            <Button variant="outlined" onClick={() => router.back()}>
+              Cancel
+            </Button>
+          </Box>
+        ) : null}
       </Box>
-      {!readOnly ? (
+      {mode === 'edit' && !readOnly ? (
         <DvFormFooter
           mode={mode}
-          dirty={dirty || mode === 'create'}
+          dirty={dirty}
           primaryLabel={busy ? 'Saving…' : undefined}
           onPrimary={() => submit()}
           onSecondary={() => router.back()}

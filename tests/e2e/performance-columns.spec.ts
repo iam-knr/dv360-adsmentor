@@ -139,7 +139,8 @@ test.describe('list pages', () => {
     await signIn(page);
     await page.goto(`${A()}/cs?d=YESTERDAY`);
     expect(num(await cellOf(page, w.names.campaign, 'Spent'))).toBeCloseTo(1080);
-    expect(num(await cellOf(page, /Total/, 'Spent'))).toBeCloseTo(1080);
+    // real DV360 has no Total row under the Campaigns list (audit CAM-052)
+    await expect(page.getByRole('row').filter({ hasText: /^Total/ })).toHaveCount(0);
   });
 
   test('IO list: Impr. and Revenue, totals reconcile', async ({ page }) => {
@@ -147,7 +148,7 @@ test.describe('list pages', () => {
     await page.goto(`${A()}/explorerios?d=YESTERDAY`);
     expect(num(await cellOf(page, 'Festive IO', 'Impr.'))).toBe(12_000);
     expect(num(await cellOf(page, 'Festive IO', 'Revenue'))).toBeCloseTo(1080);
-    expect(num(await cellOf(page, /Total/, 'Impr.'))).toBe(12_000);
+    await expect(page.getByRole('row').filter({ hasText: /^Total/ })).toHaveCount(0);
   });
 
   test('LI list: Impr., Clicks, Revenue, totals reconcile', async ({ page }) => {

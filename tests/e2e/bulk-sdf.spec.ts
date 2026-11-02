@@ -40,7 +40,7 @@ test('PW-11-07 select campaigns, Action, Pause: one job, the row pauses and Bulk
     .getByRole('checkbox')
     .check();
   await expect(page.getByText('1 row selected')).toBeVisible();
-  await page.getByRole('button', { name: 'Action' }).click();
+  await page.getByRole('button', { name: 'Action', exact: true }).click();
   await expect(page.getByRole('menuitem', { name: 'Activate' })).toBeDisabled();
   await page.getByRole('menuitem', { name: 'Pause' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Bulk action started' })).toBeVisible();
@@ -64,7 +64,7 @@ test('PW-11-10 duplicate a campaign: a Copy of campaign with its tree appears', 
     .getByRole('row', { name: /PW11 Duplicate me/ })
     .getByRole('checkbox')
     .check();
-  await page.getByRole('button', { name: 'Action' }).click();
+  await page.getByRole('button', { name: 'Action', exact: true }).click();
   await page.getByRole('menuitem', { name: /Duplicate/ }).click();
   await page.getByLabel('Number of copies').fill('0');
   await page.getByRole('button', { name: 'Duplicate' }).click();
@@ -86,7 +86,7 @@ test('PW-11-01 SDF download: untick Ads, the job lists with a Download link to a
 }) => {
   await signIn(page, w);
   await page.goto(A('/cs'));
-  await page.getByRole('button', { name: 'SDF' }).click();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('menuitem', { name: 'Download', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Download Structured Data Files' })).toBeVisible();
   await page.getByRole('checkbox', { name: 'Ads' }).uncheck();
@@ -126,7 +126,7 @@ test('PW-11-02 SDF upload: rename a campaign in the CSV and upload it', async ({
   );
   expect(csv).toContain('PW11 Renamed by SDF');
   await page.goto(A('/cs'));
-  await page.getByRole('button', { name: 'SDF' }).click();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('menuitem', { name: 'Upload' }).click();
   await expect(
     page.getByText('Line items without an answer for EU political ads will get "No"'),
@@ -157,7 +157,7 @@ test('PW-11-16 column view: create a custom view, pin it, reload and the columns
   page,
 }) => {
   await signIn(page, w);
-  await page.goto(A(`/c/${w.ids.cid}/explorerios`));
+  await page.goto(A('/explorerlis'));
   await page.getByRole('combobox', { name: 'Status filter' }).click();
   await page.getByRole('option', { name: 'Status: All' }).click();
   await expect(page.getByRole('columnheader', { name: /Impr\./ })).toBeVisible();
@@ -221,13 +221,13 @@ test('PW-11-15 a read-only person cannot edit in bulk but can still download SDF
   await signIn(page, wRo);
   await page.goto(advPath(wRo, '/cs'));
   await page.getByRole('row').nth(1).getByRole('checkbox').check();
-  await page.getByRole('button', { name: 'Action' }).click();
+  await page.getByRole('button', { name: 'Action', exact: true }).click();
   await expect(page.getByRole('menuitem', { name: 'Pause' })).toBeDisabled();
   await expect(page.getByRole('menuitem', { name: 'Activate' })).toBeDisabled();
   await expect(page.getByRole('menuitem', { name: /Duplicate/ })).toBeDisabled();
   await expect(page.getByRole('menuitem', { name: /^Download/ }).first()).toBeEnabled();
   await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'SDF' }).click();
+  await page.getByRole('button', { name: 'More actions' }).click();
   await expect(page.getByRole('menuitem', { name: 'Upload' })).toBeDisabled();
   await expect(page.getByRole('menuitem', { name: 'Download', exact: true })).toBeEnabled();
 });

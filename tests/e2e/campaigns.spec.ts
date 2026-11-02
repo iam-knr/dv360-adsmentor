@@ -34,7 +34,11 @@ test('PW-06-02 empty campaign shows the catalogue errors and stays on the page',
   await login(page);
   await page.goto(A('/cs/new'));
   await page.getByRole('button', { name: 'Create' }).click();
-  await expect(page.getByText('Enter a value').first()).toBeVisible();
+  // the exact wording and the four required errors of real DV360 (audit CAM-047, CAM-048)
+  await expect(page.getByText('Enter a value')).toHaveCount(1);
+  await expect(page.getByText('A value is required')).toHaveCount(2);
+  await expect(page.getByText('Please select at least one creative type.')).toBeVisible();
+  await expect(page.getByText(/errors?\. Fix them to continue/)).toHaveCount(0);
   await expect(page).toHaveURL(/\/cs\/new/);
 });
 
@@ -42,11 +46,10 @@ test('PW-06-01 and PW-07-01 create a campaign, then an insertion order in it', a
   await login(page);
   await page.goto(A('/cs/new'));
   await page.locator('#name').fill('PW Autumn Launch');
-  await page.getByRole('combobox', { name: /Campaign goal/ }).click();
+  await page.getByRole('combobox', { name: /Overall campaign goal/ }).click();
   await page.getByRole('option', { name: /Raise awareness/ }).click();
-  await page.getByRole('combobox', { name: /Goal KPI/ }).click();
+  await page.getByRole('combobox', { name: /^KPI/ }).click();
   await page.getByRole('option', { name: /^CPM/ }).first().click();
-  await page.locator('#kpi-value').fill('50');
   await page.getByRole('checkbox', { name: 'Display' }).check();
   await page.getByRole('button', { name: 'Create' }).click();
   await page.waitForURL(/\/c\/\d+\/explorerios/);
@@ -73,11 +76,10 @@ test('PW-06-01 and PW-07-01 create a campaign, then an insertion order in it', a
 
 async function fillValidCampaign(page: Page, name: string, kpiOption: RegExp) {
   await page.locator('#name').fill(name);
-  await page.getByRole('combobox', { name: /Campaign goal/ }).click();
+  await page.getByRole('combobox', { name: /Overall campaign goal/ }).click();
   await page.getByRole('option', { name: /Raise awareness/ }).click();
-  await page.getByRole('combobox', { name: /Goal KPI/ }).click();
+  await page.getByRole('combobox', { name: /^KPI/ }).click();
   await page.getByRole('option', { name: kpiOption }).first().click();
-  await page.locator('#kpi-value').fill('50');
   await page.getByRole('checkbox', { name: 'Display' }).check();
 }
 
@@ -185,7 +187,7 @@ test('PW-06-12 copy settings: only the ticked setting is copied into the draft',
   await expect(dialog).toBeHidden();
   await expect(page.getByRole('textbox', { name: 'Exposures' })).toHaveValue('7');
   // the goal was not ticked, so it stays empty
-  await expect(page.getByRole('combobox', { name: /Campaign goal/ })).not.toContainText(
+  await expect(page.getByRole('combobox', { name: /Overall campaign goal/ })).not.toContainText(
     'Raise awareness',
   );
 });
@@ -207,8 +209,10 @@ test('AC-06-16/17 campaign page: tabs, pin stored per user, redirect and the fiv
     'Explore budget options',
   ])
     await expect(page.getByRole('region', { name: title })).toBeVisible();
-  await expect(page.getByText(/check the box next to an insertion order/)).toBeVisible();
-  await expect(page.getByText(/select a single insertion order/)).toBeVisible();
+  // fixed cards: no hints, no carousel arrows (audit CAM-063)
+  await expect(page.getByText(/check the box next to an insertion order/)).toHaveCount(0);
+  await expect(page.getByText('No spend yet for this period.')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Scroll charts/ })).toHaveCount(0);
 
   await page.getByRole('tab', { name: 'Combined' }).click();
   await page.waitForURL(/\/explorercombined/);

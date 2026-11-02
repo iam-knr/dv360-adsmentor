@@ -95,11 +95,10 @@ test('demo path: Super admin, student, campaign to metrics', async ({ page, brow
       .click();
     await page.waitForURL(/\/cs\/new/);
     await page.locator('#name').fill('Demo Diwali Launch');
-    await page.getByRole('combobox', { name: /Campaign goal/ }).click();
+    await page.getByRole('combobox', { name: /Overall campaign goal/ }).click();
     await page.getByRole('option', { name: /Raise awareness/ }).click();
-    await page.getByRole('combobox', { name: /Goal KPI/ }).click();
+    await page.getByRole('combobox', { name: /^KPI/ }).click();
     await page.getByRole('option', { name: /^CPM/ }).first().click();
-    await page.locator('#kpi-value').fill('50');
     await page.getByRole('checkbox', { name: 'Display' }).check();
     await page.getByRole('button', { name: 'Create' }).click();
     await page.waitForURL(/\/c\/\d+\/explorerios/);

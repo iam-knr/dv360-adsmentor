@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation';
 import { IoList } from '@/components/insertion-orders/IoList';
+import { compactRange, defaultRange } from '@/lib/campaigns/range';
+import { getSimToday } from '@/lib/campaigns/service';
 import { listInsertionOrders } from '@/lib/insertion-orders/service';
 import { requireView } from '@/lib/scope/guard';
 import { resolveCampaign } from '@/lib/scope/resolve';
@@ -17,11 +19,13 @@ export default async function Page({
   const { partnerId, advertiserId, campaignId } = await params;
   const chain = await resolveCampaign(partnerId, advertiserId, campaignId);
   if (!chain) notFound();
-  const { d } = await searchParams;
+  const { d: dParam } = await searchParams;
+  const today = await getSimToday(user, chain.advertiser.timeZone);
+  const d = dParam ?? compactRange(defaultRange(today));
   const result = await listInsertionOrders(
     user,
     { campaignId: chain.campaign.publicId },
-    { status: ['*'], pageSize: 1000, d: d ?? null },
+    { status: ['*'], pageSize: 1000, d },
   );
   return (
     <IoList
@@ -31,6 +35,8 @@ export default async function Page({
       currency={chain.advertiser.currencyCode}
       rows={result.rows}
       embedded
+      d={d}
+      today={today}
     />
   );
 }

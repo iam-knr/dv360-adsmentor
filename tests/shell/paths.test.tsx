@@ -137,7 +137,7 @@ describe('top bar crumbs (routes.md 4.5)', () => {
     ).toEqual([
       { level: 'Partner', name: 'Agency', href: '/p/1/home_v3' },
       { level: 'Advertiser', name: 'Shop', href: '/p/1/a/2/cs' },
-      { level: 'Campaign', name: 'Campaign Diwali', href: '/p/1/a/2/c/3' },
+      { level: 'Campaign', name: 'Diwali', href: '/p/1/a/2/c/3' },
     ]);
   });
 

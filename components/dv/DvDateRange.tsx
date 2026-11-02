@@ -52,6 +52,8 @@ export interface DvDateRangeProps {
   singleDay?: boolean;
   /** Start of "Lifetime". */
   lifetimeStart?: Date;
+  /** Replaces the label on the trigger, for example the formatted date range of a preset ("Oct 31, 2026"). */
+  triggerText?: string;
 }
 
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -177,6 +179,7 @@ export function DvDateRange({
   maxDate: maxProp,
   singleDay,
   lifetimeStart,
+  triggerText,
 }: DvDateRangeProps) {
   const today = startOfDay(todayProp);
   const maxDate = startOfDay(maxProp ?? today);
@@ -303,7 +306,7 @@ export function DvDateRange({
         endIcon={<DvIcon name="arrow_drop_down" size={20} />}
         sx={{ color: 'text.primary' }}
       >
-        {triggerLabel(value)}
+        {triggerText ?? triggerLabel(value)}
       </Button>
       <Popover
         id={popId}

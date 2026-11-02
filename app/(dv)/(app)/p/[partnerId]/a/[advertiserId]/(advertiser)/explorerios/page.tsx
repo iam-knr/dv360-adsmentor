@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation';
 import { ListFilterChips } from '@/components/search/ListFilterChips';
 import { IoList } from '@/components/insertion-orders/IoList';
+import { compactRange, defaultRange } from '@/lib/campaigns/range';
+import { getSimToday } from '@/lib/campaigns/service';
 import { listInsertionOrders } from '@/lib/insertion-orders/service';
 import { requireView } from '@/lib/scope/guard';
 import { resolveAdvertiser } from '@/lib/scope/resolve';
@@ -20,11 +22,12 @@ export default async function Page({
   const chain = await resolveAdvertiser(partnerId, advertiserId);
   if (!chain) notFound();
   const filters = parseListFilters(await searchParams);
-  const d = filters.d;
+  const today = await getSimToday(user, chain.advertiser.timeZone);
+  const d = filters.d ?? compactRange(defaultRange(today));
   const result = await listInsertionOrders(
     user,
     { advertiserId: chain.advertiser.publicId },
-    { status: ['*'], pageSize: 1000, d: d ?? null },
+    { status: ['*'], pageSize: 1000, d },
   );
   return (
     <IoList
@@ -33,6 +36,8 @@ export default async function Page({
       currency={chain.advertiser.currencyCode}
       rows={filterIoRows(result.rows, filters)}
       initialStatus={filters.status}
+      d={d}
+      today={today}
       filterChips={<ListFilterChips chips={extraFilterChips(filters)} />}
     />
   );

@@ -378,7 +378,6 @@ export const CAMPAIGN_TREE: NavNode[] = [
     icon: 'navCampaignAlerts',
     href: cmp('alerts'),
     match: ['/alerts'],
-    badge: 'NEW',
   },
   {
     key: 'history',

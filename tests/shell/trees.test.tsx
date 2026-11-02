@@ -133,7 +133,8 @@ describe('nav trees (AC-01-3)', () => {
       '(Linked accounts)',
     );
     const cmp = buildTree('campaign', ctx, 'STANDARD');
-    expect(cmp.find((i) => i.id === 'alerts')?.badge).toBe('NEW');
+    // real DV360 has no NEW badge on the campaign Alerts item (fidelity audit CAM-060)
+    expect(cmp.find((i) => i.id === 'alerts')?.badge).toBeUndefined();
     // every top-level item has an icon, children have none
     for (const level of ['partner', 'advertiser', 'campaign'] as const) {
       for (const n of TREES[level]) {

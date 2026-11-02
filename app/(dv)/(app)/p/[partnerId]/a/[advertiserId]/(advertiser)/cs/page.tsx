@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation';
 import { ListFilterChips } from '@/components/search/ListFilterChips';
 import { CampaignsList } from '@/components/campaigns/CampaignsList';
-import { listCampaigns } from '@/lib/campaigns/service';
+import { compactRange, defaultRange } from '@/lib/campaigns/range';
+import { getSimToday, listCampaigns } from '@/lib/campaigns/service';
 import { requireView } from '@/lib/scope/guard';
 import { resolveAdvertiser } from '@/lib/scope/resolve';
 import { extraFilterChips, filterNamedRows, parseListFilters } from '@/lib/search/list-filters';
@@ -20,11 +21,12 @@ export default async function Page({
   const chain = await resolveAdvertiser(partnerId, advertiserId);
   if (!chain) notFound();
   const filters = parseListFilters(await searchParams);
-  const d = filters.d;
+  const today = await getSimToday(user, chain.advertiser.timeZone);
+  const d = filters.d ?? compactRange(defaultRange(today));
   const result = await listCampaigns(user, chain.advertiser.publicId, {
     status: ['*'],
     pageSize: 1000,
-    d: d ?? null,
+    d,
   });
   return (
     <CampaignsList
@@ -33,6 +35,8 @@ export default async function Page({
       currency={chain.advertiser.currencyCode}
       rows={filterNamedRows(result.rows, filters)}
       initialStatus={filters.status}
+      d={d}
+      today={today}
       filterChips={<ListFilterChips chips={extraFilterChips(filters)} />}
     />
   );

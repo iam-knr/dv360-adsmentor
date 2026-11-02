@@ -7,10 +7,12 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import IconButton from '@mui/material/IconButton';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
 import { DvBanner, DvModal, DvSelect } from '@/components/dv';
+import { DvIcon } from '@/components/icons';
 import { useViewer } from '@/components/shell/ViewerProvider';
 import type { BulkEntityKey } from '@/lib/bulk/entities';
 import { BLK } from '@/lib/sdf/rules';
@@ -283,9 +285,12 @@ export function SdfUploadDialog({
 export function SdfMenu({
   advertiserId,
   campaignsList = false,
+  kebab = false,
 }: {
   advertiserId: string;
   campaignsList?: boolean;
+  /** Real DV360 shows the same menu behind a ⋮ icon (Campaigns and Insertion orders lists). */
+  kebab?: boolean;
 }) {
   const { viewer } = useViewer();
   const router = useRouter();
@@ -302,9 +307,19 @@ export function SdfMenu({
 
   return (
     <>
-      <Button variant="outlined" aria-haspopup="menu" onClick={(e) => setAnchor(e.currentTarget)}>
-        SDF
-      </Button>
+      {kebab ? (
+        <IconButton
+          aria-label="More actions"
+          aria-haspopup="menu"
+          onClick={(e) => setAnchor(e.currentTarget)}
+        >
+          <DvIcon name="more_vert" size={20} />
+        </IconButton>
+      ) : (
+        <Button variant="outlined" aria-haspopup="menu" onClick={(e) => setAnchor(e.currentTarget)}>
+          SDF
+        </Button>
+      )}
       <Menu anchorEl={anchor} open={!!anchor} onClose={() => setAnchor(null)}>
         <MenuItem
           onClick={() => {
@@ -323,7 +338,7 @@ export function SdfMenu({
         >
           Upload
         </MenuItem>
-        {campaignsList ? (
+        {campaignsList || kebab ? (
           <MenuItem onClick={() => void quick('METADATA')}>Download metadata</MenuItem>
         ) : null}
         <MenuItem onClick={() => void quick('QA')}>Download QA</MenuItem>

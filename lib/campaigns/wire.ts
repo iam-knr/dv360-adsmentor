@@ -94,6 +94,7 @@ export interface CampaignRow {
   alertSeverity: 'critical' | 'warning' | null;
   budget: number | null;
   spent: number;
+  goal: CampaignGoal | null;
   kpiGoal: string | null;
   kpiActual: string | null;
   kpiActualTrueView: string | null;
