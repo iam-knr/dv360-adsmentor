@@ -46,7 +46,7 @@ Sources: `docs/PROJECT-LOG.md` (Part B) section 9, `docs/PROJECT-LOG.md` section
 - Consequences: Local sessions hand content to cloud sessions, which commit it.
 
 ### ADR-012 Repository is public
-- Status: Accepted. Date: 2026-10-28. By: Kailas. Revisit: decided, the repo stays public (ADR-044, RC-059).
+- Status: Accepted. Date: 2026-10-28. By: Kailas. Revisit: SUPERSEDED 2026-11-03 by the owner: the repo is now private (see docs/PROJECT-LOG.md D24). Original: the repo stays public (ADR-044, RC-059).
 - Decision: The repo is public so cloud sessions can reach it.
 - Consequences: Explore notes about DV360 are visible to anyone. No secrets may be committed; secret scanning and push protection are required (build-plan 1.6). The owner can switch to private; Vercel and cloud sessions work with private repos.
 
