@@ -1,8 +1,14 @@
 name: ci
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
   push:
     branches: [main]
+  workflow_dispatch:
+# A new push to the same PR cancels its older run (saves Actions minutes on a private repo).
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -46,6 +52,7 @@ jobs:
       - run: npx prisma generate
       - run: npm run test:db
   e2e:
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'full-ci')
     needs: [check, db-tests]
     runs-on: ubuntu-latest
     services:
@@ -80,6 +87,7 @@ jobs:
   # PROD-CRASH: a database prepared exactly like production (migrations + bootstrap under NODE_ENV=production, no
   # db:seed), RLS on for every table, two students provisioned by the real job, every linked page opened as the second.
   prod-like:
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'full-ci')
     needs: [check, db-tests]
     runs-on: ubuntu-latest
     services:

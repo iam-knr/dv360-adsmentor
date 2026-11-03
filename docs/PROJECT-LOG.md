@@ -8,7 +8,7 @@ Last updated: 2026-11-02 · This file replaces the former `PROJECT.md` (its full
 ## 0. Current state (2026-11-02) — read this first
 
 ### 0.1 What is live
-- Production: https://dv360-adsmentor.vercel.app (Vercel Hobby, team "BIGSEO's projects", main deploys automatically; Supabase Postgres, eu-west-1). Repo `iam-knr/dv360-adsmentor` is public: never commit secrets or student data.
+- Production: https://dv360-adsmentor.vercel.app (Vercel Hobby, team "BIGSEO's projects", main deploys automatically; Supabase Postgres, eu-west-1). Repo `iam-knr/dv360-adsmentor` was public until 2026-11-03 and is now PRIVATE (owner decision D24, supersedes D19/ADR-044): still never commit secrets or student data. Vercel deploys from it (check Project > Settings > Git if a deploy ever stops), cloud sessions reach it through the GitHub connector.
 - Stack as built: Next.js 15.5 (App Router), React 19, TypeScript 5.9, MUI 7, Prisma 6.19 (154 models, 190 enums, migrations 0000 to 0014), Auth.js v5 beta, Zod, Recharts, Vitest, Playwright. Postgres row level security isolates sandboxes (roles `app_tenant`, `app_engine`, owner; setting `app.sandbox_id`).
 - Everything in the module map is built to some depth: shell, partner level, campaigns, IOs, line items (all types), targeting, creatives, inventory, audiences, resources, reporting, planning, advertiser settings, bulk/SDF, experiments, optimisation and Troubleshooter, history and notifications, account management. Per-slice leftovers are in `docs/gaps/*.md`.
 - Two account levels only: Super admin (`/manage`) and students (ADM-FIX). The DB enum value `ADMIN` remains but nothing uses it.
@@ -37,6 +37,7 @@ Font rule: Google Sans only if open-licensed, otherwise the closest open font; n
 Audit areas still to run by the owner in Claude in Chrome (use browser zoom on the real DV360 window so CSS widths match the simulator): Insertion orders, Line items, Targeting, Creatives, Audiences, report run results and charts. Each result becomes a fix session (max 3 concurrent).
 
 ### 0.5 Working agreements
+- CI on a private repo (2,000 free Actions minutes a month): `check` and `db-tests` run on every PR push; the heavy `e2e` and `prod-like` jobs run on pushes to main, on manual runs (workflow_dispatch) and on PRs carrying the label `full-ci` (add the label before merging anything that touches app code; docs-only PRs do not need it). A new push cancels the older run of the same PR.
 - At most 3 cloud sessions at the same time. Prompts carry file ownership, the gates to run in the foreground (`npm run check`, `npm run test:db`, full Playwright incl. crawler), "push once", "never merge".
 - The owner authorised merging ready PRs ("merge whats ready"): squash, sha pinned, only with all four checks green (`check`, `db-tests`, `e2e`, `prod-like`), branch containing main. Rerun a failed job once for infrastructure flakes (the e2e web server sometimes times out after 240 s). GraphQL is blocked from cloud sessions, use REST.
 - The Vercel project "dv360-adsmentor-feoh" is a duplicate that always fails its status; it is to be deleted by the owner and is ignored meanwhile.
@@ -86,6 +87,7 @@ A classroom-only training simulator for FREE students (paying Ads Mentor student
 | D19 | Repo visibility | Stays public. Never commit secrets, `.env*`, keys, DB URLs or student data; secret scan in P3-01 CI. Closes RC-059 (ADR-044) | Kailas |
 | D20 | Class size | Default up to 25 concurrent students; free cohorts may be larger; RC-057 is an open owner question (cohort size, public self-signup; default 25, no self-signup). Free Supabase tier for the pilot with reduced retention; P6-03 target 25, 60 stretch (ADR-045, ADR-048) | Kailas |
 | D22 | Gap-finish writes | Owner approved creating test entities in the paused second demo advertiser: 6 campaigns (Paused), 6 IOs (Draft), 1 YouTube LI (Draft); DV360 also auto-saved 1 empty plan. Listed in `19-gap-finish.md` section 6; archive later | Kailas |
+| D24 | Repo private (2026-11-03) | Owner does not want the code base taken; repo switched to private. CI minutes protected by running e2e and prod-like only on main or with the `full-ci` label. Supersedes D19 | Kailas |
 | D23 | Demand Gen | Skipped in exploration by owner decision; build from public docs | Kailas |
 | D21 | Merge authority | Cowork assistant may merge Phase 3+ build PRs after green checks and preview, in merge order, with no open comments; squash only; reports every merge. Closes P-13 (ADR-046) | Kailas |
 
