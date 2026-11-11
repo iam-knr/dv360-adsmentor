@@ -4,7 +4,7 @@
   "private": true,
   "description": "DV360 Simulator by Adsmetor: classroom simulator for free students",
   "engines": {
-    "node": ">=22.12"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "next dev",
