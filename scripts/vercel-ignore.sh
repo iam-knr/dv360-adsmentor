@@ -8,3 +8,4 @@ if [ -z "$base" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
   exit 1
 fi
 git diff --quiet "$base" HEAD -- . ':!docs' ':!*.md'
+# Touching this file forces a build when only Vercel env vars changed (12 Nov 2026: DATABASE_URL moved to port 6543).
